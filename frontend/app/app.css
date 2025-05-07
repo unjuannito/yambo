@@ -7,9 +7,14 @@
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+  color-scheme: light;
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+@media (max-width: 818px) {
+  .custom-break {
+    display: none;
+  }
+  .custom-break-button {
+    display: inline-flex;
   }
 }
