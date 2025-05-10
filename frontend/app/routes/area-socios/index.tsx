@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
-import type { Route } from "../+types/index";
-import Hero from "../../components/home/Hero";
-import AboutUs from "../../components/home/AboutUs";
-import FeaturedProjects from "../../components/home/FeaturedProjects";
-import ActivitiesPreview from "../../components/home/ActivitiesPreview";
-import MonitorsGallery from "../../components/home/MonitorsGallery";
+import { use, useEffect, useState } from "react";
+import type { Route } from "./+types/index";
+import { useOutletContext } from "react-router";
+import SummaryCards from "~/components/area-socios/home/SummaryCards";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -13,15 +10,15 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
-export default function Index() {
+export default function AreaSociosIndex() {
+  const {summaries, user } = useOutletContext<any>();
 
   return (
-    <main className="flex-1 pt-16">
-      <Hero />
-      <AboutUs />
-      <FeaturedProjects />
-      <ActivitiesPreview />
-      <MonitorsGallery />
-    </main>
+    <>
+      <h1 className="p-4 text-2xl font-semibold">
+        !Hola, {user.name}!
+      </h1>
+      <SummaryCards summaries={summaries} />
+    </>
   );
 }
