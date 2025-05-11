@@ -1,0 +1,83 @@
+package es.yambo_alco.web.model;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import static org.junit.jupiter.api.Assertions.*;
+
+class UserTest {
+
+    @Test
+    void builder_ShouldCreateUserWithAllFields() {
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.builder()
+                .id(1L)
+                .username("testuser")
+                .password("password123")
+                .email("test@example.com")
+                .role(Role.ADMIN)
+                .createdAt(now)
+                .updatedAt(now)
+                .enabled(true)
+                .build();
+
+        assertEquals(1L, user.getId());
+        assertEquals("testuser", user.getUsername());
+        assertEquals("password123", user.getPassword());
+        assertEquals("test@example.com", user.getEmail());
+        assertEquals(Role.ADMIN, user.getRole());
+        assertEquals(now, user.getCreatedAt());
+        assertEquals(now, user.getUpdatedAt());
+        assertTrue(user.isEnabled());
+    }
+
+    @Test
+    void getAuthorities_ShouldReturnCorrectAuthorities() {
+        User user = User.builder()
+                .role(Role.ADMIN)
+                .build();
+
+        Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
+        
+        assertEquals(1, authorities.size());
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    }
+
+    @Test
+    void userDetails_DefaultValues_ShouldBeCorrect() {
+        User user = new User();
+        
+        assertTrue(user.isAccountNonExpired());
+        assertTrue(user.isAccountNonLocked());
+        assertTrue(user.isCredentialsNonExpired());
+        assertTrue(user.isEnabled());
+    }
+
+    @Test
+    void setEnabled_ShouldUpdateEnabledStatus() {
+        User user = new User();
+        user.setEnabled(false);
+        
+        assertFalse(user.isEnabled());
+    }
+
+    @Test
+    void equalsAndHashCode_ShouldWorkCorrectly() {
+        User user1 = User.builder()
+                .id(1L)
+                .username("user")
+                .email("user@example.com")
+                .build();
+
+        User user2 = User.builder()
+                .id(1L)
+                .username("user")
+                .email("user@example.com")
+                .build();
+
+        assertEquals(user1, user2);
+        assertEquals(user1.hashCode(), user2.hashCode());
+    }
+}
