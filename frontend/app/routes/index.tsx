@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import type { Route } from "./+types/index";
 import Hero from "../components/home/Hero";
 import AboutUs from "../components/home/AboutUs";
@@ -16,12 +15,12 @@ export function meta({ }: Route.MetaArgs) {
 export default function Index() {
 
   return (
-    <main className="flex-1 pt-16">
+    <>
       <Hero />
       <AboutUs />
       <FeaturedProjects />
       <ActivitiesPreview />
       <MonitorsGallery />
-    </main>
+    </>
   );
 }

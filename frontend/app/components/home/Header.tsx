@@ -27,7 +27,7 @@ export default function Header() {
             </a>
           ))}
           <a
-            href="#"
+            href="/area-socios"
             className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
           >
             Área Socios
@@ -74,14 +74,14 @@ export default function Header() {
             <a
               key={link.label}
               href={link.href}
-              className="block text-gray-700 hover:text-gray-900"
+              className="block text-gray-700 hover:text-gray-900 px-4"
               onClick={() => setMenuOpen(false)}
             >
               {link.label}
             </a>
           ))}
           <a
-            href="#"
+            href="/area-socios"
             className="mt-4 block w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-center"
             onClick={() => setMenuOpen(false)}
           >
