@@ -30,12 +30,12 @@
   },
   
   "forwardPorts": [
-    "${FRONTEND_PORT}",
-    "${BACKEND_PORT}",
+    8080,
+    3000,
     5432
   ],
   
-  "postCreateCommand": "npm install --prefix frontend && cd /workspace/backend && ./mvnw clean install -DskipTests",
+  "postCreateCommand": "npm install --prefix frontend && chmod +x backend/mvnw && cd /workspace/backend && ./mvnw clean install -DskipTests",
   
   "remoteUser": "root"
 }
