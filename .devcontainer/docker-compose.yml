@@ -6,14 +6,14 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ..:/workspace
+      - ..:/workspace:cached
     environment:
       - FRONTEND_PORT=${FRONTEND_PORT:-3000}
       - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8080}
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
-      - DATABASE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-app_db}
-      - DB_USER=${DB_USER:-user}
-      - DB_PASS=${DB_PASS:-password}
+      - DATABASE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-yambo_db}
+      - DB_USER=${DB_USER:-yambo_user}
+      - DB_PASS=${DB_PASS:-yambo_pass}
       - JWT_SECRET=${JWT_SECRET:-c088f6bdf47931b8fab95fcd90b28773218aabbaa12994c5e6a49c675ae2123b0c8d59b0d17264372abd224f457113ede4566adc719a0829f1f2fe2cff2f16873d1282a0850869b6ee62f7ece9ad79a65e9537c3bbe81cfea2ba8452218a43292f28fcce0fa0d1139f2563f2e7a589552c46ac5d16acbe1675a0e94115c49005491e0212a1ad42c58f1de8681f2e3df6a2b9505bd5f56fc3e5644db7dd00d850fbb863c9f9de8c04193ce4e84bc2147968ce8f7f70db22fc105cf875bb26bf85000a3512557053f156bc3e75575d262dc40d5caa61188010a713f35896ac20bb933501280dd69781bb11f22305a2350bf76d3a71f6cd8359114eb4e9e093859a}
       - JWT_EXPIRATION_MS=${JWT_EXPIRATION_MS:-3600000}
     ports:
@@ -26,9 +26,9 @@ services:
   db:
     image: postgres:${POSTGRES_VERSION:-14}
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-app_db}
-      - POSTGRES_USER=${DB_USER:-user}
-      - POSTGRES_PASSWORD=${DB_PASS:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-yambo_db}
+      - POSTGRES_USER=${DB_USER:-yambo_user}
+      - POSTGRES_PASSWORD=${DB_PASS:-yambo_pass}
     volumes:
       - ./db/data:/var/lib/postgresql/data
     ports:
