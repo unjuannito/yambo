@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,7 +48,10 @@ class AuthServiceTest {
                 .username(TEST_USERNAME)
                 .password(ENCODED_PASSWORD)
                 .email("test@yambo-alco.es")
-                .role(Role.SOCIO)
+                .roles(Set.of(
+                        Role.builder().id("ADMIN").build(),
+                        Role.builder().id("USER").build()
+                ))
                 .enabled(true)
                 .build();
     }

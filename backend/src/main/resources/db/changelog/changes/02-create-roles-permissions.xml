@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="02-create-roles-permissions" author="yambo">
+        <!-- Remove role column from users table if it exists -->
+        <dropColumn tableName="users" columnName="role"/>
+
+        <!-- Create name column in users table -->
+        <addColumn tableName="users">
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <!-- Create roles table -->
+        <createTable tableName="roles">
+            <column name="id" type="varchar(50)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Create permissions table -->
+        <createTable tableName="permissions">
+            <column name="id" type="varchar(50)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Junction table between roles and permissions -->
+        <createTable tableName="role_permissions">
+            <column name="role_id" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="permission_id" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Foreign key constraints -->
+        <addForeignKeyConstraint baseTableName="role_permissions"
+                                 baseColumnNames="role_id"
+                                 constraintName="fk_role_permissions_role"
+                                 referencedTableName="roles"
+                                 referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint baseTableName="role_permissions"
+                                 baseColumnNames="permission_id"
+                                 constraintName="fk_role_permissions_permission"
+                                 referencedTableName="permissions"
+                                 referencedColumnNames="id"/>
+
+        <!-- Create user_roles junction table, modify existing if needed -->
+        <createTable tableName="user_roles">
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_id" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="user_roles"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_user_roles_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint baseTableName="user_roles"
+                                 baseColumnNames="role_id"
+                                 constraintName="fk_user_roles_role"
+                                 referencedTableName="roles"
+                                 referencedColumnNames="id"/>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="user_roles" indexName="idx_user_roles_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="user_roles" indexName="idx_user_roles_role_id">
+            <column name="role_id"/>
+        </createIndex>
+
+        <!-- Seed additional basic roles -->
+        <insert tableName="roles">
+            <column name="id" value="INTERESADO"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="id" value="SOCIO"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="id" value="COORDINADOR"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="id" value="TESORERO"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="id" value="ADMINISTRADOR"/>
+        </insert>
+
+        <!-- Seed base permissions -->
+        <insert tableName="permissions">
+            <column name="id" value="PERM_READ_USERS"/>
+            <column name="description" value="Read user data"/>
+        </insert>
+        <insert tableName="permissions">
+            <column name="id" value="PERM_WRITE_USERS"/>
+            <column name="description" value="Modify user data"/>
+        </insert>
+        <insert tableName="permissions">
+            <column name="id" value="PERM_MANAGE_ROLES"/>
+            <column name="description" value="Manage roles and permissions"/>
+        </insert>
+
+        <!-- ADMINISTRADOR: all permissions -->
+        <insert tableName="role_permissions">
+            <column name="role_id" value="ADMINISTRADOR"/>
+            <column name="permission_id" value="PERM_READ_USERS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" value="ADMINISTRADOR"/>
+            <column name="permission_id" value="PERM_WRITE_USERS"/>
+        </insert>
+        <insert tableName="role_permissions">
+            <column name="role_id" value="ADMINISTRADOR"/>
+            <column name="permission_id" value="PERM_MANAGE_ROLES"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>
