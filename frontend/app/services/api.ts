@@ -6,6 +6,15 @@ export class ApiService {
     protected axiosInstance: AxiosInstance;
     private static token: string | null = null;
 
+    private static _syncToken = (() => {
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'auth_token') {
+                ApiService.token = event.newValue;
+            }
+        });
+        return null;
+    })();
+
     constructor() {
         this.baseUrl = import.meta.env.DEV ? 'http://localhost:8080' : '/api';
         this.axiosInstance = axios.create({
