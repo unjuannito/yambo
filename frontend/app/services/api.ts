@@ -67,12 +67,12 @@ export class ApiService {
         return response.data;
     }
 
-    protected async post<T>(endpoint: string, data: any): Promise<T> {
+    protected async post<T, D>(endpoint: string, data: D): Promise<T> {
         const response: AxiosResponse<T> = await this.axiosInstance.post(endpoint, data);
         return response.data;
     }
 
-    protected async put<T>(endpoint: string, data: any): Promise<T> {
+    protected async put<T, D>(endpoint: string, data: D): Promise<T> {
         const response: AxiosResponse<T> = await this.axiosInstance.put(endpoint, data);
         return response.data;
     }
