@@ -3,7 +3,7 @@ package es.yambo_alco.web.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
-import es.yambo_alco.web.controller.auth.LoginRequest;
+import es.yambo_alco.web.controller.AuthController.LoginRequest;
 import es.yambo_alco.web.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,7 +1,5 @@
 package es.yambo_alco.web.controller;
 
-import es.yambo_alco.web.controller.auth.AuthResponse;
-import es.yambo_alco.web.controller.auth.LoginRequest;
 import es.yambo_alco.web.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -37,4 +35,8 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
     }
+
+    public record AuthResponse(String token) {}
+
+    public record LoginRequest(String username, String password) {}
 }
