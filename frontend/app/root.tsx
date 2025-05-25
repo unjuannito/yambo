@@ -7,6 +7,8 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { AuthProvider } from "./hooks/useAuth";
+
 import type { Route } from "./+types/root";
 import "./app.css";
 
@@ -34,9 +36,11 @@ export default function Document() {
         <Links />
       </head>
       <body>
-        <div className="min-h-screen flex flex-col">
-          <Outlet />
-        </div>
+        <AuthProvider>
+          <div className="min-h-screen flex flex-col">
+            <Outlet />
+          </div>
+        </AuthProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -81,6 +85,5 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         </main>
       </body>
     </html>
-
   );
 }

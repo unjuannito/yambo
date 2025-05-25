@@ -1,8 +1,9 @@
 import { useState } from "react";
+import type { User } from "~/types/user";
 
 interface HeaderProps {
-  links: { label: string; href: string }[]; // Define the type of links prop
-  user: { icon: { href: string; center: { x: number; y: number }; scale: number }; name: string }; // Define the type of links prop
+  links: { label: string; href: string }[];
+  user: User;
 }
 
 export default function Header({ links, user }: HeaderProps) {
@@ -36,13 +37,9 @@ export default function Header({ links, user }: HeaderProps) {
           <a href="/area-socios/usuario" className="flex items-center justify-center">
             <div className="w-10 h-10 overflow-hidden rounded-full">
               <img
-                src={user.icon.href}
+                src={user.avatarURL || "/icons/default-avatar.svg"}
                 alt={"Icono de " + user.name}
                 className="rounded-full object-cover w-full h-full"
-                style={{
-                  objectPosition: `${user.icon.center.x}% ${user.icon.center.y}%`,
-                  transform: `scale(${user.icon.scale / 100})`,
-                }}
               />
             </div>
           </a>
