@@ -5,6 +5,8 @@ import es.yambo_alco.web.jwt.JwtService;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -29,7 +31,7 @@ public class AuthService implements UserDetailsService {
         if (passwordEncoder.matches(password, user.getPassword())) {
             return jwtService.generateToken(user);
         }
-        throw new UnauthorizedException("Invalid credentials");
+        throw new BadCredentialsException("Invalid credentials");
     }
 
 
