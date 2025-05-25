@@ -1,19 +1,10 @@
-import axios from 'axios';
-import type { AxiosInstance, AxiosResponse } from 'axios';
+import axios from "axios";
+import type { AxiosInstance, AxiosResponse } from "axios";
 
 export class ApiService {
     protected baseUrl: string;
     protected axiosInstance: AxiosInstance;
     private static token: string | null = null;
-
-    private static _syncToken = (() => {
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'auth_token') {
-                ApiService.token = event.newValue;
-            }
-        });
-        return null;
-    })();
 
     constructor() {
         this.baseUrl = import.meta.env.DEV ? 'http://localhost:8080' : '/api';
@@ -23,6 +14,14 @@ export class ApiService {
                 'Content-Type': 'application/json',
             },
         });
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'auth_token') {
+                    ApiService.token = event.newValue;
+                }
+            });
+        }
 
         this.axiosInstance.interceptors.response.use(
             (response) => response,
