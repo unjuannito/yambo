@@ -17,26 +17,20 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        try {
-            String token = authService.authenticate(request.username(), request.password());
-            return ResponseEntity.ok(new AuthResponse(token));
-        } catch (Exception e) {
-            return ResponseEntity.status(401).build();
-        }
+        String token = authService.authenticate(request.username(), request.password());
+        return ResponseEntity.ok(new AuthResponse(token));
     }
 
     @PostMapping("/reload")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AuthResponse> reload() {
-        try {
-            String token = authService.reload();
-            return ResponseEntity.ok(new AuthResponse(token));
-        } catch (Exception e) {
-            return ResponseEntity.status(401).build();
-        }
+        String token = authService.reload();
+        return ResponseEntity.ok(new AuthResponse(token));
     }
 
-    public record AuthResponse(String token) {}
+    public record AuthResponse(String token) {
+    }
 
-    public record LoginRequest(String username, String password) {}
+    public record LoginRequest(String username, String password) {
+    }
 }
