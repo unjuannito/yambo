@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { href, NavLink, Outlet, useNavigate } from "react-router";
+import {Outlet, useNavigate } from "react-router";
 import SociosNav from "~/components/area-socios/SociosNav";
 import SociosHeader from "~/components/area-socios/SociosHeader";
 import { useAuth } from "~/hooks/useAuth";
@@ -74,6 +74,8 @@ export default function AreaSociosLayout() {
     { href: '/area-socios/actividades', label: 'Mis Actividades' },
     { href: '/area-socios/facturas', label: 'Mis Facturas' },
     { href: '/area-socios/notificaciones', label: 'Mis Notificaciones' },
+    { href: '/area-socios/usuario', label: 'Mi Perfil' },
+    { href: '/area-socios/monitores', label: 'Monitores' },
     // { href: '/area-socios/ajustes', label: 'Ajustes' },
   ];
 

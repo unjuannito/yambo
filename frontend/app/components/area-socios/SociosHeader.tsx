@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../hooks/useAuth";
 import type { User } from "~/types/user";
 
 interface HeaderProps {
@@ -8,15 +10,12 @@ interface HeaderProps {
 
 export default function Header({ links, user }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-
-
-  // const links = [
-  //   { label: "Inicio", href: "/" },
-  //   { label: "Proyectos", href: "/proyectos" },
-  //   { label: "Actividades", href: "/actividades" },
-  //   { label: "Monitores", href: "/monitores" },
-  //   { label: "Contacto", href: "/contacto" },items
-  // ];
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout();
+    navigate('/area-socios/login', { replace: true });
+  };
 
   return (
     <header className="w-full bg-white shadow-md fixed top-0 z-50">
@@ -43,6 +42,12 @@ export default function Header({ links, user }: HeaderProps) {
               />
             </div>
           </a>
+          <button
+            onClick={handleLogout}
+            className="ml-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 whitespace-nowrap"
+          >
+            Cerrar sesión
+          </button>
           <button
             className="md:hidden display-block focus:outline-none"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -99,6 +104,12 @@ export default function Header({ links, user }: HeaderProps) {
           >
             Pagina publica
           </a>
+          <button
+            onClick={() => { setMenuOpen(false); handleLogout(); }}
+            className="mt-2 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all font-semibold"
+          >
+            Cerrar sesión
+          </button>
         </nav>
       </div>
     </header>
