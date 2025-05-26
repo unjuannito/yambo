@@ -89,7 +89,4 @@ export default function AreaSociosLayout() {
     </>
   );
 }
-function isAuthenticated() {
-  throw new Error("Function not implemented.");
-}
 
