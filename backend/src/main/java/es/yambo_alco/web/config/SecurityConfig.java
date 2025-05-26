@@ -74,6 +74,9 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         if (env.acceptsProfiles(Profiles.of("dev"))) {
             config.setAllowedOrigins(List.of("http://localhost:5173"));
+        } else {
+            String allowedOrigins = env.getProperty("cors.allowed-origins", "https://www.yambo-alco.net");
+            config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
