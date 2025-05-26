@@ -2,11 +2,12 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { AuthService } from '../services/auth';
 import { UserService } from '../services/user';
 import type { User } from '~/types/user';
+import { Navigate } from 'react-router';
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    hasPermission: (permission: string) => boolean;    
+    hasPermission: (permission: string) => boolean;
     login: (username: string, password: string) => Promise<void>;
     isAuthenticated: () => boolean;
     logout: () => void;
@@ -72,3 +73,12 @@ export const useAuth = (): AuthContextType => {
     }
     return context;
 };
+
+export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
+    const { loading, hasPermission } = useAuth();
+    if (loading) return null;
+    if (!hasPermission(permission)) {
+        return <Navigate to="/area-socios" replace />;
+    }
+    return <>{children}</>;
+}
