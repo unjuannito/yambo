@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../hooks/useAuth";
 import type { Route } from "./+types/login";
 
 export function meta({ }: Route.MetaArgs) {
@@ -9,21 +11,18 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export default function Index() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    //TODO lógica real de login
-    const ret = {
-      status: 'OK',
-      JWT: "JWT1",
-    }
-    if (ret.status == "OK") {
-      localStorage.setItem("JWT", ret.JWT);
-      window.location.href = "/area-socios";
-    } else {
-      alert("Error al iniciar sesión. Por favor, verifica tus credenciales.");
+    try {
+      await login(username, password);
+      navigate('/area-socios', { replace: true });
+    } catch (err) {
+      alert('Error al iniciar sesión. Por favor, verifica tus credenciales.');
     }
   }
   return (
@@ -37,14 +36,14 @@ export default function Index() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email o usuario
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              Usuario
             </label>
             <input
-              id="email"
+              id="username"
               type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-orange-400 focus:ring-orange-400 sm:text-sm p-2"
               required
             />

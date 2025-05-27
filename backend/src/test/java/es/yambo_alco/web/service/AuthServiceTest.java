@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.jwt.JwtService;
 import es.yambo_alco.web.model.Role;
 import es.yambo_alco.web.model.User;
@@ -10,14 +11,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,7 +54,9 @@ class AuthServiceTest {
                 .username(TEST_USERNAME)
                 .password(ENCODED_PASSWORD)
                 .email("test@yambo-alco.es")
-                .role(Role.SOCIO)
+                .roles(Set.of(
+                        Role.builder().id("ADMIN").build(),
+                        Role.builder().id("USER").build()))
                 .enabled(true)
                 .build();
     }
@@ -97,7 +106,80 @@ class AuthServiceTest {
         when(passwordEncoder.matches("wrongpass", ENCODED_PASSWORD)).thenReturn(false);
 
         // Then
-        assertThrows(RuntimeException.class,
+        assertThrows(BadCredentialsException.class,
                 () -> authService.authenticate(TEST_USERNAME, "wrongpass"));
+    }
+
+    @Test
+    void getCurrentUser_WhenAuthenticated_ShouldReturnUser() {
+        // Given
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(testUser);
+
+        // When
+        User result = authService.getCurrentUser(true);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(testUser, result);
+    }
+
+    @Test
+    void getCurrentUser_WhenNotAuthenticated_AndThrowIsTrue_ShouldThrowException() {
+        // Given
+        SecurityContext securityContext = mock(SecurityContext.class);
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        // Then
+        assertThrows(UnauthorizedException.class,
+                () -> authService.getCurrentUser(true));
+    }
+
+    @Test
+    void getCurrentUser_WhenNotAuthenticated_AndThrowIsFalse_ShouldReturnNull() {
+        // Given
+        SecurityContext securityContext = mock(SecurityContext.class);
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        // When
+        User result = authService.getCurrentUser(false);
+
+        // Then
+        assertNull(result);
+    }
+
+    @Test
+    void reload_WhenAuthenticated_ShouldReturnNewToken() {
+        // Given
+        SecurityContext securityContext = mock(SecurityContext.class);
+        Authentication authentication = mock(Authentication.class);
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(testUser);
+        when(jwtService.generateToken(testUser)).thenReturn(TEST_TOKEN);
+
+        // When
+        String token = authService.reload();
+
+        // Then
+        assertNotNull(token);
+        assertEquals(TEST_TOKEN, token);
+    }
+
+    @Test
+    void reload_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        SecurityContext securityContext = mock(SecurityContext.class);
+        SecurityContextHolder.setContext(securityContext);
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        // Then
+        assertThrows(UnauthorizedException.class,
+                () -> authService.reload());
     }
 }

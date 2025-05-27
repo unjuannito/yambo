@@ -5,6 +5,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class UserTest {
@@ -17,7 +19,7 @@ class UserTest {
                 .username("testuser")
                 .password("password123")
                 .email("test@example.com")
-                .role(Role.ADMIN)
+                .name("Test User")
                 .createdAt(now)
                 .updatedAt(now)
                 .enabled(true)
@@ -27,7 +29,7 @@ class UserTest {
         assertEquals("testuser", user.getUsername());
         assertEquals("password123", user.getPassword());
         assertEquals("test@example.com", user.getEmail());
-        assertEquals(Role.ADMIN, user.getRole());
+        assertEquals("Test User", user.getName());
         assertEquals(now, user.getCreatedAt());
         assertEquals(now, user.getUpdatedAt());
         assertTrue(user.isEnabled());
@@ -36,19 +38,31 @@ class UserTest {
     @Test
     void getAuthorities_ShouldReturnCorrectAuthorities() {
         User user = User.builder()
-                .role(Role.ADMIN)
+                .roles(Set.of(
+                        Role.builder().id("ADMIN")
+                        .permissions(Set.of(
+                                Permission.builder().id("PERM_READ_USERS").build(),
+                                Permission.builder().id("PERM_WRITE_USERS").build(),
+                                Permission.builder().id("PERM_MANAGE_ROLES").build()
+                        )).build(),
+                        Role.builder().id("USER").build()
+                ))
                 .build();
 
         Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
         
-        assertEquals(1, authorities.size());
+        assertEquals(5, authorities.size());
         assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_USER")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_READ_USERS")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_WRITE_USERS")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_MANAGE_ROLES")));
     }
 
     @Test
     void userDetails_DefaultValues_ShouldBeCorrect() {
         User user = new User();
-        
+
         assertTrue(user.isAccountNonExpired());
         assertTrue(user.isAccountNonLocked());
         assertTrue(user.isCredentialsNonExpired());
@@ -59,7 +73,7 @@ class UserTest {
     void setEnabled_ShouldUpdateEnabledStatus() {
         User user = new User();
         user.setEnabled(false);
-        
+
         assertFalse(user.isEnabled());
     }
 

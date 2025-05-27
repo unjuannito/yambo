@@ -10,6 +10,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Set;
+
 @ExtendWith(MockitoExtension.class)
 class JwtServiceTest {
 
@@ -24,7 +26,10 @@ class JwtServiceTest {
                 .username("testuser")
                 .password("password")
                 .email("test@yambo-alco.es")
-                .role(Role.SOCIO)
+                .roles(Set.of(
+                        Role.builder().id("ADMIN").build(),
+                        Role.builder().id("USER").build()
+                ))
                 .enabled(true)
                 .build();
     }
@@ -60,7 +65,9 @@ class JwtServiceTest {
                 .username("otheruser")
                 .password("password")
                 .email("other@yambo-alco.es")
-                .role(Role.SOCIO)
+                .roles(Set.of(
+                        Role.builder().id("USER").build()
+                ))
                 .enabled(true)
                 .build();
                 
