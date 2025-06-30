@@ -1,0 +1,32 @@
+name: Front issue
+description: Issues relacionados con el front
+title: "FRONT - "
+labels: ["front"]
+assignees: ["tu-usuario-o-equipo"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: Explica con detalle el objetivo, contexto y alcance funcional.
+      placeholder: "Se quiere..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: technical-requirements
+    attributes:
+      label: todo
+      description: Explica en pasos que se necesita hacer en el issue.
+      placeholder: "- [ ] Crear..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Aceptance criteria
+      description: Explica con detalle lo que se necesita para dar como valido el desarrollo.
+      placeholder: "- [ ] Probar que funciona el.."
+    validations:
+      required: false
