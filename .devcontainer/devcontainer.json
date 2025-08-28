@@ -1,0 +1,41 @@
+{
+  "name": "Yambo web Dev Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-vscode.vscode-typescript-next",
+        "vscjava.vscode-java-pack",
+        "pivotal.vscode-spring-boot",
+        "eamodio.gitlens",
+        "postgres.quick-database"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "java.home": "/usr/lib/jvm/temurin-21-jdk-amd64",
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-21",
+            "path": "/usr/lib/jvm/temurin-21-jdk-amd64"
+          }
+        ]
+      }
+    }
+  },
+  
+  "forwardPorts": [
+    8080,
+    3000,
+    5432
+  ],
+  
+  "postCreateCommand": "npm install --prefix frontend && chmod +x backend/mvnw && cd /workspace/backend && ./mvnw clean install -DskipTests",
+  
+  "remoteUser": "root"
+}
