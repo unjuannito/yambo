@@ -11,5 +11,7 @@
 
     <!-- Include all changelog files here -->
     <include file="db/changelog/changes/01-initial-schema.xml"/>
-    <include file="db/changelog/changes/02-create-roles-permissions.xml"/>    
+    <include file="db/changelog/changes/02-create-roles-permissions.xml
+    <include file="db/changelog/changes/03-create-invitations.xml"/>"/>
+    <include file="db/changelog/changes/04-update-permissions.xml"/>
 </databaseChangeLog>

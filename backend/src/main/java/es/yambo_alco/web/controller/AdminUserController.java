@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin/users")
-@PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
     private final UserService userService;
@@ -30,6 +29,7 @@ public class AdminUserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('LIST_USERS')")
     public ResponseEntity<Page<User>> listUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,

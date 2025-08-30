@@ -22,7 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = AdminUserController.class)
 @Import(TestSecurityConfig.class)
-
 public class AdminUserControllerTest {
 
     @Autowired
@@ -32,7 +31,7 @@ public class AdminUserControllerTest {
     private UserService userService;
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(authorities  = "LIST_USERS")
     public void listUsers_ok() throws Exception {
         User u = User.builder().id(1L).username("u").email("a@b.com").name("User").enabled(true).build();
     Mockito.when(userService.listUsers(Mockito.anyString(), Mockito.anyString(), Mockito.any(), Mockito.anyList(), Mockito.anyList(), Mockito.any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(u)));
