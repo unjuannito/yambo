@@ -2,12 +2,6 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.Invitation;
 import es.yambo_alco.web.service.InvitationService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.media.Content;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,18 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/admin/invitations")
 @RequiredArgsConstructor
-@Tag(name = "Admin Invitations", description = "Operations for admin invitation management")
 public class AdminInvitationController {
 
     private final InvitationService invitationService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('INVITE_USERS')")
-    @Operation(summary = "Create invitation", description = "Create an invitation for a user by email")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Invitation created", content = @Content(mediaType = "application/json")),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
     public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest req, Authentication authentication) {
         Long invitedBy = null;
         if (authentication != null) {
@@ -53,7 +41,6 @@ public class AdminInvitationController {
 
     @Data
     public static class InvitationRequest {
-    @Schema(description = "Email address to be invited", example = "user@example.com")
         @NotBlank
         @Email
         private String email;
@@ -61,15 +48,10 @@ public class AdminInvitationController {
 
     @Data
     public static class InvitationResponse {
-    @Schema(description = "Invitation id")
         private Long id;
-    @Schema(description = "Invited email")
         private String email;
-    @Schema(description = "Invitation token")
         private String token;
-    @Schema(description = "Creation timestamp")
         private java.time.LocalDateTime createdAt;
-    @Schema(description = "Expiration timestamp")
         private java.time.LocalDateTime expiresAt;
 
         public InvitationResponse(Long id, String email, String token, java.time.LocalDateTime createdAt, java.time.LocalDateTime expiresAt) {
