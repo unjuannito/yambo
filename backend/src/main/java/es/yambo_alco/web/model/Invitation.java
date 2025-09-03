@@ -27,6 +27,7 @@ public class Invitation {
     private String token;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean used = false;
 
     private LocalDateTime createdAt;
