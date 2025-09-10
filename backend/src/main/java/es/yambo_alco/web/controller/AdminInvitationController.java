@@ -34,7 +34,7 @@ public class AdminInvitationController {
                 invitedBy = ((User) principal).getId();
             }
         }
-        Invitation inv = invitationService.createInvitation(req.getEmail(), invitedBy);
+        Invitation inv = invitationService.createInvitation(req.getEmail(), req.getName(), invitedBy);
         InvitationResponse res = new InvitationResponse(inv.getId(), inv.getEmail(), inv.getToken(), inv.getCreatedAt(), inv.getExpiresAt());
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
@@ -44,6 +44,9 @@ public class AdminInvitationController {
         @NotBlank
         @Email
         private String email;
+
+        @NotBlank
+        private String name;
     }
 
     @Data

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 
@@ -18,12 +19,14 @@ import static org.mockito.Mockito.when;
 public class UserServiceTest {
 
     private UserRepository userRepository;
+    private PasswordEncoder passwordEncoder;
     private UserService userService;
 
     @BeforeEach
     public void setup() {
         userRepository = Mockito.mock(UserRepository.class);
-        userService = new UserService(userRepository);
+        passwordEncoder = Mockito.mock(PasswordEncoder.class);
+        userService = new UserService(userRepository, passwordEncoder);
     }
 
     @Test

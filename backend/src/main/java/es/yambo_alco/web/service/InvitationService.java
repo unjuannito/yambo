@@ -33,7 +33,7 @@ public class InvitationService {
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
 
-    public Invitation createInvitation(String email, Long invitedBy) {
+    public Invitation createInvitation(String email, String name, Long invitedBy) {
         String token = generateToken();
         LocalDateTime now = LocalDateTime.now();
         Invitation inv = Invitation.builder()

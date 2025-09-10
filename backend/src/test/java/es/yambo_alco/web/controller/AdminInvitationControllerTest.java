@@ -31,12 +31,12 @@ class AdminInvitationControllerTest {
     @Test
     @WithMockUser(authorities = "INVITE_USERS")
     void createInvitation_returnsCreated() throws Exception {
-        when(invitationService.createInvitation(anyString(), any())).thenReturn(
+        when(invitationService.createInvitation(anyString(), anyString(), any())).thenReturn(
                 Invitation.builder().id(1L).email("a@b.com").token("tok").build());
 
         mvc.perform(post("/admin/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"a@b.com\"}"))
+                .content("{\"email\":\"a@b.com\", \"name\":\"Test User\"}"))
                 .andExpect(status().isCreated());
     }
 }

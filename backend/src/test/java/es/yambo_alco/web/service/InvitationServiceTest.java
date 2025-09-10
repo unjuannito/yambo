@@ -69,7 +69,7 @@ class InvitationServiceTest {
 
         when(invitationRepository.save(any(Invitation.class))).thenReturn(expectedInvitation);
 
-        Invitation result = invitationService.createInvitation(email, invitedBy);
+        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy);
 
         verify(invitationRepository).save(any(Invitation.class));
         verify(mailService).sendInvitation(
@@ -88,8 +88,8 @@ class InvitationServiceTest {
     void createInvitation_ShouldSetCorrectExpirationTime() {
         String email = "test@example.com";
         Long invitedBy = 1L;
-        
-        invitationService.createInvitation(email, invitedBy);
+
+        invitationService.createInvitation(email, "Test User", invitedBy);
 
         verify(invitationRepository).save(any(Invitation.class));
     }
