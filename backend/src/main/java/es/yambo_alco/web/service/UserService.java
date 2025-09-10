@@ -1,28 +1,33 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
 	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
 
-	public UserService(UserRepository userRepository) {
-		this.userRepository = userRepository;
-	}
 
 	public Page<User> listUsers(String name, String email, Boolean enabled, Set<String> permissions, Pageable pageable) {
 		Specification<User> spec = Specification.where(null);
@@ -69,5 +74,36 @@ public class UserService {
 		}
 
 		return userRepository.findAll(spec, sanitized);
+	}
+
+	public User updateProfile(Long userId, String name, String email) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (name != null && !name.trim().isEmpty()) {
+			user.setName(name.trim());
+		}
+		if (email != null && !email.trim().isEmpty()) {
+			if (!email.equals(user.getEmail()) && userRepository.existsByEmail(email)) {
+				throw new BadRequestException("Email already in use");
+			}
+			user.setEmail(email.trim());
+		}
+
+		user.setUpdatedAt(LocalDateTime.now());
+		return userRepository.save(user);
+	}
+
+	public void changePassword(Long userId, String oldPassword, String newPassword) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+			throw new BadRequestException("Old password is incorrect");
+		}
+
+		user.setPassword(passwordEncoder.encode(newPassword));
+		user.setUpdatedAt(LocalDateTime.now());
+		userRepository.save(user);
 	}
 }
