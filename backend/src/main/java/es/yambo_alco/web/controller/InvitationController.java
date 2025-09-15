@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.Invitation;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.InvitationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -24,17 +25,14 @@ public class InvitationController {
 
     private final InvitationService invitationService;
 
+    private final AuthService authService;
+
     @PostMapping
     @PreAuthorize("hasAuthority('INVITE_USERS')")
     public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest req, Authentication authentication) {
-        Long invitedBy = null;
-        if (authentication != null) {
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof User) {
-                invitedBy = ((User) principal).getId();
-            }
-        }
-        Invitation inv = invitationService.createInvitation(req.getEmail(), req.getName(), invitedBy);
+        User user = authService.getCurrentUser(true);
+
+        Invitation inv = invitationService.createInvitation(req.getEmail(), req.getName(), user.getId());
         InvitationResponse res = new InvitationResponse(inv.getId(), inv.getEmail(), inv.getToken(), inv.getCreatedAt(), inv.getExpiresAt());
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
