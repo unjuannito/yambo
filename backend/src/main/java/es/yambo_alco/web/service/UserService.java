@@ -2,7 +2,9 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.Role;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.repository.RoleRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class UserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final RoleRepository roleRepository;
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
 
@@ -105,5 +108,25 @@ public class UserService {
 		user.setPassword(passwordEncoder.encode(newPassword));
 		user.setUpdatedAt(LocalDateTime.now());
 		userRepository.save(user);
+	}
+
+	public User updateUserRoles(Long userId, Set<String> roleIds) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (roleIds == null || roleIds.isEmpty()) {
+			throw new BadRequestException("At least one role must be specified");
+		}
+
+		Set<Role> roles = new HashSet<>();
+		for (String roleId : roleIds) {
+			Role role = roleRepository.findById(roleId)
+					.orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleId));
+			roles.add(role);
+		}
+
+		user.setRoles(roles);
+		user.setUpdatedAt(LocalDateTime.now());
+		return userRepository.save(user);
 	}
 }

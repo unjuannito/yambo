@@ -6,12 +6,15 @@ import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 @RestController
 @RequestMapping("/user")
@@ -45,6 +48,14 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/roles")
+    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    public ResponseEntity<UserResponse> updateUserRoles(@RequestParam Long userId, @Valid @RequestBody UpdateRolesRequest request) {
+        User updatedUser = userService.updateUserRoles(userId, request.getRoleIds());
+        UserResponse response = new UserResponse(updatedUser);
+        return ResponseEntity.ok(response);
+    }
+
     @Data
     public static class UpdateProfileRequest {
         @NotBlank(message = "Name cannot be blank")
@@ -64,6 +75,12 @@ public class UserController {
         @NotBlank(message = "New password cannot be blank")
         @Size(min = 8, message = "New password must be at least 8 characters")
         private String newPassword;
+    }
+
+    @Data
+    public static class UpdateRolesRequest {
+        @NotEmpty(message = "At least one role must be specified")
+        private Set<String> roleIds;
     }
 
     @Data
