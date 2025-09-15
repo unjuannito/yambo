@@ -14,6 +14,10 @@
             <column name="id" value="WRITE_PRIVILEGES"/>
             <column name="description" value="Modify user data"/>
         </insert>
+        <insert tableName="permissions">
+            <column name="id" value="MANAGE_USERS"/>
+            <column name="description" value="Manage user roles and permissions"/>
+        </insert>
 
         <update tableName="role_permissions">
             <column name="permission_id" value="READ_PRIVILEGES"/>

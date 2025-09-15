@@ -18,9 +18,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = AdminInvitationController.class)
+@WebMvcTest(controllers = InvitationController.class)
 @Import(TestSecurityConfig.class)
-class AdminInvitationControllerTest {
+class InvitationControllerTest {
 
     @Autowired
     private MockMvc mvc;
@@ -34,7 +34,7 @@ class AdminInvitationControllerTest {
         when(invitationService.createInvitation(anyString(), anyString(), any())).thenReturn(
                 Invitation.builder().id(1L).email("a@b.com").token("tok").build());
 
-        mvc.perform(post("/admin/invitations")
+        mvc.perform(post("/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"a@b.com\", \"name\":\"Test User\"}"))
                 .andExpect(status().isCreated());

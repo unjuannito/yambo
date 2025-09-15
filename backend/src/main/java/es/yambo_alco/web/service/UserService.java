@@ -31,6 +31,11 @@ public class UserService {
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
 
+	public User getUserById(Long userId) {
+		return userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+	}
+
 
 	public Page<User> listUsers(String name, String email, Boolean enabled, Set<String> permissions, Pageable pageable) {
 		Specification<User> spec = Specification.where(null);
@@ -40,27 +45,22 @@ public class UserService {
 		if (permissions != null && !permissions.isEmpty()) {
 			spec = spec.and(UserSpecifications.hasPermissions(permissions));
 		}
-	// if caller supplied roles in the permissions set, they won't be used; roles have separate param in controller
-	// roles filtering is handled by an overload below that accepts roles list
 
-		// sanitize pageable sort property names
 		var sort = pageable.getSort();
 		var sanitized = pageable;
 		if (sort != null && sort.stream().anyMatch(o -> !ALLOWED_SORT_FIELDS.contains(o.getProperty()))) {
-			// rebuild pageable with default sort if unsafe
 			sanitized = Pageable.ofSize(pageable.getPageSize()).withPage(pageable.getPageNumber());
 		}
 
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	// convenience bridge used by controller previously expecting different signature
-	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, org.springframework.data.domain.Pageable pageable) {
+	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, Pageable pageable) {
 		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
 		return listUsers(name, email, enabled, perms, pageable);
 	}
 
-	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, List<String> roles, org.springframework.data.domain.Pageable pageable) {
+	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, List<String> roles, Pageable pageable) {
 		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
 		Set<String> roleSet = roles == null ? null : roles.stream().collect(Collectors.toSet());
 		Specification<User> spec = Specification.where(null);

@@ -18,9 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin/invitations")
+@RequestMapping("/invitations")
 @RequiredArgsConstructor
-public class AdminInvitationController {
+public class InvitationController {
 
     private final InvitationService invitationService;
 
