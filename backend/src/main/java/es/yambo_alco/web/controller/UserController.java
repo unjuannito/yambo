@@ -46,6 +46,14 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/delete")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<String> deleteAccount() {
+        User currentUser = authService.getCurrentUser(true);
+        userService.deleteUser(currentUser.getId());
+        return ResponseEntity.ok("User account deleted successfully");
+    }
+
     @Data
     public static class UpdateProfileRequest {
         @NotBlank(message = "Name cannot be blank")
