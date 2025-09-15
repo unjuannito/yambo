@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.controller.UserController.UserResponse;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -18,7 +19,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +39,7 @@ import java.util.stream.Collectors;
 public class AdminUserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIST_USERS')")
@@ -92,6 +96,18 @@ public class AdminUserController {
         User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail());
         UserResponse response = new UserResponse(updatedUser);
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+        User currentUser = authService.getCurrentUser(true);
+        if (currentUser.getId().equals(userId)) {
+            return ResponseEntity.badRequest().body("Cannot delete your own account");
+        }
+
+        userService.deleteUser(userId);
+        return ResponseEntity.ok("User deleted successfully");
     }
 
     @Data

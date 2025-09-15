@@ -254,4 +254,70 @@ public class UserServiceTest {
 
         verify(userRepository, never()).save(any(User.class));
     }
+
+    @Test
+    public void getUserById_WithExistingUser_ShouldReturnUser() {
+        // Given
+        User existingUser = User.builder()
+                .id(1L)
+                .username("testuser")
+                .email("test@example.com")
+                .name("Test User")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+
+        // When
+        User result = userService.getUserById(1L);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getUsername()).isEqualTo("testuser");
+        assertThat(result.getEmail()).isEqualTo("test@example.com");
+        assertThat(result.getName()).isEqualTo("Test User");
+    }
+
+    @Test
+    public void getUserById_WithNonExistentUser_ShouldThrowException() {
+        // Given
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.getUserById(1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("User not found");
+    }
+
+    @Test
+    public void deleteUser_WithExistingUser_ShouldDeleteUser() {
+        // Given
+        User existingUser = User.builder()
+                .id(1L)
+                .username("testuser")
+                .email("test@example.com")
+                .name("Test User")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+
+        // When
+        userService.deleteUser(1L);
+
+        // Then
+        verify(userRepository).delete(existingUser);
+    }
+
+    @Test
+    public void deleteUser_WithNonExistentUser_ShouldThrowException() {
+        // Given
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.deleteUser(1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("User not found");
+
+        verify(userRepository, never()).delete(any(User.class));
+    }
 }

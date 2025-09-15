@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Role;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,6 +36,9 @@ public class AdminUserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private AuthService authService;
 
     @Test
     @WithMockUser(authorities = "LIST_USERS")
@@ -131,5 +136,26 @@ public class AdminUserControllerTest {
                 .andExpect(jsonPath("$.username").value("olduser"))
                 .andExpect(jsonPath("$.email").value("new@example.com"))
                 .andExpect(jsonPath("$.name").value("New Name"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "MANAGE_USERS")
+    void deleteUser_ShouldReturnOk() throws Exception {
+        User currentUser = User.builder().id(1L).build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        mockMvc.perform(delete("/admin/users/2")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk());
+    }
+    @Test
+    @WithMockUser(authorities = "MANAGE_USERS")
+    void deleteUser_SelfDeletion_ShouldReturnBadRequest() throws Exception {
+        User currentUser = User.builder().id(1L).build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        mockMvc.perform(delete("/admin/users/1")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isBadRequest());
     }
 }
