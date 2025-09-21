@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Role;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.PendingDeletionService;
 import es.yambo_alco.web.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private PendingDeletionService pendingDeletionService;
 
     @Test
     void getUserData_WithValidToken_ShouldReturnUserData() throws Exception {
@@ -189,7 +193,7 @@ class UserControllerTest {
         mockMvc.perform(post("/user/delete")
                 .header("Authorization", "Bearer test.jwt.token"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("User account deleted successfully"));
+                .andExpect(content().string("User account scheduled for deletion in 30 days"));
     }
 
     @Test
@@ -199,7 +203,9 @@ class UserControllerTest {
 
         // When & Then
         mockMvc.perform(post("/user/delete")
-                .header("Authorization", "Bearer invalid.token"))
+                .header("Authorization", "Bearer invalid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"days\": 30}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(401))

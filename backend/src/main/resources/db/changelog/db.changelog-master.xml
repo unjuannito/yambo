@@ -14,4 +14,5 @@
     <include file="db/changelog/changes/02-create-roles-permissions.xml"/>
     <include file="db/changelog/changes/03-create-invitations.xml"/>
     <include file="db/changelog/changes/04-update-permissions.xml"/>
+    <include file="db/changelog/changes/05-create-pending-deletion.xml"/>
 </databaseChangeLog>
