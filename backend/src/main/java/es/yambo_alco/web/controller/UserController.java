@@ -1,7 +1,9 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.PendingDeletionService;
 import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -20,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final AuthService authService;
     private final UserService userService;
+    private final PendingDeletionService pendingDeletionService;
+
+    private static final int DEFAULT_DELETION_DAYS = 30;
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
@@ -48,10 +53,11 @@ public class UserController {
 
     @PostMapping("/delete")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> deleteAccount() {
+    public ResponseEntity<String> scheduleAccountDeletion() {
         User currentUser = authService.getCurrentUser(true);
-        userService.deleteUser(currentUser.getId());
-        return ResponseEntity.ok("User account deleted successfully");
+        pendingDeletionService.scheduleDeletion(DeletionObjectType.USER, currentUser.getId().toString(),
+            java.time.LocalDateTime.now().plusDays(DEFAULT_DELETION_DAYS));
+        return ResponseEntity.ok("User account scheduled for deletion in " + DEFAULT_DELETION_DAYS + " days");
     }
 
     @Data
