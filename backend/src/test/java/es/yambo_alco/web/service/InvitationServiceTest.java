@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -69,7 +70,7 @@ class InvitationServiceTest {
 
         when(invitationRepository.save(any(Invitation.class))).thenReturn(expectedInvitation);
 
-        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy);
+        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, null);
 
         verify(invitationRepository).save(any(Invitation.class));
         verify(mailService).sendInvitation(
@@ -89,9 +90,61 @@ class InvitationServiceTest {
         String email = "test@example.com";
         Long invitedBy = 1L;
 
-        invitationService.createInvitation(email, "Test User", invitedBy);
+        invitationService.createInvitation(email, "Test User", invitedBy, null);
 
         verify(invitationRepository).save(any(Invitation.class));
+    }
+
+    @Test
+    void createInvitation_ShouldThrowIfEmailAlreadyRegistered() {
+        String email = "existing@example.com";
+        Long invitedBy = 1L;
+
+        when(userRepository.existsByEmail(email)).thenReturn(true);
+
+        assertThatThrownBy(() -> invitationService.createInvitation(email, "Test User", invitedBy, null))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("Email already registered");
+
+        verify(invitationRepository, org.mockito.Mockito.never()).save(any(Invitation.class));
+        verify(mailService, org.mockito.Mockito.never()).sendInvitation(any(), any(), any());
+    }
+
+    @Test
+    void createInvitation_WithRoles_ShouldValidateRolesExist() {
+        String email = "test@example.com";
+        Long invitedBy = 1L;
+        Set<String> roleIds = Set.of("SOCIO", "MONITOR");
+
+        Role socio = Role.builder().id("SOCIO").build();
+        Role monitor = Role.builder().id("MONITOR").build();
+
+        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(roleRepository.findAllById(roleIds)).thenReturn(List.of(socio, monitor));
+        when(invitationRepository.save(any(Invitation.class))).thenReturn(Invitation.builder().email(email).build());
+
+        invitationService.createInvitation(email, "Test User", invitedBy, roleIds);
+
+        verify(roleRepository).findAllById(roleIds);
+        verify(invitationRepository).save(any(Invitation.class));
+    }
+
+    @Test
+    void createInvitation_WithInvalidRoles_ShouldThrowException() {
+        String email = "test@example.com";
+        Long invitedBy = 1L;
+        Set<String> roleIds = Set.of("SOCIO", "INVALID_ROLE");
+
+        Role socio = Role.builder().id("SOCIO").build();
+
+        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(roleRepository.findAllById(roleIds)).thenReturn(List.of(socio)); // Only one role found
+
+        assertThatThrownBy(() -> invitationService.createInvitation(email, "Test User", invitedBy, roleIds))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("One or more roles not found");
+
+        verify(invitationRepository, org.mockito.Mockito.never()).save(any(Invitation.class));
     }
 
     @Test
@@ -110,7 +163,7 @@ class InvitationServiceTest {
             .expiresAt(now.plusHours(1))
             .build();
 
-        Role role = Role.builder().id("ROLE_USER").build();
+        Role role = Role.builder().id("INTERESADO").build();
         User user = User.builder()
             .username(username)
             .password("encoded-password")
@@ -122,7 +175,7 @@ class InvitationServiceTest {
         when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
         when(userRepository.existsByUsername(username)).thenReturn(false);
         when(userRepository.existsByEmail(email)).thenReturn(false);
-        when(roleRepository.findById("ROLE_USER")).thenReturn(Optional.of(role));
+        when(roleRepository.findByIsDefaultTrue()).thenReturn(List.of(role));
         when(passwordEncoder.encode(password)).thenReturn("encoded-password");
         when(userRepository.save(any(User.class))).thenReturn(user);
 
@@ -204,5 +257,320 @@ class InvitationServiceTest {
         assertThatThrownBy(() -> invitationService.completeInvitation(token, "user", "pass", "name"))
             .isInstanceOf(BadRequestException.class)
             .hasMessage("Email already registered");
+    }
+
+    @Test
+    void createInvitation_WithRoles_ShouldValidateAndAssignRoles() {
+        // Given
+        String email = "test@example.com";
+        Long invitedBy = 1L;
+        Set<String> roleIds = Set.of("SOCIO", "MONITOR");
+        
+        Role socioRole = Role.builder().id("SOCIO").build();
+        Role monitorRole = Role.builder().id("MONITOR").build();
+        Set<Role> roles = Set.of(socioRole, monitorRole);
+
+        when(roleRepository.findAllById(roleIds)).thenReturn(roles.stream().toList());
+        when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, roleIds);
+
+        // Then
+        verify(roleRepository).findAllById(roleIds);
+        verify(invitationRepository).save(any(Invitation.class));
+        assertThat(result.getRoles()).hasSize(2);
+        assertThat(result.getRoles()).containsExactlyInAnyOrder(socioRole, monitorRole);
+    }
+
+    @Test
+    void createInvitation_WithInvalidRoles_ShouldThrowBadRequestException() {
+        // Given
+        String email = "test@example.com";
+        Long invitedBy = 1L;
+        Set<String> roleIds = Set.of("SOCIO", "INVALID_ROLE");
+        
+        Role socioRole = Role.builder().id("SOCIO").build();
+        // Only one role returned, meaning INVALID_ROLE doesn't exist
+        when(roleRepository.findAllById(roleIds)).thenReturn(List.of(socioRole));
+
+        // When & Then
+        assertThatThrownBy(() -> invitationService.createInvitation(email, "Test User", invitedBy, roleIds))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("One or more roles not found");
+    }
+
+    @Test
+    void createInvitation_WithNullRoles_ShouldCreateInvitationWithEmptyRoles() {
+        // Given
+        String email = "test@example.com";
+        Long invitedBy = 1L;
+
+        when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, null);
+
+        // Then
+        verify(invitationRepository).save(any(Invitation.class));
+        assertThat(result.getRoles()).isEmpty();
+    }
+
+    @Test
+    void createInvitation_WithEmptyRoles_ShouldCreateInvitationWithEmptyRoles() {
+        // Given
+        String email = "test@example.com";
+        Long invitedBy = 1L;
+        Set<String> roleIds = Set.of();
+
+        when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, roleIds);
+
+        // Then
+        verify(invitationRepository).save(any(Invitation.class));
+        assertThat(result.getRoles()).isEmpty();
+    }
+
+    @Test
+    void completeInvitation_WithInvitationRoles_ShouldAssignRolesToUser() {
+        // Given
+        String token = "valid-token";
+        String username = "newuser";
+        String password = "password";
+        String name = "New User";
+        String email = "test@example.com";
+        LocalDateTime now = LocalDateTime.now();
+
+        Role socioRole = Role.builder().id("SOCIO").build();
+        Role monitorRole = Role.builder().id("MONITOR").build();
+        Set<Role> invitationRoles = Set.of(socioRole, monitorRole);
+
+        Invitation invitation = Invitation.builder()
+            .email(email)
+            .token(token)
+            .used(false)
+            .expiresAt(now.plusHours(1))
+            .roles(invitationRoles)
+            .build();
+
+        when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
+        when(userRepository.existsByUsername(username)).thenReturn(false);
+        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(passwordEncoder.encode(password)).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        User result = invitationService.completeInvitation(token, username, password, name);
+
+        // Then
+        assertThat(result.getRoles()).hasSize(2);
+        assertThat(result.getRoles()).containsExactlyInAnyOrder(socioRole, monitorRole);
+        verify(invitationRepository).save(invitation);
+        assertThat(invitation.isUsed()).isTrue();
+    }
+
+    @Test
+    void completeInvitation_WithoutInvitationRoles_ShouldAssignDefaultRole() {
+        // Given
+        String token = "valid-token";
+        String username = "newuser";
+        String password = "password";
+        String name = "New User";
+        String email = "test@example.com";
+        LocalDateTime now = LocalDateTime.now();
+
+        Invitation invitation = Invitation.builder()
+            .email(email)
+            .token(token)
+            .used(false)
+            .expiresAt(now.plusHours(1))
+            .roles(Set.of()) // Empty roles
+            .build();
+
+        Role defaultRole = Role.builder().id("INTERESADO").build();
+
+        when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
+        when(userRepository.existsByUsername(username)).thenReturn(false);
+        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(roleRepository.findByIsDefaultTrue()).thenReturn(List.of(defaultRole));
+        when(passwordEncoder.encode(password)).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        User result = invitationService.completeInvitation(token, username, password, name);
+
+        // Then
+        assertThat(result.getRoles()).hasSize(1);
+        assertThat(result.getRoles()).containsExactly(defaultRole);
+        verify(roleRepository).findByIsDefaultTrue();
+    }
+
+    @Test
+    void completeInvitation_WithoutInvitationRolesAndDefaultRoleNotFound_ShouldThrowException() {
+        // Given
+        String token = "valid-token";
+        String username = "newuser";
+        String password = "password";
+        String name = "New User";
+        String email = "test@example.com";
+        LocalDateTime now = LocalDateTime.now();
+
+        Invitation invitation = Invitation.builder()
+            .email(email)
+            .token(token)
+            .used(false)
+            .expiresAt(now.plusHours(1))
+            .roles(Set.of())
+            .build();
+
+        when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
+        when(userRepository.existsByUsername(username)).thenReturn(false);
+        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(roleRepository.findByIsDefaultTrue()).thenReturn(List.of());
+
+        // When & Then
+        assertThatThrownBy(() -> invitationService.completeInvitation(token, username, password, name))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("No default roles found. Please mark at least one role as default in the database.");
+    }
+
+    @Test
+    void completeInvitation_WithMultipleDefaultRoles_ShouldAssignAllDefaultRoles() {
+        // Given
+        String token = "valid-token";
+        String username = "newuser";
+        String password = "password";
+        String name = "New User";
+        String email = "test@example.com";
+        LocalDateTime now = LocalDateTime.now();
+
+        Invitation invitation = Invitation.builder()
+            .email(email)
+            .token(token)
+            .used(false)
+            .expiresAt(now.plusHours(1))
+            .roles(Set.of())
+            .build();
+
+        Role interesadoRole = Role.builder().id("INTERESADO").isDefault(true).build();
+        Role socioRole = Role.builder().id("SOCIO").isDefault(true).build();
+
+        when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
+        when(userRepository.existsByUsername(username)).thenReturn(false);
+        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(roleRepository.findByIsDefaultTrue()).thenReturn(List.of(interesadoRole, socioRole));
+        when(passwordEncoder.encode(password)).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        User result = invitationService.completeInvitation(token, username, password, name);
+
+        // Then
+        assertThat(result.getRoles()).hasSize(2);
+        assertThat(result.getRoles()).containsExactlyInAnyOrder(interesadoRole, socioRole);
+        verify(roleRepository).findByIsDefaultTrue();
+    }
+
+    @Test
+    void getAllInvitations_ShouldReturnAllInvitations() {
+        // Given
+        LocalDateTime now = LocalDateTime.now();
+        Invitation invitation1 = Invitation.builder()
+            .id(1L)
+            .email("user1@example.com")
+            .token("token1")
+            .createdAt(now)
+            .expiresAt(now.plusHours(72))
+            .used(false)
+            .build();
+
+        Invitation invitation2 = Invitation.builder()
+            .id(2L)
+            .email("user2@example.com")
+            .token("token2")
+            .createdAt(now)
+            .expiresAt(now.plusHours(72))
+            .used(true)
+            .build();
+
+        when(invitationRepository.findAll()).thenReturn(List.of(invitation1, invitation2));
+
+        // When
+        List<Invitation> result = invitationService.getAllInvitations();
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result).containsExactlyInAnyOrder(invitation1, invitation2);
+        verify(invitationRepository).findAll();
+    }
+
+    @Test
+    void getAllInvitations_WithNoInvitations_ShouldReturnEmptyList() {
+        // Given
+        when(invitationRepository.findAll()).thenReturn(List.of());
+
+        // When
+        List<Invitation> result = invitationService.getAllInvitations();
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(invitationRepository).findAll();
+    }
+
+    @Test
+    void deleteInvitation_WithExistingInvitation_ShouldDeleteInvitation() {
+        // Given
+        Long invitationId = 1L;
+        Invitation invitation = Invitation.builder()
+            .id(invitationId)
+            .email("test@example.com")
+            .token("token123")
+            .build();
+
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+
+        // When
+        invitationService.deleteInvitation(invitationId);
+
+        // Then
+        verify(invitationRepository).findById(invitationId);
+        verify(invitationRepository).delete(invitation);
+    }
+
+    @Test
+    void deleteInvitation_WithNonExistentInvitation_ShouldThrowException() {
+        // Given
+        Long invitationId = 999L;
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> invitationService.deleteInvitation(invitationId))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Invitation not found");
+
+        verify(invitationRepository).findById(invitationId);
+        verify(invitationRepository, org.mockito.Mockito.never()).delete(any(Invitation.class));
+    }
+
+    @Test
+    void deleteInvitation_WithDifferentId_ShouldCallRepositoryWithCorrectId() {
+        // Given
+        Long invitationId = 42L;
+        Invitation invitation = Invitation.builder()
+            .id(invitationId)
+            .email("user@example.com")
+            .token("unique-token")
+            .build();
+
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+
+        // When
+        invitationService.deleteInvitation(invitationId);
+
+        // Then
+        verify(invitationRepository).findById(invitationId);
+        verify(invitationRepository).delete(invitation);
     }
 }
