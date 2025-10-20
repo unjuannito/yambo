@@ -11,7 +11,7 @@ export default defineConfig({
     strictPort: true,
     watch: {
       usePolling: true, // Enable polling for file changes (important for Docker/WSL)
-      interval: 100, // Check for changes every 100ms
+      interval: 500, // Check for changes every 500ms
     },
     hmr: {
       host: 'localhost', // HMR host
