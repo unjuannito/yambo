@@ -15,7 +15,6 @@ RUN apt-get install -y postgresql-client nginx
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/sites-available/default
 
-RUN nginx -s reload
 
 # Configure environment
 ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
