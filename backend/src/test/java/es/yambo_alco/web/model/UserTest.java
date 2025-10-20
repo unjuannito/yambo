@@ -41,8 +41,8 @@ class UserTest {
                 .roles(Set.of(
                         Role.builder().id("ADMIN")
                         .permissions(Set.of(
-                                Permission.builder().id("PERM_READ_USERS").build(),
-                                Permission.builder().id("PERM_WRITE_USERS").build(),
+                                Permission.builder().id("READ_PRIVILEGES").build(),
+                                Permission.builder().id("WRITE_PRIVILEGES").build(),
                                 Permission.builder().id("PERM_MANAGE_ROLES").build()
                         )).build(),
                         Role.builder().id("USER").build()
@@ -54,8 +54,8 @@ class UserTest {
         assertEquals(5, authorities.size());
         assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_ADMIN")));
         assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_USER")));
-        assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_READ_USERS")));
-        assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_WRITE_USERS")));
+    assertTrue(authorities.contains(new SimpleGrantedAuthority("READ_PRIVILEGES")));
+    assertTrue(authorities.contains(new SimpleGrantedAuthority("WRITE_PRIVILEGES")));
         assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_MANAGE_ROLES")));
     }
 

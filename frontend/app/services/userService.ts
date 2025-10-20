@@ -1,4 +1,4 @@
-import { ApiService } from './api';
+import { ApiService } from './apiService';
 import type { User } from '../types/user';
 
 export class UserService extends ApiService {

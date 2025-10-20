@@ -6,6 +6,8 @@ import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Role;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.PendingDeletionService;
+import es.yambo_alco.web.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,6 +35,12 @@ class UserControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private UserService userService;
+
+    @MockitoBean
+    private PendingDeletionService pendingDeletionService;
 
     @Test
     void getUserData_WithValidToken_ShouldReturnUserData() throws Exception {
@@ -52,14 +62,15 @@ class UserControllerTest {
 
         // When & Then
         mockMvc.perform(get("/user/me")
-            .header("Authorization", "Bearer " + authResponse.token()))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.username").value("testuser"))
-            .andExpect(jsonPath("$.email").value("testuser@example.com"))
-            .andExpect(jsonPath("$.roles").isArray())
-            .andExpect(jsonPath("$.roles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")))
-            .andExpect(jsonPath("$.permissions").isArray())
-            .andExpect(jsonPath("$.permissions", org.hamcrest.Matchers.containsInAnyOrder("READ_PRIVILEGES", "WRITE_PRIVILEGES")));
+                .header("Authorization", "Bearer " + authResponse.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.email").value("testuser@example.com"))
+                .andExpect(jsonPath("$.roles").isArray())
+                .andExpect(jsonPath("$.roles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")))
+                .andExpect(jsonPath("$.permissions").isArray())
+                .andExpect(jsonPath("$.permissions",
+                        org.hamcrest.Matchers.containsInAnyOrder("READ_PRIVILEGES", "WRITE_PRIVILEGES")));
     }
 
     @Test
@@ -75,4 +86,130 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.message").value("Unauthorized access"));
     }
+
+    @Test
+    void updateProfile_WithValidData_ShouldReturnUpdatedUser() throws Exception {
+        // Given
+        User currentUser = User.builder()
+                .id(1L)
+                .username("testuser")
+                .email("testuser@example.com")
+                .name("Old Name")
+                .roles(Set.of())
+                .build();
+        User updatedUser = User.builder()
+                .id(1L)
+                .username("testuser")
+                .email("newemail@example.com")
+                .name("New Name")
+                .roles(Set.of())
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+        when(userService.updateProfile(1L, "New Name", "newemail@example.com")).thenReturn(updatedUser);
+
+        String requestBody = """
+                {
+                    "name": "New Name",
+                    "email": "newemail@example.com"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/user/profile")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("testuser"))
+                .andExpect(jsonPath("$.email").value("newemail@example.com"))
+                .andExpect(jsonPath("$.name").value("New Name"));
+    }
+
+    @Test
+    void updateProfile_WithInvalidData_ShouldReturnBadRequest() throws Exception {
+        // Given
+        String requestBody = """
+                {
+                    "name": "",
+                    "email": "invalid-email"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/user/profile")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_WithValidData_ShouldReturnOk() throws Exception {
+        // Given
+        User currentUser = User.builder().id(1L).build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        String requestBody = """
+                {
+                    "oldPassword": "oldPass123",
+                    "newPassword": "newPass123"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/user/change-password")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void changePassword_WithInvalidData_ShouldReturnBadRequest() throws Exception {
+        // Given
+        String requestBody = """
+                {
+                    "oldPassword": "",
+                    "newPassword": "short"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/user/change-password")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleteAccount_WithValidToken_ShouldDeleteSuccessfully() throws Exception {
+        // Given
+        User currentUser = User.builder().id(1L).build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        // When & Then
+        mockMvc.perform(post("/user/delete")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("User account scheduled for deletion in 30 days"));
+    }
+
+    @Test
+    void deleteAccount_Unauthorized_ShouldReturnUnauthorized() throws Exception {
+        // Given
+        when(authService.getCurrentUser(true)).thenThrow(new UnauthorizedException("Unauthorized access"));
+
+        // When & Then
+        mockMvc.perform(post("/user/delete")
+                .header("Authorization", "Bearer invalid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"days\": 30}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Unauthorized access"));
+    }
+
 }

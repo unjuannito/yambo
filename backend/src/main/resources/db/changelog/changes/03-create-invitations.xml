@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="03-create-invitations" author="yambo">
+        <createTable tableName="invitations">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp"/>
+            <column name="expires_at" type="timestamp"/>
+            <column name="invited_by" type="bigint"/>
+        </createTable>
+
+        <createIndex tableName="invitations" indexName="idx_invitations_email">
+            <column name="email"/>
+        </createIndex>
+        <createIndex tableName="invitations" indexName="idx_invitations_token">
+            <column name="token"/>
+        </createIndex>
+
+        <addForeignKeyConstraint baseTableName="invitations"
+                                 baseColumnNames="invited_by"
+                                 constraintName="fk_invitations_invited_by_users"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"/>
+
+        <insert tableName="permissions">
+            <column name="id" value="INVITE_USERS"/>
+            <column name="description" value="Invite new users"/>
+        </insert>
+        
+        <insert tableName="role_permissions">
+            <column name="role_id" value="ADMINISTRADOR"/>
+            <column name="permission_id" value="INVITE_USERS"/>
+        </insert>
+
+
+    </changeSet>
+</databaseChangeLog>
