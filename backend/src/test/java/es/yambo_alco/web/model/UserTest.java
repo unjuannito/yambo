@@ -40,23 +40,20 @@ class UserTest {
         User user = User.builder()
                 .roles(Set.of(
                         Role.builder().id("ADMIN")
-                        .permissions(Set.of(
-                                Permission.builder().id("READ_PRIVILEGES").build(),
-                                Permission.builder().id("WRITE_PRIVILEGES").build(),
-                                Permission.builder().id("PERM_MANAGE_ROLES").build()
-                        )).build(),
-                        Role.builder().id("USER").build()
-                ))
+                                .permissions(Set.of(
+                                        Permission.builder().id("READ_PRIVILEGES").build(),
+                                        Permission.builder().id("WRITE_PRIVILEGES").build()))
+                                .build(),
+                        Role.builder().id("USER").build()))
                 .build();
 
         Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
-        
-        assertEquals(5, authorities.size());
+
+        assertEquals(4, authorities.size());
         assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_ADMIN")));
         assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_USER")));
-    assertTrue(authorities.contains(new SimpleGrantedAuthority("READ_PRIVILEGES")));
-    assertTrue(authorities.contains(new SimpleGrantedAuthority("WRITE_PRIVILEGES")));
-        assertTrue(authorities.contains(new SimpleGrantedAuthority("PERM_MANAGE_ROLES")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("READ_PRIVILEGES")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("WRITE_PRIVILEGES")));
     }
 
     @Test

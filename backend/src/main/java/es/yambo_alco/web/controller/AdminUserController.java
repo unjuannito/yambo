@@ -43,7 +43,7 @@ public class AdminUserController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIST_USERS')")
-    public ResponseEntity<Page<User>> listUsers(
+    public ResponseEntity<Page<UserResponse>> listUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) Boolean enabled,
@@ -70,7 +70,7 @@ public class AdminUserController {
 
         Page<User> users = userService.listUsers(name, email, enabled, perms == null ? null : List.copyOf(perms),
                 rolesList, pr);
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(users.map(UserResponse::new));
     }
 
     @PutMapping("/roles")

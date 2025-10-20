@@ -1,5 +1,6 @@
 package es.yambo_alco.web.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,11 @@ import java.util.Set;
 public class Role implements GrantedAuthority {
     @Id
     private String id;
+
+    @Column(name = "is_default")
+    @Builder.Default
+    @JsonProperty("isDefault")
+    private boolean isDefault = false;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
