@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -33,7 +35,21 @@ public class InvitationService {
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
 
-    public Invitation createInvitation(String email, String name, Long invitedBy) {
+    public Invitation createInvitation(String email, String name, Long invitedBy, Set<String> roleIds) {
+        // Check if email is already registered
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("Email already registered");
+        }
+
+        // Validate roles exist
+        Set<Role> roles = Set.of();
+        if (roleIds != null && !roleIds.isEmpty()) {
+            roles = Set.copyOf(roleRepository.findAllById(roleIds));
+            if (roles.size() != roleIds.size()) {
+                throw new BadRequestException("One or more roles not found");
+            }
+        }
+
         String token = generateToken();
         LocalDateTime now = LocalDateTime.now();
         Invitation inv = Invitation.builder()
@@ -43,6 +59,7 @@ public class InvitationService {
                 .expiresAt(now.plusHours(expirationHours))
                 .used(false)
                 .invitedBy(invitedBy)
+                .roles(roles)
                 .build();
         Invitation saved = invitationRepository.save(inv);
 
@@ -74,15 +91,21 @@ public class InvitationService {
             throw new BadRequestException("Email already registered");
         }
 
-        Role defaultRole = roleRepository.findById("ROLE_USER")
-                .orElseThrow(() -> new ResourceNotFoundException("Default role not found"));
+        // Use roles from invitation, or default roles from configuration if none specified
+        // Create a new HashSet to avoid shared collection references between entities
+        Set<Role> userRoles;
+        if (invitation.getRoles() != null && !invitation.getRoles().isEmpty()) {
+            userRoles = new HashSet<>(invitation.getRoles());
+        } else {
+            userRoles = getDefaultRoles();
+        }
 
         User user = User.builder()
                 .username(username)
                 .password(passwordEncoder.encode(password))
                 .email(invitation.getEmail())
                 .name(name)
-                .roles(Set.of(defaultRole))
+                .roles(userRoles)
                 .createdAt(LocalDateTime.now())
                 .enabled(true)
                 .build();
@@ -100,9 +123,29 @@ public class InvitationService {
         return frontend + "/register?invitation=" + token;
     }
 
+    public List<Invitation> getAllInvitations() {
+        return invitationRepository.findAll();
+    }
+
+    public void deleteInvitation(Long id) {
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+        invitationRepository.delete(invitation);
+    }
+
     private String generateToken() {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private Set<Role> getDefaultRoles() {
+        List<Role> defaultRoles = roleRepository.findByIsDefaultTrue();
+        
+        if (defaultRoles.isEmpty()) {
+            throw new ResourceNotFoundException("No default roles found. Please mark at least one role as default in the database.");
+        }
+        
+        return new HashSet<>(defaultRoles);
     }
 }
