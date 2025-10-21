@@ -49,8 +49,6 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
-<<<<<<< Updated upstream
-=======
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(
@@ -159,5 +157,4 @@ public class GlobalExceptionHandler {
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
->>>>>>> Stashed changes
 }

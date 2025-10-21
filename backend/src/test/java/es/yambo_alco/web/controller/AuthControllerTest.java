@@ -77,8 +77,6 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.timestamp").exists());
     }
-<<<<<<< Updated upstream
-=======
 
     @Test
     void register_WithValidInvitation_ShouldReturnToken() throws Exception {
@@ -160,7 +158,4 @@ class AuthControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.token").value(refreshedToken));
     }
-
-
->>>>>>> Stashed changes
 }
