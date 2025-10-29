@@ -14,11 +14,12 @@
         "vscjava.vscode-java-pack",
         "pivotal.vscode-spring-boot",
         "eamodio.gitlens",
-        "postgres.quick-database"
+        "ms-ossdata.vscode-pgsql",
+        "vmware.vscode-boot-dev-pack"
       ],
       "settings": {
         "terminal.integrated.shell.linux": "/bin/bash",
-        "java.home": "/usr/lib/jvm/temurin-21-jdk-amd64",
+        "java.jdt.ls.java.home": "/usr/lib/jvm/temurin-21-jdk-amd64",
         "java.configuration.runtimes": [
           {
             "name": "JavaSE-21",

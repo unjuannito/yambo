@@ -1,5 +1,5 @@
-# Fullstack development environment
-FROM node:lts-bullseye
+# Fullstack development environment with newer GLIBC for PostgreSQL extension compatibility
+FROM node:lts-bookworm
 
 # Install Java 21 and Maven
 RUN apt-get update && \
@@ -9,8 +9,12 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y temurin-21-jdk maven
 
-# Install PostgreSQL client
-RUN apt-get install -y postgresql-client
+# Install PostgreSQL client and nginx
+RUN apt-get install -y postgresql-client nginx
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/sites-available/default
+
 
 # Configure environment
 ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
