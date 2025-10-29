@@ -131,8 +131,17 @@ public class UserService {
 	}
 
 	public void deleteUser(Long userId) {
-		User user = userRepository.findById(userId)
+		// Verify user exists before scheduling deletion
+		userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
-		userRepository.delete(user);
+		
+		// Schedule deletion instead of immediate deletion
+		// The user will be disabled immediately and permanently deleted after the delay period
+		LocalDateTime scheduledDeletionDate = LocalDateTime.now().plusDays(deletionDelayDays);
+		pendingDeletionService.scheduleDeletion(
+			DeletionObjectType.USER, 
+			userId.toString(), 
+			scheduledDeletionDate
+		);
 	}
 }

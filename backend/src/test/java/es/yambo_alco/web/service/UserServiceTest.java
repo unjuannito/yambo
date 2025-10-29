@@ -34,13 +34,15 @@ public class UserServiceTest {
     private PasswordEncoder passwordEncoder;
     private UserService userService;
     private RoleRepository roleRepository;
+    private PendingDeletionService pendingDeletionService;
 
     @BeforeEach
     public void setup() {
         userRepository = Mockito.mock(UserRepository.class);
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
         roleRepository = Mockito.mock(RoleRepository.class);
-        userService = new UserService(userRepository, passwordEncoder, roleRepository);
+        pendingDeletionService = Mockito.mock(PendingDeletionService.class);
+        userService = new UserService(userRepository, passwordEncoder, roleRepository, pendingDeletionService);
     }
 
     @Test
@@ -290,7 +292,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void deleteUser_WithExistingUser_ShouldDeleteUser() {
+    public void deleteUser_WithExistingUser_ShouldScheduleDeletion() {
         // Given
         User existingUser = User.builder()
                 .id(1L)
@@ -305,7 +307,9 @@ public class UserServiceTest {
         userService.deleteUser(1L);
 
         // Then
-        verify(userRepository).delete(existingUser);
+        verify(userRepository).findById(1L);
+        verify(pendingDeletionService).scheduleDeletion(any(), any(), any());
+        verify(userRepository, never()).delete(any(User.class));
     }
 
     @Test
@@ -319,5 +323,6 @@ public class UserServiceTest {
                 .hasMessage("User not found");
 
         verify(userRepository, never()).delete(any(User.class));
+        verify(pendingDeletionService, never()).scheduleDeletion(any(), any(), any());
     }
 }
