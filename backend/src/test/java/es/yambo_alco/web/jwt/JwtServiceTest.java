@@ -21,6 +21,7 @@ class JwtServiceTest {
     @BeforeEach
     void setUp() {
         jwtService = new JwtService();
+        ReflectionTestUtils.setField(jwtService, "jwtSecret", "bd54d2a5f05bab92db7403e180b40782cf5835d39fe702d8aa26ddeb18877019");
         ReflectionTestUtils.setField(jwtService, "jwtExpirationMillis", 3600000L);
         testUser = User.builder()
                 .username("testuser")

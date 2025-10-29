@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,10 +19,16 @@ import java.util.function.Function;
 @Component
 public class JwtService {
 
-    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+    
     @Value("${jwt.expiration:86400000}")
     private long jwtExpirationMillis;
+
+    private Key getSigningKey() {
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -38,7 +45,7 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         Jws<Claims> jws = Jwts.parserBuilder()
-                              .setSigningKey(SECRET_KEY)
+                              .setSigningKey(getSigningKey())
                               .build()
                               .parseClaimsJws(token);
         return jws.getBody();
@@ -60,7 +67,7 @@ public class JwtService {
                    .setSubject(subject)
                    .setIssuedAt(new Date(now))
                    .setExpiration(new Date(now + jwtExpirationMillis))
-                   .signWith(SECRET_KEY, SignatureAlgorithm.HS256)
+                   .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                    .compact();
     }
 

@@ -26,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.security.test.context.support.WithMockUser;
+
 @WebMvcTest(controllers = AuthController.class)
 @Import(TestSecurityConfig.class)
 class AuthControllerTest {
@@ -70,7 +72,10 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Invalid credentials"));
+                .andExpect(jsonPath("$.message").value("Invalid username or password"))
+                .andExpect(jsonPath("$.type").value("AUTHENTICATION_FAILED"))
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
@@ -122,5 +127,35 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value("Invitation already used"));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    void reload_WithAuthenticatedUser_ShouldReturnNewToken() throws Exception {
+        // Given
+        when(authService.reload()).thenReturn("new.jwt.token");
+
+        // When & Then
+        mockMvc.perform(post("/auth/reload")
+                .header("Authorization", "Bearer old.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("new.jwt.token"));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    void reload_WithAuthenticatedUser_ShouldGenerateFreshToken() throws Exception {
+        // Given
+        String refreshedToken = "refreshed.jwt.token.with.new.expiration";
+        when(authService.reload()).thenReturn(refreshedToken);
+
+        // When & Then
+        mockMvc.perform(post("/auth/reload")
+                .header("Authorization", "Bearer expiring.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.token").value(refreshedToken));
     }
 }

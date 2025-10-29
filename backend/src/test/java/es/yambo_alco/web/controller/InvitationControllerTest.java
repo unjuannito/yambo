@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Invitation;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.InvitationService;
 import es.yambo_alco.web.service.UserService;
@@ -16,11 +17,16 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @WebMvcTest(controllers = InvitationController.class)
 @Import(TestSecurityConfig.class)
@@ -38,20 +44,208 @@ class InvitationControllerTest {
     @MockitoBean
     private UserService userService;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
     @Test
     @WithMockUser(authorities = "INVITE_USERS")
     void createInvitation_returnsCreated() throws Exception {
-        when(authService.getCurrentUser(true)).thenReturn(
-                User.builder().id(1L).email("test@example.com").build());
+        User currentUser = User.builder().id(1L).email("test@example.com").username("testuser").name("Test User").build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
-        when(invitationService.createInvitation(anyString(), anyString(), any())).thenReturn(
-                Invitation.builder().id(1L).email("a@b.com").token("tok").build());
+        when(invitationService.createInvitation(anyString(), anyString(), any(), any())).thenReturn(
+                Invitation.builder().id(1L).email("a@b.com").token("tok").invitedBy(1L).build());
 
+        when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
 
         mvc.perform(post("/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer test.jwt.token")
                 .content("{\"email\":\"a@b.com\", \"name\":\"Test User\"}"))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void createInvitation_WithRoles_ShouldIncludeRolesInResponse() throws Exception {
+        // Given
+        User currentUser = User.builder().id(1L).email("test@example.com").username("testuser").name("Test User").build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        when(invitationService.createInvitation(anyString(), anyString(), any(), any())).thenReturn(
+                Invitation.builder()
+                        .id(1L)
+                        .email("user@example.com")
+                        .token("test-token")
+                        .invitedBy(1L)
+                        .roles(java.util.Set.of(
+                                es.yambo_alco.web.model.Role.builder().id("SOCIO").build(),
+                                es.yambo_alco.web.model.Role.builder().id("MONITOR").build()
+                        ))
+                        .build());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
+
+        // When & Then
+        mvc.perform(post("/invitations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer test.jwt.token")
+                .content("{\"email\":\"user@example.com\", \"name\":\"Test User\", \"roleIds\":[\"SOCIO\",\"MONITOR\"]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.roleIds", hasSize(2)));
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void getAllInvitations_WithValidAuthority_ShouldReturnAllInvitations() throws Exception {
+        // Given
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusDays(7);
+        
+        User inviter = User.builder().id(1L).username("inviter").name("Inviter User").email("inviter@example.com").build();
+        
+        Invitation invitation1 = Invitation.builder()
+                .id(1L)
+                .email("user1@example.com")
+                .token("token123")
+                .createdAt(now)
+                .expiresAt(expiresAt)
+                .used(false)
+                .invitedBy(1L)
+                .build();
+
+        Invitation invitation2 = Invitation.builder()
+                .id(2L)
+                .email("user2@example.com")
+                .token("token456")
+                .createdAt(now)
+                .expiresAt(expiresAt)
+                .used(true)
+                .invitedBy(1L)
+                .build();
+
+        when(invitationService.getAllInvitations()).thenReturn(List.of(invitation1, invitation2));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(inviter));
+
+        // When & Then
+        mvc.perform(get("/invitations")
+                .header("Authorization", "Bearer test.jwt.token")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].email").value("user1@example.com"))
+                .andExpect(jsonPath("$[0].token").value("token123"))
+                .andExpect(jsonPath("$[0].used").value(false))
+                .andExpect(jsonPath("$[0].invitedBy").value(1))
+                .andExpect(jsonPath("$[0].invitedByUser.username").value("inviter"))
+                .andExpect(jsonPath("$[1].id").value(2))
+                .andExpect(jsonPath("$[1].email").value("user2@example.com"))
+                .andExpect(jsonPath("$[1].used").value(true));
+
+        verify(invitationService, times(1)).getAllInvitations();
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void getAllInvitations_WithNoInvitations_ShouldReturnEmptyList() throws Exception {
+        // Given
+        when(invitationService.getAllInvitations()).thenReturn(List.of());
+
+        // When & Then
+        mvc.perform(get("/invitations")
+                .header("Authorization", "Bearer test.jwt.token")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        verify(invitationService, times(1)).getAllInvitations();
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void getAllInvitations_ShouldIncludeAllInvitationFields() throws Exception {
+        // Given
+        LocalDateTime createdAt = LocalDateTime.of(2025, 10, 18, 10, 0);
+        LocalDateTime expiresAt = LocalDateTime.of(2025, 10, 25, 10, 0);
+        
+        User inviter = User.builder().id(5L).username("admin").name("Admin User").email("admin@example.com").build();
+        
+        Invitation invitation = Invitation.builder()
+                .id(1L)
+                .email("test@example.com")
+                .token("test-token-123")
+                .createdAt(createdAt)
+                .expiresAt(expiresAt)
+                .used(false)
+                .invitedBy(5L)
+                .build();
+
+        when(invitationService.getAllInvitations()).thenReturn(List.of(invitation));
+        when(userRepository.findById(5L)).thenReturn(Optional.of(inviter));
+
+        // When & Then
+        mvc.perform(get("/invitations")
+                .header("Authorization", "Bearer test.jwt.token")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].email").value("test@example.com"))
+                .andExpect(jsonPath("$[0].token").value("test-token-123"))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[0].expiresAt").exists())
+                .andExpect(jsonPath("$[0].used").value(false))
+                .andExpect(jsonPath("$[0].invitedBy").value(5))
+                .andExpect(jsonPath("$[0].invitedByUser.id").value(5))
+                .andExpect(jsonPath("$[0].invitedByUser.username").value("admin"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void deleteInvitation_WithValidId_ShouldReturnSuccess() throws Exception {
+        // Given
+        doNothing().when(invitationService).deleteInvitation(1L);
+
+        // When & Then
+        mvc.perform(delete("/invitations/1")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Invitation deleted successfully"));
+
+        verify(invitationService, times(1)).deleteInvitation(1L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void deleteInvitation_WithDifferentId_ShouldCallServiceWithCorrectId() throws Exception {
+        // Given
+        doNothing().when(invitationService).deleteInvitation(999L);
+
+        // When & Then
+        mvc.perform(delete("/invitations/999")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Invitation deleted successfully"));
+
+        verify(invitationService, times(1)).deleteInvitation(999L);
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void deleteInvitation_MultipleTimes_ShouldCallServiceEachTime() throws Exception {
+        // Given
+        doNothing().when(invitationService).deleteInvitation(anyLong());
+
+        // When & Then
+        mvc.perform(delete("/invitations/1")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk());
+
+        mvc.perform(delete("/invitations/2")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk());
+
+        verify(invitationService, times(1)).deleteInvitation(1L);
+        verify(invitationService, times(1)).deleteInvitation(2L);
     }
 }

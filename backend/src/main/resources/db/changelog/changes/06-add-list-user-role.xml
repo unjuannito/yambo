@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="06-add-list-user-role" author="yambo">
+        <insert tableName="permissions">
+            <column name="id" value="LIST_USERS"/>
+            <column name="description" value="List users"/>
+        </insert>
+
+        <insert tableName="role_permissions">
+            <column name="role_id" value="ADMINISTRADOR"/>
+            <column name="permission_id" value="LIST_USERS"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

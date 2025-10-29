@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 @Builder
@@ -35,4 +36,13 @@ public class Invitation {
     private LocalDateTime expiresAt;
 
     private Long invitedBy;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "invitation_roles",
+        joinColumns = @JoinColumn(name = "invitation_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<Role> roles = Set.of();
 }

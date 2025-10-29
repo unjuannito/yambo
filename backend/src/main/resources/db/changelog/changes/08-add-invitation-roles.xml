@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="08-add-invitation-roles" author="yambo">
+        <createTable tableName="invitation_roles">
+            <column name="invitation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_id" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="invitation_roles"
+                       columnNames="invitation_id, role_id"
+                       constraintName="pk_invitation_roles"/>
+
+        <addForeignKeyConstraint baseTableName="invitation_roles"
+                                 baseColumnNames="invitation_id"
+                                 constraintName="fk_invitation_roles_invitation"
+                                 referencedTableName="invitations"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="invitation_roles"
+                                 baseColumnNames="role_id"
+                                 constraintName="fk_invitation_roles_role"
+                                 referencedTableName="roles"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex tableName="invitation_roles" indexName="idx_invitation_roles_invitation_id">
+            <column name="invitation_id"/>
+        </createIndex>
+
+        <createIndex tableName="invitation_roles" indexName="idx_invitation_roles_role_id">
+            <column name="role_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

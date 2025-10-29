@@ -2,6 +2,7 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.Role;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.RoleRepository;
@@ -9,6 +10,7 @@ import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,6 +30,10 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final RoleRepository roleRepository;
+	private final PendingDeletionService pendingDeletionService;
+
+	@Value("${user.deletion.delay.days:30}")
+	private long deletionDelayDays;
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
 
@@ -53,11 +59,6 @@ public class UserService {
 		}
 
 		return userRepository.findAll(spec, sanitized);
-	}
-
-	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, Pageable pageable) {
-		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
-		return listUsers(name, email, enabled, perms, pageable);
 	}
 
 	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, List<String> roles, Pageable pageable) {
