@@ -27,10 +27,10 @@ export default function Header() {
             </a>
           ))}
           <a
-            href="/area-socios"
+            href="/mi-espacio"
             className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
           >
-            Área Socios
+            Acceder
           </a>
         </nav>
 
@@ -81,11 +81,11 @@ export default function Header() {
             </a>
           ))}
           <a
-            href="/area-socios"
+            href="/mi-espacio"
             className="mt-4 block w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-center"
             onClick={() => setMenuOpen(false)}
           >
-            Área Socios
+            Acceder
           </a>
         </nav>
       </div>

@@ -57,7 +57,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     message = error.status === 404 ? "Error 404" : "Error";
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "No se ha encontrado esta pagina."
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;

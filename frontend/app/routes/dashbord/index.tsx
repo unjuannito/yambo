@@ -1,7 +1,7 @@
 import { use, useEffect, useState } from "react";
 import type { Route } from "./+types/index";
 import { useOutletContext } from "react-router";
-import SummaryCards from "~/components/area-socios/home/SummaryCards";
+import SummaryCards from "~/components/dashbord/home/SummaryCards";
 
 export function meta({ }: Route.MetaArgs) {
   return [

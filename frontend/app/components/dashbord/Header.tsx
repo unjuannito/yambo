@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
-import type { User } from "~/types/user";
+import type { User } from "~/types/userType";
 
 interface HeaderProps {
   links: { label: string; href: string }[];
@@ -14,18 +14,16 @@ export default function Header({ links, user }: HeaderProps) {
   const navigate = useNavigate();
   const handleLogout = () => {
     logout();
-    navigate('/area-socios/login', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   return (
     <header className="w-full bg-white shadow-md fixed top-0 z-50">
       <div className="max-w-8xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-        <a href="/area-socios" className="flex items-center space-x-2">
+        <a href="/mi-espacio" className="flex items-center space-x-2">
           <img src="/logo.png" alt="Yambo logo" className="h-8 w-auto" />
           <span className="text-2xl font-bold text-gray-800">Yambo</span>
         </a>
-
-
         <nav className="flex gap-6 items-center">
           <a
             href="/"
@@ -33,21 +31,6 @@ export default function Header({ links, user }: HeaderProps) {
           >
             Pagina publica
           </a>
-          <a href="/area-socios/usuario" className="flex items-center justify-center">
-            <div className="w-10 h-10 overflow-hidden rounded-full">
-              <img
-                src={user.avatarURL || "/icons/default-avatar.svg"}
-                alt={"Icono de " + user.name}
-                className="rounded-full object-cover w-full h-full"
-              />
-            </div>
-          </a>
-          <button
-            onClick={handleLogout}
-            className="ml-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 whitespace-nowrap"
-          >
-            Cerrar sesión
-          </button>
           <button
             className="md:hidden display-block focus:outline-none"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -104,12 +87,6 @@ export default function Header({ links, user }: HeaderProps) {
           >
             Pagina publica
           </a>
-          <button
-            onClick={() => { setMenuOpen(false); handleLogout(); }}
-            className="mt-2 w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all font-semibold"
-          >
-            Cerrar sesión
-          </button>
         </nav>
       </div>
     </header>

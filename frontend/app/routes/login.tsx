@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
 import type { Route } from "./+types/login";
 
 export function meta({ }: Route.MetaArgs) {
@@ -20,7 +20,7 @@ export default function Index() {
     e.preventDefault();
     try {
       await login(username, password);
-      navigate('/area-socios', { replace: true });
+      navigate('/mi-espacio', { replace: true });
     } catch (err) {
       alert('Error al iniciar sesión. Por favor, verifica tus credenciales.');
     }

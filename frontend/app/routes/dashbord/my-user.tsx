@@ -1,8 +1,8 @@
-import type { Route } from "./+types/usuario";
+import type { Route } from "./+types/my-user";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Yambo - Usuario" },
+    { title: "Yambo - Mi usuario" },
     { name: "Yambo - Usuario", content: "Yambo - Usuario" },
   ];
 }
