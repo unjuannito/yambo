@@ -45,6 +45,13 @@ public class AuthController {
     public record LoginRequest(String email, String password) {
     }
 
+    /**
+     * Request body for user registration.
+     * Note: Username is no longer required. The user's email is taken from the invitation.
+     * 
+     * @param password The user's chosen password
+     * @param name The user's display name
+     */
     public record RegisterRequest(String password, String name) {
     }
 }

@@ -74,15 +74,18 @@ public class InvitationService {
 
     /**
      * Completes a user registration using an invitation token.
-     * The user's email is taken from the invitation, and a unique 8-character alphanumeric ID is generated.
-     * Username field is no longer used - email serves as the login identifier.
+     * 
+     * BREAKING CHANGE: The username parameter has been removed. The user's email is taken from 
+     * the invitation, and a unique 8-character alphanumeric ID is generated for the user.
+     * Email serves as the login identifier instead of username.
      * 
      * @param token The invitation token
      * @param password The user's password
      * @param name The user's display name
-     * @return The created User
+     * @return The created User with a unique 8-character alphanumeric ID
      * @throws ResourceNotFoundException if invitation not found
      * @throws BadRequestException if invitation expired, already used, or email already registered
+     * @throws IllegalStateException if unable to generate a unique ID after maximum attempts
      */
     public User completeInvitation(String token, String password, String name) {
         Invitation invitation = invitationRepository.findByToken(token)
