@@ -1,7 +1,7 @@
 import { ApiService } from './apiService';
 
 export interface LoginRequest {
-    username: string;
+    email: string;
     password: string;
 }
 
@@ -10,8 +10,8 @@ export interface AuthResponse {
 }
 
 export class AuthService extends ApiService {
-    public async login(username: string, password: string): Promise<string> {
-        const { token } = await this.post<AuthResponse, LoginRequest>('/auth/login', { username, password });
+    public async login(email: string, password: string): Promise<string> {
+        const { token } = await this.post<AuthResponse, LoginRequest>('/auth/login', { email, password });
         // Poner en la consola q ha llegado aqui para debugear
         console.log('Login successful, token received:', token);
         ApiService.setToken(token);

@@ -20,7 +20,6 @@ export default function AreaSociosLayout() {
       user: {
         id: "0001",
         name: "Laura",
-        username: "laroba",
         icon: {
           href: '/monitores/laura.jpg ',
           center: { x: 60, y: 30 },
