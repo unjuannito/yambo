@@ -86,8 +86,7 @@ public class UserController {
 
     @Data
     public static class UserResponse {
-        private Long id;
-        private String username;
+        private String id;
         private String email;
         private String name;
         private String[] roles;
@@ -96,7 +95,6 @@ public class UserController {
 
         public UserResponse(User user) {
             this.id = user.getId();
-            this.username = user.getUsername();
             this.email = user.getEmail();
             this.name = user.getName();
             this.roles = user.getRoles().stream().map(role -> role.getId()).toArray(String[]::new);

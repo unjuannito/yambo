@@ -35,7 +35,7 @@ public class Invitation {
 
     private LocalDateTime expiresAt;
 
-    private Long invitedBy;
+    private String invitedBy;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

@@ -35,9 +35,9 @@ public class UserService {
 	@Value("${user.deletion.delay.days:30}")
 	private long deletionDelayDays;
 
-	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
+	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "createdAt"));
 
-	public User getUserById(Long userId) {
+	public User getUserById(String userId) {
 		return userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 	}
@@ -80,7 +80,7 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public User updateProfile(Long userId, String name, String email) {
+	public User updateProfile(String userId, String name, String email) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -98,7 +98,7 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	public void changePassword(Long userId, String oldPassword, String newPassword) {
+	public void changePassword(String userId, String oldPassword, String newPassword) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -111,7 +111,7 @@ public class UserService {
 		userRepository.save(user);
 	}
 
-	public User updateUserRoles(Long userId, Set<String> roleIds) {
+	public User updateUserRoles(String userId, Set<String> roleIds) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -131,7 +131,7 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	public void deleteUser(Long userId) {
+	public void deleteUser(String userId) {
 		// Verify user exists before scheduling deletion
 		userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -141,7 +141,7 @@ public class UserService {
 		LocalDateTime scheduledDeletionDate = LocalDateTime.now().plusDays(deletionDelayDays);
 		pendingDeletionService.scheduleDeletion(
 			DeletionObjectType.USER, 
-			userId.toString(), 
+			userId, 
 			scheduledDeletionDate
 		);
 	}

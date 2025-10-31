@@ -8,6 +8,7 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.InvitationRepository;
 import es.yambo_alco.web.repository.RoleRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import es.yambo_alco.web.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +36,7 @@ public class InvitationService {
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
 
-    public Invitation createInvitation(String email, String name, Long invitedBy, Set<String> roleIds) {
+    public Invitation createInvitation(String email, String name, String invitedBy, Set<String> roleIds) {
         // Check if email is already registered
         if (userRepository.existsByEmail(email)) {
             throw new BadRequestException("Email already registered");
@@ -71,7 +72,7 @@ public class InvitationService {
         return saved;
     }
 
-    public User completeInvitation(String token, String username, String password, String name) {
+    public User completeInvitation(String token, String password, String name) {
         Invitation invitation = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
@@ -81,10 +82,6 @@ public class InvitationService {
 
         if (invitation.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Invitation expired");
-        }
-
-        if (userRepository.existsByUsername(username)) {
-            throw new BadRequestException("Username already exists");
         }
 
         if (userRepository.existsByEmail(invitation.getEmail())) {
@@ -100,8 +97,11 @@ public class InvitationService {
             userRoles = getDefaultRoles();
         }
 
+        // Generate unique user ID
+        String userId = IdGenerator.generateUniqueId(userRepository::existsById);
+
         User user = User.builder()
-                .username(username)
+                .id(userId)
                 .password(passwordEncoder.encode(password))
                 .email(invitation.getEmail())
                 .name(name)

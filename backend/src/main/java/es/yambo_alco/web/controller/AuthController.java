@@ -21,7 +21,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        String token = authService.authenticate(request.username(), request.password());
+        String token = authService.authenticate(request.email(), request.password());
         return ResponseEntity.ok(new AuthResponse(token));
     }
 
@@ -34,17 +34,17 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestParam String invitation, @RequestBody RegisterRequest request) {
-        User user = invitationService.completeInvitation(invitation, request.username(), request.password(), request.name());
-        String token = authService.authenticate(user.getUsername(), request.password());
+        User user = invitationService.completeInvitation(invitation, request.password(), request.name());
+        String token = authService.authenticate(user.getEmail(), request.password());
         return ResponseEntity.ok(new AuthResponse(token));
     }
 
     public record AuthResponse(String token) {
     }
 
-    public record LoginRequest(String username, String password) {
+    public record LoginRequest(String email, String password) {
     }
 
-    public record RegisterRequest(String username, String password, String name) {
+    public record RegisterRequest(String password, String name) {
     }
 }

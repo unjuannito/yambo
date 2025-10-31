@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="10-migrate-user-id-and-remove-username" author="yambo">
+        <!-- Step 1: Add new_id column with String type -->
+        <addColumn tableName="users">
+            <column name="new_id" type="varchar(8)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Step 2: Generate unique IDs for existing users -->
+        <sql>
+            UPDATE users SET new_id = CONCAT(
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
+                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1)
+            );
+        </sql>
+
+        <!-- Step 3: Update foreign key references in user_roles -->
+        <addColumn tableName="user_roles">
+            <column name="new_user_id" type="varchar(8)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <sql>
+            UPDATE user_roles ur
+            SET new_user_id = (SELECT new_id FROM users WHERE id = ur.user_id);
+        </sql>
+
+        <!-- Step 4: Update foreign key references in invitations -->
+        <addColumn tableName="invitations">
+            <column name="new_invited_by" type="varchar(8)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <sql>
+            UPDATE invitations i
+            SET new_invited_by = (SELECT new_id FROM users WHERE id = i.invited_by)
+            WHERE invited_by IS NOT NULL;
+        </sql>
+
+        <!-- Step 5: Drop old foreign keys -->
+        <dropForeignKeyConstraint baseTableName="user_roles" constraintName="user_roles_user_id_fkey"/>
+        <dropForeignKeyConstraint baseTableName="invitations" constraintName="invitations_invited_by_fkey"/>
+
+        <!-- Step 6: Drop old primary key and columns -->
+        <dropPrimaryKey tableName="users" constraintName="users_pkey"/>
+        <dropColumn tableName="users" columnName="id"/>
+        <dropColumn tableName="user_roles" columnName="user_id"/>
+        <dropColumn tableName="invitations" columnName="invited_by"/>
+
+        <!-- Step 7: Rename new columns -->
+        <renameColumn tableName="users" oldColumnName="new_id" newColumnName="id" columnDataType="varchar(8)"/>
+        <renameColumn tableName="user_roles" oldColumnName="new_user_id" newColumnName="user_id" columnDataType="varchar(8)"/>
+        <renameColumn tableName="invitations" oldColumnName="new_invited_by" newColumnName="invited_by" columnDataType="varchar(8)"/>
+
+        <!-- Step 8: Add primary key and constraints -->
+        <addPrimaryKey tableName="users" columnNames="id" constraintName="users_pkey"/>
+        <addNotNullConstraint tableName="users" columnName="id" columnDataType="varchar(8)"/>
+        <addNotNullConstraint tableName="user_roles" columnName="user_id" columnDataType="varchar(8)"/>
+
+        <!-- Step 9: Add back foreign keys -->
+        <addForeignKeyConstraint 
+            baseTableName="user_roles" 
+            baseColumnNames="user_id" 
+            constraintName="user_roles_user_id_fkey" 
+            referencedTableName="users" 
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint 
+            baseTableName="invitations" 
+            baseColumnNames="invited_by" 
+            constraintName="invitations_invited_by_fkey" 
+            referencedTableName="users" 
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- Step 10: Drop username column and its index -->
+        <dropIndex tableName="users" indexName="idx_users_username"/>
+        <dropColumn tableName="users" columnName="username"/>
+    </changeSet>
+</databaseChangeLog>

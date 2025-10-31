@@ -75,7 +75,7 @@ public class AdminUserController {
 
     @PutMapping("/roles")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<UserResponse> updateUserRoles(@RequestParam Long userId,
+    public ResponseEntity<UserResponse> updateUserRoles(@RequestParam String userId,
             @Valid @RequestBody UpdateRolesRequest request) {
         User updatedUser = userService.updateUserRoles(userId, request.getRoleIds());
         UserResponse response = new UserResponse(updatedUser);
@@ -100,7 +100,7 @@ public class AdminUserController {
 
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<String> deleteUser(@PathVariable String userId) {
         User currentUser = authService.getCurrentUser(true);
         if (currentUser.getId().equals(userId)) {
             return ResponseEntity.badRequest().body("Cannot delete your own account");
@@ -113,7 +113,7 @@ public class AdminUserController {
     @Data
     public static class UpdateProfileRequest {
         @NotNull(message = "User ID cannot be null")
-        private Long id;
+        private String id;
 
         @NotBlank(message = "Name cannot be blank")
         @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")

@@ -19,4 +19,5 @@
     <include file="db/changelog/changes/07-drop-perm-manage-roles.xml"/>
     <include file="db/changelog/changes/08-add-invitation-roles.xml"/>
     <include file="db/changelog/changes/09-add-default-roles.xml"/>
+    <include file="db/changelog/changes/10-migrate-user-id-and-remove-username.xml"/>
 </databaseChangeLog>

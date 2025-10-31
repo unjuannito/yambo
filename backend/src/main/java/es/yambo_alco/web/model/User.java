@@ -23,11 +23,8 @@ import java.util.Set;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String username;
+    @Column(length = 8, nullable = false)
+    private String id;
 
     @Column(nullable = false)
     private String password;
@@ -63,6 +60,11 @@ public class User implements UserDetails {
             }
         }
         return authorities;
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
     }
 
     @Override

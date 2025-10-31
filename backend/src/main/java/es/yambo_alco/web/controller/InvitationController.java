@@ -43,7 +43,7 @@ public class InvitationController {
         UserInfo invitedByUser = null;
         if (inv.getInvitedBy() != null) {
             invitedByUser = userRepository.findById(inv.getInvitedBy())
-                    .map(u -> new UserInfo(u.getId(), u.getUsername(), u.getName(), u.getEmail()))
+                    .map(u -> new UserInfo(u.getId(), u.getName(), u.getEmail()))
                     .orElse(null);
         }
         
@@ -70,7 +70,7 @@ public class InvitationController {
                     UserInfo invitedByUser = null;
                     if (inv.getInvitedBy() != null) {
                         invitedByUser = userRepository.findById(inv.getInvitedBy())
-                                .map(u -> new UserInfo(u.getId(), u.getUsername(), u.getName(), u.getEmail()))
+                                .map(u -> new UserInfo(u.getId(), u.getName(), u.getEmail()))
                                 .orElse(null);
                     }
                     
@@ -117,11 +117,11 @@ public class InvitationController {
         private LocalDateTime createdAt;
         private LocalDateTime expiresAt;
         private boolean used;
-        private Long invitedBy;
+        private String invitedBy;
         private UserInfo invitedByUser;
         private Set<String> roleIds;
 
-        public InvitationResponse(Long id, String email, String token, LocalDateTime createdAt, LocalDateTime expiresAt, boolean used, Long invitedBy, UserInfo invitedByUser, Set<String> roleIds) {
+        public InvitationResponse(Long id, String email, String token, LocalDateTime createdAt, LocalDateTime expiresAt, boolean used, String invitedBy, UserInfo invitedByUser, Set<String> roleIds) {
             this.id = id;
             this.email = email;
             this.token = token;
@@ -136,14 +136,12 @@ public class InvitationController {
 
     @Data
     public static class UserInfo {
-        private Long id;
-        private String username;
+        private String id;
         private String name;
         private String email;
 
-        public UserInfo(Long id, String username, String name, String email) {
+        public UserInfo(String id, String name, String email) {
             this.id = id;
-            this.username = username;
             this.name = name;
             this.email = email;
         }

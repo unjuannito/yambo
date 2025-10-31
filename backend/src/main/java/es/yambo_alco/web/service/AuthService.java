@@ -21,13 +21,13 @@ public class AuthService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByUsername(username)
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    public String authenticate(String username, String password) {
-        UserDetails user = loadUserByUsername(username);
+    public String authenticate(String email, String password) {
+        UserDetails user = loadUserByUsername(email);
         if (passwordEncoder.matches(password, user.getPassword())) {
             return jwtService.generateToken(user);
         }
