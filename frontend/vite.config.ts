@@ -14,7 +14,7 @@ export default defineConfig({
       interval: 500, // Check for changes every 500ms
     },
     hmr: {
-      host: '0.0.0.0', // HMR host
+      host: 'localhost', // HMR host
       port: 5173,
     },
   },
