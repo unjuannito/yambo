@@ -72,6 +72,18 @@ public class InvitationService {
         return saved;
     }
 
+    /**
+     * Completes a user registration using an invitation token.
+     * The user's email is taken from the invitation, and a unique 8-character alphanumeric ID is generated.
+     * Username field is no longer used - email serves as the login identifier.
+     * 
+     * @param token The invitation token
+     * @param password The user's password
+     * @param name The user's display name
+     * @return The created User
+     * @throws ResourceNotFoundException if invitation not found
+     * @throws BadRequestException if invitation expired, already used, or email already registered
+     */
     public User completeInvitation(String token, String password, String name) {
         Invitation invitation = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));

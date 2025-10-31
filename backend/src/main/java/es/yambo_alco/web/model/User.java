@@ -62,6 +62,11 @@ public class User implements UserDetails {
         return authorities;
     }
 
+    /**
+     * Returns the username for Spring Security authentication.
+     * Since the username field was removed, this returns the email address.
+     * @return the user's email address
+     */
     @Override
     public String getUsername() {
         return email;

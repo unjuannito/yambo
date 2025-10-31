@@ -13,18 +13,9 @@
             </column>
         </addColumn>
 
-        <!-- Step 2: Generate unique IDs for existing users -->
+        <!-- Step 2: Generate unique IDs for existing users using MD5 hash of email + id to ensure uniqueness -->
         <sql>
-            UPDATE users SET new_id = CONCAT(
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1),
-                SUBSTRING('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', FLOOR(1 + (RANDOM() * 62))::int, 1)
-            );
+            UPDATE users SET new_id = UPPER(SUBSTRING(MD5(CONCAT(email, id::text)), 1, 8));
         </sql>
 
         <!-- Step 3: Update foreign key references in user_roles -->
