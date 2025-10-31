@@ -15,8 +15,7 @@ class UserTest {
     void builder_ShouldCreateUserWithAllFields() {
         LocalDateTime now = LocalDateTime.now();
         User user = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("abc12345")
                 .password("password123")
                 .email("test@example.com")
                 .name("Test User")
@@ -25,8 +24,8 @@ class UserTest {
                 .enabled(true)
                 .build();
 
-        assertEquals(1L, user.getId());
-        assertEquals("testuser", user.getUsername());
+        assertEquals("abc12345", user.getId());
+        assertEquals("test@example.com", user.getUsername()); // getUsername() returns email
         assertEquals("password123", user.getPassword());
         assertEquals("test@example.com", user.getEmail());
         assertEquals("Test User", user.getName());
@@ -77,14 +76,12 @@ class UserTest {
     @Test
     void equalsAndHashCode_ShouldWorkCorrectly() {
         User user1 = User.builder()
-                .id(1L)
-                .username("user")
+                .id("abc12345")
                 .email("user@example.com")
                 .build();
 
         User user2 = User.builder()
-                .id(1L)
-                .username("user")
+                .id("abc12345")
                 .email("user@example.com")
                 .build();
 
