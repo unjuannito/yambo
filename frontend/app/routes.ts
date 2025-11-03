@@ -10,7 +10,7 @@ export default [
   ]),
   layout("routes/dashbord/_layout.tsx", [
     route("mi-espacio", "routes/dashbord/index.tsx"),
-    route("mi-espacio/mi-cuenta", "routes/dashbord/my-user.tsx"),
+    route("mi-espacio/mi-cuenta", "routes/dashbord/my-account.tsx"),
     // Admin pages
     route("mi-espacio/usuarios", "routes/dashbord/users.tsx"),
   ]),

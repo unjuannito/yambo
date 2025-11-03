@@ -1,14 +1,13 @@
 //Permissions
-const MANAGE_USERS = "manage_user"
+const SEE_USERS = "users_read"
 
 //links
 const LINKS_MAP = [
-    { href: '/mi-espacio', label: 'Página Principal', need: 'nothing' },
+    { name: "home", href: "/mi-espacio", label: "Página Principal", need: "nothing", icon: "" },
     // ADMIN
-    { href: '/mi-espacio/usuarios', label: 'Usuarios', need: MANAGE_USERS },
+    { name: "users", href: "/mi-espacio/usuarios", label: "Usuarios", need: SEE_USERS, icon: "/icons/users.svg" },
     // Todos
-    { href: '/mi-espacio/mi-cuenta', label: 'Mi cuenta', need: 'nothing' },
+    { name: "myAccount", href: "/mi-espacio/mi-cuenta", label: "Mi cuenta", need: "nothing", icon: "/icons/user.svg" },
 ];
 
-
-export { LINKS_MAP, MANAGE_USERS }
+export { LINKS_MAP, SEE_USERS }
