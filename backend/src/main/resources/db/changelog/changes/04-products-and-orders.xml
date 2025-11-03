@@ -11,13 +11,40 @@
             <column name="id" type="char(8)">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="name" type="varchar(64)" />
-            <column name="project_id" type="char(8)" />
-            <column name="active" type="tinyint(1)" />
-            <column name="base_price" type="decimal(10,2)" />
-            <column name="version" type="varchar(16)" />
-            <column name="options" type="json" />
+            <column name="name" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="tinyint(1)" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="base_price" type="decimal(10,2)" defaultValueNumeric="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="varchar(16)" defaultValue="1.0.0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="options" type="json" defaultValue="{}">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
+        <addUniqueConstraint
+            tableName="product"
+            columnNames="name, project_id"
+            constraintName="uk_product_name_project"/>
+        <addForeignKeyConstraint
+            baseTableName="product"
+            baseColumnNames="project_id"
+            referencedTableName="project"
+            referencedColumnNames="id"
+            constraintName="fk_product_project"
+            onDelete="CASCADE"/>
+        <sql>
+            ALTER TABLE product ADD CONSTRAINT chk_product_base_price_positive 
+            CHECK (base_price >= 0)
+        </sql>
     </changeSet>
 
     <changeSet id="11-create-order" author="yambo">
@@ -25,18 +52,54 @@
             <column name="id" type="char(8)">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="customer_id" type="int"/>
-            <column name="status" type="int"/>
+            <column name="customer_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="int">
+                <constraints nullable="false"/>
+            </column>
             <column name="payment_id" type="int"/>
-            <column name="created_at" type="int"/>
+            <column name="created_at" type="int" defaultValueComputed="UNIX_TIMESTAMP()">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
+        <sql>
+            ALTER TABLE `order` ADD CONSTRAINT chk_order_status_valid 
+            CHECK (status IN (0, 1, 2, 3, 4, 5))
+        </sql>
+        <sql>
+            ALTER TABLE `order` ADD CONSTRAINT chk_order_customer_id_positive 
+            CHECK (customer_id > 0)
+        </sql>
+        <sql>
+            ALTER TABLE `order` ADD CONSTRAINT chk_order_created_at_positive 
+            CHECK (created_at > 0)
+        </sql>
     </changeSet>
 
     <changeSet id="12-create-order-product" author="yambo">
         <createTable tableName="order_product">
-            <column name="order_id" type="char(8)" />
-            <column name="product_id" type="char(8)" />
+            <column name="order_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_order_product"/>
+            </column>
+            <column name="product_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_order_product"/>
+            </column>
         </createTable>
+        <addForeignKeyConstraint
+            baseTableName="order_product"
+            baseColumnNames="order_id"
+            referencedTableName="order"
+            referencedColumnNames="id"
+            constraintName="fk_order_product_order"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="order_product"
+            baseColumnNames="product_id"
+            referencedTableName="product"
+            referencedColumnNames="id"
+            constraintName="fk_order_product_product"
+            onDelete="CASCADE"/>
     </changeSet>
 
 </databaseChangeLog>

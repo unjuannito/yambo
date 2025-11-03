@@ -10,13 +10,8 @@
         http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
 
     <!-- Include all changelog files here -->
-    <include file="db/changelog/changes/01-initial-schema.xml"/>
-    <include file="db/changelog/changes/02-create-roles-permissions.xml"/>
-    <include file="db/changelog/changes/03-create-invitations.xml"/>
-    <include file="db/changelog/changes/04-update-permissions.xml"/>
-    <include file="db/changelog/changes/05-create-pending-deletion.xml"/>
-    <include file="db/changelog/changes/06-add-list-user-role.xml"/>
-    <include file="db/changelog/changes/07-drop-perm-manage-roles.xml"/>
-    <include file="db/changelog/changes/08-add-invitation-roles.xml"/>
-    <include file="db/changelog/changes/09-add-default-roles.xml"/>
+    <include file="db/changelog/changes/01-base-tables.xml"/>
+    <include file="db/changelog/changes/02-base-relations.xml"/>
+    <include file="db/changelog/changes/03-permissions.xml"/>
+    <include file="db/changelog/changes/04-products-and-orders.xml"/>
 </databaseChangeLog>
