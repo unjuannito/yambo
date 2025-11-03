@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="10-create-product" author="yambo">
+        <createTable tableName="product">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(64)" />
+            <column name="project_id" type="char(8)" />
+            <column name="active" type="tinyint(1)" />
+            <column name="base_price" type="decimal(10,2)" />
+            <column name="version" type="varchar(16)" />
+            <column name="options" type="json" />
+        </createTable>
+    </changeSet>
+
+    <changeSet id="11-create-order" author="yambo">
+        <createTable tableName="order">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="customer_id" type="int"/>
+            <column name="status" type="int"/>
+            <column name="payment_id" type="int"/>
+            <column name="created_at" type="int"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="12-create-order-product" author="yambo">
+        <createTable tableName="order_product">
+            <column name="order_id" type="char(8)" />
+            <column name="product_id" type="char(8)" />
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

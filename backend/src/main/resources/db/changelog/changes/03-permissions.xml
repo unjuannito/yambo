@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="06-create-permission-table" author="yambo">
+        <createTable tableName="permission">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="resource" type="varchar(64)"/>
+            <column name="action" type="enum('create','read','update','delete')"/>
+            <column name="has_condition" type="tinyint(1)" />
+        </createTable>
+    </changeSet>
+
+    <changeSet id="07-create-profile-permission" author="yambo">
+        <createTable tableName="profile_permission">
+            <column name="profile_id" type="char(8)"/>
+            <column name="permission_id" type="char(8)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="08-create-user-permission" author="yambo">
+        <createTable tableName="user_permission">
+            <column name="user_id" type="char(8)"/>
+            <column name="permission_id" type="char(8)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="09-create-condition" author="yambo">
+        <createTable tableName="condition">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="permission_id" type="char(8)" />
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
