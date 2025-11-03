@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="25-create-promotion" author="yambo">
+        <createTable tableName="promotion">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="start_tms" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_tms" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="promotion"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_profile"
+            onDelete="CASCADE"/>
+        <!-- Check constraint to ensure end_tms is after start_tms -->
+        <sql>
+            ALTER TABLE promotion ADD CONSTRAINT chk_promotion_date_range 
+            CHECK (end_tms > start_tms)
+        </sql>
+    </changeSet>
+
+    <changeSet id="26-create-family-product" author="yambo">
+        <createTable tableName="family_product">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_tms" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="family_product"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_family_product_profile"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="27-add-family-product-relation-to-product" author="yambo">
+        <addColumn tableName="product">
+            <column name="family_product_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint
+            baseTableName="product"
+            baseColumnNames="family_product_id"
+            referencedTableName="family_product"
+            referencedColumnNames="id"
+            constraintName="fk_product_family_product"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -14,4 +14,5 @@
     <include file="db/changelog/changes/02-base-relations.xml"/>
     <include file="db/changelog/changes/03-permissions.xml"/>
     <include file="db/changelog/changes/04-products-and-orders.xml"/>
+    <include file="db/changelog/changes/05-promotions-and-family-products.xml"/>
 </databaseChangeLog>
