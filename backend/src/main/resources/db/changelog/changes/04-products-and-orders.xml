@@ -15,7 +15,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="project_id" type="char(8)">
-                <constraints nullable="false"/>
+                <!-- Allow products without project assignment -->
             </column>
             <column name="active" type="tinyint(1)" defaultValueBoolean="true">
                 <constraints nullable="false"/>
@@ -32,15 +32,15 @@
         </createTable>
         <addUniqueConstraint
             tableName="product"
-            columnNames="name, project_id"
-            constraintName="uk_product_name_project"/>
+            columnNames="name"
+            constraintName="uk_product_name"/>
         <addForeignKeyConstraint
             baseTableName="product"
             baseColumnNames="project_id"
             referencedTableName="project"
             referencedColumnNames="id"
             constraintName="fk_product_project"
-            onDelete="CASCADE"/>
+            onDelete="SET NULL"/>
         <sql>
             ALTER TABLE product ADD CONSTRAINT chk_product_base_price_positive 
             CHECK (base_price >= 0)
