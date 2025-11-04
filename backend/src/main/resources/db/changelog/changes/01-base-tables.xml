@@ -48,9 +48,9 @@
             <column name="name" type="varchar(64)">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="active" type="tinyint(1)" defaultValueBoolean="true">
-                <constraints nullable="false"/>
-            </column>
+                <column name="active" type="boolean" defaultValueBoolean="true">
+                    <constraints nullable="false"/>
+                </column>
         </createTable>
     </changeSet>
 

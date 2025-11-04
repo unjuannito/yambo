@@ -14,12 +14,12 @@
             <column name="resource" type="varchar(64)">
                 <constraints nullable="false"/>
             </column>
-            <column name="action" type="enum('create','read','update','delete')">
-                <constraints nullable="false"/>
-            </column>
-            <column name="has_condition" type="tinyint(1)" defaultValueBoolean="false">
-                <constraints nullable="false"/>
-            </column>
+                <column name="action" type="varchar(16)">
+                    <constraints nullable="false"/>
+                </column>
+                <column name="has_condition" type="boolean" defaultValueBoolean="false">
+                    <constraints nullable="false"/>
+                </column>
         </createTable>
         <addUniqueConstraint
             tableName="permission"

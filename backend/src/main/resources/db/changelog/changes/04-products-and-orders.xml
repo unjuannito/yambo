@@ -17,7 +17,7 @@
             <column name="project_id" type="char(8)">
                 <!-- Allow products without project assignment -->
             </column>
-            <column name="active" type="tinyint(1)" defaultValueBoolean="true">
+            <column name="active" type="boolean" defaultValueBoolean="true">
                 <constraints nullable="false"/>
             </column>
             <column name="base_price" type="decimal(10,2)" defaultValueNumeric="0.00">
@@ -59,22 +59,10 @@
                 <constraints nullable="false"/>
             </column>
             <column name="payment_id" type="int"/>
-            <column name="created_at" type="int" defaultValueComputed="UNIX_TIMESTAMP()">
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <sql>
-            ALTER TABLE `order` ADD CONSTRAINT chk_order_status_valid 
-            CHECK (status IN (0, 1, 2, 3, 4, 5))
-        </sql>
-        <sql>
-            ALTER TABLE `order` ADD CONSTRAINT chk_order_customer_id_positive 
-            CHECK (customer_id > 0)
-        </sql>
-        <sql>
-            ALTER TABLE `order` ADD CONSTRAINT chk_order_created_at_positive 
-            CHECK (created_at > 0)
-        </sql>
     </changeSet>
 
     <changeSet id="12-create-order-product" author="yambo">
