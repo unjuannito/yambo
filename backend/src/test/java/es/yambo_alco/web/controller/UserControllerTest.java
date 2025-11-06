@@ -3,7 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.model.Permission;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
@@ -48,16 +48,16 @@ class UserControllerTest {
         AuthController.AuthResponse authResponse = new AuthController.AuthResponse("test.jwt.token");
         when(authService.getCurrentUser(true)).thenReturn(
                 User.builder()
-                        .username("testuser")
+                        .email("testuser")
                         .password("password")
                         .email("testuser@example.com")
-                        .roles(Set.of(
-                                Role.builder().id("ROLE_USER")
+                        .profiles(Set.of(
+                                Profile.builder().id("ROLE_USER")
                                         .permissions(Set.of(
                                                 Permission.builder().id("READ_PRIVILEGES").build(),
                                                 Permission.builder().id("WRITE_PRIVILEGES").build()))
                                         .build(),
-                                Role.builder().id("ROLE_ADMIN").build()))
+                                Profile.builder().id("ROLE_ADMIN").build()))
                         .build());
 
         // When & Then
@@ -66,8 +66,8 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.email").value("testuser@example.com"))
-                .andExpect(jsonPath("$.roles").isArray())
-                .andExpect(jsonPath("$.roles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")))
+                .andExpect(jsonPath("$.profiles").isArray())
+                .andExpect(jsonPath("$.profiles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")))
                 .andExpect(jsonPath("$.permissions").isArray())
                 .andExpect(jsonPath("$.permissions",
                         org.hamcrest.Matchers.containsInAnyOrder("READ_PRIVILEGES", "WRITE_PRIVILEGES")));
@@ -91,22 +91,22 @@ class UserControllerTest {
     void updateProfile_WithValidData_ShouldReturnUpdatedUser() throws Exception {
         // Given
         User currentUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("testuser@example.com")
                 .name("Old Name")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .build();
         User updatedUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("newemail@example.com")
                 .name("New Name")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
-        when(userService.updateProfile(1L, "New Name", "newemail@example.com")).thenReturn(updatedUser);
+        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com")).thenReturn(updatedUser);
 
         String requestBody = """
                 {
@@ -147,7 +147,7 @@ class UserControllerTest {
     @Test
     void changePassword_WithValidData_ShouldReturnOk() throws Exception {
         // Given
-        User currentUser = User.builder().id(1L).build();
+        User currentUser = User.builder().id("U0000001").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
         String requestBody = """
@@ -186,7 +186,7 @@ class UserControllerTest {
     @Test
     void deleteAccount_WithValidToken_ShouldDeleteSuccessfully() throws Exception {
         // Given
-        User currentUser = User.builder().id(1L).build();
+        User currentUser = User.builder().id("U0000001").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
         // When & Then

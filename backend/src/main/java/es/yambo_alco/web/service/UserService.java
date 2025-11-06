@@ -3,9 +3,9 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.DeletionObjectType;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.repository.RoleRepository;
+import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class UserService {
 
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
-	private final RoleRepository roleRepository;
+	private final ProfileRepository profileRepository;
 	private final PendingDeletionService pendingDeletionService;
 
 	@Value("${user.deletion.delay.days:30}")
@@ -37,7 +37,7 @@ public class UserService {
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
 
-	public User getUserById(Long userId) {
+	public User getUserById(String userId) {
 		return userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 	}
@@ -61,15 +61,15 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, List<String> roles, Pageable pageable) {
+	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, List<String> profiles, Pageable pageable) {
 		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
-		Set<String> roleSet = roles == null ? null : roles.stream().collect(Collectors.toSet());
+		Set<String> profileSet = profiles == null ? null : profiles.stream().collect(Collectors.toSet());
 		Specification<User> spec = Specification.where(null);
 		spec = spec.and(UserSpecifications.nameContains(name));
 		spec = spec.and(UserSpecifications.emailContains(email));
 		spec = spec.and(UserSpecifications.enabledEquals(enabled));
 		if (perms != null && !perms.isEmpty()) spec = spec.and(UserSpecifications.hasPermissions(perms));
-		if (roleSet != null && !roleSet.isEmpty()) spec = spec.and(UserSpecifications.hasRoles(roleSet));
+		if (profileSet != null && !profileSet.isEmpty()) spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -80,7 +80,7 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public User updateProfile(Long userId, String name, String email) {
+	public User updateProfile(String userId, String name, String email) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -94,11 +94,10 @@ public class UserService {
 			user.setEmail(email.trim());
 		}
 
-		user.setUpdatedAt(LocalDateTime.now());
 		return userRepository.save(user);
 	}
 
-	public void changePassword(Long userId, String oldPassword, String newPassword) {
+	public void changePassword(String userId, String oldPassword, String newPassword) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -107,31 +106,29 @@ public class UserService {
 		}
 
 		user.setPassword(passwordEncoder.encode(newPassword));
-		user.setUpdatedAt(LocalDateTime.now());
 		userRepository.save(user);
 	}
 
-	public User updateUserRoles(Long userId, Set<String> roleIds) {
+	public User updateUserProfiles(String userId, Set<String> profileIds) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-		if (roleIds == null || roleIds.isEmpty()) {
-			throw new BadRequestException("At least one role must be specified");
+		if (profileIds == null || profileIds.isEmpty()) {
+			throw new BadRequestException("At least one profile must be specified");
 		}
 
-		Set<Role> roles = new HashSet<>();
-		for (String roleId : roleIds) {
-			Role role = roleRepository.findById(roleId)
-					.orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleId));
-			roles.add(role);
+		Set<Profile> profilesSet = new HashSet<>();
+		for (String profileId : profileIds) {
+			Profile profile = profileRepository.findById(profileId)
+					.orElseThrow(() -> new ResourceNotFoundException("Profile not found: " + profileId));
+			profilesSet.add(profile);
 		}
 
-		user.setRoles(roles);
-		user.setUpdatedAt(LocalDateTime.now());
+		user.setProfiles(profilesSet);
 		return userRepository.save(user);
 	}
 
-	public void deleteUser(Long userId) {
+	public void deleteUser(String userId) {
 		// Verify user exists before scheduling deletion
 		userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));

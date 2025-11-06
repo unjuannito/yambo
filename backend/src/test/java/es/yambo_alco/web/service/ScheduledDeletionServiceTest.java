@@ -47,7 +47,7 @@ public class ScheduledDeletionServiceTest {
         scheduledDeletionService.processPendingDeletions();
 
         // Then
-        verify(userRepository).deleteById(1L);
+        verify(userRepository).deleteById("U0000001");
         verify(pendingDeletionRepository).delete(userDeletion);
     }
 
@@ -75,13 +75,13 @@ public class ScheduledDeletionServiceTest {
                 .build();
 
         lenient().when(pendingDeletionRepository.findByScheduledAtBefore(any(LocalDateTime.class))).thenReturn(List.of(userDeletion));
-        doThrow(new RuntimeException("Database error")).when(userRepository).deleteById(1L);
+        doThrow(new RuntimeException("Database error")).when(userRepository).deleteById("U0000001");
 
         // When
         scheduledDeletionService.processPendingDeletions();
 
         // Then
-        verify(userRepository).deleteById(1L);
+        verify(userRepository).deleteById("U0000001");
         verify(pendingDeletionRepository).save(userDeletion); // Should save with failed status
         verify(pendingDeletionRepository, never()).delete(userDeletion);
     }

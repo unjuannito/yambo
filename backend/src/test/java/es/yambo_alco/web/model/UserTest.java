@@ -15,36 +15,34 @@ class UserTest {
     void builder_ShouldCreateUserWithAllFields() {
         LocalDateTime now = LocalDateTime.now();
         User user = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .password("password123")
                 .email("test@example.com")
                 .name("Test User")
                 .createdAt(now)
-                .updatedAt(now)
                 .enabled(true)
                 .build();
 
-        assertEquals(1L, user.getId());
+        assertEquals("U0000001", user.getId());
         assertEquals("testuser", user.getUsername());
         assertEquals("password123", user.getPassword());
         assertEquals("test@example.com", user.getEmail());
         assertEquals("Test User", user.getName());
         assertEquals(now, user.getCreatedAt());
-        assertEquals(now, user.getUpdatedAt());
         assertTrue(user.isEnabled());
     }
 
     @Test
     void getAuthorities_ShouldReturnCorrectAuthorities() {
         User user = User.builder()
-                .roles(Set.of(
-                        Role.builder().id("ADMIN")
+                .profiles(Set.of(
+                        Profile.builder().id("ADMIN")
                                 .permissions(Set.of(
                                         Permission.builder().id("READ_PRIVILEGES").build(),
                                         Permission.builder().id("WRITE_PRIVILEGES").build()))
                                 .build(),
-                        Role.builder().id("USER").build()))
+                        Profile.builder().id("USER").build()))
                 .build();
 
         Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
@@ -77,14 +75,14 @@ class UserTest {
     @Test
     void equalsAndHashCode_ShouldWorkCorrectly() {
         User user1 = User.builder()
-                .id(1L)
-                .username("user")
+                .id("U0000001")
+                .email("user")
                 .email("user@example.com")
                 .build();
 
         User user2 = User.builder()
-                .id(1L)
-                .username("user")
+                .id("U0000001")
+                .email("user")
                 .email("user@example.com")
                 .build();
 

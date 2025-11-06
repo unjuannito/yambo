@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.DeletionObjectType;
+import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
@@ -12,12 +13,13 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 
 @RestController
 @RequestMapping("/user")
@@ -59,7 +61,7 @@ public class UserController {
     public ResponseEntity<String> scheduleAccountDeletion() {
         User currentUser = authService.getCurrentUser(true);
         pendingDeletionService.scheduleDeletion(DeletionObjectType.USER, currentUser.getId().toString(),
-            java.time.LocalDateTime.now().plusDays(DEFAULT_DELETION_DAYS));
+                java.time.LocalDateTime.now().plusDays(DEFAULT_DELETION_DAYS));
         return ResponseEntity.ok("User account scheduled for deletion in " + DEFAULT_DELETION_DAYS + " days");
     }
 
@@ -86,26 +88,32 @@ public class UserController {
 
     @Data
     public static class UserResponse {
-        private Long id;
-        private String username;
         private String email;
         private String name;
-        private String[] roles;
-        private String[] permissions;
-        private boolean enabled;
+        private PermissionResponse[] permissions;
 
         public UserResponse(User user) {
-            this.id = user.getId();
-            this.username = user.getUsername();
             this.email = user.getEmail();
             this.name = user.getName();
-            this.roles = user.getRoles().stream().map(role -> role.getId()).toArray(String[]::new);
-            this.permissions = user.getRoles().stream()
-                    .flatMap(role -> role.getPermissions().stream())
-                    .map(permission -> permission.getId())
-                    .distinct()
-                    .toArray(String[]::new);
-            this.enabled = user.isEnabled();
+            Map<String, Set<String>> resourceActions = user.getProfiles().stream()
+                    .flatMap(profile -> profile.getPermissions().stream())
+                    .collect(Collectors.groupingBy(
+                            Permission::getResource,
+                            Collectors.mapping(Permission::getAction, Collectors.toSet())));
+            this.permissions = resourceActions.entrySet().stream()
+                    .map(entry -> new PermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
+                    .toArray(PermissionResponse[]::new);
+        }
+    }
+
+    @Data
+    public static class PermissionResponse {
+        private String obj;
+        private String[] actions;
+
+        public PermissionResponse(String obj, String[] actions) {
+            this.obj = obj;
+            this.actions = actions;
         }
     }
 }

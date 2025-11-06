@@ -50,13 +50,13 @@ class InvitationControllerTest {
     @Test
     @WithMockUser(authorities = "INVITE_USERS")
     void createInvitation_returnsCreated() throws Exception {
-        User currentUser = User.builder().id(1L).email("test@example.com").username("testuser").name("Test User").build();
+        User currentUser = User.builder().id("U0000001").email("test@example.com").email("testuser").name("Test User").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
         when(invitationService.createInvitation(anyString(), anyString(), any(), any())).thenReturn(
-                Invitation.builder().id(1L).email("a@b.com").token("tok").invitedBy(1L).build());
+                Invitation.builder().id(1L).email("a@b.com").token("tok").invitedBy("U0000001").build());
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(currentUser));
 
         mvc.perform(post("/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -67,9 +67,9 @@ class InvitationControllerTest {
 
     @Test
     @WithMockUser(authorities = "INVITE_USERS")
-    void createInvitation_WithRoles_ShouldIncludeRolesInResponse() throws Exception {
+        void createInvitation_WithProfiles_ShouldIncludeProfilesInResponse() throws Exception {
         // Given
-        User currentUser = User.builder().id(1L).email("test@example.com").username("testuser").name("Test User").build();
+        User currentUser = User.builder().id("U0000001").email("test@example.com").email("testuser").name("Test User").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
         when(invitationService.createInvitation(anyString(), anyString(), any(), any())).thenReturn(
@@ -77,22 +77,22 @@ class InvitationControllerTest {
                         .id(1L)
                         .email("user@example.com")
                         .token("test-token")
-                        .invitedBy(1L)
-                        .roles(java.util.Set.of(
-                                es.yambo_alco.web.model.Role.builder().id("SOCIO").build(),
-                                es.yambo_alco.web.model.Role.builder().id("MONITOR").build()
+                        .invitedBy("U0000001")
+                        .profiles(java.util.Set.of(
+                                es.yambo_alco.web.model.Profile.builder().id("SOCIO").build(),
+                                es.yambo_alco.web.model.Profile.builder().id("MONITOR").build()
                         ))
                         .build());
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(currentUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(currentUser));
 
         // When & Then
         mvc.perform(post("/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer test.jwt.token")
-                .content("{\"email\":\"user@example.com\", \"name\":\"Test User\", \"roleIds\":[\"SOCIO\",\"MONITOR\"]}"))
+                .content("{\"email\":\"user@example.com\", \"name\":\"Test User\", \"profileIds\":[\"SOCIO\",\"MONITOR\"]}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.roleIds", hasSize(2)));
+                .andExpect(jsonPath("$.profileIds", hasSize(2)));
     }
 
     @Test
@@ -101,9 +101,9 @@ class InvitationControllerTest {
         // Given
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = now.plusDays(7);
-        
-        User inviter = User.builder().id(1L).username("inviter").name("Inviter User").email("inviter@example.com").build();
-        
+
+        User inviter = User.builder().id("U0000001").email("inviter").name("Inviter User").email("inviter@example.com").build();
+
         Invitation invitation1 = Invitation.builder()
                 .id(1L)
                 .email("user1@example.com")
@@ -111,7 +111,7 @@ class InvitationControllerTest {
                 .createdAt(now)
                 .expiresAt(expiresAt)
                 .used(false)
-                .invitedBy(1L)
+                .invitedBy("U0000001")
                 .build();
 
         Invitation invitation2 = Invitation.builder()
@@ -121,11 +121,11 @@ class InvitationControllerTest {
                 .createdAt(now)
                 .expiresAt(expiresAt)
                 .used(true)
-                .invitedBy(1L)
+                .invitedBy("U0000002")
                 .build();
 
         when(invitationService.getAllInvitations()).thenReturn(List.of(invitation1, invitation2));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(inviter));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(inviter));
 
         // When & Then
         mvc.perform(get("/invitations")
@@ -168,9 +168,9 @@ class InvitationControllerTest {
         // Given
         LocalDateTime createdAt = LocalDateTime.of(2025, 10, 18, 10, 0);
         LocalDateTime expiresAt = LocalDateTime.of(2025, 10, 25, 10, 0);
-        
-        User inviter = User.builder().id(5L).username("admin").name("Admin User").email("admin@example.com").build();
-        
+
+        User inviter = User.builder().id("U0000005").email("admin").name("Admin User").email("admin@example.com").build();
+
         Invitation invitation = Invitation.builder()
                 .id(1L)
                 .email("test@example.com")
@@ -178,11 +178,11 @@ class InvitationControllerTest {
                 .createdAt(createdAt)
                 .expiresAt(expiresAt)
                 .used(false)
-                .invitedBy(5L)
+                .invitedBy("U0000005")
                 .build();
 
         when(invitationService.getAllInvitations()).thenReturn(List.of(invitation));
-        when(userRepository.findById(5L)).thenReturn(Optional.of(inviter));
+        when(userRepository.findById("U0000005")).thenReturn(Optional.of(inviter));
 
         // When & Then
         mvc.perform(get("/invitations")

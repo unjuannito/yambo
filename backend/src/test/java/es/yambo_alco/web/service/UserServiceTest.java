@@ -2,9 +2,9 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.repository.RoleRepository;
+import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,22 +32,22 @@ public class UserServiceTest {
 
     private UserRepository userRepository;
     private PasswordEncoder passwordEncoder;
-    private UserService userService;
-    private RoleRepository roleRepository;
+        private UserService userService;
+        private ProfileRepository roleRepository;
     private PendingDeletionService pendingDeletionService;
 
     @BeforeEach
     public void setup() {
         userRepository = Mockito.mock(UserRepository.class);
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
-        roleRepository = Mockito.mock(RoleRepository.class);
+        roleRepository = Mockito.mock(ProfileRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
         userService = new UserService(userRepository, passwordEncoder, roleRepository, pendingDeletionService);
     }
 
     @Test
     public void listUsers_returnsPageFromRepository() {
-        User u = User.builder().id(1L).username("u").email("a@b.com").name("User").enabled(true).build();
+        User u = User.builder().id("U0000001").email("u").email("a@b.com").name("User").enabled(true).build();
         Page<User> page = new PageImpl<>(List.of(u));
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
@@ -62,26 +62,25 @@ public class UserServiceTest {
     public void updateProfile_WithValidData_ShouldUpdateUser() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("old@example.com")
                 .name("Old Name")
                 .build();
 
         User updatedUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("new@example.com")
                 .name("New Name")
-                .updatedAt(LocalDateTime.now())
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateProfile(1L, "New Name", "new@example.com");
+        User result = userService.updateProfile("U0000001", "New Name", "new@example.com");
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -93,15 +92,15 @@ public class UserServiceTest {
     public void updateProfile_WithExistingEmail_ShouldThrowException() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
+                .id("U0000001")
                 .email("old@example.com")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile(1L, "New Name", "existing@example.com"))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already in use");
 
@@ -111,10 +110,10 @@ public class UserServiceTest {
     @Test
     public void updateProfile_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile(1L, "New Name", "new@example.com"))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -123,16 +122,16 @@ public class UserServiceTest {
     public void changePassword_WithValidData_ShouldUpdatePassword() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
+                .id("U0000001")
                 .password("encodedOldPassword")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
         when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
 
         // When
-        userService.changePassword(1L, "oldPassword", "newPassword");
+        userService.changePassword("U0000001", "oldPassword", "newPassword");
 
         // Then
         verify(passwordEncoder).encode("newPassword");
@@ -143,15 +142,15 @@ public class UserServiceTest {
     public void changePassword_WithWrongOldPassword_ShouldThrowException() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
+                .id("U0000001")
                 .password("encodedOldPassword")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("wrongPassword", "encodedOldPassword")).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> userService.changePassword(1L, "wrongPassword", "newPassword"))
+        assertThatThrownBy(() -> userService.changePassword("U0000001", "wrongPassword", "newPassword"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Old password is incorrect");
 
@@ -162,97 +161,96 @@ public class UserServiceTest {
     @Test
     public void changePassword_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.changePassword(1L, "oldPassword", "newPassword"))
+        assertThatThrownBy(() -> userService.changePassword("U0000001", "oldPassword", "newPassword"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
 
     @Test
-    public void updateUserRoles_WithValidData_ShouldUpdateRoles() {
+        public void updateUserProfiles_WithValidData_ShouldUpdateProfiles() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .build();
 
-        Role role1 = Role.builder().id("ROLE_USER").build();
-        Role role2 = Role.builder().id("ROLE_ADMIN").build();
+        Profile role1 = Profile.builder().id("ROLE_USER").build();
+        Profile role2 = Profile.builder().id("ROLE_ADMIN").build();
 
         User updatedUser = User.builder()
-                .id(1L)
-                .username("testuser")
-                .roles(Set.of(role1, role2))
-                .updatedAt(LocalDateTime.now())
+                .id("U0000001")
+                .email("testuser")
+                .profiles(Set.of(role1, role2))
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(roleRepository.findById("ROLE_USER")).thenReturn(Optional.of(role1));
         when(roleRepository.findById("ROLE_ADMIN")).thenReturn(Optional.of(role2));
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateUserRoles(1L, Set.of("ROLE_USER", "ROLE_ADMIN"));
+        User result = userService.updateUserProfiles("U0000001", Set.of("ROLE_USER", "ROLE_ADMIN"));
 
         // Then
-        assertThat(result.getRoles()).hasSize(2);
-        assertThat(result.getRoles()).extracting("id").contains("ROLE_USER", "ROLE_ADMIN");
+        assertThat(result.getProfiles()).hasSize(2);
+        assertThat(result.getProfiles()).extracting("id").contains("ROLE_USER", "ROLE_ADMIN");
         verify(userRepository).save(any(User.class));
     }
 
     @Test
-    public void updateUserRoles_WithEmptyRoles_ShouldThrowException() {
+        public void updateUserProfiles_WithEmptyProfiles_ShouldThrowException() {
         // Given
-        User existingUser = User.builder().id(1L).build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        User existingUser = User.builder().id("U0000001").build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, Set.of()))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of()))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("At least one role must be specified");
+                .hasMessage("At least one profile must be specified");
 
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    public void updateUserRoles_WithNullRoles_ShouldThrowException() {
+        public void updateUserProfiles_WithNullProfiles_ShouldThrowException() {
         // Given
-        User existingUser = User.builder().id(1L).build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        User existingUser = User.builder().id("U0000001").build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, null))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", null))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("At least one role must be specified");
+                .hasMessage("At least one profile must be specified");
 
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    public void updateUserRoles_WithNonExistentUser_ShouldThrowException() {
+        public void updateUserProfiles_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, Set.of("ROLE_USER")))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of("ROLE_USER")))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
 
     @Test
-    public void updateUserRoles_WithNonExistentRole_ShouldThrowException() {
+        public void updateUserProfiles_WithNonExistentProfile_ShouldThrowException() {
         // Given
-        User existingUser = User.builder().id(1L).build();
+        User existingUser = User.builder().id("U0000001").build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(roleRepository.findById("NON_EXISTENT_ROLE")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, Set.of("NON_EXISTENT_ROLE")))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of("NON_EXISTENT_ROLE")))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Role not found: NON_EXISTENT_ROLE");
+                .hasMessage("Profile not found: NON_EXISTENT_ROLE");
 
         verify(userRepository, never()).save(any(User.class));
     }
@@ -261,16 +259,16 @@ public class UserServiceTest {
     public void getUserById_WithExistingUser_ShouldReturnUser() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("test@example.com")
                 .name("Test User")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When
-        User result = userService.getUserById(1L);
+        User result = userService.getUserById("U0000001");
 
         // Then
         assertThat(result).isNotNull();
@@ -283,10 +281,10 @@ public class UserServiceTest {
     @Test
     public void getUserById_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.getUserById(1L))
+        assertThatThrownBy(() -> userService.getUserById("U0000001"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -295,19 +293,19 @@ public class UserServiceTest {
     public void deleteUser_WithExistingUser_ShouldScheduleDeletion() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("test@example.com")
                 .name("Test User")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When
-        userService.deleteUser(1L);
+        userService.deleteUser("U0000001");
 
         // Then
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById("U0000001");
         verify(pendingDeletionService).scheduleDeletion(any(), any(), any());
         verify(userRepository, never()).delete(any(User.class));
     }
@@ -315,10 +313,10 @@ public class UserServiceTest {
     @Test
     public void deleteUser_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.deleteUser(1L))
+        assertThatThrownBy(() -> userService.deleteUser("U0000001"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
 

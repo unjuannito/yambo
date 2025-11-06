@@ -35,14 +35,14 @@ public class Invitation {
 
     private LocalDateTime expiresAt;
 
-    private Long invitedBy;
+    private String invitedBy;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "invitation_roles",
+        name = "invitation_profile",
         joinColumns = @JoinColumn(name = "invitation_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+        inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
     @Builder.Default
-    private Set<Role> roles = Set.of();
+    private Set<Profile> profiles = Set.of();
 }

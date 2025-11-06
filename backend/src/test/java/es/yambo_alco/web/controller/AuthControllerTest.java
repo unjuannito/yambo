@@ -82,7 +82,7 @@ class AuthControllerTest {
     void register_WithValidInvitation_ShouldReturnToken() throws Exception {
         // Given
         RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
-        User user = User.builder().username("newuser").build();
+        User user = User.builder().email("newuser").build();
         when(invitationService.completeInvitation("valid-token", "newuser", "password", "New User")).thenReturn(user);
         when(authService.authenticate("newuser", "password")).thenReturn("test.jwt.token");
 

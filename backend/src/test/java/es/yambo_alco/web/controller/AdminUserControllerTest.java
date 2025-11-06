@@ -1,7 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
@@ -52,8 +52,8 @@ public class AdminUserControllerTest {
     @Test
     @WithMockUser(authorities = "LIST_USERS")
     public void listUsers_ok() throws Exception {
-        User u = User.builder().id(1L).username("u").email("a@b.com").name("User")
-        .roles(Set.of()).enabled(true).build();
+        User u = User.builder().id("U0000001").email("a@b.com").name("User")
+                .profiles(Set.of()).enabled(true).build();
         Mockito.when(userService.listUsers(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
                 Mockito.any(), Mockito.any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(u)));
 
@@ -66,20 +66,18 @@ public class AdminUserControllerTest {
     void listUsers_WithDefaultPagination_ShouldReturnPagedResults() throws Exception {
         // Given
         User user1 = User.builder()
-                .id(1L)
-                .username("user1")
+                .id("U0000001")
                 .email("user1@example.com")
                 .name("User One")
-                .roles(Set.of(Role.builder().id("ROLE_USER").build()))
+                .profiles(Set.of(Profile.builder().id("ROLE_USER").build()))
                 .enabled(true)
                 .build();
         
         User user2 = User.builder()
-                .id(2L)
-                .username("user2")
+                .id("U0000002")
                 .email("user2@example.com")
                 .name("User Two")
-                .roles(Set.of(Role.builder().id("ROLE_ADMIN").build()))
+                .profiles(Set.of(Profile.builder().id("ROLE_ADMIN").build()))
                 .enabled(true)
                 .build();
 
@@ -95,9 +93,9 @@ public class AdminUserControllerTest {
                 .andExpect(jsonPath("$.content", hasSize(2)))
                 .andExpect(jsonPath("$.content[0].username").value("user1"))
                 .andExpect(jsonPath("$.content[1].username").value("user2"))
-                .andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.size").value(20))
-                .andExpect(jsonPath("$.number").value(0));
+                .andExpect(jsonPath("$.page.totalElements").value(2))
+                .andExpect(jsonPath("$.page.size").value(20))
+                .andExpect(jsonPath("$.page.number").value(0));
 
         verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class));
     }
@@ -107,11 +105,10 @@ public class AdminUserControllerTest {
     void listUsers_WithNameFilter_ShouldFilterByName() throws Exception {
         // Given
         User user = User.builder()
-                .id(1L)
-                .username("john")
+                .id("U0000001")
                 .email("john@example.com")
                 .name("John Doe")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .enabled(true)
                 .build();
 
@@ -136,11 +133,10 @@ public class AdminUserControllerTest {
     void listUsers_WithEmailFilter_ShouldFilterByEmail() throws Exception {
         // Given
         User user = User.builder()
-                .id(1L)
-                .username("test")
+                .id("U0000001")
                 .email("test@example.com")
                 .name("Test User")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .enabled(true)
                 .build();
 
@@ -164,11 +160,10 @@ public class AdminUserControllerTest {
     void listUsers_WithEnabledFilter_ShouldFilterByEnabledStatus() throws Exception {
         // Given
         User enabledUser = User.builder()
-                .id(1L)
-                .username("enabled")
+                .id("U0000002")
                 .email("enabled@example.com")
                 .name("Enabled User")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .enabled(true)
                 .build();
 
@@ -192,11 +187,10 @@ public class AdminUserControllerTest {
     void listUsers_WithPermissionsFilter_ShouldFilterByPermissions() throws Exception {
         // Given
         User user = User.builder()
-                .id(1L)
-                .username("admin")
+                .id("U0000001")
                 .email("admin@example.com")
                 .name("Admin User")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .enabled(true)
                 .build();
 
@@ -216,14 +210,13 @@ public class AdminUserControllerTest {
 
     @Test
     @WithMockUser(authorities = "LIST_USERS")
-    void listUsers_WithRolesFilter_ShouldFilterByRoles() throws Exception {
+        void listUsers_WithProfilesFilter_ShouldFilterByProfiles() throws Exception {
         // Given
         User user = User.builder()
-                .id(1L)
-                .username("admin")
+                .id("U0000001")
                 .email("admin@example.com")
                 .name("Admin User")
-                .roles(Set.of(Role.builder().id("ROLE_ADMIN").build()))
+                                .profiles(Set.of(Profile.builder().id("ROLE_ADMIN").build()))
                 .enabled(true)
                 .build();
 
@@ -233,7 +226,7 @@ public class AdminUserControllerTest {
 
         // When & Then
         mockMvc.perform(get("/admin/users")
-                .param("roles", "ROLE_ADMIN,ROLE_USER")
+                .param("profiles", "ROLE_ADMIN,ROLE_USER")
                 .header("Authorization", "Bearer test.jwt.token")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
@@ -248,11 +241,10 @@ public class AdminUserControllerTest {
         List<User> users = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             users.add(User.builder()
-                    .id((long) i)
-                    .username("user" + i)
+                    .id("U000000" + i)
                     .email("user" + i + "@example.com")
                     .name("User " + i)
-                    .roles(Set.of())
+                                        .profiles(Set.of())
                     .enabled(true)
                     .build());
         }
@@ -269,9 +261,9 @@ public class AdminUserControllerTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(10)))
-                .andExpect(jsonPath("$.number").value(1))
-                .andExpect(jsonPath("$.size").value(10))
-                .andExpect(jsonPath("$.totalElements").value(25));
+                .andExpect(jsonPath("$.page.number").value(1))
+                .andExpect(jsonPath("$.page.size").value(10))
+                .andExpect(jsonPath("$.page.totalElements").value(25));
     }
 
     @Test
@@ -279,20 +271,18 @@ public class AdminUserControllerTest {
     void listUsers_WithSortByName_ShouldSortAscending() throws Exception {
         // Given
         User user1 = User.builder()
-                .id(1L)
-                .username("alice")
+                .id("U0000001")
                 .email("alice@example.com")
                 .name("Alice")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .enabled(true)
                 .build();
         
         User user2 = User.builder()
-                .id(2L)
-                .username("bob")
+                .id("U0000002")
                 .email("bob@example.com")
                 .name("Bob")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .enabled(true)
                 .build();
 
@@ -334,11 +324,10 @@ public class AdminUserControllerTest {
     void listUsers_WithMultipleFilters_ShouldApplyAllFilters() throws Exception {
         // Given
         User user = User.builder()
-                .id(1L)
-                .username("admin")
+                .id("U0000001")
                 .email("admin@example.com")
                 .name("Admin User")
-                .roles(Set.of(Role.builder().id("ROLE_ADMIN").build()))
+                .profiles(Set.of(Profile.builder().id("ROLE_ADMIN").build()))
                 .enabled(true)
                 .build();
 
@@ -352,7 +341,7 @@ public class AdminUserControllerTest {
                 .param("email", "admin@example.com")
                 .param("enabled", "true")
                 .param("permissions", "MANAGE_USERS")
-                .param("roles", "ROLE_ADMIN")
+                .param("profiles", "ROLE_ADMIN")
                 .header("Authorization", "Bearer test.jwt.token")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -373,51 +362,50 @@ public class AdminUserControllerTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(0)))
-                .andExpect(jsonPath("$.totalElements").value(0));
+                .andExpect(jsonPath("$.page.totalElements").value(0));
     }
 
     
 
     @Test
     @WithMockUser(authorities = "MANAGE_USERS")
-    void updateUserRoles_WithValidData_ShouldReturnUpdatedUser() throws Exception {
+    void updateUserProfiles_WithValidData_ShouldReturnUpdatedUser() throws Exception {
         User updatedUser = User.builder()
-                .id(2L)
-                .username("user2")
+                .id("U0000002")
                 .email("user2@example.com")
                 .name("User Two")
-                .roles(Set.of(
-                        Role.builder().id("ROLE_USER").build(),
-                        Role.builder().id("ROLE_ADMIN").build()))
+                .profiles(Set.of(
+                        Profile.builder().id("ROLE_USER").build(),
+                        Profile.builder().id("ROLE_ADMIN").build()))
                 .build();
 
-        when(userService.updateUserRoles(2L, Set.of("ROLE_USER", "ROLE_ADMIN"))).thenReturn(updatedUser);
+        when(userService.updateUserProfiles("U0000002", Set.of("ROLE_USER", "ROLE_ADMIN"))).thenReturn(updatedUser);
 
         String requestBody = """
                 {
-                    "roleIds": ["ROLE_USER", "ROLE_ADMIN"]
+                    "profileIds": ["ROLE_USER", "ROLE_ADMIN"]
                 }
                 """;
 
-        mockMvc.perform(put("/admin/users/roles?userId=2")
+        mockMvc.perform(put("/admin/users/profiles?userId=2")
                 .header("Authorization", "Bearer test.jwt.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("user2"))
-                .andExpect(jsonPath("$.roles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")));
+                .andExpect(jsonPath("$.profiles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")));
     }
 
     @Test
     @WithMockUser(authorities = "MANAGE_USERS")
-    void updateUserRoles_WithEmptyRoles_ShouldReturnBadRequest() throws Exception {
+    void updateUserProfiles_WithEmptyProfiles_ShouldReturnBadRequest() throws Exception {
         String requestBody = """
                 {
-                    "roleIds": []
+                    "profileIds": []
                 }
                 """;
 
-        mockMvc.perform(put("/admin/users/roles?userId=2")
+        mockMvc.perform(put("/admin/users/profiles?userId=2")
                 .header("Authorization", "Bearer test.jwt.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
@@ -428,26 +416,24 @@ public class AdminUserControllerTest {
     @WithMockUser(authorities = "MANAGE_USERS")
     void updateProfile_WithValidData_ShouldReturnUpdatedUser() throws Exception {
         User userToUpdate = User.builder()
-                .id(1L)
-                .username("olduser")
+                .id("U0000001")
                 .email("old@example.com")
                 .name("Old Name")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .build();
         User updatedUser = User.builder()
-                .id(1L)
-                .username("olduser")
+                .id("U0000001")
                 .email("new@example.com")
                 .name("New Name")
-                .roles(Set.of())
+                .profiles(Set.of())
                 .build();
 
-        when(userService.getUserById(1L)).thenReturn(userToUpdate);
-        when(userService.updateProfile(1L, "New Name", "new@example.com")).thenReturn(updatedUser);
+        when(userService.getUserById("U0000001")).thenReturn(userToUpdate);
+        when(userService.updateProfile("U0000001", "New Name", "new@example.com")).thenReturn(updatedUser);
 
         String requestBody = """
                 {
-                    "id": 1,
+                    "id": "U0000001",
                     "name": "New Name",
                     "email": "new@example.com"
                 }
@@ -466,20 +452,20 @@ public class AdminUserControllerTest {
     @Test
     @WithMockUser(authorities = "MANAGE_USERS")
     void deleteUser_ShouldReturnOk() throws Exception {
-        User currentUser = User.builder().id(1L).build();
+        User currentUser = User.builder().id("U0000001").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
-        mockMvc.perform(delete("/admin/users/2")
+        mockMvc.perform(delete("/admin/users/U0000001")
                 .header("Authorization", "Bearer test.jwt.token"))
                 .andExpect(status().isOk());
     }
     @Test
     @WithMockUser(authorities = "MANAGE_USERS")
     void deleteUser_SelfDeletion_ShouldReturnBadRequest() throws Exception {
-        User currentUser = User.builder().id(1L).build();
+        User currentUser = User.builder().id("U0000001").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
-        mockMvc.perform(delete("/admin/users/1")
+        mockMvc.perform(delete("/admin/users/U0000001")
                 .header("Authorization", "Bearer test.jwt.token"))
                 .andExpect(status().isBadRequest());
     }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="28-add-name-to-family-product" author="yambo">
+        <addColumn tableName="family_product">
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="29-remove-profile-id-from-family-product" author="yambo">
+        <dropForeignKeyConstraint
+            baseTableName="family_product"
+            constraintName="fk_family_product_profile"/>
+        <dropColumn tableName="family_product" columnName="profile_id"/>
+    </changeSet>
+
+    <changeSet id="30-create-family-product-profile-many-to-many" author="yambo">
+        <createTable tableName="family_product_profile">
+            <column name="family_product_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="family_product_profile"
+                       columnNames="family_product_id, profile_id"
+                       constraintName="pk_family_product_profile"/>
+        <addForeignKeyConstraint
+            baseTableName="family_product_profile"
+            baseColumnNames="family_product_id"
+            referencedTableName="family_product"
+            referencedColumnNames="id"
+            constraintName="fk_fpp_family_product"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="family_product_profile"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_fpp_profile"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

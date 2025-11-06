@@ -38,12 +38,12 @@ public class InvitationController {
     public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest req, Authentication authentication) {
         User user = authService.getCurrentUser(true);
 
-        Invitation inv = invitationService.createInvitation(req.getEmail(), req.getName(), user.getId(), req.getRoleIds());
+        Invitation inv = invitationService.createInvitation(req.getEmail(), req.getName(), user.getId(), req.getProfileIds());
         
         UserInfo invitedByUser = null;
         if (inv.getInvitedBy() != null) {
             invitedByUser = userRepository.findById(inv.getInvitedBy())
-                    .map(u -> new UserInfo(u.getId(), u.getUsername(), u.getName(), u.getEmail()))
+                    .map(u -> new UserInfo(u.getId(), u.getEmail(), u.getName(), u.getEmail()))
                     .orElse(null);
         }
         
@@ -55,8 +55,8 @@ public class InvitationController {
                 inv.getExpiresAt(), 
                 inv.isUsed(), 
                 inv.getInvitedBy(),
-                invitedByUser,
-                inv.getRoles().stream().map(r -> r.getId()).collect(Collectors.toSet())
+        invitedByUser,
+        inv.getProfiles().stream().map(p -> p.getId()).collect(Collectors.toSet())
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
@@ -83,7 +83,7 @@ public class InvitationController {
                             inv.isUsed(), 
                             inv.getInvitedBy(),
                             invitedByUser,
-                            inv.getRoles().stream().map(r -> r.getId()).collect(Collectors.toSet())
+                            inv.getProfiles().stream().map(r -> r.getId()).collect(Collectors.toSet())
                     );
                 })
                 .collect(Collectors.toList());
@@ -106,7 +106,7 @@ public class InvitationController {
         @NotBlank
         private String name;
 
-        private Set<String> roleIds;
+        private Set<String> profileIds;
     }
 
     @Data
@@ -117,11 +117,11 @@ public class InvitationController {
         private LocalDateTime createdAt;
         private LocalDateTime expiresAt;
         private boolean used;
-        private Long invitedBy;
+        private String invitedBy;
         private UserInfo invitedByUser;
-        private Set<String> roleIds;
+        private Set<String> profileIds;
 
-        public InvitationResponse(Long id, String email, String token, LocalDateTime createdAt, LocalDateTime expiresAt, boolean used, Long invitedBy, UserInfo invitedByUser, Set<String> roleIds) {
+        public InvitationResponse(Long id, String email, String token, LocalDateTime createdAt, LocalDateTime expiresAt, boolean used, String invitedBy, UserInfo invitedByUser, Set<String> profileIds) {
             this.id = id;
             this.email = email;
             this.token = token;
@@ -130,18 +130,18 @@ public class InvitationController {
             this.used = used;
             this.invitedBy = invitedBy;
             this.invitedByUser = invitedByUser;
-            this.roleIds = roleIds;
+            this.profileIds = profileIds;
         }
     }
 
     @Data
     public static class UserInfo {
-        private Long id;
+        private String id;
         private String username;
         private String name;
         private String email;
 
-        public UserInfo(Long id, String username, String name, String email) {
+        public UserInfo(String id, String username, String name, String email) {
             this.id = id;
             this.username = username;
             this.name = name;

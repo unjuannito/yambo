@@ -1,6 +1,6 @@
 package es.yambo_alco.web.jwt;
 
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,12 +24,12 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(jwtService, "jwtSecret", "bd54d2a5f05bab92db7403e180b40782cf5835d39fe702d8aa26ddeb18877019");
         ReflectionTestUtils.setField(jwtService, "jwtExpirationMillis", 3600000L);
         testUser = User.builder()
-                .username("testuser")
+                .email("testuser")
                 .password("password")
                 .email("test@yambo-alco.es")
-                .roles(Set.of(
-                        Role.builder().id("ADMIN").build(),
-                        Role.builder().id("USER").build()
+        .profiles(Set.of(
+            Profile.builder().id("ADMIN").build(),
+            Profile.builder().id("USER").build()
                 ))
                 .enabled(true)
                 .build();
@@ -63,11 +63,11 @@ class JwtServiceTest {
         String token = jwtService.generateToken(testUser);
         
         User otherUser = User.builder()
-                .username("otheruser")
+                .email("otheruser")
                 .password("password")
                 .email("other@yambo-alco.es")
-                .roles(Set.of(
-                        Role.builder().id("USER").build()
+        .profiles(Set.of(
+            Profile.builder().id("USER").build()
                 ))
                 .enabled(true)
                 .build();

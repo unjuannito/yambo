@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.controller.UserController.UserResponse;
+import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,12 +45,12 @@ public class AdminUserController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('LIST_USERS')")
-    public ResponseEntity<Page<UserResponse>> listUsers(
+    public ResponseEntity<Page<AdminUserResponse>> listUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) Boolean enabled,
             @RequestParam(required = false) String permissions,
-            @RequestParam(required = false) String roles,
+            @RequestParam(required = false) String profiles,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size,
             @RequestParam(required = false) String sortBy,
@@ -58,9 +60,9 @@ public class AdminUserController {
             perms = Arrays.stream(permissions.split(",")).map(String::trim).filter(s -> !s.isEmpty())
                     .collect(Collectors.toSet());
         }
-        List<String> rolesList = null;
-        if (roles != null && !roles.isBlank()) {
-            rolesList = Arrays.stream(roles.split(",")).map(String::trim).filter(s -> !s.isEmpty())
+        List<String> profilesList = null;
+        if (profiles != null && !profiles.isBlank()) {
+            profilesList = Arrays.stream(profiles.split(",")).map(String::trim).filter(s -> !s.isEmpty())
                     .collect(Collectors.toList());
         }
 
@@ -69,23 +71,23 @@ public class AdminUserController {
                 : PageRequest.of(page, size, dir, sortBy);
 
         Page<User> users = userService.listUsers(name, email, enabled, perms == null ? null : List.copyOf(perms),
-                rolesList, pr);
-        return ResponseEntity.ok(users.map(UserResponse::new));
+                profilesList, pr);
+        return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
 
-    @PutMapping("/roles")
+    @PutMapping("/profiles")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<UserResponse> updateUserRoles(@RequestParam Long userId,
-            @Valid @RequestBody UpdateRolesRequest request) {
-        User updatedUser = userService.updateUserRoles(userId, request.getRoleIds());
-        UserResponse response = new UserResponse(updatedUser);
+    public ResponseEntity<AdminUserResponse> updateUserProfiles(@RequestParam String userId,
+            @Valid @RequestBody UpdateProfilesRequest request) {
+        User updatedUser = userService.updateUserProfiles(userId, request.getProfileIds());
+        AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
 
     @Data
-    public static class UpdateRolesRequest {
-        @NotEmpty(message = "At least one role must be specified")
-        private Set<String> roleIds;
+    public static class UpdateProfilesRequest {
+        @NotEmpty(message = "At least one profile must be specified")
+        private Set<String> profileIds;
     }
 
     @PutMapping("/profile")
@@ -100,7 +102,7 @@ public class AdminUserController {
 
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<String> deleteUser(@PathVariable String userId) {
         User currentUser = authService.getCurrentUser(true);
         if (currentUser.getId().equals(userId)) {
             return ResponseEntity.badRequest().body("Cannot delete your own account");
@@ -113,7 +115,7 @@ public class AdminUserController {
     @Data
     public static class UpdateProfileRequest {
         @NotNull(message = "User ID cannot be null")
-        private Long id;
+        private String id;
 
         @NotBlank(message = "Name cannot be blank")
         @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
@@ -122,5 +124,58 @@ public class AdminUserController {
         @NotBlank(message = "Email cannot be blank")
         @Email(message = "Email should be valid")
         private String email;
+    }
+
+    @Data
+    public static class AdminUserResponse {
+        private String id;
+        private String email;
+        private String name;
+        private AdminUserProfileResponse[] profiles;
+        private AdminUserPermissionResponse[] permissions;
+        private boolean enabled;
+
+        public AdminUserResponse(User user) {
+            this.id = user.getId();
+            this.email = user.getEmail();
+            this.name = user.getName();
+
+            this.profiles = user.getProfiles().stream()
+                    .map(profile -> new AdminUserProfileResponse(profile.getId(), profile.getName()))
+                    .toArray(AdminUserProfileResponse[]::new);
+
+            Map<String, Set<String>> resourceActions = user.getProfiles().stream()
+                    .flatMap(profile -> profile.getPermissions().stream())
+                    .collect(Collectors.groupingBy(
+                            Permission::getResource,
+                            Collectors.mapping(Permission::getAction, Collectors.toSet())));
+            this.permissions = resourceActions.entrySet().stream()
+                    .map(entry -> new AdminUserPermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
+                    .toArray(AdminUserPermissionResponse[]::new);
+
+            this.enabled = user.isEnabled();
+        }
+    }
+
+    @Data
+    public static class AdminUserProfileResponse {
+        private String id;
+        private String name;
+
+        public AdminUserProfileResponse(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    @Data
+    public static class AdminUserPermissionResponse {
+        private String obj;
+        private String[] actions;
+
+        public AdminUserPermissionResponse(String obj, String[] actions) {
+            this.obj = obj;
+            this.actions = actions;
+        }
     }
 }

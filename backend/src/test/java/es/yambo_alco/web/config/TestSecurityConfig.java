@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 
 import static org.mockito.Mockito.mock;
@@ -29,11 +28,7 @@ public class TestSecurityConfig {
         return mock(AuthService.class);
     }
 
-    @Bean
-    @Primary
-    public UserDetailsService userDetailsService() {
-        return mock(UserDetailsService.class);
-    }
+    // Use mocked AuthService (which implements UserDetailsService) to avoid multiple UserDetailsService beans
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {

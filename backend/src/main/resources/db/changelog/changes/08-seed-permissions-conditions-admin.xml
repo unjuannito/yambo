@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Ensure condition table has required columns (PostgreSQL) -->
+    <changeSet id="08-01-add-condition-columns" author="yambo" context="seed">
+        <preConditions onFail="MARK_RAN">
+            <dbms type="postgresql"/>
+        </preConditions>
+        <sql>
+            ALTER TABLE "condition"
+                ADD COLUMN IF NOT EXISTS resource_field        varchar(64),
+                ADD COLUMN IF NOT EXISTS operator              varchar(16),
+                ADD COLUMN IF NOT EXISTS source_object         varchar(64),
+                ADD COLUMN IF NOT EXISTS source_field          varchar(64),
+                ADD COLUMN IF NOT EXISTS depends_on_permission varchar(32),
+                ADD COLUMN IF NOT EXISTS description           varchar(255);
+        </sql>
+    </changeSet>
+</databaseChangeLog>

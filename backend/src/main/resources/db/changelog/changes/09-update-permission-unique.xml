@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Update unique constraint on permission to include has_condition -->
+    <changeSet id="09-01-drop-uk-permission-resource-action" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <uniqueConstraintExists tableName="permission" constraintName="uk_permission_resource_action"/>
+        </preConditions>
+        <dropUniqueConstraint tableName="permission" constraintName="uk_permission_resource_action"/>
+    </changeSet>
+
+    <changeSet id="09-02-add-uk-permission-resource-action-has-condition" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <uniqueConstraintExists tableName="permission" constraintName="uk_permission_resource_action"/>
+            </not>
+        </preConditions>
+        <addUniqueConstraint tableName="permission"
+            columnNames="resource, action, has_condition"
+            constraintName="uk_permission_resource_action"/>
+    </changeSet>
+
+</databaseChangeLog>

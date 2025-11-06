@@ -48,7 +48,7 @@ public class ScheduledDeletionService {
 
     private void deleteObject(PendingDeletion pendingDeletion) {
         DeletionObjectType objectType = pendingDeletion.getObjectType();
-        Long objectId = Long.parseLong(pendingDeletion.getObjectId());
+        String objectId = pendingDeletion.getObjectId();
 
         switch (objectType) {
             case USER:
@@ -57,7 +57,7 @@ public class ScheduledDeletionService {
         }
     }
 
-    private void deleteUser(Long userId) {
+    private void deleteUser(String userId) {
         userRepository.deleteById(userId);
         log.info("Deleted user with id: {}", userId);
     }

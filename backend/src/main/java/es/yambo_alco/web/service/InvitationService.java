@@ -3,10 +3,10 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Invitation;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.InvitationRepository;
-import es.yambo_alco.web.repository.RoleRepository;
+import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -26,7 +26,7 @@ import java.util.Set;
 public class InvitationService {
 
     private final InvitationRepository invitationRepository;
-    private final RoleRepository roleRepository;
+    private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
@@ -35,18 +35,18 @@ public class InvitationService {
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
 
-    public Invitation createInvitation(String email, String name, Long invitedBy, Set<String> roleIds) {
+    public Invitation createInvitation(String email, String name, String invitedBy, Set<String> profileIds) {
         // Check if email is already registered
         if (userRepository.existsByEmail(email)) {
             throw new BadRequestException("Email already registered");
         }
 
-        // Validate roles exist
-        Set<Role> roles = Set.of();
-        if (roleIds != null && !roleIds.isEmpty()) {
-            roles = Set.copyOf(roleRepository.findAllById(roleIds));
-            if (roles.size() != roleIds.size()) {
-                throw new BadRequestException("One or more roles not found");
+        // Validate profiles exist
+        Set<Profile> profiles = Set.of();
+        if (profileIds != null && !profileIds.isEmpty()) {
+            profiles = Set.copyOf(profileRepository.findAllById(profileIds));
+            if (profiles.size() != profileIds.size()) {
+                throw new BadRequestException("One or more profiles not found");
             }
         }
 
@@ -59,7 +59,7 @@ public class InvitationService {
                 .expiresAt(now.plusHours(expirationHours))
                 .used(false)
                 .invitedBy(invitedBy)
-                .roles(roles)
+                .profiles(profiles)
                 .build();
         Invitation saved = invitationRepository.save(inv);
 
@@ -83,29 +83,24 @@ public class InvitationService {
             throw new BadRequestException("Invitation expired");
         }
 
-        if (userRepository.existsByUsername(username)) {
-            throw new BadRequestException("Username already exists");
-        }
-
         if (userRepository.existsByEmail(invitation.getEmail())) {
             throw new BadRequestException("Email already registered");
         }
 
-        // Use roles from invitation, or default roles from configuration if none specified
+        // Use profiles from invitation, or default profiles from configuration if none specified
         // Create a new HashSet to avoid shared collection references between entities
-        Set<Role> userRoles;
-        if (invitation.getRoles() != null && !invitation.getRoles().isEmpty()) {
-            userRoles = new HashSet<>(invitation.getRoles());
+        Set<Profile> userProfiles;
+        if (invitation.getProfiles() != null && !invitation.getProfiles().isEmpty()) {
+            userProfiles = new HashSet<>(invitation.getProfiles());
         } else {
-            userRoles = getDefaultRoles();
+            userProfiles = new HashSet<>();
         }
 
         User user = User.builder()
-                .username(username)
                 .password(passwordEncoder.encode(password))
                 .email(invitation.getEmail())
                 .name(name)
-                .roles(userRoles)
+                .profiles(userProfiles)
                 .createdAt(LocalDateTime.now())
                 .enabled(true)
                 .build();
@@ -137,15 +132,5 @@ public class InvitationService {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private Set<Role> getDefaultRoles() {
-        List<Role> defaultRoles = roleRepository.findByIsDefaultTrue();
-        
-        if (defaultRoles.isEmpty()) {
-            throw new ResourceNotFoundException("No default roles found. Please mark at least one role as default in the database.");
-        }
-        
-        return new HashSet<>(defaultRoles);
     }
 }

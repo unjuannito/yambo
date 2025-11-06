@@ -19,15 +19,11 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(name = "user", schema = "public")
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String username;
+    private String id;
 
     @Column(nullable = false)
     private String password;
@@ -40,15 +36,13 @@ public class User implements UserDetails {
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "user_roles",
+        name = "user_profile",
         joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+        inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
-    private Set<Role> roles;
+    private Set<Profile> profiles;
 
     private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
 
     @Builder.Default
     private boolean enabled = true;
@@ -56,13 +50,18 @@ public class User implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<SimpleGrantedAuthority> authorities = new HashSet<>();
-        for (Role role : roles) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getId()));
-            for (Permission permission : role.getPermissions()) {
+        for (Profile profile : profiles) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + profile.getId()));
+            for (Permission permission : profile.getPermissions()) {
                 authorities.add(new SimpleGrantedAuthority(permission.getId()));
             }
         }
         return authorities;
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
     }
 
     @Override
