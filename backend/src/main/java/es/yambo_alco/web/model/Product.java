@@ -25,6 +25,10 @@ public class Product {
     @Column(name = "project_id")
     private String projectId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", insertable = false, updatable = false)
+    private Project project;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean active = true;
@@ -32,10 +36,6 @@ public class Product {
     @Builder.Default
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal basePrice = BigDecimal.ZERO;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private String version = "1.0.0";
 
     @Builder.Default
     @Column(nullable = false, columnDefinition = "json")
