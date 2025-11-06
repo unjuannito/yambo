@@ -11,7 +11,7 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export default function Index() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -19,7 +19,7 @@ export default function Index() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await login(username, password);
+      await login(email, password);
       navigate('/mi-espacio', { replace: true });
     } catch (err) {
       alert('Error al iniciar sesión. Por favor, verifica tus credenciales.');
@@ -36,14 +36,14 @@ export default function Index() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-              Usuario
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Correo electrónico
             </label>
             <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-orange-400 focus:ring-orange-400 sm:text-sm p-2"
               required
             />
