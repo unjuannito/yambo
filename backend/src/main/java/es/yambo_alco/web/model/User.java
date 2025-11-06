@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import org.springframework.lang.NonNull;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
@@ -23,6 +24,7 @@ import java.util.Set;
 public class User implements UserDetails {
 
     @Id
+    @NonNull
     private String id;
 
     @Column(nullable = false)

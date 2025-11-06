@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -18,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,7 +76,7 @@ public class AdminUserController {
 
     @PutMapping("/profiles")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<AdminUserResponse> updateUserProfiles(@RequestParam String userId,
+    public ResponseEntity<AdminUserResponse> updateUserProfiles(@RequestParam @NonNull String userId,
             @Valid @RequestBody UpdateProfilesRequest request) {
         User updatedUser = userService.updateUserProfiles(userId, request.getProfileIds());
         AdminUserResponse response = new AdminUserResponse(updatedUser);
@@ -101,7 +101,7 @@ public class AdminUserController {
 
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<String> deleteUser(@PathVariable String userId) {
+    public ResponseEntity<String> deleteUser(@PathVariable @NonNull String userId) {
         User currentUser = authService.getCurrentUser(true);
         if (currentUser.getId().equals(userId)) {
             return ResponseEntity.badRequest().body("Cannot delete your own account");
@@ -113,13 +113,16 @@ public class AdminUserController {
 
     @Data
     public static class UpdateProfileRequest {
-        @NotNull(message = "User ID cannot be null")
+        @NonNull
+        @NotBlank(message = "User ID cannot be blank")
         private String id;
 
+        @NonNull
         @NotBlank(message = "Name cannot be blank")
         @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
         private String name;
 
+        @NonNull
         @NotBlank(message = "Email cannot be blank")
         @Email(message = "Email should be valid")
         private String email;
