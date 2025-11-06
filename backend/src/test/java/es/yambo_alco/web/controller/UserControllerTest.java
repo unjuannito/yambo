@@ -48,29 +48,29 @@ class UserControllerTest {
         AuthController.AuthResponse authResponse = new AuthController.AuthResponse("test.jwt.token");
         when(authService.getCurrentUser(true)).thenReturn(
                 User.builder()
-                        .email("testuser")
                         .password("password")
                         .email("testuser@example.com")
+                        .name("Test User")
                         .profiles(Set.of(
                                 Profile.builder().id("ROLE_USER")
                                         .permissions(Set.of(
-                                                Permission.builder().id("READ_PRIVILEGES").build(),
-                                                Permission.builder().id("WRITE_PRIVILEGES").build()))
+                                                Permission.builder().id("READ_PRIVILEGES").resource("USER").action("READ").build(),
+                                                Permission.builder().id("WRITE_PRIVILEGES").resource("USER").action("WRITE").build()))
                                         .build(),
                                 Profile.builder().id("ROLE_ADMIN").build()))
+                        .enabled(true)
                         .build());
 
         // When & Then
         mockMvc.perform(get("/user/me")
                 .header("Authorization", "Bearer " + authResponse.token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.email").value("testuser@example.com"))
-                .andExpect(jsonPath("$.profiles").isArray())
-                .andExpect(jsonPath("$.profiles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")))
+                .andExpect(jsonPath("$.name").value("Test User"))
                 .andExpect(jsonPath("$.permissions").isArray())
-                .andExpect(jsonPath("$.permissions",
-                        org.hamcrest.Matchers.containsInAnyOrder("READ_PRIVILEGES", "WRITE_PRIVILEGES")));
+                .andExpect(jsonPath("$.permissions.length()").value(1))
+                .andExpect(jsonPath("$.permissions[0].obj").value("USER"))
+                .andExpect(jsonPath("$.permissions[0].actions", org.hamcrest.Matchers.containsInAnyOrder("READ", "WRITE")));
     }
 
     @Test
@@ -121,7 +121,6 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("testuser"))
                 .andExpect(jsonPath("$.email").value("newemail@example.com"))
                 .andExpect(jsonPath("$.name").value("New Name"));
     }

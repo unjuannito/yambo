@@ -1,6 +1,5 @@
 package es.yambo_alco.web.controller;
 
-import es.yambo_alco.web.controller.UserController.UserResponse;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
@@ -92,11 +91,11 @@ public class AdminUserController {
 
     @PutMapping("/profile")
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+    public ResponseEntity<AdminUserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User userToUpdate = userService.getUserById(request.getId());
 
         User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail());
-        UserResponse response = new UserResponse(updatedUser);
+        AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
 

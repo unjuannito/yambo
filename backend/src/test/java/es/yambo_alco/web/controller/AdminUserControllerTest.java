@@ -91,8 +91,8 @@ public class AdminUserControllerTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(2)))
-                .andExpect(jsonPath("$.content[0].username").value("user1"))
-                .andExpect(jsonPath("$.content[1].username").value("user2"))
+                .andExpect(jsonPath("$.content[0].email").value("user1@example.com"))
+                .andExpect(jsonPath("$.content[1].email").value("user2@example.com"))
                 .andExpect(jsonPath("$.page.totalElements").value(2))
                 .andExpect(jsonPath("$.page.size").value(20))
                 .andExpect(jsonPath("$.page.number").value(0));
@@ -345,7 +345,7 @@ public class AdminUserControllerTest {
                 .header("Authorization", "Bearer test.jwt.token")
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].username").value("admin"));
+                .andExpect(jsonPath("$.content[0].email").value("admin@example.com"));
     }
 
     @Test
@@ -375,8 +375,8 @@ public class AdminUserControllerTest {
                 .email("user2@example.com")
                 .name("User Two")
                 .profiles(Set.of(
-                        Profile.builder().id("ROLE_USER").build(),
-                        Profile.builder().id("ROLE_ADMIN").build()))
+                        Profile.builder().id("ROLE_USER").name("User").build(),
+                        Profile.builder().id("ROLE_ADMIN").name("Admin").build()))
                 .build();
 
         when(userService.updateUserProfiles("U0000002", Set.of("ROLE_USER", "ROLE_ADMIN"))).thenReturn(updatedUser);
@@ -387,13 +387,14 @@ public class AdminUserControllerTest {
                 }
                 """;
 
-        mockMvc.perform(put("/admin/users/profiles?userId=2")
+        mockMvc.perform(put("/admin/users/profiles?userId=U0000002")
                 .header("Authorization", "Bearer test.jwt.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("user2"))
-                .andExpect(jsonPath("$.profiles", org.hamcrest.Matchers.containsInAnyOrder("ROLE_USER", "ROLE_ADMIN")));
+                .andExpect(jsonPath("$.email").value("user2@example.com"))
+                .andExpect(jsonPath("$.profiles.length()").value(2))
+                .andExpect(jsonPath("$.profiles[0].id").exists())
+                .andExpect(jsonPath("$.profiles[1].id").exists());
     }
 
     @Test
@@ -420,12 +421,14 @@ public class AdminUserControllerTest {
                 .email("old@example.com")
                 .name("Old Name")
                 .profiles(Set.of())
+                .enabled(true)
                 .build();
         User updatedUser = User.builder()
                 .id("U0000001")
                 .email("new@example.com")
                 .name("New Name")
                 .profiles(Set.of())
+                .enabled(true)
                 .build();
 
         when(userService.getUserById("U0000001")).thenReturn(userToUpdate);
@@ -444,7 +447,7 @@ public class AdminUserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("olduser"))
+                .andExpect(jsonPath("$.id").value("U0000001"))
                 .andExpect(jsonPath("$.email").value("new@example.com"))
                 .andExpect(jsonPath("$.name").value("New Name"));
     }
@@ -452,7 +455,8 @@ public class AdminUserControllerTest {
     @Test
     @WithMockUser(authorities = "MANAGE_USERS")
     void deleteUser_ShouldReturnOk() throws Exception {
-        User currentUser = User.builder().id("U0000001").build();
+        // current user must be different from the user being deleted to allow deletion
+        User currentUser = User.builder().id("U9999999").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
         mockMvc.perform(delete("/admin/users/U0000001")

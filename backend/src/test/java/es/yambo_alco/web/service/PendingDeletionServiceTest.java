@@ -36,7 +36,7 @@ public class PendingDeletionServiceTest {
     public void scheduleDeletion_user_success() {
         // Given
         DeletionObjectType objectType = DeletionObjectType.USER;
-        String objectId = "1";
+        String objectId = "U0000001";
         LocalDateTime scheduledAt = LocalDateTime.now().plusDays(7);
         User user = User.builder().id("U0000001").enabled(true).build();
 

@@ -25,7 +25,6 @@ class UserTest {
                 .build();
 
         assertEquals("U0000001", user.getId());
-        assertEquals("testuser", user.getUsername());
         assertEquals("password123", user.getPassword());
         assertEquals("test@example.com", user.getEmail());
         assertEquals("Test User", user.getName());
