@@ -16,7 +16,7 @@
     <include file="db/changelog/changes/04-products-and-orders.xml"/>
     <include file="db/changelog/changes/05-promotions-and-family-products.xml"/>
     <include file="db/changelog/changes/06-invitation-table.xml"/>
-    <include file="db/changelog/changes/07-invitation-profiles.xml"/>
+    <include file="db/changelog/changes/07-invitation-profile.xml"/>
     <include file="db/changelog/changes/08-seed-permissions-conditions-admin.xml"/>
     <include file="db/changelog/changes/09-update-permission-unique.xml"/>
     <include file="db/changelog/changes/10-user-enabled-column.xml"/>
