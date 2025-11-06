@@ -3,7 +3,7 @@ import { AuthService } from '../services/authService';
 import { UserService } from '../services/userService';
 import { Navigate } from 'react-router';
 
-import type { User } from '~/types/userType';
+import type { CurrentUser } from '~/types/userType';
 import type { AuthContextType } from '~/types/authContextType';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -12,7 +12,7 @@ const userService = new UserService();
 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<CurrentUser | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -24,15 +24,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
 
-    const login = async (username: string, password: string) => {
-        await authService.login(username, password);
+    const login = async (email: string, password: string) => {
+        await authService.login(email, password);
         await reloadUser();
     };
 
     const logout = () => {
         authService.logout();
         setUser(null);
-        //TODO redirigir a logout
+        //TODO: redirigir a logout
     };
 
     const hasPermission = (required: string | string[], matchAll = true): boolean => {
