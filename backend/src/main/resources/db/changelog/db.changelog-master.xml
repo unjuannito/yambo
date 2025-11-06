@@ -21,4 +21,5 @@
     <include file="db/changelog/changes/09-update-permission-unique.xml"/>
     <include file="db/changelog/changes/10-user-enabled-column.xml"/>
     <include file="db/changelog/changes/11-family-product-updates.xml"/>
+    <include file="db/changelog/changes/12-project-product-updates.xml"/>
 </databaseChangeLog>

@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +38,7 @@ public class UserService {
 
 	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
 
-	public User getUserById(String userId) {
+	public User getUserById(@NonNull String userId) {
 		return userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 	}
@@ -80,14 +81,14 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public User updateProfile(String userId, String name, String email) {
+	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-		if (name != null && !name.trim().isEmpty()) {
+		if (!name.trim().isEmpty()) {
 			user.setName(name.trim());
 		}
-		if (email != null && !email.trim().isEmpty()) {
+		if (!email.trim().isEmpty()) {
 			if (!email.equals(user.getEmail()) && userRepository.existsByEmail(email)) {
 				throw new BadRequestException("Email already in use");
 			}
@@ -97,7 +98,7 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	public void changePassword(String userId, String oldPassword, String newPassword) {
+	public void changePassword(@NonNull String userId, String oldPassword, String newPassword) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -109,7 +110,7 @@ public class UserService {
 		userRepository.save(user);
 	}
 
-	public User updateUserProfiles(String userId, Set<String> profileIds) {
+	public User updateUserProfiles(@NonNull String userId, Set<String> profileIds) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -128,7 +129,7 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	public void deleteUser(String userId) {
+	public void deleteUser(@NonNull String userId) {
 		// Verify user exists before scheduling deletion
 		userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));

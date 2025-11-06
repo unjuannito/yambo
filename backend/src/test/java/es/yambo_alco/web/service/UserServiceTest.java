@@ -47,7 +47,7 @@ public class UserServiceTest {
 
     @Test
     public void listUsers_returnsPageFromRepository() {
-        User u = User.builder().id("U0000001").email("u").email("a@b.com").name("User").enabled(true).build();
+        User u = User.builder().id("U0000001").email("a@b.com").name("User").enabled(true).build();
         Page<User> page = new PageImpl<>(List.of(u));
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
@@ -55,7 +55,7 @@ public class UserServiceTest {
         Page<User> res = userService.listUsers(null, null, null, (List<String>) null, (List<String>) null,
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
-        assertThat(res.getContent().get(0).getUsername()).isEqualTo("u");
+        assertThat(res.getContent().get(0).getEmail()).isEqualTo("a@b.com");
     }
 
     @Test
@@ -260,7 +260,6 @@ public class UserServiceTest {
         // Given
         User existingUser = User.builder()
                 .id("U0000001")
-                .email("testuser")
                 .email("test@example.com")
                 .name("Test User")
                 .build();
@@ -272,8 +271,7 @@ public class UserServiceTest {
 
         // Then
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getUsername()).isEqualTo("testuser");
+        assertThat(result.getId()).isEqualTo("U0000001");
         assertThat(result.getEmail()).isEqualTo("test@example.com");
         assertThat(result.getName()).isEqualTo("Test User");
     }

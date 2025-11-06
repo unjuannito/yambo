@@ -102,7 +102,7 @@ class InvitationControllerTest {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiresAt = now.plusDays(7);
 
-        User inviter = User.builder().id("U0000001").email("inviter").name("Inviter User").email("inviter@example.com").build();
+        User inviter = User.builder().id("U0000001").name("Inviter User").email("inviter@example.com").build();
 
         Invitation invitation1 = Invitation.builder()
                 .id(1L)
@@ -137,8 +137,8 @@ class InvitationControllerTest {
                 .andExpect(jsonPath("$[0].email").value("user1@example.com"))
                 .andExpect(jsonPath("$[0].token").value("token123"))
                 .andExpect(jsonPath("$[0].used").value(false))
-                .andExpect(jsonPath("$[0].invitedBy").value(1))
-                .andExpect(jsonPath("$[0].invitedByUser.username").value("inviter"))
+                .andExpect(jsonPath("$[0].invitedBy").value("U0000001"))
+                .andExpect(jsonPath("$[0].invitedByUser.email").value("inviter@example.com"))
                 .andExpect(jsonPath("$[1].id").value(2))
                 .andExpect(jsonPath("$[1].email").value("user2@example.com"))
                 .andExpect(jsonPath("$[1].used").value(true));
@@ -169,7 +169,7 @@ class InvitationControllerTest {
         LocalDateTime createdAt = LocalDateTime.of(2025, 10, 18, 10, 0);
         LocalDateTime expiresAt = LocalDateTime.of(2025, 10, 25, 10, 0);
 
-        User inviter = User.builder().id("U0000005").email("admin").name("Admin User").email("admin@example.com").build();
+        User inviter = User.builder().id("U0000005").name("Admin User").email("admin@example.com").build();
 
         Invitation invitation = Invitation.builder()
                 .id(1L)
@@ -195,9 +195,9 @@ class InvitationControllerTest {
                 .andExpect(jsonPath("$[0].createdAt").exists())
                 .andExpect(jsonPath("$[0].expiresAt").exists())
                 .andExpect(jsonPath("$[0].used").value(false))
-                .andExpect(jsonPath("$[0].invitedBy").value(5))
-                .andExpect(jsonPath("$[0].invitedByUser.id").value(5))
-                .andExpect(jsonPath("$[0].invitedByUser.username").value("admin"));
+                .andExpect(jsonPath("$[0].invitedBy").value("U0000005"))
+                .andExpect(jsonPath("$[0].invitedByUser.id").value("U0000005"))
+                .andExpect(jsonPath("$[0].invitedByUser.email").value("admin@example.com"));
     }
 
     @Test

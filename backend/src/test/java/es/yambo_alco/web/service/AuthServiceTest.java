@@ -53,7 +53,6 @@ class AuthServiceTest {
         testUser = User.builder()
                 .email(TEST_USERNAME)
                 .password(ENCODED_PASSWORD)
-                .email("test@yambo-alco.es")
         .profiles(Set.of(
             Profile.builder().id("ADMIN").build(),
             Profile.builder().id("USER").build()))

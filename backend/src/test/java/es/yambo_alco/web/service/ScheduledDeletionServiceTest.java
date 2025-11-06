@@ -37,7 +37,7 @@ public class ScheduledDeletionServiceTest {
         PendingDeletion userDeletion = PendingDeletion.builder()
                 .id("1")
                 .objectType(DeletionObjectType.USER)
-                .objectId("1")
+                .objectId("U0000001")
                 .scheduledAt(now.minusDays(1))
                 .build();
 
@@ -70,7 +70,7 @@ public class ScheduledDeletionServiceTest {
         PendingDeletion userDeletion = PendingDeletion.builder()
                 .id("1")
                 .objectType(DeletionObjectType.USER)
-                .objectId("1")
+                .objectId("U0000001")
                 .scheduledAt(LocalDateTime.now().minusDays(1))
                 .build();
 

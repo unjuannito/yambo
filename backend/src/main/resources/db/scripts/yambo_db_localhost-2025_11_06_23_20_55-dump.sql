@@ -51,6 +51,7 @@ INSERT INTO public.condition (id, permission_id, resource_field, operator, sourc
 --
 
 INSERT INTO public."user" (id, password, email, name, created_at, created_by, enabled) VALUES ('A0000001', '$2a$12$MgH0iPLT7/rTOpIAuVkLoOZ.3I4SY8vdT4qcDZFnvFuhca31nWj4O', 'admin@yambo.local', 'Admin', '2025-11-04 18:23:15.537683', NULL, true);
+-- email: admin@yambo.local password: password123
 
 
 --
