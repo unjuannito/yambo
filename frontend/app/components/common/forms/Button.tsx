@@ -30,7 +30,7 @@ export function Button({
     return (
         <button
             disabled={disabled || isLoading}
-            className={`rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+            className={` py-4 rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className} `}
             {...props}
         >
             {isLoading ? (

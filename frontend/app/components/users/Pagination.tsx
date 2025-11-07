@@ -15,11 +15,7 @@ export function Pagination({
     const endItem = Math.min((page + 1) * size, totalElements);
 
     return (
-        <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-gray-700">
-                Mostrando {startItem} a {endItem} de {totalElements} {itemName}
-            </div>
-            <div className="flex gap-2">
+        <footer className="flex justify-between items-center mt-4">
                 <Button
                     variant="secondary"
                     onClick={() => onPageChange(Math.max(0, page - 1))}
@@ -37,7 +33,6 @@ export function Pagination({
                 >
                     {nextLabel}
                 </Button>
-            </div>
-        </div>
+        </footer>
     );
 }

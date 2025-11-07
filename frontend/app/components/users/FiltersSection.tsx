@@ -52,9 +52,6 @@ export function FiltersSection({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {fields.map(renderField)}
             </div>
-            <Button onClick={onSearch} className="mt-4">
-                Buscar
-            </Button>
         </div>
     );
 }

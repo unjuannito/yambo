@@ -181,7 +181,7 @@ function AdminUsuariosContent() {
     }
 
     return (
-        <div className="container mx-auto p-6">
+        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
 
             {/* Filters */}
             <FiltersSection
@@ -305,6 +305,6 @@ function AdminUsuariosContent() {
                 variant="danger"
                 confirmLabel="Eliminar"
             />
-        </div>
+        </main>
     );
 }
