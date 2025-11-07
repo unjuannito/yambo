@@ -2,7 +2,6 @@ import { use, useCallback, useEffect, useMemo, useState } from "react";
 import type { Route } from "./+types/users";
 import { useAuth } from "~/hooks/useAuth";
 import type { User } from "~/types/userType";
-import { RequirePermission } from "~/components/RequirePermission";
 import { Button } from "~/components/common/forms/Button";
 import { Input } from "~/components/common/forms/Input";
 import { Checkbox } from "~/components/common/forms/Checkbox";
@@ -15,7 +14,11 @@ import { useModal } from "~/hooks/useModal";
 import { AdminUserService, type PagedUsers } from "~/services/adminUserService";
 import { useDataFetch } from "~/hooks/useDataFetch";
 import { useProfiles } from "~/hooks/useProfiles";
-import { FiltersSection, UsersTable, Pagination, type Filters } from "~/components/users";
+import { UsersTable } from "~/components/users/UsersTable";
+import type { Filters } from "~/services/apiService";
+import { RequirePermission } from "~/components/common/RequirePermission";
+import { FiltersSection } from "~/components/common/FiltersSection";
+import { Pagination } from "~/components/common/Pagination";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -181,7 +184,7 @@ function AdminUsuariosContent() {
     }
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+        <div className="container mx-auto p-6">
 
             {/* Filters */}
             <FiltersSection
@@ -189,7 +192,8 @@ function AdminUsuariosContent() {
                 fields={filterFields}
                 onFiltersChange={(newFilters) => setFilters(newFilters as Filters)}
                 onSearch={handleSearch}
-            />            {/* Error */}
+            />
+            {/* Error */}
             {error && <ErrorMessage message={error} onRetry={refetch} className="mb-4" />}
 
             {/* Users Table */}
@@ -305,6 +309,6 @@ function AdminUsuariosContent() {
                 variant="danger"
                 confirmLabel="Eliminar"
             />
-        </main>
+        </div>
     );
 }

@@ -7,6 +7,13 @@ export interface PagedUsers {
     page: PagedInfo;
 }
 
+export interface UserFilters {
+    name?: string;
+    email?: string;
+    enabled?: boolean;
+    profiles?: string[];
+}
+
 export interface UpdateProfilesRequest {
     profiles: string[];
 }
@@ -18,12 +25,7 @@ export interface UpdateProfileRequest {
 }
 
 export class AdminUserService extends ApiService {
-    public async listUsers(params: {
-        name?: string;
-        email?: string;
-        enabled?: boolean;
-        permissions?: string;
-        roles?: string;
+    public async listUsers(params: UserFilters & {
         page?: number;
         size?: number;
         sortBy?: string;
@@ -34,8 +36,7 @@ export class AdminUserService extends ApiService {
         if (params.name) queryParams.append('name', params.name);
         if (params.email) queryParams.append('email', params.email);
         if (params.enabled !== undefined) queryParams.append('enabled', String(params.enabled));
-        if (params.permissions) queryParams.append('permissions', params.permissions);
-        if (params.roles) queryParams.append('roles', params.roles);
+        if (params.profiles) queryParams.append('profiles', params.profiles.join(','));
         if (params.page !== undefined) queryParams.append('page', String(params.page));
         if (params.size !== undefined) queryParams.append('size', String(params.size));
         if (params.sortBy) queryParams.append('sortBy', params.sortBy);

@@ -1,7 +1,15 @@
 import { Button } from "~/components/common/forms/Button";
-import { RequirePermission } from "~/components/RequirePermission";
-import { DataTable } from "./DataTable";
-import type { UsersTableProps, TableColumn } from "./types";
+import { RequirePermission } from "~/components/common/RequirePermission";
+import { DataTable, type TableColumn } from "~/components/common/DataTable";
+import type { User, CurrentUser } from "~/types/userType";
+import type { PagedUsers } from "~/services/adminUserService";
+
+export interface UsersTableProps {
+    users: PagedUsers;
+    currentUser: CurrentUser | null;
+    onEdit: (user: User) => void;
+    onDelete: (userId: string) => void;
+}
 
 export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableProps) {
     const columns: TableColumn[] = [
@@ -20,9 +28,9 @@ export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableP
         {
             key: 'profiles',
             header: 'Perfiles',
-            render: (user: any) => (
+            render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
-                    {user.profiles.map((profile: any) => (
+                    {user.profiles.map((profile) => (
                         <span key={profile.id} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
                             {profile.name}
                         </span>
@@ -33,7 +41,7 @@ export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableP
         {
             key: 'enabled',
             header: 'Estado',
-            render: (user: any) => (
+            render: (user: User) => (
                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     user.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
@@ -44,7 +52,7 @@ export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableP
         {
             key: 'actions',
             header: 'Acciones',
-            render: (user: any) => (
+            render: (user: User) => (
                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                     <div className="flex space-x-2">
                         <Button

@@ -1,6 +1,10 @@
 import axios from "axios";
 import type { AxiosInstance, AxiosResponse } from "axios";
 
+export interface Filters {
+    [key: string]: string | number | boolean | undefined | string[];
+}
+
 export class ApiService {
     protected baseUrl: string;
     protected axiosInstance: AxiosInstance;

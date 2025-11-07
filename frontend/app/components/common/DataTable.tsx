@@ -1,5 +1,12 @@
 import React from "react";
-import type { TableColumn } from "./types";
+
+export interface TableColumn<T = any> {
+    key: string;
+    header: string;
+    render?: (item: T) => React.ReactNode;
+    className?: string;
+}
+
 
 interface DataTableProps<T> {
     data: T[];
