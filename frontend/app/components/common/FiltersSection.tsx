@@ -2,7 +2,23 @@ import { Button } from "~/components/common/forms/Button";
 import { Input } from "~/components/common/forms/Input";
 import { Select } from "~/components/common/forms/Select";
 import { MultiSelect } from "~/components/common/forms/MultiSelect";
-import type { FiltersSectionProps } from "./types";
+
+
+export interface FilterField {
+    key: string;
+    label: string;
+    type: 'text' | 'select' | 'multi-select';
+    placeholder?: string;
+    options?: { value: string; label: string }[];
+}
+
+export interface FiltersSectionProps {
+    filters: Record<string, any>;
+    fields: FilterField[];
+    onFiltersChange: (filters: Record<string, any>) => void;
+    onSearch: () => void;
+    title?: string;
+}
 
 export function FiltersSection({
     filters,
