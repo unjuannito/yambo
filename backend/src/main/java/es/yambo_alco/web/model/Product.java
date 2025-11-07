@@ -1,5 +1,6 @@
 package es.yambo_alco.web.model;
 
+import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 public class Product {
 
     @Id
+    @CustomId
     private String id;
 
     @Column(nullable = false, unique = true)

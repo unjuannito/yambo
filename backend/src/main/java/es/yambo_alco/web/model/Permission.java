@@ -1,5 +1,6 @@
 package es.yambo_alco.web.model;
 
+import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ import jakarta.persistence.Transient;
 @Builder
 public class Permission {
     @Id
+    @CustomId
     @Column(nullable = false, length = 8)
     private String id;
 

@@ -1,6 +1,7 @@
 package es.yambo_alco.web.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.Set;
 @Builder
 public class Profile implements GrantedAuthority {
     @Id
+    @CustomId
     private String id;
 
     @Column(nullable = false)
