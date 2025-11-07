@@ -4,7 +4,7 @@ import { UserService } from '../services/userService';
 import { Navigate } from 'react-router';
 
 import type { CurrentUser, Permission } from '~/types/userType';
-import type { AuthContextType } from '~/types/authContextType';
+import type { AuthContextType, RequiredPermission } from '~/types/authContextType';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const authService = new AuthService();
@@ -35,11 +35,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         //TODO: redirigir a logout
     };
 
-    const hasPermission = (required: Permission | Permission[], matchAll = true): boolean => {
+    const hasPermission = (required: RequiredPermission | RequiredPermission[], matchAll = true): boolean => {
         if (!user?.permissions) return false;
 
-        const hasPermissionObj = (perm: Permission): boolean => {
-            return user.permissions.some(p => p.obj === perm.obj && perm.actions.every(a => p.actions.includes(a)));
+        const hasPermissionObj = (perm: RequiredPermission): boolean => {
+            return user.permissions.some(p => p.obj === perm.obj && p.actions.includes(perm.action));
         };
 
         if (Array.isArray(required)) {

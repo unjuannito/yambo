@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
-import type { User } from "~/types/userType";
 
 interface HeaderProps {
   links: { label: string; href: string, name: string }[];
