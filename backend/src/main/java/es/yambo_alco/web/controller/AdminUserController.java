@@ -43,7 +43,7 @@ public class AdminUserController {
     private final AuthService authService;
 
     @GetMapping
-    @PreAuthorize("@permissionCheck.hasPermission('users', 'list')")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
     public ResponseEntity<Page<AdminUserResponse>> listUsers(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -75,7 +75,7 @@ public class AdminUserController {
     }
 
     @PutMapping("/profiles")
-    @PreAuthorize("@permissionCheck.hasPermission('users', 'manage')")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
     public ResponseEntity<AdminUserResponse> updateUserProfiles(@RequestParam @NonNull String userId,
             @Valid @RequestBody UpdateProfilesRequest request) {
         User updatedUser = userService.updateUserProfiles(userId, request.getProfileIds());
@@ -90,7 +90,7 @@ public class AdminUserController {
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("@permissionCheck.hasPermission('users', 'manage')")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
     public ResponseEntity<AdminUserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User userToUpdate = userService.getUserById(request.getId());
 
@@ -100,7 +100,7 @@ public class AdminUserController {
     }
 
     @DeleteMapping("/{userId}")
-    @PreAuthorize("@permissionCheck.hasPermission('users', 'manage')")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'delete')")
     public ResponseEntity<String> deleteUser(@PathVariable @NonNull String userId) {
         User currentUser = authService.getCurrentUser(true);
         if (currentUser.getId().equals(userId)) {

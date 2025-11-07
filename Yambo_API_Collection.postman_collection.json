@@ -245,7 +245,7 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users?page=0&size=20&sortBy=name&direction=ASC&name=&email=&enabled=&permissions=&roles=",
+              "raw": "{{base_url}}/admin/users?page=0&size=20&sortBy=name&direction=ASC&name=&email=&enabled=&permissions=&profiles=",
               "host": ["{{base_url}}"],
               "path": ["admin", "users"],
               "query": [
@@ -290,9 +290,9 @@
                   "description": "Filter by permissions (comma-separated)"
                 },
                 {
-                  "key": "roles",
+                  "key": "profiles",
                   "value": "",
-                  "description": "Filter by roles (comma-separated)"
+                  "description": "Filter by profiles (comma-separated)"
                 }
               ]
             },
@@ -326,7 +326,7 @@
           }
         },
         {
-          "name": "Update User Roles",
+          "name": "Update User Profiles",
           "request": {
             "method": "PUT",
             "header": [
@@ -341,21 +341,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"roleIds\": [\"ROLE_USER\", \"ROLE_ADMIN\"]\n}"
+              "raw": "{\n  \"profileIds\": [\"ROLE_USER\", \"ROLE_ADMIN\"]\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/users/roles?userId=2",
+              "raw": "{{base_url}}/admin/users/profiles?userId=2",
               "host": ["{{base_url}}"],
-              "path": ["admin", "users", "roles"],
+              "path": ["admin", "users", "profiles"],
               "query": [
                 {
                   "key": "userId",
                   "value": "2",
-                  "description": "User ID to update roles for"
+                  "description": "User ID to update profiles for"
                 }
               ]
             },
-            "description": "Update user roles/permissions by admin"
+            "description": "Update user profiles/permissions by admin"
           }
         },
         {
