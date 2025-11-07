@@ -5,6 +5,8 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
+import es.yambo_alco.web.util.PermissionCheckService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,8 +38,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 
-@WebMvcTest(controllers = AdminUserController.class)
+@WebMvcTest(AdminUserController.class)
 @Import(TestSecurityConfig.class)
+@SuppressWarnings("null")
 public class AdminUserControllerTest {
 
     @Autowired
@@ -48,6 +51,14 @@ public class AdminUserControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private PermissionCheckService permissionCheckService;
+
+    @BeforeEach
+    public void setup() {
+        when(permissionCheckService.hasPermission(anyString(), anyString())).thenReturn(true);
+    }
 
     @Test
     @WithMockUser(authorities = "LIST_USERS")

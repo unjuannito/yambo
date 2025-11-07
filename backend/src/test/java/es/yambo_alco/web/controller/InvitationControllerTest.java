@@ -7,8 +7,11 @@ import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.InvitationService;
 import es.yambo_alco.web.service.UserService;
+import es.yambo_alco.web.util.PermissionCheckService;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -30,6 +33,7 @@ import java.util.Optional;
 
 @WebMvcTest(controllers = InvitationController.class)
 @Import(TestSecurityConfig.class)
+@SuppressWarnings("null")
 class InvitationControllerTest {
 
     @Autowired
@@ -46,6 +50,14 @@ class InvitationControllerTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private PermissionCheckService permissionCheckService;
+
+    @BeforeEach
+    void setUp() {
+        Mockito.when(permissionCheckService.hasPermission(Mockito.anyString(), Mockito.anyString())).thenReturn(true);
+    }
 
     @Test
     @WithMockUser(authorities = "INVITE_USERS")

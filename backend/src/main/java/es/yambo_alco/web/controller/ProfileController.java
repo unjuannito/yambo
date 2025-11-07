@@ -23,28 +23,28 @@ public class ProfileController {
     private final ProfileService profileService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('WRITE_PRIVILEGES')")
+    @PreAuthorize("@permissionCheck.hasPermission('profiles', 'write')")
     public ResponseEntity<List<Profile>> getAllProfiles() {
         List<Profile> profiles = profileService.getAllProfiles();
         return ResponseEntity.ok(profiles);
     }
 
     @GetMapping("/{profileId}")
-    @PreAuthorize("hasAuthority('WRITE_PRIVILEGES')")
+    @PreAuthorize("@permissionCheck.hasPermission('profiles', 'write')")
     public ResponseEntity<Profile> getProfile(@PathVariable String profileId) {
         Profile profile = profileService.getProfileById(profileId);
         return ResponseEntity.ok(profile);
     }
 
     @GetMapping("/permissions")
-    @PreAuthorize("hasAuthority('WRITE_PRIVILEGES')")
+    @PreAuthorize("@permissionCheck.hasPermission('profiles', 'write')")
     public ResponseEntity<List<Permission>> getAllPermissions() {
         List<Permission> permissions = profileService.getAllPermissions();
         return ResponseEntity.ok(permissions);
     }
 
     @PutMapping("/{profileId}/permissions")
-    @PreAuthorize("hasAuthority('WRITE_PRIVILEGES')")
+    @PreAuthorize("@permissionCheck.hasPermission('profiles', 'write')")
     public ResponseEntity<Profile> updateProfilePermissions(
             @PathVariable String profileId,
             @Valid @RequestBody UpdateProfilePermissionsRequest request) {
@@ -53,14 +53,14 @@ public class ProfileController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("@permissionCheck.hasPermission('users', 'manage')")
     public ResponseEntity<Profile> createProfile(@Valid @RequestBody CreateProfileRequest request) {
         Profile profile = profileService.createProfile(request.getProfileId(), request.getPermissionIds());
         return ResponseEntity.ok(profile);
     }
 
     @DeleteMapping("/{profileId}")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("@permissionCheck.hasPermission('users', 'manage')")
     public ResponseEntity<String> deleteProfile(@PathVariable String profileId) {
         profileService.deleteProfile(profileId);
         return ResponseEntity.ok("Profile deleted successfully");

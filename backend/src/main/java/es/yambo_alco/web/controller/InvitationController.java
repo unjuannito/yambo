@@ -34,7 +34,7 @@ public class InvitationController {
     private final UserRepository userRepository;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('INVITE_USERS')")
+    @PreAuthorize("@permissionCheck.hasPermission('users', 'invite')")
     public ResponseEntity<InvitationResponse> createInvitation(@Valid @RequestBody InvitationRequest req, Authentication authentication) {
         User user = authService.getCurrentUser(true);
 
@@ -62,7 +62,7 @@ public class InvitationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('INVITE_USERS')")
+    @PreAuthorize("@permissionCheck.hasPermission('users', 'invite')")
     public ResponseEntity<List<InvitationResponse>> getAllInvitations() {
         List<Invitation> invitations = invitationService.getAllInvitations();
         List<InvitationResponse> response = invitations.stream()
@@ -91,7 +91,7 @@ public class InvitationController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('INVITE_USERS')")
+    @PreAuthorize("@permissionCheck.hasPermission('users', 'invite')")
     public ResponseEntity<String> deleteInvitation(@PathVariable Long id) {
         invitationService.deleteInvitation(id);
         return ResponseEntity.ok("Invitation deleted successfully");
