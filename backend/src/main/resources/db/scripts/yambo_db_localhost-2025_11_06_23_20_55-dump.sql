@@ -139,7 +139,7 @@ INSERT INTO public.profile_permission (profile_id, permission_id) VALUES ('P0000
 -- Data for Name: user_profile; Type: TABLE DATA; Schema: public; Owner: yambo_user
 --
 
-INSERT INTO public.user_profile (user_id, profile_id) VALUES ('A0000001', '');
+INSERT INTO public.user_profile (user_id, profile_id) VALUES ('A0000001', 'P0000003');
 
 
 --
