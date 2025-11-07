@@ -4,11 +4,10 @@ import { useAuth } from "../../hooks/useAuth";
 import type { User } from "~/types/userType";
 
 interface HeaderProps {
-  links: { label: string; href: string }[];
-  user: User;
+  links: { label: string; href: string, name: string }[];
 }
 
-export default function Header({ links, user }: HeaderProps) {
+export default function Header({ links }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -18,7 +17,7 @@ export default function Header({ links, user }: HeaderProps) {
   };
 
   return (
-    <header className="w-full bg-white shadow-md fixed top-0 z-50">
+    <header className="w-full bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-8xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
         <a href="/mi-espacio" className="flex items-center space-x-2">
           <img src="/logo.png" alt="Yambo logo" className="h-8 w-auto" />
@@ -71,7 +70,7 @@ export default function Header({ links, user }: HeaderProps) {
           </a>
           {links.map(link => (
             <a
-              key={link.label}
+              key={link.name}
               href={link.href}
               className="block text-gray-700 hover:text-gray-900 px-4"
               onClick={() => setMenuOpen(false)}
