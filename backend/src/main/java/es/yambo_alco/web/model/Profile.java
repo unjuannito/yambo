@@ -1,6 +1,5 @@
 package es.yambo_alco.web.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import lombok.Data;
