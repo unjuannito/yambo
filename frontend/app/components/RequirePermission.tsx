@@ -1,12 +1,13 @@
 import { useContext, type ReactNode } from 'react';
 import { Navigate } from 'react-router';
 import { AuthContext } from '~/context/AuthContext';
+import type { Permission } from '~/types/userType';
 
 export function RequirePermission({
     permission,
     children,
 }: {
-    permission: string;
+    permission: Permission;
     children: ReactNode;
 }) {
     const context = useContext(AuthContext);

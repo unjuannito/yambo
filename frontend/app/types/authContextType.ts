@@ -1,9 +1,9 @@
-import type { User } from './userType';
+import type { CurrentUser, Permission } from './userType';
 
 export interface AuthContextType {
-    user: User | null;
+    user: CurrentUser | null;
     loading: boolean;
-    hasPermission: (permission: string) => boolean;
+    hasPermission: (required: Permission | Permission[], matchAll?: boolean) => boolean;
     login: (username: string, password: string) => Promise<void>;
     isAuthenticated: () => boolean;
     logout: () => void;
