@@ -27,7 +27,7 @@ export const links: Route.LinksFunction = () => [
     },
 ];
 
-// This is the main Document component that wraps the entire appF
+// This is the main Document component that wraps the entire app
 export default function Document() {
     return (
         <html lang="es">
