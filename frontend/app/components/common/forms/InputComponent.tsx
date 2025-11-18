@@ -21,7 +21,7 @@ export function InputComponent({
     const inputType = type === 'password' ? (showPassword ? 'text' : 'password') : type;
 
     const getDefaultPattern = () => {
-        if (type === 'email') return '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}';
+        if (type === 'email') return undefined;
         if (type === 'tel') return '^[0-9()+\-\s]{7,}$';
         if (type === 'password') return pattern || '.{6,}';
         return pattern;
