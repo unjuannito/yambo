@@ -15,8 +15,7 @@ export function SelectComponent({
         <label>
             {label}{props.required && <span className="text-red-500 ml-1">*</span>}
             <select
-                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 'border-gray-300'
-                    } ${className}`}
+                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300 ${className}`}
                 {...props}
             >
                 {
