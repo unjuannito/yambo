@@ -16,28 +16,24 @@ export function Pagination({
     nextLabel = "Siguiente",
 }: PaginationProps) {
     return (
-        <div className="flex justify-center items-center mt-4">
-            <div className="flex gap-2">
-                <ButtonComponent
-                    variant="secondary"
-                    onClick={() => onPageChange(Math.max(0, page - 1))}
-                    disabled={page === 0}
-                >
-                    {previousLabel}
-                </ButtonComponent>
-                <span className="px-4 py-2 flex text-center">
-                    Página {page + 1} de {totalPages}
-                </span>
-                <ButtonComponent
-                    variant="secondary"
-                    onClick={() =>
-                        onPageChange(Math.min(totalPages - 1, page + 1))
-                    }
-                    disabled={page >= totalPages - 1}
-                >
-                    {nextLabel}
-                </ButtonComponent>
-            </div>
-        </div>
+        <nav className="flex justify-center items-center mt-4 flex gap-2">
+            <ButtonComponent
+                variant="secondary"
+                onClick={() => onPageChange(Math.max(0, page - 1))}
+                disabled={page === 0}
+            >
+                {previousLabel}
+            </ButtonComponent>
+            <span className="px-4 py-2 flex text-center">
+                Página {page + 1} de {totalPages}
+            </span>
+            <ButtonComponent
+                variant="secondary"
+                onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+                disabled={page >= totalPages - 1}
+            >
+                {nextLabel}
+            </ButtonComponent>
+        </nav>
     );
 }
