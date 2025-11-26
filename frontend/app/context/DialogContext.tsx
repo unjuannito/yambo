@@ -30,7 +30,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             {children}
             {isOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={close}>
-                    <dialog className="bg-white rounded-lg p-6 max-w-md w-full justify-self-center" open>
+                    <dialog className="bg-white rounded-lg p-6 max-w-md w-full justify-self-center" open onClick={(e) => e.stopPropagation()}>
                         {content}
                     </dialog>
                 </div>

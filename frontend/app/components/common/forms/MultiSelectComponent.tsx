@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { LabelComponent } from "./LabelComponent";
 
 interface MultiSelectProps {
     label?: string;
@@ -6,8 +7,6 @@ interface MultiSelectProps {
     options?: { value: string; label: string }[];
     placeholder?: string;
     onChange?: (value: string[]) => void;
-    error?: string;
-    helperText?: string;
     className?: string;
     required?: boolean;
 }
@@ -18,147 +17,145 @@ export function MultiSelectComponent({
     options = [],
     placeholder = "Seleccionar...",
     onChange,
-    error,
-    helperText,
-    className = '',
+    className = "",
     required = false,
 }: MultiSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
-    const containerRef = useRef<HTMLDivElement>(null);
+    const [search, setSearch] = useState("");
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const randomId = Math.random().toString(36).substring(2, 15);
 
-    // Close dropdown when clicking outside
+    const filteredOptions = options.filter((option) =>
+        option.label.toLowerCase().includes(search.toLowerCase())
+    );
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target as Node)
+            ) {
                 setIsOpen(false);
-                setSearchTerm("");
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const handleToggleOption = (optionValue: string) => {
+    const toggleOption = (optionValue: string) => {
         const newValue = value.includes(optionValue)
-            ? value.filter(v => v !== optionValue)
+            ? value.filter((v) => v !== optionValue)
             : [...value, optionValue];
-
         onChange?.(newValue);
     };
 
-    const handleRemoveTag = (optionValue: string) => {
-        const newValue = value.filter(v => v !== optionValue);
-        onChange?.(newValue);
+    const removeOption = (optionValue: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        onChange?.(value.filter((v) => v !== optionValue));
     };
 
-    const filteredOptions = options.filter(option =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const getOptionLabel = (optionValue: string) => {
+        return (
+            options.find((opt) => opt.value === optionValue)?.label ||
+            optionValue
+        );
+    };
 
-    const selectedLabels = options
-        .filter(option => value.includes(option.value))
-        .map(option => option.label);
-
-    return (
-        <div className={`w-full ${className}`} ref={containerRef}>
-            {label && (
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {label}{required && <span className="text-red-500 ml-1">*</span>}
-                </label>
-            )}
-
-            {/* Selected values display */}
-            <div
-                className={`min-h-[38px] w-full border rounded px-3 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${
-                    error ? 'border-red-500' : 'border-gray-300'
-                } ${isOpen ? 'ring-2 ring-blue-500' : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
+    const multiselectElement = (
+        <div className={`relative`} ref={dropdownRef}>
+            <button
+                id={`multi-select-input-${randomId}`}
+                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center ${className}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setIsOpen(!isOpen);
+                }}
             >
-                {value.length === 0 ? (
-                    <span className="text-gray-500">{placeholder}</span>
-                ) : (
-                    <div className="flex flex-wrap gap-1">
-                        {selectedLabels.map((label, index) => {
-                            const optionValue = value[index];
-                            return (
-                                <span
-                                    key={optionValue}
-                                    className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-                                >
-                                    {label}
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemoveTag(optionValue);
-                                        }}
-                                        className="ml-1 text-blue-600 hover:text-blue-800"
-                                    >
-                                        ×
-                                    </button>
+                {value.length > 0 ? (
+                    <span className="flex flex-wrap gap-1 flex-grow overflow-hidden">
+                        {value.map((item) => (
+                            <span
+                                key={item}
+                                className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded max-w-[150px]"
+                            >
+                                <span className="truncate">
+                                    {getOptionLabel(item)}
                                 </span>
-                            );
-                        })}
-                    </div>
+                                <button
+                                    type="button"
+                                    onClick={(e) => removeOption(item, e)}
+                                    className="hover:bg-blue-300 rounded-full p-0.5 ml-1 flex-shrink-0"
+                                >
+                                    X
+                                </button>
+                            </span>
+                        ))}
+                    </span>
+                ) : (
+                    <span className="text-gray-400">{placeholder}</span>
                 )}
-            </div>
+                <span className={`w-5 h-5 text-gray-400 flex-shrink-0 `}>
+                    ▼
+                </span>
+            </button>
 
-            {/* Dropdown */}
             {isOpen && (
-                <div className="absolute z-10 mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
-                    {/* Search input */}
-                    <div className="p-2 border-b">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                    <div className="p-2">
                         <input
                             type="text"
                             placeholder="Buscar..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            onClick={(e) => e.stopPropagation()}
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
 
-                    {/* Options */}
-                    <div className="py-1">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-2 text-gray-500 text-sm">
-                                No se encontraron opciones
-                            </div>
+                    <div className="max-h-60 overflow-y-auto">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((option) => (
+                                <label
+                                    key={option.value}
+                                    className="flex items-center px-4 py-2.5 hover:bg-gray-50 cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={value.includes(option.value)}
+                                        onChange={() =>
+                                            toggleOption(option.value)
+                                        }
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                                    />
+                                    <span className="ml-3 text-gray-700 truncate">
+                                        {option.label}
+                                    </span>
+                                </label>
+                            ))
                         ) : (
-                            filteredOptions.map((option) => {
-                                const isSelected = value.includes(option.value);
-                                return (
-                                    <div
-                                        key={option.value}
-                                        className={`px-3 py-2 cursor-pointer hover:bg-gray-100 ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-900'
-                                            }`}
-                                        onClick={() => handleToggleOption(option.value)}
-                                    >
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={isSelected}
-                                                onChange={() => { }} // Handled by onClick
-                                                className="mr-2 text-blue-600 focus:ring-blue-500"
-                                            />
-                                            {option.label}
-                                        </div>
-                                    </div>
-                                );
-                            })
+                            <div className="px-4 py-3 text-sm text-gray-500">
+                                No se encontraron resultados
+                            </div>
                         )}
                     </div>
                 </div>
             )}
-
-            {error && (
-                <p className="text-red-500 text-sm mt-1">{error}</p>
-            )}
-            {helperText && !error && (
-                <p className="text-gray-500 text-xs mt-1">{helperText}</p>
-            )}
         </div>
+    );
+
+    if (!label) {
+        return multiselectElement;
+    }
+
+    return (
+        <LabelComponent
+            label={label}
+            required={required}
+            htmlFor={`multi-select-input-${randomId}`}
+        >
+            {multiselectElement}
+        </LabelComponent>
     );
 }
