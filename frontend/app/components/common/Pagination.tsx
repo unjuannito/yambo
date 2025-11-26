@@ -25,7 +25,7 @@ export function Pagination({
                 >
                     {previousLabel}
                 </ButtonComponent>
-                <span className="px-4 py-2 flex items-center">
+                <span className="px-4 py-2 flex text-center">
                     Página {page + 1} de {totalPages}
                 </span>
                 <ButtonComponent
