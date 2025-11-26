@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 export interface ConfirmOptions {
     title: string;
-    message: string;
+    children: ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: "danger" | "warning" | "info";
@@ -85,7 +85,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                                 <h2 className="text-xl font-bold mb-4 text-gray-900">
                                     {confirmOptions.title}
                                 </h2>
-                                <p className="text-gray-700 mb-6">{confirmOptions.message}</p>
+                                <div className="text-gray-700 mb-6">{confirmOptions.children}</div>
                                 <div className="flex justify-end gap-3">
                                     <button
                                         onClick={close}
