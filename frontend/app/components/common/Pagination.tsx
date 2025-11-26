@@ -13,9 +13,8 @@ export function Pagination({
     totalPages,
     onPageChange,
     previousLabel = "Anterior",
-    nextLabel = "Siguiente"
+    nextLabel = "Siguiente",
 }: PaginationProps) {
-
     return (
         <div className="flex justify-center items-center mt-4">
             <div className="flex gap-2">
@@ -23,7 +22,6 @@ export function Pagination({
                     variant="secondary"
                     onClick={() => onPageChange(Math.max(0, page - 1))}
                     disabled={page === 0}
-                    
                 >
                     {previousLabel}
                 </ButtonComponent>
@@ -32,7 +30,9 @@ export function Pagination({
                 </span>
                 <ButtonComponent
                     variant="secondary"
-                    onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+                    onClick={() =>
+                        onPageChange(Math.min(totalPages - 1, page + 1))
+                    }
                     disabled={page >= totalPages - 1}
                 >
                     {nextLabel}
