@@ -13,15 +13,17 @@ export function LabelComponent({
     label,
     required,
     className = "",
-    htmlFor : f,
+    htmlFor: f,
 }: LabelProps) {
     return (
         <label
-            className={`block text-sm font-medium text-gray-700 mb-1 ${className}`}
+            className={`block font-medium text-gray-700 mb-1 ${className}`}
             {...(f ? { htmlFor: f } : {})}
         >
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            <span className="text-md px-1 py-1">
+                {label}
+                {required && <span className="text-red-500 ml-1">*</span>}
+            </span>
             {children}
         </label>
     );

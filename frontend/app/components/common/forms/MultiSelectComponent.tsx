@@ -67,7 +67,7 @@ export function MultiSelectComponent({
         <div className={`relative`} ref={dropdownRef}>
             <button
                 id={`multi-select-input-${randomId}`}
-                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center ${className}`}
+                className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center ${className}`}
                 onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -75,11 +75,11 @@ export function MultiSelectComponent({
                 }}
             >
                 {value.length > 0 ? (
-                    <span className="flex flex-wrap gap-1 flex-grow overflow-hidden">
+                    <span className="flex gap-1 flex-wrap " style={{maxHeight: '28px', overflowY: 'scroll' }}>
                         {value.map((item) => (
                             <span
                                 key={item}
-                                className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded max-w-[150px]"
+                                className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded whitespace-nowrap flex-shrink-0 max-w-[150px]"
                             >
                                 <span className="truncate">
                                     {getOptionLabel(item)}
@@ -95,7 +95,7 @@ export function MultiSelectComponent({
                         ))}
                     </span>
                 ) : (
-                    <span className="text-gray-400">{placeholder}</span>
+                    <span className="text-gray-400 px-2 py-1" style={{maxHeight: '28px'}}>{placeholder}</span>
                 )}
                 <span className={`w-5 h-5 text-gray-400 flex-shrink-0 `}>
                     ▼

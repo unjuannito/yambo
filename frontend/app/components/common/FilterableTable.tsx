@@ -28,7 +28,6 @@ export interface FilterableTableProps<T> {
     columns: FilterableColumn<T>[];
     keyField: keyof T;
     searchPlaceholder?: string;
-    itemName?: string;
     emptyMessage?: string;
     className?: string;
     onRowClick?: (item: T) => void;
@@ -53,7 +52,6 @@ export function FilterableTable<T>({
     columns,
     keyField,
     searchPlaceholder = "Buscar...",
-    itemName = "elementos",
     emptyMessage = "No se encontraron resultados",
     className = "",
     onRowClick,

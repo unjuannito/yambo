@@ -1,8 +1,6 @@
 import React from "react";
-import { LabelComponent } from "./LabelComponent";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    label?: string;
     size?: "sm" | "md" | "lg";
     variant?: "primary" | "secondary";
     required?: boolean;
@@ -19,7 +17,6 @@ const variantClasses = {
     secondary: "bg-gray-600 hover:bg-gray-700 text-white",
 };
 export function ButtonComponent({
-    label,
     size = "md",
     disabled,
     className = "",
@@ -27,7 +24,7 @@ export function ButtonComponent({
     required,
     ...props
 }: ButtonProps) {
-    const buttonInput = (
+    return (
         <button
             disabled={disabled}
             className={`rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
@@ -35,13 +32,5 @@ export function ButtonComponent({
         >
             {props.children}
         </button>
-    );
-
-    return label ? (
-        <LabelComponent label={label} required={required} className={className}>
-            {buttonInput}
-        </LabelComponent>
-    ) : (
-        buttonInput
     );
 }
