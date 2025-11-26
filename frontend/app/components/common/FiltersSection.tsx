@@ -16,8 +16,24 @@ export function FiltersSection({
     filters,
     fields,
     onFiltersChange,
-    title = "Filtros"
+    title,
 }: FiltersSectionProps) {
+
+    const mdCols: 1 | 2 = fields.length > 2 ? 2 : (fields.length as 1 | 2);
+    const lgCols: 1 | 2 | 3 | 5 = fields.length >= 4 ? 5 : (fields.length as 1 | 2 | 3);
+
+    const mdClassMap = {
+        1: "md:grid-cols-1",
+        2: "md:grid-cols-2",
+    } as const;
+
+    const lgClassMap = {
+        1: "lg:grid-cols-1",
+        2: "lg:grid-cols-2",
+        3: "lg:grid-cols-3",
+        5: "lg:grid-cols-5",
+    } as const;
+
     const updateFilter = (key: string, value: string | boolean | undefined | string[]) => {
         onFiltersChange({ ...filters, [key]: value });
     };
@@ -34,6 +50,7 @@ export function FiltersSection({
                         placeholder={field.placeholder || field.label}
                         value={value || ''}
                         onChange={(e) => updateFilter(field.key, e.target.value)}
+                        className="col-span-1"
                     />
                 );
             case 'select':
@@ -44,6 +61,7 @@ export function FiltersSection({
                         value={value === undefined ? '' : String(value)}
                         onChange={(e) => updateFilter(field.key, e.target.value === '' ? undefined : e.target.value)}
                         options={field.options}
+                        className="col-span-1"
                     />
                 );
             case 'multi-select':
@@ -55,6 +73,7 @@ export function FiltersSection({
                         options={field.options || []}
                         placeholder={field.placeholder || `Seleccionar ${field.label.toLowerCase()}`}
                         onChange={(newValue) => updateFilter(field.key, newValue)}
+                        className="col-span-1"
                     />
                 );
             default:
@@ -63,11 +82,9 @@ export function FiltersSection({
     };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-            <h2 className="text-xl font-semibold mb-4">{title}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {fields.map(renderField)}
-            </div>
-        </div>
+        <form className={`bg-white p-4 rounded-lg shadow mb-6 grid grid-flow-row auto-rows-auto grid-cols-1 ${mdClassMap[mdCols]} ${lgClassMap[lgCols]} gap-4`}>
+            {title && <h2 className="text-xl font-semibold col-span-full">{title}</h2>}
+            {fields.map(renderField)}
+        </form>
     );
 }
