@@ -66,6 +66,7 @@ export function MultiSelectComponent({
     const multiselectElement = (
         <div className={`relative`} ref={dropdownRef}>
             <button
+                type="button"
                 id={`multi-select-input-${randomId}`}
                 className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center ${className}`}
                 onClick={(e) => {
