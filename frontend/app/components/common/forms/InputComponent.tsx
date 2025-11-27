@@ -17,19 +17,32 @@ export function InputComponent({
     const inputType =
         type === "password" ? (showPassword ? "text" : "password") : type;
 
-    const getDefaultPattern = () => {
-        if (type === "email") return undefined;
-        if (type === "tel") return "[0-9]{9}";
-        if (type === "password") return pattern || ".{6,}";
-        return pattern;
+    const validationRules = {
+        email: {
+            pattern: undefined,
+            title: "Por favor, introduce un correo electrónico válido.",
+        },
+        tel: {
+            pattern: "[0-9]{9}",
+            title: "Por favor, introduce un número de teléfono válido de 9 dígitos.",
+        },
+        password: {
+            pattern: pattern || ".{6,}",
+            title: "La contraseña debe tener al menos 6 caracteres.",
+        },
     };
+
+    const currentRule = validationRules[type as keyof typeof validationRules];
+    const inputPattern = currentRule?.pattern ?? pattern;
+    const inputTitle = currentRule?.title;
 
     const input = (
         <div className="relative">
             <input
                 className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${type === "password" ? "pr-10" : ""} ${className}`}
                 type={inputType}
-                pattern={getDefaultPattern()}
+                pattern={inputPattern}
+                title={inputTitle}
                 name={label || undefined}
                 {...props}
             />

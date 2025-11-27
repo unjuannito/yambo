@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { LabelComponent } from "./LabelComponent";
 
 interface MultiSelectProps {
@@ -23,7 +23,7 @@ export function MultiSelectComponent({
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const randomId = Math.random().toString(36).substring(2, 15);
+    const inputId = useId();
 
     const filteredOptions = options.filter((option) =>
         option.label.toLowerCase().includes(search.toLowerCase())
@@ -67,7 +67,7 @@ export function MultiSelectComponent({
         <div className={`relative`} ref={dropdownRef}>
             <button
                 type="button"
-                id={`multi-select-input-${randomId}`}
+                id={inputId}
                 className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center ${className}`}
                 onClick={(e) => {
                     e.stopPropagation();
@@ -154,7 +154,7 @@ export function MultiSelectComponent({
         <LabelComponent
             label={label}
             required={required}
-            htmlFor={`multi-select-input-${randomId}`}
+            htmlFor={inputId}
         >
             {multiselectElement}
         </LabelComponent>
