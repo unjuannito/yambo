@@ -76,7 +76,7 @@ export function MultiSelectComponent({
                 }}
             >
                 {value.length > 0 ? (
-                    <span className="flex gap-1 flex-wrap " style={{maxHeight: '28px', overflowY: 'scroll' }}>
+                    <span className="flex gap-1 flex-wrap " style={{maxHeight: '28px', overflowY: 'auto' }}>
                         {value.map((item) => (
                             <span
                                 key={item}
