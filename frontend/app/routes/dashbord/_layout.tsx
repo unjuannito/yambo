@@ -4,6 +4,7 @@ import SociosNav from "~/components/dashbord/Nav";
 import SociosHeader from "~/components/dashbord/Header";
 import { useAuth } from "~/hooks/useAuth";
 import LINKS_MAP from "~/data/links";
+import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 
 // This is the layout for area-socios section
 export default function AreaSociosLayout() {
@@ -17,7 +18,11 @@ export default function AreaSociosLayout() {
   }, [navigate]);
 
   if (!user) {
-    return <div className="flex-1 flex items-center justify-center">Cargando usuario...</div>;
+    return (
+      <main className="flex flex-col p-8 w-full h-screen justify-center">
+        <LoadingSpinner size="xl" message="Cargando usuario..."></LoadingSpinner>
+      </main>
+    );
   }
 
 
