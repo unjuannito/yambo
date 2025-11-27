@@ -2,7 +2,7 @@ import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     size?: "sm" | "md" | "lg";
-    variant?: "primary" | "secondary";
+    variant?: "primary" | "secondary" | "danger" | "warning" | "info";
     required?: boolean;
 }
 
@@ -15,6 +15,9 @@ const sizeClasses = {
 const variantClasses = {
     primary: "bg-blue-600 hover:bg-blue-700 text-white",
     secondary: "bg-gray-600 hover:bg-gray-700 text-white",
+    danger: "bg-red-600 hover:bg-red-700 text-white",
+    warning: "bg-yellow-600 hover:bg-yellow-700 text-white",
+    info: "bg-blue-600 hover:bg-blue-700 text-white",
 };
 export function ButtonComponent({
     size = "md",
@@ -27,7 +30,7 @@ export function ButtonComponent({
     return (
         <button
             disabled={disabled}
-            className={`rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+            className={`rounded font-medium transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
             {...props}
         >
             {props.children}

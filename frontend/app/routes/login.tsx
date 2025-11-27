@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { ButtonComponent } from "../components/common/forms/ButtonComponent";
 import type { Route } from "./+types/login";
 
 export function meta({ }: Route.MetaArgs) {
@@ -63,12 +64,12 @@ export default function Index() {
             />
           </div>
 
-          <button
+          <ButtonComponent
             type="submit"
-            className="w-full py-2 px-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all font-semibold"
+            className="w-full"
           >
             Iniciar sesión
-          </button>
+          </ButtonComponent>
         </form>
 
         <p className="text-xs text-center text-gray-500">

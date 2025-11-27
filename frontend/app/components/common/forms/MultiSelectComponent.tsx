@@ -68,7 +68,7 @@ export function MultiSelectComponent({
             <button
                 type="button"
                 id={inputId}
-                className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center ${className}`}
+                className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer ${className}`}
                 onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -85,13 +85,20 @@ export function MultiSelectComponent({
                                 <span className="truncate">
                                     {getOptionLabel(item)}
                                 </span>
-                                <button
-                                    type="button"
+                                <div
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={(e) => removeOption(item, e)}
-                                    className="hover:bg-blue-300 rounded-full p-0.5 ml-1 flex-shrink-0"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            removeOption(item, e as any);
+                                        }
+                                    }}
+                                    className="hover:bg-blue-300 rounded-full p-0.5 ml-1 flex-shrink-0 cursor-pointer"
                                 >
                                     X
-                                </button>
+                                </div>
                             </span>
                         ))}
                     </span>

@@ -47,23 +47,29 @@ export function InputComponent({
                 {...props}
             />
             {type === "password" && (
-                <button
-                    type="button"
-                    tabIndex={-1}
+                <div
+                    role="button"
+                    tabIndex={0}
                     aria-label={
                         showPassword
                             ? "Ocultar contraseña"
                             : "Mostrar contraseña"
                     }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
                     onClick={() => setShowPassword((v) => !v)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setShowPassword((v) => !v);
+                        }
+                    }}
                 >
                     <img
                         src={showPassword ? "/icons/eye-slash.svg" : "/icons/eye.svg"}
                         alt={showPassword ? "Ocultar" : "Mostrar"}
                         className="w-5 h-5"
                     />
-                </button>
+                </div>
             )}
         </div>
     );

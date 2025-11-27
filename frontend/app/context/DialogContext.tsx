@@ -1,5 +1,6 @@
 import { createContext, useState, useRef } from "react";
 import type { ReactNode } from "react";
+import { ButtonComponent } from "../components/common/forms/ButtonComponent";
 
 export interface ConfirmOptions {
     title: string;
@@ -15,12 +16,6 @@ export interface DialogContextType {
     confirm: (options: ConfirmOptions) => Promise<boolean>;
     isOpen: boolean;
 }
-
-const variantStyles = {
-    danger: "bg-red-600 hover:bg-red-700",
-    warning: "bg-yellow-600 hover:bg-yellow-700",
-    info: "bg-blue-600 hover:bg-blue-700",
-};
 
 export const DialogContext = createContext<DialogContextType | undefined>(undefined);
 
@@ -87,20 +82,21 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                                 </h2>
                                 <div className="text-gray-700 mb-6">{confirmOptions.children}</div>
                                 <div className="flex justify-end gap-3">
-                                    <button
+                                    <ButtonComponent
                                         onClick={close}
                                         disabled={isLoading}
-                                        className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        variant="secondary"
+                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700"
                                     >
                                         {confirmOptions.cancelLabel ?? "Cancelar"}
-                                    </button>
-                                    <button
+                                    </ButtonComponent>
+                                    <ButtonComponent
                                         onClick={handleConfirm}
                                         disabled={isLoading}
-                                        className={`px-4 py-2 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantStyles[confirmOptions.variant ?? "info"]}`}
+                                        variant={confirmOptions.variant ?? "info"}
                                     >
                                         {isLoading ? "Procesando..." : (confirmOptions.confirmLabel ?? "Confirmar")}
-                                    </button>
+                                    </ButtonComponent>
                                 </div>
                             </>
                         )}

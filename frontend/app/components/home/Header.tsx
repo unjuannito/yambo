@@ -34,9 +34,17 @@ export default function Header() {
           </a>
         </nav>
 
-        <button
-          className="md:hidden custom-break-button hidden focus:outline-none"
+        <div
+          role="button"
+          tabIndex={0}
+          className="md:hidden custom-break-button hidden focus:outline-none cursor-pointer"
           onClick={() => setMenuOpen(!menuOpen)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setMenuOpen(!menuOpen);
+            }
+          }}
         >
           <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -46,7 +54,7 @@ export default function Header() {
               d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
             />
           </svg>
-        </button>
+        </div>
       </div>
 
       {menuOpen && (
