@@ -3,9 +3,9 @@ import { DataTable } from "./DataTable";
 import type { TableColumn } from "./DataTable";
 import { FiltersSection } from "./FiltersSection";
 import { Pagination } from "./Pagination";
-import { InputComponent } from "./forms/InputComponent";
 import type { ColumnFilter, FilterValues } from "./types/tableTypes";
 import type { PagedInfo, PagedResponse } from "~/types/apiType";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
     filter?: ColumnFilter;
@@ -27,11 +27,9 @@ interface ServerSideProps<T> {
 export interface FilterableTableProps<T> {
     columns: FilterableColumn<T>[];
     keyField: keyof T;
-    searchPlaceholder?: string;
     emptyMessage?: string;
     className?: string;
     onRowClick?: (item: T) => void;
-    enableSearch?: boolean;
     enableFilters?: boolean;
     enablePagination?: boolean;
 
@@ -51,11 +49,9 @@ const EMPTY_FILTERS: FilterValues = {};
 export function FilterableTable<T>({
     columns,
     keyField,
-    searchPlaceholder = "Buscar...",
     emptyMessage = "No se encontraron resultados",
     className = "",
     onRowClick,
-    enableSearch = true,
     enableFilters = true,
     enablePagination = true,
     serverSide,
@@ -81,7 +77,6 @@ export function FilterableTable<T>({
     const [clientPage, setClientPage] = useState(0);
     const [clientFilters, setClientFilters] =
         useState<FilterValues>(EMPTY_FILTERS);
-    const [searchTerm, setSearchTerm] = useState("");
     const clientPageSize = 10;
 
     // Refs for stable callbacks
@@ -146,11 +141,6 @@ export function FilterableTable<T>({
         [isServerSide]
     );
 
-    const handleSearchChange = useCallback((value: string) => {
-        setSearchTerm(value);
-        setClientPage(0);
-    }, []);
-
     // Derived data
     const data = isServerSide ? serverData : (clientData ?? []);
 
@@ -179,19 +169,6 @@ export function FilterableTable<T>({
         if (isServerSide) return data;
 
         let result = [...data];
-
-        // Search filter
-        if (enableSearch && searchTerm) {
-            const lowered = searchTerm.toLowerCase();
-            result = result.filter((item) =>
-                columns.some((column) => {
-                    const value = item[column.key as keyof T];
-                    return String(value ?? "")
-                        .toLowerCase()
-                        .includes(lowered);
-                })
-            );
-        }
 
         // Column filters
         if (enableFilters) {
@@ -226,10 +203,8 @@ export function FilterableTable<T>({
         return result;
     }, [
         data,
-        searchTerm,
         clientFilters,
         columns,
-        enableSearch,
         enableFilters,
         isServerSide,
     ]);
@@ -263,20 +238,6 @@ export function FilterableTable<T>({
 
     return (
         <div className={className}>
-            {/* Search Bar (client-side only) */}
-            {!isServerSide && enableSearch && (
-                <div className="mb-4">
-                    <InputComponent
-                        type="text"
-                        label="Buscar"
-                        placeholder={searchPlaceholder}
-                        value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
-                        className="max-w-md"
-                    />
-                </div>
-            )}
-
             {/* Filters Section */}
             {enableFilters && filterFields.length > 0 && (
                 <FiltersSection
@@ -296,7 +257,7 @@ export function FilterableTable<T>({
             {/* Loading / Table / Empty */}
             {isLoading ? (
                 <div className="flex justify-center items-center py-8">
-                    <div className="loader" />
+                    <LoadingSpinner message="Cargando datos..." size="md" />
                 </div>
             ) : paginatedData.length > 0 ? (
                 <DataTable
