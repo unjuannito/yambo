@@ -25,9 +25,9 @@ export function InputComponent({
     };
 
     const input = (
-        <>
+        <div className="relative">
             <input
-                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${type === "password" ? "pr-10" : ""} ${className}`}
                 type={inputType}
                 pattern={getDefaultPattern()}
                 {...props}
@@ -92,7 +92,7 @@ export function InputComponent({
                     )}
                 </button>
             )}
-        </>
+        </div>
     );
 
     if (!label) {
