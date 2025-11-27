@@ -19,7 +19,7 @@ export function InputComponent({
 
     const getDefaultPattern = () => {
         if (type === "email") return undefined;
-        if (type === "tel") return "^[0-9()+\-\s]{7,}$";
+        if (type === "tel") return "[0-9]{9}";
         if (type === "password") return pattern || ".{6,}";
         return pattern;
     };
