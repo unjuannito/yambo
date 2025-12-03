@@ -20,8 +20,8 @@ export function FiltersSection({
     title,
 }: FiltersSectionProps) {
     const mdCols: 1 | 2 = fields.length > 2 ? 2 : (fields.length as 1 | 2);
-    const lgCols: 1 | 2 | 3 | 5 =
-        fields.length >= 4 ? 5 : (fields.length as 1 | 2 | 3);
+    const lgCols: 1 | 2 | 3 | 4 =
+        fields.length >= 4 ? 4 : (fields.length as 1 | 2 | 3);
 
     const mdClassMap = {
         1: "md:grid-cols-1",
@@ -32,7 +32,7 @@ export function FiltersSection({
         1: "lg:grid-cols-1",
         2: "lg:grid-cols-2",
         3: "lg:grid-cols-3",
-        5: "lg:grid-cols-5",
+        4: "lg:grid-cols-4",
     } as const;
 
     const updateFilter = (
