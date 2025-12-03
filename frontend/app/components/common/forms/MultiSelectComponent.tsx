@@ -68,7 +68,7 @@ export function MultiSelectComponent({
             <button
                 type="button"
                 id={inputId}
-                className={`w-full border rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer ${className}`}
+                className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer ${className}`}
                 onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -110,7 +110,7 @@ export function MultiSelectComponent({
                     </span>
                 ) : (
                     <span
-                        className="text-gray-400 py-0.5"
+                        className="text-gray-400"
                         style={{ maxHeight: "28px" }}
                     >
                         {placeholder}
