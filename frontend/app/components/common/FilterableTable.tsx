@@ -201,13 +201,7 @@ export function FilterableTable<T>({
         }
 
         return result;
-    }, [
-        data,
-        clientFilters,
-        columns,
-        enableFilters,
-        isServerSide,
-    ]);
+    }, [data, clientFilters, columns, enableFilters, isServerSide]);
 
     // Client-side pagination
     const paginatedData = useMemo(() => {
@@ -237,7 +231,7 @@ export function FilterableTable<T>({
     const activeFilters = isServerSide ? filters : clientFilters;
 
     return (
-        <div className={className}>
+        <div className={`flex flex-col gap-4 ${className}`}>
             {/* Filters Section */}
             {enableFilters && filterFields.length > 0 && (
                 <FiltersSection
@@ -256,29 +250,28 @@ export function FilterableTable<T>({
 
             {/* Loading / Table / Empty */}
             {isLoading ? (
-                <div className="flex justify-center items-center py-8">
-                    <LoadingSpinner message="Cargando datos..." size="md" />
-                </div>
+                <LoadingSpinner message="Cargando datos..." size="md" />
             ) : paginatedData.length > 0 ? (
-                <DataTable
-                    data={paginatedData}
-                    columns={enhancedColumns}
-                    keyField={keyField}
-                    onRowClick={onRowClick}
-                />
+                <>
+                    <DataTable
+                        data={paginatedData}
+                        columns={enhancedColumns}
+                        keyField={keyField}
+                        onRowClick={onRowClick}
+                    />
+                    {/* Pagination */}
+                    {enablePagination && (
+                        <Pagination
+                            page={displayPageInfo.page}
+                            totalPages={displayPageInfo.totalPages}
+                            onPageChange={handlePageChange}
+                        />
+                    )}
+                </>
             ) : (
-                <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                <span className="text-center text-gray-500">
                     {emptyMessage}
-                </div>
-            )}
-
-            {/* Pagination */}
-            {enablePagination && (
-                <Pagination
-                    page={displayPageInfo.page}
-                    totalPages={displayPageInfo.totalPages}
-                    onPageChange={handlePageChange}
-                />
+                </span>
             )}
         </div>
     );

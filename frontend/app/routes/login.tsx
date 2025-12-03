@@ -66,6 +66,7 @@ export default function Index() {
 
           <ButtonComponent
             type="submit"
+            variant="primary"
             className="w-full"
           >
             Iniciar sesión

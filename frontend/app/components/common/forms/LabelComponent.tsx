@@ -17,10 +17,10 @@ export function LabelComponent({
 }: LabelProps) {
     return (
         <label
-            className={`block font-medium text-gray-700 mb-1 ${className}`}
+            className={`flex flex-col font-medium text-gray-700 gap-1 ${className}`}
             {...(f ? { htmlFor: f } : {})}
         >
-            <span className="text-md px-1 py-1">
+            <span className="text-md py-1 px-2">
                 {label}
                 {required && <span className="text-red-500 ml-1">*</span>}
             </span>

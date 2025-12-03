@@ -18,17 +18,17 @@ export function Pagination({
     return (
         <nav className="flex justify-center items-center mt-4 flex gap-2">
             <ButtonComponent
-                variant="secondary"
+                variant="neutral"
                 onClick={() => onPageChange(Math.max(0, page - 1))}
                 disabled={page === 0}
             >
                 {previousLabel}
             </ButtonComponent>
-            <span className="px-4 py-2 flex text-center">
-                Página {page + 1} de {totalPages}
-            </span>
+            <div className="px-4 py-2 flex flex-wrap gap-1 justify-center items-center">
+                <span>Página</span><span>{page + 1} de {totalPages}</span>
+            </div>
             <ButtonComponent
-                variant="secondary"
+                variant="neutral"
                 onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
                 disabled={page >= totalPages - 1}
             >

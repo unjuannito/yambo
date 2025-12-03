@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth";
-import { ButtonComponent } from "../common/forms/ButtonComponent";
+import { BurgerButton } from "../common/BurgerButton";
 
 interface HeaderProps {
   links: { label: string; href: string, name: string }[];
@@ -30,27 +30,11 @@ export default function Header({ links }: HeaderProps) {
           >
             Pagina publica
           </a>
-          <div
-            role="button"
-            tabIndex={0}
-            className="md:hidden display-block focus:outline-none cursor-pointer"
+          <BurgerButton
+            isOpen={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setMenuOpen(!menuOpen);
-              }
-            }}
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-              />
-            </svg>
-          </div>
+            className="md:hidden display-block"
+          />
 
         </nav>
 

@@ -68,7 +68,7 @@ export function MultiSelectComponent({
             <button
                 type="button"
                 id={inputId}
-                className={`w-full border rounded px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer ${className}`}
+                className={`w-full border rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer ${className}`}
                 onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -76,11 +76,14 @@ export function MultiSelectComponent({
                 }}
             >
                 {value.length > 0 ? (
-                    <span className="flex gap-1 flex-wrap " style={{maxHeight: '28px', overflowY: 'auto' }}>
+                    <span
+                        className="flex gap-1 flex-wrap "
+                        style={{ maxHeight: "28px", overflowY: "auto" }}
+                    >
                         {value.map((item) => (
                             <span
                                 key={item}
-                                className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded whitespace-nowrap flex-shrink-0 max-w-[150px]"
+                                className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-1 py-1 rounded whitespace-nowrap flex-shrink-0 max-w-[150px]"
                             >
                                 <span className="truncate">
                                     {getOptionLabel(item)}
@@ -90,7 +93,10 @@ export function MultiSelectComponent({
                                     tabIndex={0}
                                     onClick={(e) => removeOption(item, e)}
                                     onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
+                                        if (
+                                            e.key === "Enter" ||
+                                            e.key === " "
+                                        ) {
                                             e.preventDefault();
                                             removeOption(item, e as any);
                                         }
@@ -103,9 +109,16 @@ export function MultiSelectComponent({
                         ))}
                     </span>
                 ) : (
-                    <span className="text-gray-400 px-2 py-1" style={{maxHeight: '28px'}}>{placeholder}</span>
+                    <span
+                        className="text-gray-400 py-0.5"
+                        style={{ maxHeight: "28px" }}
+                    >
+                        {placeholder}
+                    </span>
                 )}
-                <span className={`w-5 h-5 text-gray-400 flex-shrink-0 `}>
+                <span
+                    className={`w-5 text-gray-400 flex-shrink-0 py-1 transition-transform duration-100 ease-in-out ${isOpen ? "transform rotate-x-180" : ""}`}
+                >
                     ▼
                 </span>
             </button>
@@ -158,11 +171,7 @@ export function MultiSelectComponent({
     }
 
     return (
-        <LabelComponent
-            label={label}
-            required={required}
-            htmlFor={inputId}
-        >
+        <LabelComponent label={label} required={required} htmlFor={inputId}>
             {multiselectElement}
         </LabelComponent>
     );

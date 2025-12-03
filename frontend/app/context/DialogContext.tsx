@@ -2,40 +2,48 @@ import { createContext, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import { ButtonComponent } from "../components/common/forms/ButtonComponent";
 
+type DialogVariant = "info" | "warning" | "danger" | "success";
+
+// Maps dialog semantic variants to button variants
+const variantToButtonVariant: Record<
+    DialogVariant,
+    "primary" | "destructive" | "success"
+> = {
+    info: "primary",
+    warning: "primary",
+    danger: "destructive",
+    success: "success",
+};
+
 export interface ConfirmOptions {
     title: string;
     children: ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
-    variant?: "danger" | "warning" | "info";
+    variant?: DialogVariant;
 }
 
 export interface DialogContextType {
-    open: (content: ReactNode) => void;
-    close: () => void;
-    confirm: (options: ConfirmOptions) => Promise<boolean>;
+    openDialog: (options: ConfirmOptions) => Promise<boolean>;
+    closeDialog: () => void;
     isOpen: boolean;
 }
 
-export const DialogContext = createContext<DialogContextType | undefined>(undefined);
+export const DialogContext = createContext<DialogContextType | undefined>(
+    undefined
+);
 
 export function DialogProvider({ children }: { children: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [content, setContent] = useState<ReactNode | null>(null);
-    const [confirmOptions, setConfirmOptions] = useState<ConfirmOptions | null>(null);
+    const [confirmOptions, setConfirmOptions] = useState<ConfirmOptions | null>(
+        null
+    );
     const resolveRef = useRef<((value: boolean) => void) | null>(null);
 
-    const open = (dialogContent: ReactNode) => {
-        setContent(dialogContent);
-        setConfirmOptions(null);
-        setIsOpen(true);
-    };
-
-    const close = () => {
+    const closeDialog = () => {
         setIsOpen(false);
         setIsLoading(false);
-        setContent(null);
         setConfirmOptions(null);
         if (resolveRef.current) {
             resolveRef.current(false);
@@ -52,17 +60,16 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         setConfirmOptions(null);
     };
 
-    const confirm = (options: ConfirmOptions): Promise<boolean> => {
+    const openDialog = (options: ConfirmOptions): Promise<boolean> => {
         return new Promise((resolve) => {
             resolveRef.current = resolve;
             setConfirmOptions(options);
-            setContent(null);
             setIsOpen(true);
         });
     };
 
     return (
-        <DialogContext.Provider value={{ open, close, confirm, isOpen }}>
+        <DialogContext.Provider value={{ openDialog, closeDialog, isOpen }}>
             {children}
             {isOpen && (
                 <div
@@ -70,36 +77,37 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                     onClick={close}
                 >
                     <dialog
-                        className="bg-white rounded-lg p-6 max-w-md w-auto justify-self-center m-4"
+                        className="bg-white rounded-lg p-6 max-w-md w-auto justify-self-center m-4 flex flex-col gap-4"
                         open
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {content}
-                        {confirmOptions && (
-                            <>
-                                <h2 className="text-xl font-bold mb-4 text-gray-900">
-                                    {confirmOptions.title}
-                                </h2>
-                                <div className="text-gray-700 mb-6">{confirmOptions.children}</div>
-                                <div className="flex justify-end gap-3">
-                                    <ButtonComponent
-                                        onClick={close}
-                                        disabled={isLoading}
-                                        variant="secondary"
-                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700"
-                                    >
-                                        {confirmOptions.cancelLabel ?? "Cancelar"}
-                                    </ButtonComponent>
-                                    <ButtonComponent
-                                        onClick={handleConfirm}
-                                        disabled={isLoading}
-                                        variant={confirmOptions.variant ?? "info"}
-                                    >
-                                        {isLoading ? "Procesando..." : (confirmOptions.confirmLabel ?? "Confirmar")}
-                                    </ButtonComponent>
-                                </div>
-                            </>
-                        )}
+                        <h2 className="text-xl font-bold text-gray-900">
+                            {confirmOptions?.title}
+                        </h2>
+                        {confirmOptions?.children}
+                        <nav className="flex justify-end gap-3">
+                            <ButtonComponent
+                                onClick={closeDialog}
+                                disabled={isLoading}
+                                variant="neutral"
+                            >
+                                {confirmOptions?.cancelLabel ?? "Cancelar"}
+                            </ButtonComponent>
+                            <ButtonComponent
+                                onClick={handleConfirm}
+                                disabled={isLoading}
+                                variant={
+                                    variantToButtonVariant[
+                                        confirmOptions?.variant ?? "info"
+                                    ]
+                                }
+                            >
+                                {isLoading
+                                    ? "Procesando..."
+                                    : (confirmOptions?.confirmLabel ??
+                                      "Confirmar")}
+                            </ButtonComponent>
+                        </nav>
                     </dialog>
                 </div>
             )}

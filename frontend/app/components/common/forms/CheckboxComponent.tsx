@@ -43,7 +43,7 @@ export function CheckboxComponent({
     }
 
     return (
-        <LabelComponent label={label} required={required} className={className}>
+        <LabelComponent label={label} required={required} className="flex flex-row items-center">
             {input}
         </LabelComponent>
     );

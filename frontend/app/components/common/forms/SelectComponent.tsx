@@ -3,14 +3,12 @@ import { LabelComponent } from "./LabelComponent";
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
     label?: string;
     options?: { value: string; label: string }[];
-    value?: string;
 }
 
 export function SelectComponent({
     label,
     className = "",
     options = [],
-    value,
     ...props
 }: SelectProps) {
     const selectElement = (
@@ -33,7 +31,6 @@ export function SelectComponent({
     return (
         <LabelComponent
             label={label}
-            className={className}
             required={props.required}
         >
             {selectElement}
