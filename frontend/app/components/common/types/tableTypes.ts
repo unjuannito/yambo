@@ -1,4 +1,4 @@
-export type FilterType = 'text' | 'select' | 'multi-select' | 'checkbox';
+export type FilterType = 'text' | 'select' | 'multi-select' | 'checkbox' | 'toggle';
 
 export interface FilterOption {
     value: string;

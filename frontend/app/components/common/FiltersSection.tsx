@@ -106,6 +106,19 @@ export function FiltersSection({
                         className="col-span-1"
                     />
                 );
+            case "toggle":
+                return (
+                    <CheckboxComponent
+                        key={field.key}
+                        label={field.label}
+                        variant="toggle"
+                        checked={Boolean(value)}
+                        onChange={(e) =>
+                            updateFilter(field.key, e.target.checked)
+                        }
+                        className="col-span-1"
+                    />
+                );
             default:
                 return null;
         }
