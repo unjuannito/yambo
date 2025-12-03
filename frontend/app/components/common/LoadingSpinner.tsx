@@ -6,20 +6,24 @@ interface LoadingSpinnerProps {
 const sizeClasses = {
     sm: {
         text: "text-sm",
-        spinner: "h-4 w-4 border-2"
+        spinner: "h-4 w-4 border-2",
+        gap: "gap-1"
     }
     ,
     md: {
         text: "text-md",
-        spinner: "h-8 w-8 border-3"
+        spinner: "h-8 w-8 border-3",
+        gap: "gap-2"
     },
     lg: {
         text: "text-lg",
-        spinner: "h-16 w-16 border-4"
+        spinner: "h-16 w-16 border-4",
+        gap: "gap-4"
     },
     xl:  {
         text: "text-xl",
-        spinner: "h-32 w-32 border-6"
+        spinner: "h-32 w-32 border-6",
+        gap: "gap-8"
     }
 };
 export function LoadingSpinner({
@@ -27,12 +31,12 @@ export function LoadingSpinner({
     message
 }: LoadingSpinnerProps) {
 
-    return (<div className="flex flex-col items-center justify-center gap-3">
+    return (<div className={`flex flex-col items-center justify-center ${sizeClasses[size].gap}`}>
             <svg
                 className={`${sizeClasses[size].spinner} border-blue-600 border-t-transparent rounded-full animate-spin`}
                 role="status"
                 aria-label="Cargando"
             />
-            {message && <span className={`text-gray-600 ${sizeClasses[size].text}`}>{message}</span>}
+            {message && <span className={`text-gray-600`}>{message}</span>}
         </div>);
 }
