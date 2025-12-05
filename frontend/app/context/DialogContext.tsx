@@ -1,6 +1,7 @@
-import { createContext, useState, useRef } from "react";
+import { createContext, useState, useRef, useEffect } from "react";
 import type { ReactNode } from "react";
 import { ButtonComponent } from "../components/common/forms/ButtonComponent";
+import toast from "react-hot-toast";
 
 type DialogVariant = "info" | "warning" | "danger" | "success";
 
@@ -15,16 +16,23 @@ const variantToButtonVariant: Record<
     success: "success",
 };
 
-export interface ConfirmOptions {
+export interface DialogOptions {
     title: string;
     children: ReactNode;
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: DialogVariant;
+    action: (event: any) =>
+        | { success: true; result: any }
+        | { success: true; result: any; successMessage: any }
+        | { success: false; errorMessage: string }
+        | Promise<{ success: true; result: any; successMessage: any }
+            | { success: true; result: any }
+            | { success: false; errorMessage: string }>;
 }
 
 export interface DialogContextType {
-    openDialog: (options: ConfirmOptions) => Promise<boolean>;
+    openDialog: (options: DialogOptions) => void;
     closeDialog: () => void;
     isOpen: boolean;
 }
@@ -36,81 +44,102 @@ export const DialogContext = createContext<DialogContextType | undefined>(
 export function DialogProvider({ children }: { children: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [confirmOptions, setConfirmOptions] = useState<ConfirmOptions | null>(
-        null
-    );
-    const resolveRef = useRef<((value: boolean) => void) | null>(null);
+    const [dialogOptions, setDialogOptions] = useState<DialogOptions | null>(null);
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const resolverRef = useRef<{
+        resolve?: (value: any) => void;
+        reject?: (reason?: any) => void;
+    }>({});
+
+    useEffect(() => {
+        if (dialogRef.current === null) return;
+        if (isOpen) {
+            dialogRef.current.showModal();
+        } else {
+            dialogRef.current.close();
+        }
+    }, [isOpen]);
 
     const closeDialog = () => {
         setIsOpen(false);
         setIsLoading(false);
-        setConfirmOptions(null);
-        if (resolveRef.current) {
-            resolveRef.current(false);
-            resolveRef.current = null;
-        }
+        setDialogOptions(null);
     };
 
-    const handleConfirm = () => {
-        if (resolveRef.current) {
-            resolveRef.current(true);
-            resolveRef.current = null;
-        }
-        setIsOpen(false);
-        setConfirmOptions(null);
-    };
-
-    const openDialog = (options: ConfirmOptions): Promise<boolean> => {
-        return new Promise((resolve) => {
-            resolveRef.current = resolve;
-            setConfirmOptions(options);
+    const openDialog = (options: DialogOptions): Promise<any> => {
+        return new Promise((resolve, reject) => {
+            resolverRef.current = { resolve, reject };
+            setDialogOptions(options);
             setIsOpen(true);
         });
+    };
+
+    const handleSubmit = async (event: any) => {
+        event?.preventDefault?.();
+        setIsLoading(true);
+
+        try {
+            const response = await dialogOptions?.action(event);
+
+            if (response?.success) {
+                if ("successMessage" in response && response.successMessage) {
+                    toast.success(response.successMessage);
+                }
+
+                resolverRef.current.resolve?.(response.result);
+            } else {
+                toast.error(response?.errorMessage || "Ha ocurrido un error");
+                resolverRef.current.reject?.(response?.errorMessage);
+            }
+
+        } catch (error: any) {
+            console.error("Excepción al ejecutar action:", error.message);
+            toast.error(error.message || "Ha ocurrido un error");
+            resolverRef.current.reject?.(error);
+
+        } finally {
+            closeDialog();
+        }
     };
 
     return (
         <DialogContext.Provider value={{ openDialog, closeDialog, isOpen }}>
             {children}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-                    onClick={close}
-                >
-                    <dialog
-                        className="bg-white rounded-lg p-6 max-w-md w-auto justify-self-center m-4 flex flex-col gap-4"
-                        open
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h2 className="text-xl font-bold text-gray-900">
-                            {confirmOptions?.title}
-                        </h2>
-                        {confirmOptions?.children}
-                        <nav className="flex justify-end gap-3">
-                            <ButtonComponent
-                                onClick={closeDialog}
-                                disabled={isLoading}
-                                variant="neutral"
-                            >
-                                {confirmOptions?.cancelLabel ?? "Cancelar"}
-                            </ButtonComponent>
-                            <ButtonComponent
-                                onClick={handleConfirm}
-                                disabled={isLoading}
-                                variant={
-                                    variantToButtonVariant[
-                                        confirmOptions?.variant ?? "info"
-                                    ]
-                                }
-                            >
-                                {isLoading
-                                    ? "Procesando..."
-                                    : (confirmOptions?.confirmLabel ??
-                                      "Confirmar")}
-                            </ButtonComponent>
-                        </nav>
-                    </dialog>
-                </div>
-            )}
+            <dialog
+                className="fixed inset-0 bg-white rounded-lg justify-self-center self-center backdrop:bg-black/50"
+                onClick={(e) => { if (e.target === e.currentTarget && !isLoading) closeDialog(); }}
+                ref={dialogRef}
+            >
+                <form method="dialog" className="p-6 flex flex-col gap-4" onSubmit={handleSubmit}>
+                    <h2 className="text-xl font-bold text-gray-900">
+                        {dialogOptions?.title}
+                    </h2>
+                    {dialogOptions?.children}
+                    <menu className="flex justify-end gap-3">
+                        <ButtonComponent
+                            type="button"
+                            onClick={() => {closeDialog(); resolverRef.current.reject?.('user-cancelled');}}
+                            loading={isLoading}
+                            variant="neutral"
+                        >
+                            {dialogOptions?.cancelLabel ?? "Cancelar"}
+                        </ButtonComponent>
+                        <ButtonComponent
+                            loading={isLoading}
+                            variant={
+                                variantToButtonVariant[
+                                dialogOptions?.variant ?? "info"
+                                ]
+                            }
+                        >
+                            {isLoading
+                                ? "Procesando..."
+                                : (dialogOptions?.confirmLabel ??
+                                    "Confirmar")}
+                        </ButtonComponent>
+                    </menu>
+                </form>
+            </dialog>
         </DialogContext.Provider>
     );
 }
