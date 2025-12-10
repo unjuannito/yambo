@@ -1,6 +1,7 @@
-import { createContext, useState, useEffect, type ReactNode, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, type ReactNode, useContext } from 'react';
 import { AuthService } from '../services/authService';
 import { UserService } from '../services/userService';
+import { ApiService } from '../services/apiService';
 import { Navigate } from 'react-router';
 
 import type { CurrentUser, Permission } from '~/types/userType';
@@ -15,13 +16,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<CurrentUser | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const handleTokenExpired = useCallback(() => {
+        console.log('Token expired, logging out user');
+        setUser(null);
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+        }
+    }, []);
+
     useEffect(() => {
+        // Set up global token expiration handler
+        ApiService.setOnTokenExpired(handleTokenExpired);
+        
         if (authService.isAuthenticated()) {
             reloadUser();
         } else {
             setLoading(false);
         }
-    }, []);
+
+        return () => {
+            ApiService.setOnTokenExpired(null);
+        };
+    }, [handleTokenExpired]);
 
 
     const login = async (email: string, password: string) => {

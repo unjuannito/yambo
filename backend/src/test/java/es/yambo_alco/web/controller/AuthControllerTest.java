@@ -32,130 +32,131 @@ import org.springframework.security.test.context.support.WithMockUser;
 @Import(TestSecurityConfig.class)
 class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-    
-    @MockitoBean
-    private AuthService authService;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private InvitationService invitationService;
+        @MockitoBean
+        private AuthService authService;
 
-    @Test
-    void login_WithValidCredentials_ShouldReturnToken() throws Exception {
-        // Given
-        LoginRequest loginRequest = new LoginRequest("admin", "admin");
-        when(authService.authenticate("admin", "admin")).thenReturn("test.jwt.token");
+        @MockitoBean
+        private InvitationService invitationService;
 
-        // When & Then
-        mockMvc.perform(post("/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("test.jwt.token"));
-    }
+        @Test
+        void login_WithValidCredentials_ShouldReturnToken() throws Exception {
+                // Given
+                LoginRequest loginRequest = new LoginRequest("admin", "admin");
+                when(authService.authenticate("admin", "admin")).thenReturn("test.jwt.token");
 
-    @Test
-    void login_WithInvalidCredentials_ShouldReturnUnauthorized() throws Exception {
-        // Given
-        LoginRequest loginRequest = new LoginRequest("invalid", "invalid");
-        when(authService.authenticate(any(), any()))
-                .thenThrow(new BadCredentialsException("Invalid credentials"));
+                // When & Then
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(loginRequest)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("test.jwt.token"));
+        }
 
-        // When & Then
-        mockMvc.perform(post("/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Invalid username or password"))
-                .andExpect(jsonPath("$.type").value("AUTHENTICATION_FAILED"))
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.timestamp").exists());
-    }
+        @Test
+        void login_WithInvalidCredentials_ShouldReturnUnauthorized() throws Exception {
+                // Given
+                LoginRequest loginRequest = new LoginRequest("invalid", "invalid");
+                when(authService.authenticate(any(), any()))
+                                .thenThrow(new BadCredentialsException("Invalid credentials"));
 
-    @Test
-    void register_WithValidInvitation_ShouldReturnToken() throws Exception {
-        // Given
-        RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
-        User user = User.builder().email("newuser").build();
-        when(invitationService.completeInvitation("valid-token", "newuser", "password", "New User")).thenReturn(user);
-        when(authService.authenticate("newuser", "password")).thenReturn("test.jwt.token");
+                // When & Then
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(loginRequest)))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.status").value(401))
+                                .andExpect(jsonPath("$.message").value("Invalid username or password"))
+                                .andExpect(jsonPath("$.type").value("AUTHENTICATION_FAILED"))
+                                .andExpect(jsonPath("$.id").exists())
+                                .andExpect(jsonPath("$.timestamp").exists());
+        }
 
-        // When & Then
-        mockMvc.perform(post("/auth/register")
-                .param("invitation", "valid-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("test.jwt.token"));
-    }
+        @Test
+        void register_WithValidInvitation_ShouldReturnToken() throws Exception {
+                // Given
+                RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
+                User user = User.builder().email("newuser").build();
+                when(invitationService.completeInvitation("valid-token", "newuser", "password", "New User"))
+                                .thenReturn(user);
+                when(authService.authenticate("newuser", "password")).thenReturn("test.jwt.token");
 
-    @Test
-    void register_WithInvalidInvitation_ShouldReturnBadRequest() throws Exception {
-        // Given
-        RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
-        when(invitationService.completeInvitation(any(), any(), any(), any()))
-                .thenThrow(new ResourceNotFoundException("Invitation not found"));
+                // When & Then
+                mockMvc.perform(post("/auth/register")
+                                .param("invitation", "valid-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(registerRequest)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("test.jwt.token"));
+        }
 
-        // When & Then
-        mockMvc.perform(post("/auth/register")
-                .param("invitation", "invalid-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isNotFound())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message").value("Invitation not found"));
-    }
+        @Test
+        void register_WithInvalidInvitation_ShouldReturnBadRequest() throws Exception {
+                // Given
+                RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
+                when(invitationService.completeInvitation(any(), any(), any(), any()))
+                                .thenThrow(new ResourceNotFoundException("Invitation not found"));
 
-    @Test
-    void register_WithUsedInvitation_ShouldReturnBadRequest() throws Exception {
-        // Given
-        RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
-        when(invitationService.completeInvitation(any(), any(), any(), any()))
-                .thenThrow(new BadRequestException("Invitation already used"));
+                // When & Then
+                mockMvc.perform(post("/auth/register")
+                                .param("invitation", "invalid-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(registerRequest)))
+                                .andExpect(status().isNotFound())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invitation not found"));
+        }
 
-        // When & Then
-        mockMvc.perform(post("/auth/register")
-                .param("invitation", "used-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message").value("Invitation already used"));
-    }
+        @Test
+        void register_WithUsedInvitation_ShouldReturnBadRequest() throws Exception {
+                // Given
+                RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
+                when(invitationService.completeInvitation(any(), any(), any(), any()))
+                                .thenThrow(new BadRequestException("Invitation already used"));
 
-    @Test
-    @WithMockUser(username = "testuser")
-    void reload_WithAuthenticatedUser_ShouldReturnNewToken() throws Exception {
-        // Given
-        when(authService.reload()).thenReturn("new.jwt.token");
+                // When & Then
+                mockMvc.perform(post("/auth/register")
+                                .param("invitation", "used-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(registerRequest)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.message").value("Invitation already used"));
+        }
 
-        // When & Then
-        mockMvc.perform(post("/auth/reload")
-                .header("Authorization", "Bearer old.jwt.token")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("new.jwt.token"));
-    }
+        @Test
+        @WithMockUser(username = "testuser")
+        void reload_WithAuthenticatedUser_ShouldReturnNewToken() throws Exception {
+                // Given
+                when(authService.reload()).thenReturn("new.jwt.token");
 
-    @Test
-    @WithMockUser(username = "testuser")
-    void reload_WithAuthenticatedUser_ShouldGenerateFreshToken() throws Exception {
-        // Given
-        String refreshedToken = "refreshed.jwt.token.with.new.expiration";
-        when(authService.reload()).thenReturn(refreshedToken);
+                // When & Then
+                mockMvc.perform(post("/auth/reload")
+                                .header("Authorization", "Bearer old.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("new.jwt.token"));
+        }
 
-        // When & Then
-        mockMvc.perform(post("/auth/reload")
-                .header("Authorization", "Bearer expiring.jwt.token")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.token").value(refreshedToken));
-    }
+        @Test
+        @WithMockUser(username = "testuser")
+        void reload_WithAuthenticatedUser_ShouldGenerateFreshToken() throws Exception {
+                // Given
+                String refreshedToken = "refreshed.jwt.token.with.new.expiration";
+                when(authService.reload()).thenReturn(refreshedToken);
+
+                // When & Then
+                mockMvc.perform(post("/auth/reload")
+                                .header("Authorization", "Bearer expiring.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.token").value(refreshedToken));
+        }
 }
