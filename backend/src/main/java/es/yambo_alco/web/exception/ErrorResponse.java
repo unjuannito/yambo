@@ -13,20 +13,20 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ErrorResponse {
-    
+
     @Builder.Default
     private String id = UUID.randomUUID().toString();
-    
+
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
-    
+
     private String type;
-    
+
     private String message;
-    
+
     private String path;
-    
+
     private Integer status;
-    
+
     private String details;
 }
