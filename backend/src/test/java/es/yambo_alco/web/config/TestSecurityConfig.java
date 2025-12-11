@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import static org.mockito.Mockito.mock;
 
@@ -28,13 +29,19 @@ public class TestSecurityConfig {
         return mock(AuthService.class);
     }
 
+    @Bean
+    @Primary
+    public HandlerExceptionResolver handlerExceptionResolver() {
+        return mock(HandlerExceptionResolver.class);
+    }
+
     // Use mocked AuthService (which implements UserDetailsService) to avoid multiple UserDetailsService beans
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService(), authService());
+        return new JwtAuthenticationFilter(jwtService(), authService(), handlerExceptionResolver());
     }
-    
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -43,7 +50,7 @@ public class TestSecurityConfig {
                 .requestMatchers("/health").permitAll()
                 .anyRequest().permitAll()
             );
-        
+
         return http.build();
     }
 }
