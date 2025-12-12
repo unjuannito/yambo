@@ -1,6 +1,6 @@
 import { createContext, useState, useRef, useEffect } from "react";
 import type { ReactNode } from "react";
-import { ButtonComponent } from "../components/common/forms/ButtonComponent";
+import ButtonComponent from "../components/common/forms/ButtonComponent";
 import toast from "react-hot-toast";
 
 type DialogVariant = "info" | "warning" | "danger" | "success";
@@ -93,7 +93,6 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             }
 
         } catch (error: any) {
-            console.error("Excepción al ejecutar action:", error.message);
             toast.error(error.message || "Ha ocurrido un error");
             resolverRef.current.reject?.(error);
 

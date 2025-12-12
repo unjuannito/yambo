@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { LabelComponent } from "./LabelComponent";
+import LabelComponent from "./LabelComponent";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
 }
 
-export function InputComponent({
+export default function InputComponent({
     label,
     className = "",
     ...props

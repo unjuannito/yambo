@@ -8,7 +8,7 @@ interface LabelProps {
     htmlFor?: string;
 }
 
-export function LabelComponent({
+export default function LabelComponent({
     children,
     label,
     required,
@@ -20,7 +20,7 @@ export function LabelComponent({
             className={`flex flex-col font-medium text-gray-700 gap-1 ${className}`}
             {...(f ? { htmlFor: f } : {})}
         >
-            <span className="text-md py-1 px-2">
+            <span className="text-md py-1 px-2 font-semibold truncate">
                 {label}
                 {required && <span className="text-red-500 ml-1">*</span>}
             </span>

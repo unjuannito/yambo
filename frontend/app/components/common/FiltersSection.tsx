@@ -1,8 +1,8 @@
-import { InputComponent } from "~/components/common/forms/InputComponent";
-import { SelectComponent } from "~/components/common/forms/SelectComponent";
-import { MultiSelectComponent } from "~/components/common/forms/MultiSelectComponent";
+import InputComponent from "~/components/common/forms/InputComponent";
+import SelectComponent from "~/components/common/forms/SelectComponent";
+import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { FilterField, FilterValues } from "./types/tableTypes";
-import { CheckboxComponent } from "./forms/CheckboxComponent";
+import CheckboxComponent from "./forms/CheckboxComponent";
 
 export interface FiltersSectionProps {
     filters: FilterValues;
@@ -100,6 +100,7 @@ export function FiltersSection({
                         key={field.key}
                         label={field.label}
                         value={value || ""}
+                        variant="right-with-description"
                         onChange={(e) =>
                             updateFilter(field.key, e.target.checked)
                         }
@@ -111,7 +112,8 @@ export function FiltersSection({
                     <CheckboxComponent
                         key={field.key}
                         label={field.label}
-                        variant="toggle"
+                        variantType="toggle"
+                        variant="right-with-description"
                         checked={Boolean(value)}
                         onChange={(e) =>
                             updateFilter(field.key, e.target.checked)

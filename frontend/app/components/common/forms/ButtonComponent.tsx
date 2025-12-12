@@ -1,4 +1,5 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     size?: "sm" | "md" | "lg";
@@ -14,9 +15,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const sizeClasses = {
-    sm: "px-3 py-1 text-sm leading-6",
-    md: "px-4 py-0 leading-[1.875rem]",
-    lg: "px-6 py-1 text-lg leading-8",
+    sm: "px-3 py-1 text-sm",
+    md: "px-4 py-0",
+    lg: "px-6 py-1 text-lg",
 };
 
 const variantClasses = {
@@ -35,7 +36,7 @@ const variantClasses = {
         "bg-green-500 border-green-500 text-white hover:bg-green-600 hover:border-green-600",
 };
 
-export function ButtonComponent({
+export default function ButtonComponent({
     size = "md",
     disabled,
     className = "",
@@ -46,7 +47,7 @@ export function ButtonComponent({
     return (
         <button
             disabled={disabled || loading}
-            className={`
+            className={twMerge(`
             inline-flex items-center justify-center
             text-center font-medium
             border border-solid rounded
@@ -57,7 +58,7 @@ export function ButtonComponent({
             ${variantClasses[variant]}
             ${loading ? "disabled:cursor-wait" : ""}
             ${className}
-            `}
+            `)}
             {...props}
         >
             {props.children}

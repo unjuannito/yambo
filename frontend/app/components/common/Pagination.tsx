@@ -1,4 +1,4 @@
-import { ButtonComponent } from "~/components/common/forms/ButtonComponent";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 export interface PaginationProps {
     page: number;

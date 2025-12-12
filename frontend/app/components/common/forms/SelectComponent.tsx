@@ -1,11 +1,11 @@
-import { LabelComponent } from "./LabelComponent";
+import LabelComponent from "./LabelComponent";
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
     label?: string;
     options?: { value: string; label: string }[];
 }
 
-export function SelectComponent({
+export default function SelectComponent({
     label,
     className = "",
     options = [],

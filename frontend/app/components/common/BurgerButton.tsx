@@ -1,4 +1,4 @@
-import { ButtonComponent } from "./forms/ButtonComponent";
+import ButtonComponent from "./forms/ButtonComponent";
 
 interface BurgerButtonProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ export function BurgerButton({ isOpen, onClick, className = "" }: BurgerButtonPr
       variant="base"
       aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
       aria-expanded={isOpen}
-      className={`focus:outline-none cursor-pointer ${className}`}
+      className={`focus:outline-none cursor-pointer text-black ${className}`}
       onClick={onClick}
     >
       <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
-import { ButtonComponent } from "../components/common/forms/ButtonComponent";
+import ButtonComponent from "../components/common/forms/ButtonComponent";
 import type { Route } from "./+types/login";
 
 export function meta({ }: Route.MetaArgs) {
