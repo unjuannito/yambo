@@ -6,6 +6,7 @@ import { Pagination } from "./Pagination";
 import type { ColumnFilter, FilterValues } from "./types/tableTypes";
 import type { PagedInfo, PagedResponse } from "~/types/apiType";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { twMerge } from "tailwind-merge";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
     filter?: ColumnFilter;
@@ -160,7 +161,7 @@ export function FilterableTable<T>({
         if (!onRowClick) return columns;
         return columns.map((col) => ({
             ...col,
-            className: `${col.className || ""} cursor-pointer hover:bg-gray-50`,
+            className: twMerge(`cursor-pointer hover:bg-gray-50 ${col.className || ""}`),
         }));
     }, [columns, onRowClick]);
 
@@ -231,7 +232,7 @@ export function FilterableTable<T>({
     const activeFilters = isServerSide ? filters : clientFilters;
 
     return (
-        <div className={`flex flex-col gap-4 ${className}`}>
+        <div className={twMerge(`flex flex-col gap-4 ${className}`)}>
             {/* Filters Section */}
             {enableFilters && filterFields.length > 0 && (
                 <FiltersSection

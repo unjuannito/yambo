@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import LabelComponent from "./LabelComponent";
+import { twMerge } from "tailwind-merge";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
@@ -34,7 +35,7 @@ export default function InputComponent({
     const inputPassword = (
         <div className="relative">
             <input
-                className={`w-full border rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+                className={twMerge(`w-full border rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`)}
                 pattern={inputPattern}
                 title={inputTitle}
                 name={label || undefined}
@@ -66,7 +67,7 @@ export default function InputComponent({
             inputPassword
         ) : (
             <input
-                className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+                className={twMerge(`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`)}
                 pattern={inputPattern}
                 title={inputTitle}
                 name={label || undefined}

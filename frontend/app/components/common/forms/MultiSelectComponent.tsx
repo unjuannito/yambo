@@ -9,6 +9,7 @@ import {
 import LabelComponent from "./LabelComponent";
 import ButtonComponent from "./ButtonComponent";
 import CheckboxComponent from "./CheckboxComponent";
+import { twMerge } from "tailwind-merge";
 
 interface MultiSelectProps extends Omit<
     React.SelectHTMLAttributes<HTMLSelectElement>,
@@ -190,7 +191,7 @@ export default function MultiSelectComponent({
 
             <div className={`relative`} ref={multiSelectRef}>
                 <span
-                    className={`w-full border rounded pl-3 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`}
+                    className={twMerge(`w-full border rounded pl-3, pr: focus:outline focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`)}
                     onClick={() => {
                         setIsOpen(!isOpen);
                     }}

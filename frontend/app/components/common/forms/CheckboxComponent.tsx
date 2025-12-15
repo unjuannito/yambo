@@ -1,10 +1,10 @@
 import React from "react";
 import LabelComponent from "./LabelComponent";
+import { twMerge } from "tailwind-merge";
 
 interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
     description?: string;
-    className?: string;
     variantType?: "checkbox" | "toggle";
     variant?:
         // | "top"
@@ -23,7 +23,7 @@ function Checkbox({ className = "", ...props }) {
     return (
         <input
             type="checkbox"
-            className={`w-6 h-6 scale-80 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${className}`}
+            className={twMerge(`w-6 h-6 scale-80 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${className}`)}
             {...props}
         />
     );
@@ -32,7 +32,7 @@ function Checkbox({ className = "", ...props }) {
 // Componente Toggle
 function Toggle({ className = "", ...props }) {
     return (
-        <span className={`relative inline-block w-10 h-6 ${className}`}>
+        <span className={twMerge(`relative inline-block w-10 h-6 ${className}`)}>
             <input
                 type="checkbox"
                 className="peer opacity-0 w-10 h-6 absolute left-0 top-0 cursor-pointer"
@@ -102,9 +102,9 @@ export default function CheckboxComponent({
     }
 
     return (
-        <label className={`truncate ${labelClass[variant]}`}>
+        <label className={twMerge(`truncate ${labelClass[variant]}`)}>
             <div className="flex flex-col gap-1 text-ellipsis">
-                <span className={`text-ellipsis ${titleClass[variant]}`}>
+                <span className={twMerge(`text-ellipsis ${titleClass[variant]}`)}>
                     {label}
                 </span>
                 {description && variant.includes("description") && (

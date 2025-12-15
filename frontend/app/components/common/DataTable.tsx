@@ -1,4 +1,5 @@
 import React from "react";
+import { twMerge } from "tailwind-merge";
 
 export interface TableColumn<T = any> {
   key: string;
@@ -23,7 +24,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <div
-      className={`overflow-x-auto bg-white rounded-lg shadow overflow-hidden ${className}`}
+      className={twMerge(`overflow-x-auto bg-white rounded-lg shadow overflow-hidden ${className}`)}
     >
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
