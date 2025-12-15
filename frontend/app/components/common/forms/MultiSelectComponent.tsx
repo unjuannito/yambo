@@ -1,112 +1,142 @@
-import { useState, useRef, useEffect, useId, useLayoutEffect } from "react";
+import {
+    useState,
+    useRef,
+    useEffect,
+    useId,
+    useLayoutEffect
+} from "react";
+
 import LabelComponent from "./LabelComponent";
-import InputComponent from "./InputComponent";
 import ButtonComponent from "./ButtonComponent";
-import type { index } from "@react-router/dev/routes";
 import CheckboxComponent from "./CheckboxComponent";
 
-interface MultiSelectProps {
+interface MultiSelectProps extends Omit<
+    React.SelectHTMLAttributes<HTMLSelectElement>,
+    "value" | "defaultValue"
+> {
     label?: string;
     value?: string[];
+    defaultValue?: string[];
     options?: { value: string; label: string }[];
     placeholder?: string;
-    onChange?: (value: string[]) => void;
     className?: string;
     required?: boolean;
 }
 
 export default function MultiSelectComponent({
     label,
-    value = [],
+    value,
     options = [],
     placeholder = "Seleccionar...",
-    onChange,
     className = "",
-    required = false,
+    required,
+    name,
+    defaultValue,
+    ...selectProps
 }: MultiSelectProps) {
+
+    const isControlled = value !== undefined;
+
+    const [internalValue, setInternalValue] = useState<string[]>(
+        () => value ?? defaultValue ?? []
+    );
+    const selectedValues = isControlled ? value! : internalValue;
+
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
-    const [visibleCount, setVisibleCount] = useState(value.length);
-    const [containerWidth, setContainerWidth] = useState(value.length);
-    const [reloadValueContainer, setReloadValueContainer] = useState<boolean>(false)
+    const [visibleCount, setVisibleCount] = useState(selectedValues.length);
+    const [reloadValueContainer, setReloadValueContainer] = useState(false);
+
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const labelRef = useRef<HTMLLabelElement>(null);
+    const multiSelectRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLSpanElement>(null);
+    const selectRef = useRef<HTMLSelectElement>(null);
     const inputId = useId();
 
     const filteredOptions = options.filter((option) =>
         option.label.toLowerCase().includes(search.toLowerCase())
     );
 
-    // Cerrar clic fuera
-    useEffect(() => {
-        if (!isOpen) return;
+    /* ===============================
+       Sincronizar select nativo
+       =============================== */
 
-        const handleClickOutside = (event: MouseEvent) => {
-            if (!dropdownRef.current) return;
+    const syncSelectValue = (values: string[]) => {
+        if (!selectRef.current) return;
 
-            const target = event.target as Node;
+        Array.from(selectRef.current.options).forEach(opt => {
+            opt.selected = values.includes(opt.value);
+        });
 
-            // Obtener el label padre del dropdown (si existe)
-            const parentLabel = dropdownRef.current.closest("label");
+        // Dispara change nativo (formularios)
+        selectRef.current.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
+    };
 
-            // Si el click viene de ese mismo label → NO cerrar
-            if (parentLabel && parentLabel.contains(target)) {
-                return;
-            }
+    const updateValue = (newValue: string[]) => {
+        if (!isControlled) {
+            setInternalValue(newValue);
+        }
+        syncSelectValue(newValue);
+    };
 
-            // Si haces clic fuera → cerrar
-            if (!dropdownRef.current.contains(target)) {
-                setIsOpen(false);
-            }
-        };
-
-        document.removeEventListener("mousedown", handleClickOutside);
-        document.addEventListener("mousedown", handleClickOutside);
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isOpen]);
+    /* ===============================
+       Toggle opciones
+       =============================== */
 
     const toggleOption = (optionValue: string) => {
-        const newValue = value.includes(optionValue)
-            ? value.filter((v) => v !== optionValue)
-            : [...value, optionValue];
-        onChange?.(newValue);
+        const newValue = selectedValues.includes(optionValue)
+            ? selectedValues.filter(v => v !== optionValue)
+            : [...selectedValues, optionValue];
+
+        updateValue(newValue);
     };
 
     const removeOption = (optionValue: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        onChange?.(value.filter((v) => v !== optionValue));
+        updateValue(selectedValues.filter(v => v !== optionValue));
     };
 
-    //Pone a true el reloadValueContainer
-    useLayoutEffect(() => {
-        const handleResize = () => {
-            setReloadValueContainer(true);
+    /* ===============================
+       Click fuera
+       =============================== */
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (!dropdownRef.current) return;
+            if (!dropdownRef.current.contains(e.target as Node) && !labelRef.current?.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
         };
 
-        // Solo intentamos observar si el ref está disponible
-        if (containerRef.current) {
-            const resizeObserver = new ResizeObserver(handleResize);
-            resizeObserver.observe(containerRef.current); // Comienza a observar el contenedor
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [isOpen]);
 
-            // Limpiar el observer cuando el componente se desmonte
-            return () => {
-                resizeObserver.disconnect();
-            };
-        }
-    }, [value]);
+    /* ===============================
+       Resize observer
+       =============================== */
 
-    //Establece cuantos values son visibles en el container
     useLayoutEffect(() => {
-        if (reloadValueContainer === true) {
-            setVisibleCount(value.length)
-            setReloadValueContainer(false)
+        if (!containerRef.current) return;
+
+        const ro = new ResizeObserver(() => {
+            setReloadValueContainer(true);
+        });
+
+        ro.observe(containerRef.current);
+        return () => ro.disconnect();
+    }, [selectedValues]);
+
+    useLayoutEffect(() => {
+        if (reloadValueContainer) {
+            setVisibleCount(selectedValues.length);
+            setReloadValueContainer(false);
             return;
         }
-
-        //ver si sobresale alguno
         const container = containerRef.current;
         if (!container) return;
 
@@ -134,30 +164,45 @@ export default function MultiSelectComponent({
                 return null; // Retornar null para los elementos que no tengan overflow
             })
             .filter(item => item !== null); // Eliminar los nulls
-
         if (overflowingItems.length > 0) {
             setVisibleCount(Math.max(0, visibleCount - overflowingItems.length));
         }
 
-    }, [reloadValueContainer, visibleCount])
+    }, [reloadValueContainer, visibleCount]);
 
     const multiselectElement = (
         <>
-            <div className={`relative`} ref={dropdownRef}>
+            {/* SELECT NATIVO REAL */}
+            <select
+                ref={selectRef}
+                name={name}
+                multiple
+                className="hidden"
+                defaultValue={selectedValues}
+                {...selectProps}
+            >
+                {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                    </option>
+                ))}
+            </select>
+
+            <div className={`relative`} ref={multiSelectRef}>
                 <span
                     className={`w-full border rounded pl-3 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`}
-                    onClick={(e) => {
+                    onClick={() => {
                         setIsOpen(!isOpen);
                     }}
                 >
                     <span className={`w-full justify-start text-gray-400 text-ellipsis truncate flex gap-1 select-none`}>
-                        {value.length > 0 ? (
+                        {selectedValues.length > 0 ? (
                             <>
                                 <span id="!1" ref={containerRef} className="w-full flex justify-start gap-1 ">
-                                    {value.slice(0, visibleCount).map((item) => (
+                                    {selectedValues.slice(0, visibleCount).map((item) => (
                                         <span
                                             key={item}
-                                            className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-1 py-1 rounded whitespace-nowrap flex-shrink-0  truncate   "
+                                            className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-1 py-1 rounded whitespace-nowrap flex-shrink-0  truncate gap-0.5"
                                         >
                                             {options.find((opt) => opt.value === item)?.label || item}
                                             <ButtonComponent
@@ -178,12 +223,12 @@ export default function MultiSelectComponent({
                                     ))}
                                     {visibleCount == 0 &&
                                         <span className="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded flex-shrink-0">
-                                            {value.length} seleccionado{value.length > 1 ? "s" : ""}
+                                            {selectedValues.length} seleccionado{selectedValues.length > 1 ? "s" : ""}
                                         </span>
                                     }
-                                    {visibleCount > 0 && visibleCount < value.length &&
+                                    {visibleCount > 0 && visibleCount < selectedValues.length &&
                                         <span id="plusSign" className="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded flex-shrink-0 select-none">
-                                            + {value.length - visibleCount}
+                                            + {selectedValues.length - visibleCount}
                                         </span>
                                     }
                                 </span>
@@ -200,7 +245,9 @@ export default function MultiSelectComponent({
                     </span>
                 </span>
                 <div
-                    className={`${isOpen ? "flex" : "hidden"} absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-2 flex-col gap-2`}
+                    ref={dropdownRef}
+                    style={{ maxWidth: `${multiSelectRef.current?.clientWidth}px` }}
+                    className={`${isOpen ? "flex" : "hidden"} fixed z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-2 flex-col gap-2`}
                     onClick={(e) => {
                         if (e.target === e.currentTarget)
                             e.preventDefault();
@@ -222,7 +269,7 @@ export default function MultiSelectComponent({
                                         <CheckboxComponent
                                             label={option.label}
                                             variant="left"
-                                            checked={value.includes(option.value)}
+                                            checked={selectedValues.includes(option.value)}
                                             onChange={() => toggleOption(option.value)}
                                         />
                                     </li>
@@ -235,16 +282,19 @@ export default function MultiSelectComponent({
                     </ul>
                 </div>
             </div>
-            <select multiple value={value} className="hidden" aria-readonly onChange={() => { }}></select>
         </>
     );
 
-    if (!label) {
-        return multiselectElement;
-    }
+    if (!label) return multiselectElement;
 
     return (
-        <LabelComponent label={label} required={required}>
+        <LabelComponent label={label} required={required} ref={labelRef}
+            onClick={(e) => {
+                if (e.target instanceof HTMLElement && dropdownRef.current?.contains(e.target)) return;
+                e.preventDefault();
+                setIsOpen(!isOpen);
+            }}
+        >
             {multiselectElement}
         </LabelComponent>
     );

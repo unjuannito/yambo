@@ -85,12 +85,21 @@ export function FiltersSection({
                         value={Array.isArray(value) ? value : []}
                         options={field.options || []}
                         placeholder={
-                            field.placeholder ||
+                            field.placeholder ??
                             `Seleccionar ${field.label.toLowerCase()}`
                         }
-                        onChange={(newValue) =>
-                            updateFilter(field.key, newValue)
-                        }
+                        onChange={(e) => {
+                            const selectedValues = Array.from(
+                                e.currentTarget.selectedOptions
+                            ).map(option => option.value);
+
+                            updateFilter(
+                                field.key,
+                                selectedValues.length > 0
+                                    ? selectedValues
+                                    : undefined
+                            );
+                        }}
                         className="col-span-1"
                     />
                 );

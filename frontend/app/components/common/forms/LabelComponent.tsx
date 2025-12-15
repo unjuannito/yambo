@@ -1,11 +1,10 @@
 import React from "react";
 
-interface LabelProps {
-    children?: React.ReactNode;
+interface LabelProps extends React.SelectHTMLAttributes<HTMLLabelElement>{
     label: string;
     required?: boolean;
     className?: string;
-    htmlFor?: string;
+    ref?: React.Ref<HTMLLabelElement>
 }
 
 export default function LabelComponent({
@@ -13,13 +12,11 @@ export default function LabelComponent({
     label,
     required,
     className = "",
-    htmlFor: f,
+    ref,
+    ...props
 }: LabelProps) {
     return (
-        <label
-            className={`flex flex-col font-medium text-gray-700 gap-1 ${className}`}
-            {...(f ? { htmlFor: f } : {})}
-        >
+        <label className={`flex flex-col font-medium text-gray-700 gap-1 ${className}`} {...props} ref={ref}>
             <span className="text-md py-1 px-2 font-semibold truncate">
                 {label}
                 {required && <span className="text-red-500 ml-1">*</span>}

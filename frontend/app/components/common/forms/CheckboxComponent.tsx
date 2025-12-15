@@ -22,7 +22,7 @@ function Checkbox({ className = "", ...props }) {
     return (
         <input
             type="checkbox"
-            className={`h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${className}`}
+            className={`w-6 h-6 scale-80 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${className}`}
             {...props}
         />
     );
@@ -80,7 +80,7 @@ export default function CheckboxComponent({
 
     const titleClass = {
         right: "",
-        left: "text-md p-1 font-semibold",
+        left: "text-md p-1 font-semibold truncate",
         top: "",
         bottom: "",
         "left-with-description": "",
@@ -95,15 +95,15 @@ export default function CheckboxComponent({
         top: "",
         bottom: "",
         "left-with-description": "",
-        "right-with-description": "inline-flex  text-sm px-3 h-[42px] items-center text-ellipsis",
+        "right-with-description": "inline-flex  text-sm px-2 h-[42px] items-center text-ellipsis",
         "left-with-inline-description": "",
         "right-with-inline-description": "",
     }
 
     return (
-        <label className={labelClass[variant]}>
-            <div className="flex flex-col gap-1">
-                <span className={titleClass[variant]}>
+        <label className={`truncate ${labelClass[variant]}`}>
+            <div className="flex flex-col gap-1 text-ellipsis">
+                <span className={`text-ellipsis ${titleClass[variant]}`}>
                     {label}
                 </span>
                 {description && variant.includes("description") && (
