@@ -7,14 +7,15 @@ interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
     className?: string;
     variantType?: "checkbox" | "toggle";
     variant?:
-        | "top"
-        | "bottom"
+        // | "top"
+        // | "bottom"
         | "left"
         | "right"
         | "left-with-description"
         | "right-with-description"
-        | "left-with-inline-description"
-        | "right-with-inline-description"; // Variantes de disposición del texto
+        // | "left-with-inline-description"
+        // | "right-with-inline-description"
+    ;
 }
 
 // Componente Checkbox
@@ -57,33 +58,33 @@ export default function CheckboxComponent({
     if (!label) return <CheckboxInput className={className} {...props} />;
 
     const labelClass = {
-        right: "",
+        right: "flex justify-between items-center px-4 py-2.5 hover:bg-gray-50 cursor-pointer gap-2",
         left: "flex items-center px-4 py-2.5 hover:bg-gray-50 cursor-pointer gap-2",
         top: "",
         bottom: "",
-        "left-with-description": "",
+        "left-with-description": "flex",
         "right-with-description": "flex justify-between",
         "left-with-inline-description": "",
         "right-with-inline-description": "",
     };
 
     const inputClass = {
-        right: "",
+        right: "order-last w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0",
         left: "order-first w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0",
         top: "",
         bottom: "",
-        "left-with-description": "",
-        "right-with-description": "self-center mx-2",
+        "right-with-description": "self-center mx-2 order-last",
+        "left-with-description": "self-top my-1 order-first",
         "left-with-inline-description": "",
         "right-with-inline-description": "",
     };
 
     const titleClass = {
-        right: "",
+        right: "text-md p-1 font-semibold truncate",
         left: "text-md p-1 font-semibold truncate",
         top: "",
         bottom: "",
-        "left-with-description": "",
+        "left-with-description": "text-md py-1 px-2 font-semibold",
         "right-with-description": "text-md py-1 px-2 font-semibold",
         "left-with-inline-description": "",
         "right-with-inline-description": "",
@@ -94,8 +95,8 @@ export default function CheckboxComponent({
         left: "",
         top: "",
         bottom: "",
-        "left-with-description": "",
-        "right-with-description": "inline-flex  text-sm px-2 h-[42px] items-center text-ellipsis",
+        "left-with-description": "inline-flex text-sm px-2 h-[42px] items-center text-ellipsis",
+        "right-with-description": "inline-flex text-sm px-2 h-[42px] items-center text-ellipsis",
         "left-with-inline-description": "",
         "right-with-inline-description": "",
     }
