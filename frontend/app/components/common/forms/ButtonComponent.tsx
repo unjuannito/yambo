@@ -14,12 +14,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     loading?: boolean;
 }
 
-const sizeClasses = {
-    sm: "px-3 py-1 text-sm",
-    md: "px-4 py-0",
-    lg: "px-6 py-1 text-lg",
-};
-
 const variantClasses = {
     base: "bg-transparent border-transparent text-blue-600 hover:text-blue-700",
     neutral:
@@ -54,7 +48,7 @@ export default function ButtonComponent({
             transition-[border] duration-150 ease-linear
             select-none whitespace-normal
             cursor-pointer disabled:cursor-not-allowed disabled:opacity-50
-            ${sizeClasses[size]}
+            px-4 py-2
             ${variantClasses[variant]}
             ${loading ? "disabled:cursor-wait" : ""}
             ${className}
