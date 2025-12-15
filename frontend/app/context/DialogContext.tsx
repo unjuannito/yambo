@@ -101,12 +101,21 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const handleBackdropClick = (e: React.MouseEvent) => {
+        // Asegurarse de que el clic fue fuera del cuadro de diálogo
+        if (e.target === e.currentTarget && !isLoading) {
+            closeDialog();
+            resolverRef.current.reject?.("user-cancelled");
+        }
+    };
+
+
     return (
         <DialogContext.Provider value={{ openDialog, closeDialog, isOpen }}>
             {children}
             <dialog
                 className="fixed inset-0 bg-white rounded-lg justify-self-center self-center backdrop:bg-black/50"
-                onClick={(e) => { if (e.target === e.currentTarget && !isLoading) closeDialog(); }}
+                onClick={handleBackdropClick}
                 ref={dialogRef}
             >
                 <form method="dialog" className="p-6 flex flex-col gap-4" onSubmit={handleSubmit}>
