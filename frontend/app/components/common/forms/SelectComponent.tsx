@@ -13,7 +13,7 @@ export default function SelectComponent({
 }: SelectProps) {
     const selectElement = (
         <select
-            className={`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+            className={`w-full border rounded px-3 py-2.25 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
             {...props}
         >
             {options.map((option) => (
