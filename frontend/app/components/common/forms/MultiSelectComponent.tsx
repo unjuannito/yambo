@@ -189,7 +189,7 @@ export default function MultiSelectComponent({
                 ))}
             </select>
 
-            <div className={`relative`} ref={multiSelectRef}>
+            <div className="relative" ref={multiSelectRef}>
                 <span
                     className={twMerge(`w-full border rounded pl-3 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`)}
                     onClick={() => {
@@ -240,15 +240,14 @@ export default function MultiSelectComponent({
 
                     </span>
                     <span
-                        className={`w-5 text-gray-400 transition-transform duration-100 ease-in-out ${isOpen ? "transform rotate-180" : ""}`}
+                        className={`w-5 text-gray-400 transition-transform duration-100 ease-in-out select-none ${isOpen ? "transform rotate-180" : ""}`}
                     >
                         ▼
                     </span>
                 </span>
                 <div
                     ref={dropdownRef}
-                    style={{ maxWidth: `${multiSelectRef.current?.clientWidth}px` }}
-                    className={`${isOpen ? "flex" : "hidden"} fixed z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-2 flex-col gap-2`}
+                    className={`${isOpen ? "flex" : "hidden"} absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-2 flex-col gap-2`}
                     onClick={(e) => {
                         if (e.target === e.currentTarget)
                             e.preventDefault();

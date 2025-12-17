@@ -114,7 +114,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         <DialogContext.Provider value={{ openDialog, closeDialog, isOpen }}>
             {children}
             <dialog
-                className="fixed inset-0 bg-white rounded-lg justify-self-center self-center backdrop:bg-black/50"
+                className={`${isOpen ? 'flex' : 'hidden'} fixed inset-0 bg-white rounded-lg justify-self-center self-center backdrop:bg-black/50 max-w-[90dvw] max-h-[80dvh] overflow-visible z-9`}
                 onClick={handleBackdropClick}
                 ref={dialogRef}
             >
