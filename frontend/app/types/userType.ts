@@ -12,6 +12,7 @@ export type User = {
     created_by: string;
     permissions: Permission[]
     profiles : Profile[]
+    enabled: boolean;
 }
 
 export type Profile = {
