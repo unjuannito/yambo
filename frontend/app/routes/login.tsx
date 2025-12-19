@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import ButtonComponent from "../components/common/forms/ButtonComponent";
 import type { Route } from "./+types/login";
+import InputComponent from "~/components/common/forms/InputComponent";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -11,14 +13,23 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export default function Index() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/mi-espacio', { replace: true });
+    }
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
     try {
+      setLoading(true);
       await login(email, password);
       navigate('/mi-espacio', { replace: true });
     } catch (err) {
@@ -29,50 +40,26 @@ export default function Index() {
     <main className="min-h-screen flex items-center justify-center min-h-[calc(100vh-4rem)] bg-gradient-to-br from-yellow-100 via-orange-100 to-pink-100">
       <div className="bg-white shadow-xl rounded-2xl px-8 py-10 max-w-md w-full space-y-6">
         <div className="text-center">
-          {/* Logo de Yambo aquí si lo tienes */}
           <h1 className="text-2xl font-bold text-gray-800">Área de Socios</h1>
           <p className="text-sm text-gray-500">Inicia sesión para acceder</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Correo electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-orange-400 focus:ring-orange-400 sm:text-sm p-2"
-              required
-            />
-          </div>
+          <InputComponent name="email" label="Correo electrónico" type="email" required />
+          <InputComponent name="password" label="Contraseña" type="password" required />
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-gray-300 shadow-sm focus:border-orange-400 focus:ring-orange-400 sm:text-sm p-2"
-              required
-            />
-          </div>
-
-          <button
+          <ButtonComponent
             type="submit"
-            className="w-full py-2 px-4 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all font-semibold"
+            variant="primary"
+            className="w-full"
+            loading={loading}
           >
             Iniciar sesión
-          </button>
+          </ButtonComponent>
         </form>
 
         <p className="text-xs text-center text-gray-500">
-          ¿No eres socio? <a href="/contacto">Contacta con Yambo.</a>
+          ¿No eres socio? <a className="text-blue-600" href="/contacto">Contacta con Yambo.</a>
         </p>
       </div>
     </main>

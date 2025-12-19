@@ -1,71 +1,133 @@
-import { Button } from "~/components/common/forms/Button";
-import { Input } from "~/components/common/forms/Input";
-import { Select } from "~/components/common/forms/Select";
-import { MultiSelect } from "~/components/common/forms/MultiSelect";
-
-
-export interface FilterField {
-    key: string;
-    label: string;
-    type: 'text' | 'select' | 'multi-select';
-    placeholder?: string;
-    options?: { value: string; label: string }[];
-}
+import InputComponent from "~/components/common/forms/InputComponent";
+import SelectComponent from "~/components/common/forms/SelectComponent";
+import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
+import type { FilterField, FilterValues } from "./types/tableTypes";
+import CheckboxComponent from "./forms/CheckboxComponent";
 
 export interface FiltersSectionProps {
-    filters: Record<string, any>;
+    filters: FilterValues;
     fields: FilterField[];
-    onFiltersChange: (filters: Record<string, any>) => void;
-    onSearch: () => void;
+    onFiltersChange: (filters: FilterValues) => void;
     title?: string;
 }
+
+export type { FilterField, FilterValues } from "./types/tableTypes";
 
 export function FiltersSection({
     filters,
     fields,
     onFiltersChange,
-    onSearch,
-    title = "Filtros"
+    title,
 }: FiltersSectionProps) {
-    const updateFilter = (key: string, value: string | boolean | undefined | string[]) => {
+    const mdCols: 1 | 2 = fields.length > 2 ? 2 : (fields.length as 1 | 2);
+    const lgCols: 1 | 2 | 3 | 4 =
+        fields.length >= 4 ? 4 : (fields.length as 1 | 2 | 3);
+
+    const mdClassMap = {
+        1: "md:grid-cols-1",
+        2: "md:grid-cols-2",
+    } as const;
+
+    const lgClassMap = {
+        1: "lg:grid-cols-1",
+        2: "lg:grid-cols-2",
+        3: "lg:grid-cols-3",
+        4: "lg:grid-cols-4",
+    } as const;
+
+    const updateFilter = (
+        key: string,
+        value: string | boolean | undefined | string[]
+    ) => {
         onFiltersChange({ ...filters, [key]: value });
     };
 
-    const renderField = (field: FiltersSectionProps['fields'][0]) => {
+    const renderField = (field: FiltersSectionProps["fields"][0]) => {
         const value = filters[field.key];
 
         switch (field.type) {
-            case 'text':
+            case "text":
                 return (
-                    <Input
+                    <InputComponent
                         key={field.key}
+                        label={field.label}
                         placeholder={field.placeholder || field.label}
-                        value={value || ''}
-                        onChange={(e) => updateFilter(field.key, e.target.value)}
+                        value={value || ""}
+                        onChange={(e) =>
+                            updateFilter(field.key, e.target.value)
+                        }
+                        className="col-span-1"
                     />
                 );
-            case 'select':
+            case "select":
                 return (
-                    <Select
+                    <SelectComponent
                         key={field.key}
-                        value={value === undefined ? '' : String(value)}
-                        onChange={(e) => updateFilter(field.key, e.target.value === '' ? undefined : e.target.value)}
-                    >
-                        {field.options?.map(option => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </Select>
+                        label={field.label}
+                        value={value === undefined ? "" : String(value)}
+                        onChange={(e) =>
+                            updateFilter(
+                                field.key,
+                                e.target.value === ""
+                                    ? undefined
+                                    : e.target.value
+                            )
+                        }
+                        options={field.options}
+                        className="col-span-1"
+                    />
                 );
-            case 'multi-select':
+            case "multi-select":
                 return (
-                    <MultiSelect
+                    <MultiSelectComponent
                         key={field.key}
+                        label={field.label}
                         value={Array.isArray(value) ? value : []}
                         options={field.options || []}
-                        placeholder={field.placeholder || `Seleccionar ${field.label.toLowerCase()}`}
-                        onChange={(newValue) => updateFilter(field.key, newValue)}
+                        placeholder={
+                            field.placeholder ??
+                            `Seleccionar ${field.label.toLowerCase()}`
+                        }
+                        onChange={(e) => {
+                            const selectedValues = Array.from(
+                                e.currentTarget.selectedOptions
+                            ).map(option => option.value);
+
+                            updateFilter(
+                                field.key,
+                                selectedValues.length > 0
+                                    ? selectedValues
+                                    : undefined
+                            );
+                        }}
+                        className="col-span-1"
+                    />
+                );
+            case "checkbox":
+                return (
+                    <CheckboxComponent
+                        key={field.key}
+                        label={field.label}
+                        value={value || ""}
+                        variant="right-with-description"
+                        onChange={(e) =>
+                            updateFilter(field.key, e.target.checked)
+                        }
+                        className="col-span-1"
+                    />
+                );
+            case "toggle":
+                return (
+                    <CheckboxComponent
+                        key={field.key}
+                        label={field.label}
+                        variantType="toggle"
+                        variant="right-with-description"
+                        checked={Boolean(value)}
+                        onChange={(e) =>
+                            updateFilter(field.key, e.target.checked)
+                        }
+                        className="col-span-1"
                     />
                 );
             default:
@@ -74,14 +136,13 @@ export function FiltersSection({
     };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-            <h2 className="text-xl font-semibold mb-4">{title}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {fields.map(renderField)}
-            </div>
-            <Button onClick={onSearch} className="mt-4">
-                Buscar
-            </Button>
-        </div>
+        <form
+            className={`bg-white p-4 rounded-lg shadow mb-6 grid grid-flow-row auto-rows-auto grid-cols-1 ${mdClassMap[mdCols]} ${lgClassMap[lgCols]} gap-4`}
+        >
+            {title && (
+                <h2 className="text-xl font-semibold col-span-full">{title}</h2>
+            )}
+            {fields.map(renderField)}
+        </form>
     );
 }

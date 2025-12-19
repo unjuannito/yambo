@@ -3,7 +3,7 @@ package es.yambo_alco.web.config;
 import es.yambo_alco.web.jwt.JwtAuthenticationFilter;
 import es.yambo_alco.web.jwt.JwtService;
 import es.yambo_alco.web.service.AuthService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -21,36 +21,49 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
-    
+
     private final AuthService authService;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final Environment env;
-    
+    private final HandlerExceptionResolver exceptionResolver;
+
+    public SecurityConfig(
+            AuthService authService,
+            JwtService jwtService,
+            PasswordEncoder passwordEncoder,
+            Environment env,
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver) {
+        this.authService = authService;
+        this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+        this.env = env;
+        this.exceptionResolver = exceptionResolver;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health").permitAll()
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/user/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-        
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/health").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/user/**").authenticated()
+                        .anyRequest().authenticated())
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
-    
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -66,7 +79,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService, authService);
+        return new JwtAuthenticationFilter(jwtService, authService, exceptionResolver);
     }
 
     @Bean

@@ -1,6 +1,11 @@
 export interface PagedInfo {
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+}
+
+export interface PagedResponse<T> {
+    content: T[];
+    page: PagedInfo;
 }
