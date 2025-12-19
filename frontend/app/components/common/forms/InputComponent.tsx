@@ -79,5 +79,5 @@ export default function InputComponent({
         return input;
     }
 
-    return <LabelComponent label={label}>{input}</LabelComponent>;
+    return <LabelComponent label={label} required={props.required}>{input}</LabelComponent>;
 }
