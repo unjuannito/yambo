@@ -44,7 +44,7 @@ export default function Index() {
           <p className="text-sm text-gray-500">Inicia sesión para acceder</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-4">
           <InputComponent name="email" label="Correo electrónico" type="email" required />
           <InputComponent name="password" label="Contraseña" type="password" required />
 

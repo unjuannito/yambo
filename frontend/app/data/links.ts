@@ -10,6 +10,7 @@ const LINKS_MAP = [
     { name: "orders", href: "/mi-espacio/pedidos", label: "Pedidos", need: { obj: "order", action: "read"}},
     // ADMIN
     { name: "users", href: "/mi-espacio/usuarios", label: "Usuarios", need: { obj: "user", action: "read"}},
+    { name: "invitations", href: "/mi-espacio/invitaciones", label: "Invitaciones", need: { obj: "invitation", action: "read"}},
     // Todos
     { name: "myAccount", href: "/mi-espacio/mi-cuenta", label: "Mi cuenta", need: null},
 ];
