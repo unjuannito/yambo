@@ -56,3 +56,5 @@ export class ProfileService extends ApiService {
         );
     }
 }
+
+export const profileService = new ProfileService();

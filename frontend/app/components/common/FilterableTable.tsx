@@ -7,6 +7,7 @@ import type { ColumnFilter, FilterValues } from "./types/tableTypes";
 import type { PagedInfo, PagedResponse } from "~/types/apiType";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { twMerge } from "tailwind-merge";
+import toast from "react-hot-toast";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
     filter?: ColumnFilter;
@@ -106,7 +107,6 @@ export function FilterableTable<T>({
                     ? err.message
                     : "Error al cargar los datos";
             setError(errorMessage);
-            console.error("Error fetching data:", err);
         } finally {
             setIsLoading(false);
         }

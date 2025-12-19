@@ -11,6 +11,13 @@ export interface ApiError {
     status: number;
 }
 
+export interface PagedParams {
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    direction?: "ASC" | "DESC";
+}
+
 export class ApiService {
     protected baseUrl: string;
     protected axiosInstance: AxiosInstance;
@@ -113,5 +120,27 @@ export class ApiService {
         const response: AxiosResponse<T> =
             await this.axiosInstance.delete(endpoint);
         return response.data;
+    }
+
+    protected buildQueryParams(params: Record<string, any>): URLSearchParams {
+        const queryParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== undefined && value !== null && typeof key === 'string') {
+                if (Array.isArray(value)) {
+                    // Validate array elements
+                    const validArray = value.filter(item => typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean');
+                    queryParams.append(key, validArray.join(","));
+                } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                    queryParams.append(key, String(value));
+                }
+                // Ignore other types for security
+            }
+        }
+        return queryParams;
+    }
+
+    protected async getPaged<T>(endpoint: string, params: Record<string, any>): Promise<T> {
+        const queryParams = this.buildQueryParams(params);
+        return await this.get<T>(`${endpoint}?${queryParams.toString()}`);
     }
 }
