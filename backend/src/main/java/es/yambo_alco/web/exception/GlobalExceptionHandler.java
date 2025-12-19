@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailAuthenticationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -187,6 +188,23 @@ public class GlobalExceptionHandler {
                 .type("INTERNAL_SERVER_ERROR")
                 .message("An unexpected error occurred")
                 .details(ex.getClass().getSimpleName() + ": " + ex.getMessage())
+                .path(request.getRequestURI())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(MailAuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleMailAuthenticationException(
+            MailAuthenticationException ex,
+            HttpServletRequest request) {
+
+        log.error("Mail authentication failed at path: {}", request.getRequestURI(), ex);
+
+        ErrorResponse error = ErrorResponse.builder()
+                .type("MAIL_AUTHENTICATION_FAILED")
+                .message("Failed to authenticate mail credentials. Please check your configuration.")
                 .path(request.getRequestURI())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .build();

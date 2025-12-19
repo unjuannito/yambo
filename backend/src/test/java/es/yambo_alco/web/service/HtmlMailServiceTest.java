@@ -43,7 +43,7 @@ class HtmlMailServiceTest {
         // Given
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
         when(templateEngine.process(eq("emails/invitation"), any())).thenReturn("<html>Invitation Email</html>");
-        
+
         String to = "test@example.com";
         String subject = "Invitación a Yambo";
         String body = "Has sido invitado a registrarte. http://localhost:5173/register?invitation=token123";
@@ -61,7 +61,7 @@ class HtmlMailServiceTest {
     void sendInvitation_WhenMessagingExceptionOccurs_ShouldThrowRuntimeException() {
         // Given
         when(mailSender.createMimeMessage()).thenThrow(new RuntimeException("Mail server error"));
-        
+
         String to = "test@example.com";
         String subject = "Invitación a Yambo";
         String body = "Has sido invitado.";
@@ -70,7 +70,7 @@ class HtmlMailServiceTest {
         assertThatThrownBy(() -> htmlMailService.sendInvitation(to, subject, body))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to send invitation email");
-        
+
         verify(mailSender).createMimeMessage();
         verify(mailSender, never()).send(any(MimeMessage.class));
     }
@@ -80,7 +80,7 @@ class HtmlMailServiceTest {
         // Given
         when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
         when(templateEngine.process(eq("emails/invitation"), any())).thenReturn("<html>Email</html>");
-        
+
         // When
         htmlMailService.sendInvitation("user@test.com", "Subject", "Body with link http://example.com");
 

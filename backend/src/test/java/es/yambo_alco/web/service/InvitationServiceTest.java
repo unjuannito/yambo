@@ -71,7 +71,7 @@ class InvitationServiceTest {
 
         when(invitationRepository.save(any(Invitation.class))).thenReturn(expectedInvitation);
 
-        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, null);
+        Invitation result = invitationService.createInvitation(email, invitedBy, null);
 
         verify(invitationRepository).save(any(Invitation.class));
         verify(mailService).sendInvitation(
@@ -90,7 +90,7 @@ class InvitationServiceTest {
         String email = "test@example.com";
         String invitedBy = "U0000001";
 
-        invitationService.createInvitation(email, "Test User", invitedBy, null);
+        invitationService.createInvitation(email, invitedBy, null);
 
         verify(invitationRepository).save(any(Invitation.class));
     }
@@ -102,7 +102,7 @@ class InvitationServiceTest {
 
         when(userRepository.existsByEmail(email)).thenReturn(true);
 
-        assertThatThrownBy(() -> invitationService.createInvitation(email, "Test User", invitedBy, null))
+        assertThatThrownBy(() -> invitationService.createInvitation(email, invitedBy, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already registered");
 
@@ -123,7 +123,7 @@ class InvitationServiceTest {
         when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socio, monitor));
         when(invitationRepository.save(any(Invitation.class))).thenReturn(Invitation.builder().email(email).build());
 
-        invitationService.createInvitation(email, "Test User", invitedBy, profileIds);
+        invitationService.createInvitation(email, invitedBy, profileIds);
 
         verify(roleRepository).findAllById(profileIds);
         verify(invitationRepository).save(any(Invitation.class));
@@ -140,7 +140,7 @@ class InvitationServiceTest {
         when(userRepository.existsByEmail(email)).thenReturn(false);
         when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socio)); // Only one profile found
 
-        assertThatThrownBy(() -> invitationService.createInvitation(email, "Test User", invitedBy, profileIds))
+        assertThatThrownBy(() -> invitationService.createInvitation(email, invitedBy, profileIds))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("One or more profiles not found");
 
@@ -150,7 +150,6 @@ class InvitationServiceTest {
     @Test
     void completeInvitation_ShouldCreateUserAndMarkInvitationUsed() {
         String token = "valid-token";
-        String username = "newuser";
         String password = "password";
         String name = "New User";
         String email = "test@example.com";
@@ -165,9 +164,8 @@ class InvitationServiceTest {
 
         Profile role = Profile.builder().id("INTERESADO").build();
         User user = User.builder()
-                .email(username)
-                .password("encoded-password")
                 .email(email)
+                .password("encoded-password")
                 .name(name)
                 .profiles(Set.of(role))
                 .build();
@@ -177,11 +175,12 @@ class InvitationServiceTest {
         when(passwordEncoder.encode(password)).thenReturn("encoded-password");
         when(userRepository.save(any(User.class))).thenReturn(user);
 
-        User result = invitationService.completeInvitation(token, username, password, name);
+        User result = invitationService.completeInvitation(token, password, name);
 
         verify(invitationRepository).save(invitation);
         assertThat(invitation.isUsed()).isTrue();
         assertThat(result).isEqualTo(user);
+        assertThat(result.getProfiles()).containsExactlyInAnyOrder(role);
     }
 
     @Test
@@ -190,7 +189,7 @@ class InvitationServiceTest {
 
         when(invitationRepository.findByToken(token)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> invitationService.completeInvitation(token, "user", "pass", "name"))
+        assertThatThrownBy(() -> invitationService.completeInvitation(token, "pass", "name"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Invitation not found");
     }
@@ -202,7 +201,7 @@ class InvitationServiceTest {
 
         when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
 
-        assertThatThrownBy(() -> invitationService.completeInvitation(token, "user", "pass", "name"))
+        assertThatThrownBy(() -> invitationService.completeInvitation(token, "pass", "name"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Invitation already used");
     }
@@ -217,7 +216,7 @@ class InvitationServiceTest {
 
         when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
 
-        assertThatThrownBy(() -> invitationService.completeInvitation(token, "user", "pass", "name"))
+        assertThatThrownBy(() -> invitationService.completeInvitation(token, "pass", "name"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Invitation expired");
     }
@@ -235,7 +234,7 @@ class InvitationServiceTest {
         when(invitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
         when(userRepository.existsByEmail(email)).thenReturn(true);
 
-        assertThatThrownBy(() -> invitationService.completeInvitation(token, "user", "pass", "name"))
+        assertThatThrownBy(() -> invitationService.completeInvitation(token, "pass", "name"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already registered");
     }
@@ -255,7 +254,7 @@ class InvitationServiceTest {
         when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, profileIds);
+        Invitation result = invitationService.createInvitation(email, invitedBy, profileIds);
 
         // Then
         verify(roleRepository).findAllById(profileIds);
@@ -276,7 +275,7 @@ class InvitationServiceTest {
         when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socioRole));
 
         // When & Then
-        assertThatThrownBy(() -> invitationService.createInvitation(email, "Test User", invitedBy, profileIds))
+        assertThatThrownBy(() -> invitationService.createInvitation(email, invitedBy, profileIds))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("One or more profiles not found");
     }
@@ -290,7 +289,7 @@ class InvitationServiceTest {
         when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, null);
+        Invitation result = invitationService.createInvitation(email, invitedBy, null);
 
         // Then
         verify(invitationRepository).save(any(Invitation.class));
@@ -307,7 +306,7 @@ class InvitationServiceTest {
         when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        Invitation result = invitationService.createInvitation(email, "Test User", invitedBy, roleIds);
+        Invitation result = invitationService.createInvitation(email, invitedBy, roleIds);
 
         // Then
         verify(invitationRepository).save(any(Invitation.class));
@@ -318,7 +317,6 @@ class InvitationServiceTest {
     void completeInvitation_WithInvitationRoles_ShouldAssignRolesToUser() {
         // Given
         String token = "valid-token";
-        String username = "newuser";
         String password = "password";
         String name = "New User";
         String email = "test@example.com";
@@ -342,7 +340,7 @@ class InvitationServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        User result = invitationService.completeInvitation(token, username, password, name);
+        User result = invitationService.completeInvitation(token, password, name);
 
         // Then
         assertThat(result.getProfiles()).hasSize(2);

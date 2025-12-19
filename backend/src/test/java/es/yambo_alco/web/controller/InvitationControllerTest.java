@@ -65,7 +65,7 @@ class InvitationControllerTest {
         User currentUser = User.builder().id("U0000001").email("test@example.com").email("testuser").name("Test User").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
-        when(invitationService.createInvitation(anyString(), anyString(), any(), any())).thenReturn(
+        when(invitationService.createInvitation(anyString(), any(), any())).thenReturn(
                 Invitation.builder().id(1L).email("a@b.com").token("tok").invitedBy("U0000001").build());
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(currentUser));
@@ -81,10 +81,10 @@ class InvitationControllerTest {
     @WithMockUser(authorities = "INVITE_USERS")
         void createInvitation_WithProfiles_ShouldIncludeProfilesInResponse() throws Exception {
         // Given
-        User currentUser = User.builder().id("U0000001").email("test@example.com").email("testuser").name("Test User").build();
+        User currentUser = User.builder().id("U0000001").email("test@example.com").name("Test User").build();
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
 
-        when(invitationService.createInvitation(anyString(), anyString(), any(), any())).thenReturn(
+        when(invitationService.createInvitation(anyString(), any(), any())).thenReturn(
                 Invitation.builder()
                         .id(1L)
                         .email("user@example.com")
@@ -102,7 +102,7 @@ class InvitationControllerTest {
         mvc.perform(post("/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer test.jwt.token")
-                .content("{\"email\":\"user@example.com\", \"name\":\"Test User\", \"profileIds\":[\"SOCIO\",\"MONITOR\"]}"))
+                .content("{\"email\":\"user@example.com\", \"profileIds\":[\"SOCIO\",\"MONITOR\"]}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.profileIds", hasSize(2)));
     }
