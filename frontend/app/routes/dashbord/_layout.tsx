@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Links, Outlet, useNavigate } from "react-router";
-import SociosNav from "~/components/dashbord/Nav";
-import SociosHeader from "~/components/dashbord/Header";
+import SociosNav from "~/components/dashboard/Nav";
+import SociosHeader from "~/components/dashboard/Header";
 import { useAuth } from "~/hooks/useAuth";
 import LINKS_MAP from "~/data/links";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.controller.AuthController.LoginRequest;
-import es.yambo_alco.web.controller.AuthController.RegisterRequest;
+import es.yambo_alco.web.controller.AuthController.InvitationRegisterRequest;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.User;
@@ -81,9 +81,9 @@ class AuthControllerTest {
         @Test
         void register_WithValidInvitation_ShouldReturnToken() throws Exception {
                 // Given
-                RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
+                InvitationRegisterRequest registerRequest = new InvitationRegisterRequest("password", "New User");
                 User user = User.builder().email("newuser").build();
-                when(invitationService.completeInvitation("valid-token", "newuser", "password", "New User"))
+                when(invitationService.completeInvitation("valid-token", "password", "New User"))
                                 .thenReturn(user);
                 when(authService.authenticate("newuser", "password")).thenReturn("test.jwt.token");
 
@@ -99,8 +99,8 @@ class AuthControllerTest {
         @Test
         void register_WithInvalidInvitation_ShouldReturnBadRequest() throws Exception {
                 // Given
-                RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
-                when(invitationService.completeInvitation(any(), any(), any(), any()))
+                InvitationRegisterRequest registerRequest = new InvitationRegisterRequest("password", "New User");
+                when(invitationService.completeInvitation(any(), any(), any()))
                                 .thenThrow(new ResourceNotFoundException("Invitation not found"));
 
                 // When & Then
@@ -116,8 +116,8 @@ class AuthControllerTest {
         @Test
         void register_WithUsedInvitation_ShouldReturnBadRequest() throws Exception {
                 // Given
-                RegisterRequest registerRequest = new RegisterRequest("newuser", "password", "New User");
-                when(invitationService.completeInvitation(any(), any(), any(), any()))
+                InvitationRegisterRequest registerRequest = new InvitationRegisterRequest("password", "New User");
+                when(invitationService.completeInvitation(any(), any(), any()))
                                 .thenThrow(new BadRequestException("Invitation already used"));
 
                 // When & Then

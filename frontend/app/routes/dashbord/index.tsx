@@ -1,6 +1,6 @@
 import { use, useEffect, useState } from "react";
 import type { Route } from "./+types/index";
-import SummaryCards from "~/components/dashbord/home/SummaryCards";
+import SummaryCards from "~/components/dashboard/home/SummaryCards";
 import { useAuth } from "~/hooks/useAuth";
 
 export function meta({ }: Route.MetaArgs) {

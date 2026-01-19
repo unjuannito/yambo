@@ -1,67 +1,123 @@
-import { use, useEffect, useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Route } from "./+types/users";
-import { useAuth } from "~/hooks/useAuth";
 import type { User } from "~/types/userType";
-import { RequirePermission } from "~/components/RequirePermission";
+import { RequirePermission } from "~/components/common/RequirePermission";
+import { FilterableTable } from "~/components/common/FilterableTable";
+import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
+import { adminUserService } from "~/services/adminUserService";
+import { profileService } from "~/services/profileService";
+import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Yambo - Usuarios" },
-    { name: "Yambo - Usuarios", content: "Yambo - Usuarios" },
-  ];
+    return [
+        { title: "Yambo - Usuarios" },
+        { name: "Yambo - Usuarios", content: "Yambo - Usuarios" },
+    ];
 }
 
 export default function Users() {
-  const { user } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  useEffect(() => {
-    if (!user) return;
-    //TODO: Llamar a get users
-    const newUsers: User[] = [
-      {
-        id: "12345678",
-        name: "Padre 1",
-        email: "padre@mail.com",
-        created_by: "",
-        createdAt: "",
-        permissions: [],
-        profiles: []
-      },
-      {
-        id: "12345679",
-        name: "Monitor 1",
-        email: "monitor@mail.com",
-        created_by: "",
-        createdAt: "",
-        permissions: [],
-        profiles: []
-      },
-      {
-        id: "kJ5GV3JH",
-        name: "Monitor 1",
-        email: "juancanx2@gmail.com",
-        created_by: "",
-        createdAt: "",
-        permissions: [],
-        profiles: []
-      },
+    const [profileOptions, setProfileOptions] = useState<{ value: string; label: string }[]>([]);
+
+    useEffect(() => {
+        const fetchProfiles = async () => {
+            try {
+                const profiles = await profileService.getAllProfiles();
+                const options = profiles.map(profile => ({
+                    value: profile.id,
+                    label: profile.name,
+                }));
+                setProfileOptions(options);
+            } catch (error) {
+                toast.error("Error al cargar los perfiles");
+            }
+        };
+        fetchProfiles();
+    }, []);
+
+    const fetchUsersData = useCallback(async ({ page, size, filters }: FetchDataParams) => {
+        return await adminUserService.listUsers({
+            name: filters.name,
+            email: filters.email,
+            profiles: filters.profiles,
+            page,
+            size,
+        });
+    }, []);
+
+    const userTableColumns : FilterableColumn<User>[] = [
+        {
+            key: "id",
+            header: "ID",
+            render: (user: User) => (
+                <span className="font-mono text-xs">{user.id}</span>
+            ),
+        },
+        {
+            key: "name",
+            header: "Nombre",
+            filter: {
+                enabled: true,
+                type: "text",
+                placeholder: "Buscar por nombre...",
+            },
+            render: (user: User) => (
+                <span className="font-medium">{user.name}</span>
+            ),
+        },
+        {
+            key: "email",
+            header: "Correo Electrónico",
+            filter: {
+                enabled: true,
+                type: "text",
+                placeholder: "Buscar por email...",
+            },
+        },
+        {
+            key: "profiles",
+            header: "Perfiles",
+            filter: {
+                enabled: true,
+                type: "multi-select",
+                placeholder: "Seleccionar perfiles...",
+                options: profileOptions,
+            },
+            render: (user: User) => (
+                <span className="text-sm text-gray-600">
+                    {user.profiles.length > 0
+                        ? user.profiles.map((p) => p.name).join(", ")
+                        : "Sin perfiles"}
+                </span>
+            ),
+        },
+        {
+            key: "enabled",
+            header: "Habilitado",
+            filter: {
+                enabled: true,
+                type: "checkbox",
+            },
+            render: (user: User) => (
+                <input
+                    type="checkbox"
+                    checked={user.enabled}
+                    disabled
+                />
+            ),
+        }
     ];
-    setUsers(newUsers);
-  }, [user]);
-  return (
-    <RequirePermission permission={{ obj: "user", action: "read" }}>
-      <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-        <h1>Usuarios</h1>
-        <section>
-          {users.map((user) => (
-            <section key={user.id}>
-              <span>
-                Id: {user.id} | Name: {user.name} | Email: {user.email}
-              </span>
-            </section>
-          ))}
-        </section>
-      </main>
-    </RequirePermission>
-  );
+
+    return (
+        <RequirePermission permission={{ obj: "user", action: "read" }}>
+            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-bold mb-6">Usuarios</h1>
+                <FilterableTable
+                    columns={userTableColumns}
+                    keyField="id"
+                    emptyMessage="No se encontraron usuarios"
+                    serverSide={{ fetchData: fetchUsersData }}
+                />
+            </main>
+        </RequirePermission>
+    );
 }

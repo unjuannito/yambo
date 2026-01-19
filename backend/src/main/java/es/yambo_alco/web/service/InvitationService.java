@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -35,7 +36,7 @@ public class InvitationService {
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
 
-    public Invitation createInvitation(String email, String name, String invitedBy, Set<String> profileIds) {
+    public Invitation createInvitation(String email, String invitedBy, Set<String> profileIds) {
         // Check if email is already registered
         if (userRepository.existsByEmail(email)) {
             throw new BadRequestException("Email already registered");
@@ -61,17 +62,18 @@ public class InvitationService {
                 .invitedBy(invitedBy)
                 .profiles(profiles)
                 .build();
-        Invitation saved = invitationRepository.save(inv);
 
         String link = buildInvitationLink(token);
         String subject = "Invitación a Yambo";
-        String body = "Has sido invitado a registrarte en Yambo. Usa este enlace: " + link + "\nEl enlace expira en " + expirationHours + " horas.";
+        String body = "Has sido invitado a registrarte en Yambo. Usa este enlace: " + link + "\nEl enlace expira en "
+                + expirationHours + " horas.";
         mailService.sendInvitation(email, subject, body);
 
-        return saved;
+        return invitationRepository.save(inv);
     }
 
-    public User completeInvitation(String token, String username, String password, String name) {
+    @Transactional
+    public User completeInvitation(String token, String password, String name) {
         Invitation invitation = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
@@ -83,34 +85,24 @@ public class InvitationService {
             throw new BadRequestException("Invitation expired");
         }
 
+        // Check if the email is already registered
         if (userRepository.existsByEmail(invitation.getEmail())) {
             throw new BadRequestException("Email already registered");
         }
 
-        // Use profiles from invitation, or default profiles from configuration if none specified
-        // Create a new HashSet to avoid shared collection references between entities
-        Set<Profile> userProfiles;
-        if (invitation.getProfiles() != null && !invitation.getProfiles().isEmpty()) {
-            userProfiles = new HashSet<>(invitation.getProfiles());
-        } else {
-            userProfiles = new HashSet<>();
-        }
-
-        User user = User.builder()
-                .password(passwordEncoder.encode(password))
-                .email(invitation.getEmail())
-                .name(name)
-                .profiles(userProfiles)
-                .createdAt(LocalDateTime.now())
-                .enabled(true)
-                .build();
-
-        User savedUser = userRepository.save(user);
-
         invitation.setUsed(true);
         invitationRepository.save(invitation);
 
-        return savedUser;
+        User user = User.builder()
+                .email(invitation.getEmail())
+                .password(passwordEncoder.encode(password))
+                .name(name)
+                .createdAt(LocalDateTime.now())
+                .enabled(true)
+                .profiles(new HashSet<>(invitation.getProfiles()))
+                .build();
+
+        return userRepository.save(user);
     }
 
     private String buildInvitationLink(String token) {
@@ -125,6 +117,8 @@ public class InvitationService {
     public void deleteInvitation(Long id) {
         Invitation invitation = invitationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+
+        // Ensure the invitation is not null before deletion
         invitationRepository.delete(invitation);
     }
 

@@ -1,4 +1,4 @@
-import type { Route } from "../+types/monitores";
+import type { Route } from "./+types/monitores";
 
 export function meta({}: Route.MetaArgs) {
   return [

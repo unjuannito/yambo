@@ -79,11 +79,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const reload = async () => {
+        setLoading(true);
+        await reloadUser();
+    };
+
     const isAuthenticated = (): boolean => authService.isAuthenticated();
 
     return (
         <AuthContext.Provider
-            value={{ user, loading, login, logout, hasPermission, isAuthenticated }}
+            value={{ user, loading, login, logout, hasPermission, isAuthenticated, reload }}
         >
             {children}
         </AuthContext.Provider>

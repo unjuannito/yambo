@@ -12,4 +12,5 @@ export interface AuthContextType {
     login: (username: string, password: string) => Promise<void>;
     isAuthenticated: () => boolean;
     logout: () => void;
+    reload: () => Promise<void>;
 }
