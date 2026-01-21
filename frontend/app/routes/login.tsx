@@ -34,6 +34,8 @@ export default function Index() {
       navigate('/mi-espacio', { replace: true });
     } catch (err) {
       alert('Error al iniciar sesión. Por favor, verifica tus credenciales.');
+    } finally {
+      setLoading(false);
     }
   }
   return (
