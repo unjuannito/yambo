@@ -64,7 +64,7 @@ export function FilterableTable<T>({
     // Server-side state
     const [serverData, setServerData] = useState<T[]>([]);
     const [pageInfo, setPageInfo] = useState<PagedInfo>({
-        page: serverSide?.initialPage ?? 0,
+        number: serverSide?.initialPage ?? 0,
         size: serverSide?.initialSize ?? 10,
         totalElements: 0,
         totalPages: 0,
@@ -93,7 +93,7 @@ export function FilterableTable<T>({
         setError(null);
         try {
             const result = await serverSide.fetchData({
-                page: pageInfo.page,
+                page: pageInfo.number,
                 size: pageInfo.size,
                 filters,
             });
@@ -110,7 +110,7 @@ export function FilterableTable<T>({
         } finally {
             setIsLoading(false);
         }
-    }, [serverSide?.fetchData, pageInfo.page, pageInfo.size, filters]);
+    }, [serverSide?.fetchData, pageInfo.number, pageInfo.size, filters]);
 
     useEffect(() => {
         if (isServerSide) {
@@ -223,7 +223,7 @@ export function FilterableTable<T>({
     const displayPageInfo: PagedInfo = isServerSide
         ? pageInfo
         : {
-              page: clientPage,
+              number: clientPage,
               size: clientPageSize,
               totalElements: filteredData.length,
               totalPages: Math.ceil(filteredData.length / clientPageSize) || 1,
@@ -263,7 +263,7 @@ export function FilterableTable<T>({
                     {/* Pagination */}
                     {enablePagination && (
                         <Pagination
-                            page={displayPageInfo.page}
+                            page={displayPageInfo.number}
                             totalPages={displayPageInfo.totalPages}
                             onPageChange={handlePageChange}
                         />

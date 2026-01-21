@@ -1,5 +1,5 @@
 export interface PagedInfo {
-    page: number;
+    number: number;
     size: number;
     totalElements: number;
     totalPages: number;
