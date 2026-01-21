@@ -8,11 +8,11 @@ export default [
     route("monitores", "routes/public/monitores.tsx"),
     route("proyectos", "routes/public/proyectos.tsx"),
   ]),
-  layout("routes/dashbord/_layout.tsx", [
-    route("mi-espacio", "routes/dashbord/index.tsx"),
-    route("mi-espacio/mi-cuenta", "routes/dashbord/my-account.tsx"),
+  layout("routes/dashboard/_layout.tsx", [
+    route("mi-espacio", "routes/dashboard/index.tsx"),
+    route("mi-espacio/mi-cuenta", "routes/dashboard/my-account.tsx"),
     // Admin pages
-    route("mi-espacio/usuarios", "routes/dashbord/users.tsx"),
+    route("mi-espacio/usuarios", "routes/dashboard/users.tsx"),
   ]),
   route("/login", "routes/login.tsx"),
   route("/register", "routes/register.tsx")
