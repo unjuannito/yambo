@@ -5,6 +5,8 @@ import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.PermissionAction;
+import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
 import es.yambo_alco.web.service.UserService;
@@ -13,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -43,6 +47,7 @@ class UserControllerTest {
     private PendingDeletionService pendingDeletionService;
 
     @Test
+    @WithMockUser
     void getUserData_WithValidToken_ShouldReturnUserData() throws Exception {
         // Given
         AuthController.AuthResponse authResponse = new AuthController.AuthResponse("test.jwt.token");
@@ -54,8 +59,8 @@ class UserControllerTest {
                         .profiles(Set.of(
                                 Profile.builder().id("ROLE_USER")
                                         .permissions(Set.of(
-                                                Permission.builder().id("READ_PRIVILEGES").resource("USER").action("READ").build(),
-                                                Permission.builder().id("WRITE_PRIVILEGES").resource("USER").action("WRITE").build()))
+                                                Permission.builder().id("READ_PRIVILEGES").resource(PermissionResource.USER).action(PermissionAction.READ).build(),
+                                                Permission.builder().id("WRITE_PRIVILEGES").resource(PermissionResource.USER).action(PermissionAction.UPDATE).build()))
                                         .build(),
                                 Profile.builder().id("ROLE_ADMIN").build()))
                         .enabled(true)
@@ -69,25 +74,21 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.name").value("Test User"))
                 .andExpect(jsonPath("$.permissions").isArray())
                 .andExpect(jsonPath("$.permissions.length()").value(1))
-                .andExpect(jsonPath("$.permissions[0].obj").value("USER"))
-                .andExpect(jsonPath("$.permissions[0].actions", org.hamcrest.Matchers.containsInAnyOrder("READ", "WRITE")));
+                .andExpect(jsonPath("$.permissions[0].obj").value("user"))
+                .andExpect(jsonPath("$.permissions[0].actions", org.hamcrest.Matchers.containsInAnyOrder("read", "update")));
     }
 
     @Test
+    @WithAnonymousUser
     void getUserData_Unauthorized_ShouldReturnUnauthorized() throws Exception {
-        // Given
-        when(authService.getCurrentUser(true)).thenThrow(new UnauthorizedException("Unauthorized access"));
-
-        // When & Then
+        // When & Then - Anonymous users get 403 Forbidden when accessing protected endpoints
         mockMvc.perform(get("/user/me")
                 .header("Authorization", "Bearer invalid.token"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Unauthorized access"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
+    @WithMockUser
     void updateProfile_WithValidData_ShouldReturnUpdatedUser() throws Exception {
         // Given
         User currentUser = User.builder()
@@ -126,6 +127,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void updateProfile_WithInvalidData_ShouldReturnBadRequest() throws Exception {
         // Given
         String requestBody = """
@@ -144,6 +146,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void changePassword_WithValidData_ShouldReturnOk() throws Exception {
         // Given
         User currentUser = User.builder().id("U0000001").build();
@@ -165,6 +168,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void changePassword_WithInvalidData_ShouldReturnBadRequest() throws Exception {
         // Given
         String requestBody = """
@@ -183,6 +187,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void deleteAccount_WithValidToken_ShouldDeleteSuccessfully() throws Exception {
         // Given
         User currentUser = User.builder().id("U0000001").build();
@@ -196,19 +201,14 @@ class UserControllerTest {
     }
 
     @Test
+    @WithAnonymousUser
     void deleteAccount_Unauthorized_ShouldReturnUnauthorized() throws Exception {
-        // Given
-        when(authService.getCurrentUser(true)).thenThrow(new UnauthorizedException("Unauthorized access"));
-
-        // When & Then
+        // When & Then - Anonymous users get 403 Forbidden when accessing protected endpoints
         mockMvc.perform(post("/user/delete")
                 .header("Authorization", "Bearer invalid.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"days\": 30}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Unauthorized access"));
+                .andExpect(status().isForbidden());
     }
 
 }

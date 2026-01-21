@@ -3,6 +3,8 @@ package es.yambo_alco.web.util;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.PermissionAction;
+import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,7 +33,7 @@ class PermissionCheckServiceTest {
         when(authService.getCurrentUser(false)).thenReturn(null);
 
         // When
-        boolean result = permissionCheckService.hasPermission("users", "read");
+        boolean result = permissionCheckService.hasPermission("user", "read");
 
         // Then
         assertFalse(result);
@@ -49,7 +51,7 @@ class PermissionCheckServiceTest {
         when(authService.getCurrentUser(false)).thenReturn(user);
 
         // When
-        boolean result = permissionCheckService.hasPermission("users", "read");
+        boolean result = permissionCheckService.hasPermission("user", "read");
 
         // Then
         assertFalse(result);
@@ -61,8 +63,8 @@ class PermissionCheckServiceTest {
         // Given
         Permission readPermission = Permission.builder()
                 .id("P001")
-                .resource("users")
-                .action("read")
+                .resource(PermissionResource.USER)
+                .action(PermissionAction.READ)
                 .build();
 
         Profile adminProfile = Profile.builder()
@@ -78,7 +80,7 @@ class PermissionCheckServiceTest {
         when(authService.getCurrentUser(false)).thenReturn(user);
 
         // When
-        boolean result = permissionCheckService.hasPermission("users", "read");
+        boolean result = permissionCheckService.hasPermission("user", "read");
 
         // Then
         assertTrue(result);
@@ -90,8 +92,8 @@ class PermissionCheckServiceTest {
         // Given
         Permission writePermission = Permission.builder()
                 .id("P002")
-                .resource("users")
-                .action("write")
+                .resource(PermissionResource.USER)
+                .action(PermissionAction.UPDATE)
                 .build();
 
         Profile adminProfile = Profile.builder()
@@ -107,7 +109,7 @@ class PermissionCheckServiceTest {
         when(authService.getCurrentUser(false)).thenReturn(user);
 
         // When
-        boolean result = permissionCheckService.hasPermission("users", "read");
+        boolean result = permissionCheckService.hasPermission("user", "read");
 
         // Then
         assertFalse(result);
@@ -119,14 +121,14 @@ class PermissionCheckServiceTest {
         // Given
         Permission readPermission = Permission.builder()
                 .id("P001")
-                .resource("users")
-                .action("read")
+                .resource(PermissionResource.USER)
+                .action(PermissionAction.READ)
                 .build();
 
         Permission writePermission = Permission.builder()
                 .id("P002")
-                .resource("users")
-                .action("write")
+                .resource(PermissionResource.USER)
+                .action(PermissionAction.UPDATE)
                 .build();
 
         Profile adminProfile = Profile.builder()
@@ -147,7 +149,7 @@ class PermissionCheckServiceTest {
         when(authService.getCurrentUser(false)).thenReturn(user);
 
         // When
-        boolean result = permissionCheckService.hasPermission("users", "read");
+        boolean result = permissionCheckService.hasPermission("user", "read");
 
         // Then
         assertTrue(result);
@@ -159,8 +161,8 @@ class PermissionCheckServiceTest {
         // Given
         Permission adminPermission = Permission.builder()
                 .id("P001")
-                .resource("admin")
-                .action("manage")
+                .resource(PermissionResource.PROFILE)
+                .action(PermissionAction.UPDATE)
                 .build();
 
         Profile adminProfile = Profile.builder()
@@ -176,10 +178,102 @@ class PermissionCheckServiceTest {
         when(authService.getCurrentUser(false)).thenReturn(user);
 
         // When
-        boolean result = permissionCheckService.hasPermission("users", "read");
+        boolean result = permissionCheckService.hasPermission("user", "read");
 
         // Then
         assertFalse(result);
         verify(authService).getCurrentUser(false);
+    }
+
+    @Test
+    void hasPermission_WithEnumOverload_WhenUserHasMatchingPermission_ShouldReturnTrue() {
+        // Given
+        Permission readPermission = Permission.builder()
+                .id("P001")
+                .resource(PermissionResource.USER)
+                .action(PermissionAction.READ)
+                .build();
+
+        Profile userProfile = Profile.builder()
+                .id("USER")
+                .permissions(Set.of(readPermission))
+                .build();
+
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of(userProfile))
+                .build();
+
+        when(authService.getCurrentUser(false)).thenReturn(user);
+
+        // When
+        boolean result = permissionCheckService.hasPermission(PermissionResource.USER, PermissionAction.READ);
+
+        // Then
+        assertTrue(result);
+        verify(authService).getCurrentUser(false);
+    }
+
+    @Test
+    void hasPermission_WithEnumOverload_WhenUserHasNoMatchingPermission_ShouldReturnFalse() {
+        // Given
+        Permission createPermission = Permission.builder()
+                .id("P001")
+                .resource(PermissionResource.USER)
+                .action(PermissionAction.CREATE)
+                .build();
+
+        Profile userProfile = Profile.builder()
+                .id("USER")
+                .permissions(Set.of(createPermission))
+                .build();
+
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of(userProfile))
+                .build();
+
+        when(authService.getCurrentUser(false)).thenReturn(user);
+
+        // When
+        boolean result = permissionCheckService.hasPermission(PermissionResource.USER, PermissionAction.DELETE);
+
+        // Then
+        assertFalse(result);
+        verify(authService).getCurrentUser(false);
+    }
+
+    @Test
+    void hasPermission_WithInvalidResourceString_ShouldReturnFalse() {
+        // Given
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of())
+                .build();
+
+        when(authService.getCurrentUser(false)).thenReturn(user);
+
+        // When
+        boolean result = permissionCheckService.hasPermission("invalid_resource", "read");
+
+        // Then
+        assertFalse(result);
+    }
+
+    @Test
+    void hasPermission_WithInvalidActionString_ShouldReturnFalse() {
+        // Given
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of())
+                .build();
+
+        when(authService.getCurrentUser(false)).thenReturn(user);
+
+        // When
+        boolean result = permissionCheckService.hasPermission("user", "invalid_action");
+
+        // Then
+        assertFalse(result);
     }
 }

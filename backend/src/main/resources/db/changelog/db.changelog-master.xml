@@ -22,4 +22,5 @@
     <include file="db/changelog/changes/10-user-enabled-column.xml"/>
     <include file="db/changelog/changes/11-family-product-updates.xml"/>
     <include file="db/changelog/changes/12-project-product-updates.xml"/>
+    <include file="db/changelog/changes/13-seed-permissions-data.xml"/>
 </databaseChangeLog>

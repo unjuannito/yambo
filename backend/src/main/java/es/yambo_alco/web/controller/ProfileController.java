@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.service.ProfileService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

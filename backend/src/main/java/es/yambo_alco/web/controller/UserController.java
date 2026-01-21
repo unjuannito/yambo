@@ -98,8 +98,8 @@ public class UserController {
             Map<String, Set<String>> resourceActions = user.getProfiles().stream()
                     .flatMap(profile -> profile.getPermissions().stream())
                     .collect(Collectors.groupingBy(
-                            Permission::getResource,
-                            Collectors.mapping(Permission::getAction, Collectors.toSet())));
+                            p -> p.getResource().getValue(),
+                            Collectors.mapping(p -> p.getAction().getValue(), Collectors.toSet())));
             this.permissions = resourceActions.entrySet().stream()
                     .map(entry -> new PermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
                     .toArray(PermissionResponse[]::new);

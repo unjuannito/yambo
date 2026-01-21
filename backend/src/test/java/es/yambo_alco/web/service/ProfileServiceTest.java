@@ -2,6 +2,8 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.enums.PermissionAction;
+import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.repository.PermissionRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import org.junit.jupiter.api.Test;
@@ -80,8 +82,8 @@ class ProfileServiceTest {
     void getAllPermissions_ShouldReturnAllPermissions() {
         // Given
         List<Permission> expectedPermissions = List.of(
-                Permission.builder().id("P001").resource("users").action("read").build(),
-                Permission.builder().id("P002").resource("users").action("write").build()
+                Permission.builder().id("P001").resource(PermissionResource.USER).action(PermissionAction.READ).build(),
+                Permission.builder().id("P002").resource(PermissionResource.USER).action(PermissionAction.UPDATE).build()
         );
         when(permissionRepository.findAll()).thenReturn(expectedPermissions);
 
@@ -100,8 +102,8 @@ class ProfileServiceTest {
         Set<String> permissionIds = Set.of("P001", "P002");
 
         Profile existingProfile = Profile.builder().id(profileId).name("Administrator").build();
-        Permission permission1 = Permission.builder().id("P001").resource("users").action("read").build();
-        Permission permission2 = Permission.builder().id("P002").resource("users").action("write").build();
+        Permission permission1 = Permission.builder().id("P001").resource(PermissionResource.USER).action(PermissionAction.READ).build();
+        Permission permission2 = Permission.builder().id("P002").resource(PermissionResource.USER).action(PermissionAction.UPDATE).build();
 
         when(profileRepository.findById(profileId)).thenReturn(Optional.of(existingProfile));
         when(permissionRepository.findById("P001")).thenReturn(Optional.of(permission1));
@@ -145,7 +147,7 @@ class ProfileServiceTest {
         String profileId = "NEW_PROFILE";
         Set<String> permissionIds = Set.of("P001");
 
-        Permission permission1 = Permission.builder().id("P001").resource("users").action("read").build();
+        Permission permission1 = Permission.builder().id("P001").resource(PermissionResource.USER).action(PermissionAction.READ).build();
         Profile expectedProfile = Profile.builder()
                 .id(profileId)
                 .permissions(Set.of(permission1))
