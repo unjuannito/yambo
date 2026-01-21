@@ -1,8 +1,7 @@
 package es.yambo_alco.web.config;
 
-import es.yambo_alco.web.jwt.JwtAuthenticationFilter;
-import es.yambo_alco.web.jwt.JwtService;
-import es.yambo_alco.web.service.AuthService;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,10 +18,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.HandlerExceptionResolver;
-import java.util.List;
+
+import es.yambo_alco.web.jwt.JwtAuthenticationFilter;
+import es.yambo_alco.web.jwt.JwtService;
+import es.yambo_alco.web.service.AuthService;
 
 @Configuration
 @EnableWebSecurity
@@ -88,7 +90,7 @@ public class SecurityConfig {
         if (env.acceptsProfiles(Profiles.of("dev"))) {
             config.setAllowedOrigins(List.of("http://localhost:5173"));
         } else {
-            String allowedOrigins = env.getProperty("cors.allowed-origins", "https://www.yambo-alco.net");
+            String allowedOrigins = env.getProperty("CORS_ALLOWED_ORIGINS", "https://yambo.cabrasky.net");
             config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
