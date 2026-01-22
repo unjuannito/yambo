@@ -6,7 +6,7 @@ pipeline {
         FRONTEND_IMAGE = "${REGISTRY}/yambo-web-frontend"
         BACKEND_IMAGE  = "${REGISTRY}/yambo-web-backend"
         TAG = "${BUILD_NUMBER}"
-        KUBECONFIG = "/var/jenkins-home/.kube/config"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
         NAMESPACE = "yambo"
     }
 
