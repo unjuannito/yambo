@@ -5,7 +5,6 @@ pipeline {
         REGISTRY = "192.168.1.11:5000"
         FRONTEND_IMAGE = "${REGISTRY}/yambo-web-frontend"
         BACKEND_IMAGE  = "${REGISTRY}/yambo-web-backend"
-        TAG = "${BUILD_NUMBER}"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
         NAMESPACE = "yambo"
     }
@@ -15,6 +14,17 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Read Versions') {
+            steps {
+                script {
+                    env.FRONTEND_TAG = readFile('frontend/VERSION').trim()
+                    env.BACKEND_TAG = readFile('backend/VERSION').trim()
+                    echo "Frontend version: ${env.FRONTEND_TAG}"
+                    echo "Backend version: ${env.BACKEND_TAG}"
+                }
             }
         }
 
@@ -62,8 +72,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                    docker build -t $FRONTEND_IMAGE:$TAG frontend
-                    docker build -t $BACKEND_IMAGE:$TAG backend
+                    docker build -t $FRONTEND_IMAGE:$FRONTEND_TAG frontend
+                    docker build -t $BACKEND_IMAGE:$BACKEND_TAG backend
                 '''
             }
         }
@@ -71,8 +81,8 @@ pipeline {
         stage('Push Images') {
             steps {
                 sh '''
-                    docker push $FRONTEND_IMAGE:$TAG
-                    docker push $BACKEND_IMAGE:$TAG
+                    docker push $FRONTEND_IMAGE:$FRONTEND_TAG
+                    docker push $BACKEND_IMAGE:$BACKEND_TAG
                 '''
             }
         }
@@ -100,8 +110,8 @@ pipeline {
                     kubectl rollout status deployment/postgres -n $NAMESPACE --timeout=120s
 
                     # Update image tags in deployments
-                    sed -i "s|image: ${FRONTEND_IMAGE}:.*|image: ${FRONTEND_IMAGE}:${TAG}|g" k8s/frontend-deployment.yaml
-                    sed -i "s|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${TAG}|g" k8s/backend-deployment.yaml
+                    sed -i "s|image: ${FRONTEND_IMAGE}:.*|image: ${FRONTEND_IMAGE}:${FRONTEND_TAG}|g" k8s/frontend-deployment.yaml
+                    sed -i "s|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${BACKEND_TAG}|g" k8s/backend-deployment.yaml
 
                     # Apply deployments
                     kubectl apply -f k8s/frontend-deployment.yaml
@@ -118,7 +128,7 @@ pipeline {
 
     post {
         success {
-            echo "Deployment successful! Version: ${TAG}"
+            echo "Deployment successful! Frontend: ${env.FRONTEND_TAG}, Backend: ${env.BACKEND_TAG}"
         }
         failure {
             echo "Deployment failed!"
