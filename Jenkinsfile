@@ -40,20 +40,25 @@ pipeline {
         stage('Check Version Changes') {
             steps {
                 script {
-                    // Check if frontend image already exists in registry
-                    def frontendExists = sh(
-                        script: "docker manifest inspect ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} > /dev/null 2>&1",
-                        returnStatus: true
-                    ) == 0
+                    // Check if frontend image already exists in registry using REST API
+                    def frontendHttpCode = sh(
+                        script: "curl -s -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/yambo-web-frontend/manifests/${env.FRONTEND_TAG}",
+                        returnStdout: true
+                    ).trim()
+                    def frontendExists = (frontendHttpCode == '200')
                     
-                    // Check if backend image already exists in registry
-                    def backendExists = sh(
-                        script: "docker manifest inspect ${BACKEND_IMAGE}:${env.BACKEND_TAG} > /dev/null 2>&1",
-                        returnStatus: true
-                    ) == 0
+                    // Check if backend image already exists in registry using REST API
+                    def backendHttpCode = sh(
+                        script: "curl -s -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/yambo-web-backend/manifests/${env.BACKEND_TAG}",
+                        returnStdout: true
+                    ).trim()
+                    def backendExists = (backendHttpCode == '200')
                     
                     env.FRONTEND_CHANGED = frontendExists ? 'false' : 'true'
                     env.BACKEND_CHANGED = backendExists ? 'false' : 'true'
+                    
+                    echo "Frontend check: HTTP ${frontendHttpCode}"
+                    echo "Backend check: HTTP ${backendHttpCode}"
                     
                     if (frontendExists) {
                         echo "⚠️  Frontend image ${env.FRONTEND_TAG} already exists in registry"
