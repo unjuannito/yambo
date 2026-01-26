@@ -22,22 +22,37 @@ pipeline {
                 script {
                     env.FRONTEND_TAG = readFile('frontend/VERSION').trim()
                     env.BACKEND_TAG = readFile('backend/VERSION').trim()
-                    echo "Frontend version: ${env.FRONTEND_TAG}"
-                    echo "Backend version: ${env.BACKEND_TAG}"
                     
-                    // Validate version format (semver)
-                    def semverPattern = /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$/
-                    if (!env.FRONTEND_TAG.matches(semverPattern)) {
-                        error "Invalid frontend version format: ${env.FRONTEND_TAG}. Expected semver (e.g., 1.0.0)"
+                    // For PRs, use pr-{number} tags to avoid registry collision
+                    if (env.CHANGE_ID) {
+                        echo "🔀 Pull Request #${env.CHANGE_ID} detected (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
+                        env.FRONTEND_TAG = "pr-${env.CHANGE_ID}"
+                        env.BACKEND_TAG = "pr-${env.CHANGE_ID}"
+                        env.IS_PR = 'true'
+                    } else {
+                        echo "📌 Branch build: ${env.BRANCH_NAME}"
+                        env.IS_PR = 'false'
+                        
+                        // Validate version format (semver) only for non-PR builds
+                        def semverPattern = /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$/
+                        if (!env.FRONTEND_TAG.matches(semverPattern)) {
+                            error "Invalid frontend version format: ${env.FRONTEND_TAG}. Expected semver (e.g., 1.0.0)"
+                        }
+                        if (!env.BACKEND_TAG.matches(semverPattern)) {
+                            error "Invalid backend version format: ${env.BACKEND_TAG}. Expected semver (e.g., 1.0.0)"
+                        }
                     }
-                    if (!env.BACKEND_TAG.matches(semverPattern)) {
-                        error "Invalid backend version format: ${env.BACKEND_TAG}. Expected semver (e.g., 1.0.0)"
-                    }
+                    
+                    echo "Frontend tag: ${env.FRONTEND_TAG}"
+                    echo "Backend tag: ${env.BACKEND_TAG}"
                 }
             }
         }
 
         stage('Check Version Changes') {
+            when {
+                expression { env.IS_PR == 'false' }
+            }
             steps {
                 script {
                     // Check if frontend image already exists in registry using REST API
@@ -75,6 +90,20 @@ pipeline {
                     if (frontendExists && backendExists) {
                         echo "ℹ️  Both versions already exist. Skipping build stages, proceeding to deploy."
                     }
+                }
+            }
+        }
+
+        stage('PR Build Setup') {
+            when {
+                expression { env.IS_PR == 'true' }
+            }
+            steps {
+                script {
+                    // For PRs, always build both
+                    env.FRONTEND_CHANGED = 'true'
+                    env.BACKEND_CHANGED = 'true'
+                    echo "🔨 PR build: will build and test both frontend and backend"
                 }
             }
         }
@@ -165,6 +194,9 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
+            when {
+                expression { env.IS_PR == 'false' }
+            }
             steps {
                 sh '''
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
@@ -205,10 +237,22 @@ pipeline {
 
     post {
         success {
-            echo "Deployment successful! Frontend: ${env.FRONTEND_TAG}, Backend: ${env.BACKEND_TAG}"
+            script {
+                if (env.IS_PR == 'true') {
+                    echo "✅ PR #${env.CHANGE_ID} build successful! Tests passed."
+                } else {
+                    echo "✅ Deployment successful! Frontend: ${env.FRONTEND_TAG}, Backend: ${env.BACKEND_TAG}"
+                }
+            }
         }
         failure {
-            echo "Deployment failed!"
+            script {
+                if (env.IS_PR == 'true') {
+                    echo "❌ PR #${env.CHANGE_ID} build failed!"
+                } else {
+                    echo "❌ Deployment failed!"
+                }
+            }
         }
     }
 }
