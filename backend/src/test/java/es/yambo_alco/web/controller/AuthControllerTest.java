@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -64,6 +65,26 @@ class AuthControllerTest {
                 LoginRequest loginRequest = new LoginRequest("invalid", "invalid");
                 when(authService.authenticate(any(), any()))
                                 .thenThrow(new BadCredentialsException("Invalid credentials"));
+
+                // When & Then
+                mockMvc.perform(post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(loginRequest)))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(jsonPath("$.status").value(401))
+                                .andExpect(jsonPath("$.message").value("Invalid username or password"))
+                                .andExpect(jsonPath("$.type").value("AUTHENTICATION_FAILED"))
+                                .andExpect(jsonPath("$.id").exists())
+                                .andExpect(jsonPath("$.timestamp").exists());
+        }
+
+        @Test
+        void login_WithNonExistentUser_ShouldReturnUnauthorized() throws Exception {
+                // Given
+                LoginRequest loginRequest = new LoginRequest("nonexistent", "password");
+                when(authService.authenticate(any(), any()))
+                                .thenThrow(new UsernameNotFoundException("User not found"));
 
                 // When & Then
                 mockMvc.perform(post("/auth/login")

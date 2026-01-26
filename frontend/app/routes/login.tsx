@@ -1,9 +1,10 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import ButtonComponent from "../components/common/forms/ButtonComponent";
 import type { Route } from "./+types/login";
 import InputComponent from "~/components/common/forms/InputComponent";
+import toast from "react-hot-toast";
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -16,6 +17,9 @@ export default function Index() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
+  
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -25,15 +29,26 @@ export default function Index() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+    const email = emailRef.current?.value ?? '';
+    const password = passwordRef.current?.value ?? '';
     try {
       setLoading(true);
       await login(email, password);
       navigate('/mi-espacio', { replace: true });
-    } catch (err) {
-      alert('Error al iniciar sesión. Por favor, verifica tus credenciales.');
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { type?: string; message?: string }; status?: number } };
+      const errorType = axiosError.response?.data?.type;
+      const statusCode = axiosError.response?.status;
+
+      if (errorType === 'AUTHENTICATION_FAILED' || statusCode === 401) {
+        toast.error('Usuario o contraseña incorrectos.');
+      } else if (statusCode && statusCode >= 500) {
+        toast.error('Error del servidor. Por favor, inténtalo más tarde.');
+      } else if (!axiosError.response) {
+        toast.error('Error de conexión. Comprueba tu conexión a internet.');
+      } else {
+        toast.error('Error al iniciar sesión. Por favor, verifica tus credenciales.');
+      }
     } finally {
       setLoading(false);
     }
@@ -47,8 +62,8 @@ export default function Index() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <InputComponent name="email" label="Correo electrónico" type="email" required />
-          <InputComponent name="password" label="Contraseña" type="password" required />
+          <InputComponent ref={emailRef} name="email" label="Correo electrónico" type="email" required />
+          <InputComponent ref={passwordRef} name="password" label="Contraseña" type="password" required />
 
           <ButtonComponent
             type="submit"
