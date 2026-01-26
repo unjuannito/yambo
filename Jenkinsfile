@@ -196,8 +196,8 @@ pipeline {
                     kubectl apply -f k8s/ingress.yaml
 
                     # Wait for rollout
-                    kubectl rollout status deployment/yambo-frontend -n $NAMESPACE --timeout=120s
-                    kubectl rollout status deployment/yambo-backend -n $NAMESPACE --timeout=120s
+                    kubectl rollout status deployment/yambo-frontend -n $NAMESPACE --timeout=300s
+                    kubectl rollout status deployment/yambo-backend -n $NAMESPACE --timeout=300s
                 '''
             }
         }
