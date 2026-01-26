@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -60,6 +61,24 @@ public class GlobalExceptionHandler {
 
         log.warn("Authentication failed at path: {}", request.getRequestURI());
 
+        ErrorResponse error = ErrorResponse.builder()
+                .type("AUTHENTICATION_FAILED")
+                .message("Invalid username or password")
+                .path(request.getRequestURI())
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUsernameNotFound(
+            UsernameNotFoundException ex,
+            HttpServletRequest request) {
+
+        log.warn("Authentication failed (user not found) at path: {}", request.getRequestURI());
+
+        // Return same response as BadCredentialsException to prevent user enumeration
         ErrorResponse error = ErrorResponse.builder()
                 .type("AUTHENTICATION_FAILED")
                 .message("Invalid username or password")
