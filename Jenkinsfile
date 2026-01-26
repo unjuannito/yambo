@@ -24,11 +24,60 @@ pipeline {
                     env.BACKEND_TAG = readFile('backend/VERSION').trim()
                     echo "Frontend version: ${env.FRONTEND_TAG}"
                     echo "Backend version: ${env.BACKEND_TAG}"
+                    
+                    // Validate version format (semver)
+                    def semverPattern = /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$/
+                    if (!env.FRONTEND_TAG.matches(semverPattern)) {
+                        error "Invalid frontend version format: ${env.FRONTEND_TAG}. Expected semver (e.g., 1.0.0)"
+                    }
+                    if (!env.BACKEND_TAG.matches(semverPattern)) {
+                        error "Invalid backend version format: ${env.BACKEND_TAG}. Expected semver (e.g., 1.0.0)"
+                    }
+                }
+            }
+        }
+
+        stage('Check Version Changes') {
+            steps {
+                script {
+                    // Check if frontend image already exists in registry
+                    def frontendExists = sh(
+                        script: "docker manifest inspect ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} > /dev/null 2>&1",
+                        returnStatus: true
+                    ) == 0
+                    
+                    // Check if backend image already exists in registry
+                    def backendExists = sh(
+                        script: "docker manifest inspect ${BACKEND_IMAGE}:${env.BACKEND_TAG} > /dev/null 2>&1",
+                        returnStatus: true
+                    ) == 0
+                    
+                    env.FRONTEND_CHANGED = frontendExists ? 'false' : 'true'
+                    env.BACKEND_CHANGED = backendExists ? 'false' : 'true'
+                    
+                    if (frontendExists) {
+                        echo "⚠️  Frontend image ${env.FRONTEND_TAG} already exists in registry"
+                    } else {
+                        echo "✅ Frontend version ${env.FRONTEND_TAG} is new, will build"
+                    }
+                    
+                    if (backendExists) {
+                        echo "⚠️  Backend image ${env.BACKEND_TAG} already exists in registry"
+                    } else {
+                        echo "✅ Backend version ${env.BACKEND_TAG} is new, will build"
+                    }
+                    
+                    if (frontendExists && backendExists) {
+                        echo "ℹ️  Both versions already exist. Skipping build stages, proceeding to deploy."
+                    }
                 }
             }
         }
 
         stage('Frontend Tests') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' }
+            }
             steps {
                 dir('frontend') {
                     sh '''
@@ -40,6 +89,9 @@ pipeline {
         }
 
         stage('Backend Tests') {
+            when {
+                expression { env.BACKEND_CHANGED == 'true' }
+            }
             steps {
                 dir('backend') {
                     sh '''
@@ -51,6 +103,9 @@ pipeline {
         }
 
         stage('Build Frontend') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' }
+            }
             steps {
                 dir('frontend') {
                     sh 'npm run build'
@@ -59,6 +114,9 @@ pipeline {
         }
 
         stage('Build Backend') {
+            when {
+                expression { env.BACKEND_CHANGED == 'true' }
+            }
             steps {
                 dir('backend') {
                     sh '''
@@ -70,20 +128,34 @@ pipeline {
         }
 
         stage('Build Docker Images') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
+            }
             steps {
-                sh '''
-                    docker build -t $FRONTEND_IMAGE:$FRONTEND_TAG frontend
-                    docker build -t $BACKEND_IMAGE:$BACKEND_TAG backend
-                '''
+                script {
+                    if (env.FRONTEND_CHANGED == 'true') {
+                        sh "docker build -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend"
+                    }
+                    if (env.BACKEND_CHANGED == 'true') {
+                        sh "docker build -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend"
+                    }
+                }
             }
         }
 
         stage('Push Images') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
+            }
             steps {
-                sh '''
-                    docker push $FRONTEND_IMAGE:$FRONTEND_TAG
-                    docker push $BACKEND_IMAGE:$BACKEND_TAG
-                '''
+                script {
+                    if (env.FRONTEND_CHANGED == 'true') {
+                        sh "docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}"
+                    }
+                    if (env.BACKEND_CHANGED == 'true') {
+                        sh "docker push ${BACKEND_IMAGE}:${env.BACKEND_TAG}"
+                    }
+                }
             }
         }
 
