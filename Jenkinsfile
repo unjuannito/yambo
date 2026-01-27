@@ -188,7 +188,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             when {
-                expression { env.CAN_DEPLOY == 'true' }
+                branch 'develop'
             }
             steps {
                 sh '''
