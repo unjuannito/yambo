@@ -21,28 +21,35 @@ pipeline {
             steps {
                 script {
                     env.FRONTEND_TAG = readFile('frontend/VERSION').trim()
-                    env.BACKEND_TAG = readFile('backend/VERSION').trim()
-                    
-                    // For PRs, use pr-{number} tags to avoid registry collision
+                    env.BACKEND_TAG  = readFile('backend/VERSION').trim()
+
                     if (env.CHANGE_ID) {
                         echo "🔀 Pull Request #${env.CHANGE_ID} detected (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
                         env.FRONTEND_TAG = "pr-${env.CHANGE_ID}"
-                        env.BACKEND_TAG = "pr-${env.CHANGE_ID}"
+                        env.BACKEND_TAG  = "pr-${env.CHANGE_ID}"
                         env.IS_PR = 'true'
                     } else {
                         echo "📌 Branch build: ${env.BRANCH_NAME}"
                         env.IS_PR = 'false'
-                        
-                        // Validate version format (semver) only for non-PR builds
+
                         def semverPattern = /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$/
                         if (!env.FRONTEND_TAG.matches(semverPattern)) {
-                            error "Invalid frontend version format: ${env.FRONTEND_TAG}. Expected semver (e.g., 1.0.0)"
+                            error "Invalid frontend version format: ${env.FRONTEND_TAG}"
                         }
                         if (!env.BACKEND_TAG.matches(semverPattern)) {
-                            error "Invalid backend version format: ${env.BACKEND_TAG}. Expected semver (e.g., 1.0.0)"
+                            error "Invalid backend version format: ${env.BACKEND_TAG}"
                         }
                     }
-                    
+
+                    // ✅ DEPLOY ONLY FROM DEVELOP
+                    if (!env.CHANGE_ID && env.BRANCH_NAME == 'develop') {
+                        env.CAN_DEPLOY = 'true'
+                        echo "🚀 Deploy enabled (develop branch)"
+                    } else {
+                        env.CAN_DEPLOY = 'false'
+                        echo "🧱 Deploy disabled (build-only)"
+                    }
+
                     echo "Frontend tag: ${env.FRONTEND_TAG}"
                     echo "Backend tag: ${env.BACKEND_TAG}"
                 }
@@ -55,40 +62,27 @@ pipeline {
             }
             steps {
                 script {
-                    // Check if frontend image already exists in registry using REST API
-                    def frontendHttpCode = sh(
+                    def frontendCode = sh(
                         script: "curl -s -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/yambo-web-frontend/manifests/${env.FRONTEND_TAG}",
                         returnStdout: true
                     ).trim()
-                    def frontendExists = (frontendHttpCode == '200')
-                    
-                    // Check if backend image already exists in registry using REST API
-                    def backendHttpCode = sh(
+
+                    def backendCode = sh(
                         script: "curl -s -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/yambo-web-backend/manifests/${env.BACKEND_TAG}",
                         returnStdout: true
                     ).trim()
-                    def backendExists = (backendHttpCode == '200')
-                    
-                    env.FRONTEND_CHANGED = frontendExists ? 'false' : 'true'
-                    env.BACKEND_CHANGED = backendExists ? 'false' : 'true'
-                    
-                    echo "Frontend check: HTTP ${frontendHttpCode}"
-                    echo "Backend check: HTTP ${backendHttpCode}"
-                    
-                    if (frontendExists) {
-                        echo "⚠️  Frontend image ${env.FRONTEND_TAG} already exists in registry"
-                    } else {
-                        echo "✅ Frontend version ${env.FRONTEND_TAG} is new, will build"
+
+                    env.FRONTEND_CHANGED = (frontendCode == '200') ? 'false' : 'true'
+                    env.BACKEND_CHANGED  = (backendCode == '200')  ? 'false' : 'true'
+
+                    echo "Frontend registry check: HTTP ${frontendCode}"
+                    echo "Backend registry check: HTTP ${backendCode}"
+
+                    if (frontendCode == '200') {
+                        echo "⚠️ Frontend image already exists"
                     }
-                    
-                    if (backendExists) {
-                        echo "⚠️  Backend image ${env.BACKEND_TAG} already exists in registry"
-                    } else {
-                        echo "✅ Backend version ${env.BACKEND_TAG} is new, will build"
-                    }
-                    
-                    if (frontendExists && backendExists) {
-                        echo "ℹ️  Both versions already exist. Skipping build stages, proceeding to deploy."
+                    if (backendCode == '200') {
+                        echo "⚠️ Backend image already exists"
                     }
                 }
             }
@@ -100,10 +94,9 @@ pipeline {
             }
             steps {
                 script {
-                    // For PRs, always build both
                     env.FRONTEND_CHANGED = 'true'
-                    env.BACKEND_CHANGED = 'true'
-                    echo "🔨 PR build: will build and test both frontend and backend"
+                    env.BACKEND_CHANGED  = 'true'
+                    echo "🔨 PR build: forcing full build"
                 }
             }
         }
@@ -116,7 +109,7 @@ pipeline {
                 dir('frontend') {
                     sh '''
                         npm install
-                        #npm run test || true
+                        # npm test
                     '''
                 }
             }
@@ -195,39 +188,28 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             when {
-                expression { env.IS_PR == 'false' }
+                expression { env.CAN_DEPLOY == 'true' }
             }
             steps {
                 sh '''
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
 
-                    # Create namespace if it doesn't exist
                     kubectl apply -f k8s/namespace.yaml --validate=false
 
-                    # Apply secrets only if they don't exist
-                    if ! kubectl get secret yambo-secrets -n $NAMESPACE > /dev/null 2>&1; then
-                        echo "Creating secrets..."
+                    if ! kubectl get secret yambo-secrets -n $NAMESPACE >/dev/null 2>&1; then
                         kubectl apply -f k8s/secrets.yaml
-                    else
-                        echo "Secrets already exist, skipping..."
                     fi
 
-                    # Deploy database
                     kubectl apply -f k8s/database-deployment.yaml
-
-                    # Wait for database to be ready
                     kubectl rollout status deployment/postgres -n $NAMESPACE --timeout=120s
 
-                    # Update image tags in deployments
-                    sed -i "s|image: ${FRONTEND_IMAGE}:.*|image: ${FRONTEND_IMAGE}:${FRONTEND_TAG}|g" k8s/frontend-deployment.yaml
-                    sed -i "s|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${BACKEND_TAG}|g" k8s/backend-deployment.yaml
+                    sed -i "s|image: .*yambo-web-frontend:.*|image: ${FRONTEND_IMAGE}:${FRONTEND_TAG}|g" k8s/frontend-deployment.yaml
+                    sed -i "s|image: .*yambo-web-backend:.*|image: ${BACKEND_IMAGE}:${BACKEND_TAG}|g" k8s/backend-deployment.yaml
 
-                    # Apply deployments
                     kubectl apply -f k8s/frontend-deployment.yaml
                     kubectl apply -f k8s/backend-deployment.yaml
                     kubectl apply -f k8s/ingress.yaml
 
-                    # Wait for rollout
                     kubectl rollout status deployment/yambo-frontend -n $NAMESPACE --timeout=300s
                     kubectl rollout status deployment/yambo-backend -n $NAMESPACE --timeout=300s
                 '''
@@ -239,20 +221,16 @@ pipeline {
         success {
             script {
                 if (env.IS_PR == 'true') {
-                    echo "✅ PR #${env.CHANGE_ID} build successful! Tests passed."
+                    echo "✅ PR #${env.CHANGE_ID} build successful"
+                } else if (env.CAN_DEPLOY == 'true') {
+                    echo "🚀 Develop deployed successfully"
                 } else {
-                    echo "✅ Deployment successful! Frontend: ${env.FRONTEND_TAG}, Backend: ${env.BACKEND_TAG}"
+                    echo "✅ Build successful (no deploy)"
                 }
             }
         }
         failure {
-            script {
-                if (env.IS_PR == 'true') {
-                    echo "❌ PR #${env.CHANGE_ID} build failed!"
-                } else {
-                    echo "❌ Deployment failed!"
-                }
-            }
+            echo "❌ Pipeline failed"
         }
     }
 }
