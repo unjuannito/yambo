@@ -2,8 +2,11 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
+import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +17,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,6 +28,7 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final FamilyProductRepository familyProductRepository;
     private final AuthService authService;
 
     public Product getProductById(@NonNull String productId) {
@@ -45,10 +52,9 @@ public class ProductService {
         return productRepository.findAll(spec, pageable);
     }
 
-    public Product createProduct(@NonNull String name, String projectId, String familyProductId) {
-        User user = authService.getCurrentUser(true);
+    public Product createProduct(@NonNull String name, String projectId, String familyProductId, @NonNull BigDecimal basePrice, List<ProductOption> options, List<String> images) {
+        authService.getCurrentUser(true);
         // TODO: check if user can create in this family
-        // For now, assume ok
 
         if (productRepository.existsByName(name)) {
             throw new BadRequestException("Product name already exists");
@@ -58,6 +64,9 @@ public class ProductService {
                 .name(name)
                 .projectId(projectId)
                 .active(true)
+                .basePrice(basePrice)
+                .options(options != null ? options : new ArrayList<>())
+                .images(images != null ? images : new ArrayList<>())
                 .build();
 
         // TODO: set familyProduct if provided
@@ -65,7 +74,7 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public Product updateProduct(@NonNull String productId, String name, Boolean active) {
+    public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images, List<ProductOption> options, BigDecimal basePrice, String familyProductId, String projectId) {
         Product product = getProductById(productId);
         // TODO: check if user can update
 
@@ -78,6 +87,27 @@ public class ProductService {
 
         if (active != null) {
             product.setActive(active);
+        }
+
+        if (images != null) {
+            product.setImages(images);
+        }
+
+        if (options != null) {
+            product.setOptions(options);
+        }
+
+        if (basePrice != null) {
+            product.setBasePrice(basePrice);
+        }
+
+        if (familyProductId != null) {
+            FamilyProduct familyProduct = familyProductRepository.findById(familyProductId).orElse(null);
+            product.setFamilyProduct(familyProduct);
+        }
+
+        if (projectId != null && !projectId.trim().isEmpty()) {
+            product.setProjectId(projectId.trim());
         }
 
         return productRepository.save(product);
@@ -96,16 +126,14 @@ public class ProductService {
                 .collect(Collectors.toSet());
 
         if (product.getFamilyProduct() == null) {
-            return; // allow
+            return;
         }
 
         boolean hasAccess = product.getFamilyProduct().getProfiles().stream()
                 .anyMatch(p -> userProfileIds.contains(p.getId()));
 
         if (!hasAccess) {
-            throw new ResourceNotFoundException("Product not found"); // or Forbidden
+            throw new ResourceNotFoundException("Product not found");
         }
     }
-
-    // TODO: existsByName method in repo
 }

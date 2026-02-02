@@ -4,6 +4,7 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
+import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.ProductRepository;
@@ -17,6 +18,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -194,6 +198,8 @@ class ProductServiceTest {
                 .name(name)
                 .projectId(projectId)
                 .active(true)
+                .basePrice(BigDecimal.valueOf(10.00))
+                .options(new ArrayList<>())
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -201,7 +207,8 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
 
         // When
-        Product result = productService.createProduct(name, projectId, familyProductId);
+        Product result = productService.createProduct(name, projectId, familyProductId, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+
 
         // Then
         assertEquals(expectedProduct, result);
@@ -226,7 +233,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.createProduct(name, projectId, null));
+                () -> productService.createProduct(name, projectId, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
         assertEquals("Product name already exists", exception.getMessage());
         verify(authService).getCurrentUser(true);
         verify(productRepository).existsByName(name);
@@ -263,7 +270,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, newName, newActive);
+        Product result = productService.updateProduct(productId, newName, newActive, null, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -296,7 +303,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.updateProduct(productId, newName, null));
+                () -> productService.updateProduct(productId, newName, null, null, null, null, null, null));
         assertEquals("Product name already exists", exception.getMessage());
         verify(productRepository).findById(productId);
         verify(authService).getCurrentUser(true);
@@ -334,7 +341,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, sameName, newActive);
+        Product result = productService.updateProduct(productId, sameName, newActive, null, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -372,7 +379,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, null, newActive);
+        Product result = productService.updateProduct(productId, null, newActive, null, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);

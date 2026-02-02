@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add ORDER permissions -->
+    <changeSet id="15-01-add-order-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'ORDER'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="permission">
+            <column name="id" value="PORD_CRT"/>
+            <column name="resource" value="ORDER"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PORD_RD"/>
+            <column name="resource" value="ORDER"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PORD_UPD"/>
+            <column name="resource" value="ORDER"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PORD_DEL"/>
+            <column name="resource" value="ORDER"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!-- Assign ORDER permissions to ADMIN profile -->
+    <changeSet id="15-02-assign-admin-order-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'ADMIN'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'ADMIN' AND permission_id LIKE 'PORD_%'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PORD_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PORD_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PORD_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PORD_DEL"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

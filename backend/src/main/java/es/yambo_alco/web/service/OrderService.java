@@ -1,0 +1,140 @@
+package es.yambo_alco.web.service;
+
+import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.Order;
+import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.OrderProductRepository;
+import es.yambo_alco.web.repository.OrderRepository;
+import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.spec.OrderSpecifications;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+    private final OrderProductRepository orderProductRepository;
+    private final ProductRepository productRepository;
+
+    @Transactional
+    public Order createOrder(@NonNull Integer customerId, @NonNull List<OrderProduct> orderProducts) {
+        if (orderProducts.isEmpty()) {
+            throw new BadRequestException("Order must contain at least one product");
+        }
+
+        // Validate all products exist
+        for (OrderProduct op : orderProducts) {
+            if (!productRepository.existsById(op.getProductId())) {
+                throw new ResourceNotFoundException("Product not found: " + op.getProductId());
+            }
+        }
+
+        Order order = Order.builder()
+                .customerId(customerId)
+                .status(OrderStatus.PENDING_CONFIRMATION)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        order = orderRepository.save(order);
+
+        // Save order products
+        for (OrderProduct op : orderProducts) {
+            op.setOrderId(order.getId());
+            orderProductRepository.save(op);
+        }
+
+        return order;
+    }
+
+    public Order getOrderById(@NonNull String orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+    }
+
+    public Page<Order> listOrders(Integer customerId, OrderStatus status, 
+                                   LocalDateTime startDate, LocalDateTime endDate,
+                                   @NonNull Pageable pageable) {
+        Specification<Order> spec = Specification.where(null);
+        
+        if (customerId != null) {
+            spec = spec.and(OrderSpecifications.customerIdEquals(customerId));
+        }
+        if (status != null) {
+            spec = spec.and(OrderSpecifications.statusEquals(status));
+        }
+        if (startDate != null || endDate != null) {
+            spec = spec.and(OrderSpecifications.createdBetween(startDate, endDate));
+        }
+
+        return orderRepository.findAll(spec, pageable);
+    }
+
+    @Transactional
+    public Order updateOrderStatus(@NonNull String orderId, @NonNull OrderStatus status) {
+        Order order = getOrderById(orderId);
+        
+        // Validate status transition
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cannot update status of cancelled order");
+        }
+        if (order.getStatus() == OrderStatus.DELIVERED && status != OrderStatus.DELIVERED) {
+            throw new BadRequestException("Cannot change status of delivered order");
+        }
+
+        order.setStatus(status);
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order cancelOrder(@NonNull String orderId) {
+        Order order = getOrderById(orderId);
+        
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new BadRequestException("Cannot cancel delivered order");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Order is already cancelled");
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        return orderRepository.save(order);
+    }
+
+    public List<Order> getOrdersByCustomer(@NonNull Integer customerId) {
+        Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
+        return orderRepository.findAll(spec);
+    }
+
+    public List<OrderProduct> getOrderProducts(@NonNull String orderId) {
+        // Verify order exists
+        getOrderById(orderId);
+        return orderProductRepository.findAll(
+            es.yambo_alco.web.repository.spec.OrderProductSpecifications.orderIdEquals(orderId)
+        );
+    }
+
+    @Transactional
+    public void deleteOrder(@NonNull String orderId) {
+        Order order = getOrderById(orderId);
+        
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new BadRequestException("Cannot delete delivered order");
+        }
+
+        // Delete order products first (cascade should handle this, but being explicit)
+        orderProductRepository.deleteByOrderId(orderId);
+        orderRepository.delete(order);
+    }
+}
