@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create Project Manager profile -->
+    <changeSet id="18-01-seed-project-manager-profile" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile WHERE id = 'PRJ_MGR1'</sqlCheck>
+        </preConditions>
+        <insert tableName="profile">
+            <column name="id" value="PRJ_MGR1"/>
+            <column name="name" value="Project Manager"/>
+        </insert>
+    </changeSet>
+
+    <!-- Create Merch Manager profile -->
+    <changeSet id="18-02-seed-merch-manager-profile" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile WHERE id = 'MERCH_MG'</sqlCheck>
+        </preConditions>
+        <insert tableName="profile">
+            <column name="id" value="MERCH_MG"/>
+            <column name="name" value="Merch Manager"/>
+        </insert>
+    </changeSet>
+
+    <!-- Assign Project permissions to Project Manager -->
+    <changeSet id="18-03-assign-project-manager-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'PRJ_MGR1'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'PRJ_MGR1'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="PRJ_MGR1"/>
+            <column name="permission_id" value="PPRJ_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="PRJ_MGR1"/>
+            <column name="permission_id" value="PPRJ_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="PRJ_MGR1"/>
+            <column name="permission_id" value="PPRJ_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="PRJ_MGR1"/>
+            <column name="permission_id" value="PPRJ_DEL"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="PRJ_MGR1"/>
+            <column name="permission_id" value="PPRD_RD"/>
+        </insert>
+    </changeSet>
+
+    <!-- Assign Merch permissions to Merch Manager -->
+    <changeSet id="18-04-assign-merch-manager-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'MERCH_MG'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'MERCH_MG'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PPRD_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PPRD_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PPRD_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PPRD_DEL"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PPRJ_RD"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

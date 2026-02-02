@@ -8,6 +8,7 @@ import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +30,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final FamilyProductRepository familyProductRepository;
+    private final ProjectRepository projectRepository;
     private final AuthService authService;
 
     public Product getProductById(@NonNull String productId) {
@@ -58,6 +60,10 @@ public class ProductService {
 
         if (productRepository.existsByName(name)) {
             throw new BadRequestException("Product name already exists");
+        }
+
+        if (projectId != null && !projectId.trim().isEmpty() && !projectRepository.existsById(projectId)) {
+            throw new BadRequestException("Project not found");
         }
 
         Product product = Product.builder()
@@ -107,6 +113,9 @@ public class ProductService {
         }
 
         if (projectId != null && !projectId.trim().isEmpty()) {
+            if (!projectRepository.existsById(projectId)) {
+                throw new BadRequestException("Project not found");
+            }
             product.setProjectId(projectId.trim());
         }
 
@@ -117,6 +126,15 @@ public class ProductService {
         Product product = getProductById(productId);
         // TODO: check if user can delete
         productRepository.delete(product);
+    }
+
+    public Page<Product> listProductsForProject(@NonNull String projectId, String name, Boolean active, @NonNull Pageable pageable) {
+        Specification<Product> spec = Specification.where(null);
+        spec = spec.and(ProductSpecifications.projectIdEquals(projectId));
+        spec = spec.and(ProductSpecifications.nameContains(name));
+        spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
+        spec = spec.and(ProductSpecifications.userHasAccess(Set.of()));
+        return productRepository.findAll(spec, pageable);
     }
 
     private void checkAccess(Product product) {

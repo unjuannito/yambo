@@ -2,6 +2,15 @@
 -- Run this script after the database schema is created
 
 -- ========================================
+-- 0. PROJECTS
+-- ========================================
+
+INSERT INTO project (id, name, active, season)
+VALUES
+    ('PRJ00001', 'Proyecto Barrio', true, '2026'),
+    ('PRJ00002', 'Proyecto Premium', true, '2026');
+
+-- ========================================
 -- 1. FAMILY PRODUCTS
 -- ========================================
 
@@ -41,7 +50,7 @@ INSERT INTO product (id, name, project_id, active, base_price, options, family_p
 VALUES (
     'PROD0001', 
     'Sudadera Barrio', 
-    NULL, 
+    'PRJ00001', 
     true, 
     20.00, 
     '[{"name":"Talla","type":"select","values":[{"id":"s","label":"S","price":0},{"id":"m","label":"M","price":0},{"id":"l","label":"L","price":0},{"id":"xl","label":"XL","price":2}],"required":true},{"name":"Nombre","type":"text_input","values":[],"required":false,"price":5}]',
@@ -52,7 +61,7 @@ INSERT INTO product (id, name, project_id, active, base_price, options, family_p
 VALUES (
     'PROD0002', 
     'Camiseta Barrio', 
-    NULL, 
+    'PRJ00001', 
     true, 
     15.00, 
     '[{"name":"Talla","type":"select","values":[{"id":"s","label":"S","price":0},{"id":"m","label":"M","price":0},{"id":"l","label":"L","price":0}],"required":true},{"name":"Color","type":"select","values":[{"id":"black","label":"Negro","price":0},{"id":"white","label":"Blanco","price":0},{"id":"red","label":"Rojo","price":1}],"required":true}]',
@@ -64,7 +73,7 @@ INSERT INTO product (id, name, project_id, active, base_price, options, family_p
 VALUES (
     'PROD0003', 
     'Sudadera Premium', 
-    NULL, 
+    'PRJ00002', 
     true, 
     35.00, 
     '[{"name":"Talla","type":"select","values":[{"id":"s","label":"S","price":0},{"id":"m","label":"M","price":0},{"id":"l","label":"L","price":0},{"id":"xl","label":"XL","price":3},{"id":"xxl","label":"XXL","price":5}],"required":true},{"name":"Bordado personalizado","type":"text_input","values":[],"required":false,"price":10}]',
@@ -75,7 +84,7 @@ INSERT INTO product (id, name, project_id, active, base_price, options, family_p
 VALUES (
     'PROD0004', 
     'Chaqueta Premium', 
-    NULL, 
+    'PRJ00002', 
     true, 
     50.00, 
     '[{"name":"Talla","type":"select","values":[{"id":"s","label":"S","price":0},{"id":"m","label":"M","price":0},{"id":"l","label":"L","price":0},{"id":"xl","label":"XL","price":5}],"required":true}]',

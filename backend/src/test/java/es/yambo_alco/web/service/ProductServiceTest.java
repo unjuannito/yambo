@@ -4,10 +4,10 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
-import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.ProjectRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,6 +35,9 @@ class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+        @Mock
+        private ProjectRepository projectRepository;
 
     @Mock
     private AuthService authService;
@@ -204,6 +207,7 @@ class ProductServiceTest {
 
         when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.existsByName(name)).thenReturn(false);
+        when(projectRepository.existsById(projectId)).thenReturn(true);
         when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
 
         // When
@@ -237,6 +241,31 @@ class ProductServiceTest {
         assertEquals("Product name already exists", exception.getMessage());
         verify(authService).getCurrentUser(true);
         verify(productRepository).existsByName(name);
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void createProduct_WhenProjectDoesNotExist_ShouldThrowException() {
+        // Given
+        String name = "New Product";
+        String projectId = "PRJ404";
+
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of(Profile.builder().id("ADMIN").build()))
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.existsByName(name)).thenReturn(false);
+        when(projectRepository.existsById(projectId)).thenReturn(false);
+
+        // When & Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> productService.createProduct(name, projectId, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
+        assertEquals("Project not found", exception.getMessage());
+        verify(authService).getCurrentUser(true);
+        verify(productRepository).existsByName(name);
+        verify(projectRepository).existsById(projectId);
         verify(productRepository, never()).save(any());
     }
 
@@ -430,4 +459,25 @@ class ProductServiceTest {
         verify(productRepository).findById(productId);
         // Note: checkAccess is not called when product doesn't exist
     }
+
+        @Test
+        void listProductsForProject_ShouldReturnProjectProducts() {
+                // Given
+                String projectId = "PRJ001";
+                Pageable pageable = PageRequest.of(0, 10);
+                List<Product> products = List.of(
+                                Product.builder().id("P001").name("Project Product 1").projectId(projectId).active(true).build()
+                );
+                Page<Product> expectedPage = new PageImpl<>(products, pageable, products.size());
+
+                doReturn(expectedPage).when(productRepository)
+                                .findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
+
+                // When
+                Page<Product> result = productService.listProductsForProject(projectId, null, true, pageable);
+
+                // Then
+                assertEquals(expectedPage, result);
+                verify(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
+        }
 }

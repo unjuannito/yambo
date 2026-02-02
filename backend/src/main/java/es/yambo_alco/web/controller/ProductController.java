@@ -28,14 +28,14 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('product', 'create')")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
+        BigDecimal basePrice = normalizeBasePrice(request.getBasePrice());
         Product product = productService.createProduct(
                 request.getName(),
                 request.getProjectId(),
                 request.getFamilyProductId(),
-                request.getBasePrice(),
+                basePrice,
                 request.getOptions(),
-                request.getImages()
-        );
+                request.getImages());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ProductResponse(product));
     }
 
@@ -62,16 +62,16 @@ public class ProductController {
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable String id,
             @Valid @RequestBody UpdateProductRequest request) {
+        BigDecimal basePrice = normalizeBasePrice(request.getBasePrice());
         Product product = productService.updateProduct(
                 id,
                 request.getName(),
                 request.getActive(),
                 request.getImages(),
                 request.getOptions(),
-                request.getBasePrice(),
+                basePrice,
                 request.getFamilyProductId(),
-                request.getProjectId()
-        );
+                request.getProjectId());
         return ResponseEntity.ok(new ProductResponse(product));
     }
 
@@ -150,5 +150,16 @@ public class ProductController {
             this.basePrice = basePrice;
             this.finalPrice = finalPrice;
         }
+    }
+
+    private BigDecimal normalizeBasePrice(BigDecimal basePrice) {
+        if (basePrice == null) {
+            return null;
+        }
+        BigDecimal normalized = basePrice.stripTrailingZeros();
+        if (normalized.scale() < 0) {
+            normalized = normalized.setScale(0);
+        }
+        return normalized;
     }
 }

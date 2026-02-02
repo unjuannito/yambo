@@ -21,6 +21,10 @@ public final class ProductSpecifications {
         return (root, query, cb) -> active == null ? null : cb.equal(root.get("active"), active);
     }
 
+    public static Specification<Product> projectIdEquals(String projectId) {
+        return (root, query, cb) -> projectId == null ? null : cb.equal(root.get("projectId"), projectId);
+    }
+
     public static Specification<Product> userHasAccess(Set<String> profileIds) {
         return (root, query, cb) -> {
             if (profileIds == null || profileIds.isEmpty()) {
