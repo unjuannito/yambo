@@ -38,4 +38,12 @@ public class FamilyProduct {
         inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
     private Set<Profile> profiles;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "family_product_project",
+        joinColumns = @JoinColumn(name = "family_product_id"),
+        inverseJoinColumns = @JoinColumn(name = "project_id")
+    )
+    private Set<Project> projects;
 }

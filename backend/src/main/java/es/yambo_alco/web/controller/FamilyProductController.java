@@ -32,7 +32,8 @@ public class FamilyProductController {
         FamilyProduct familyProduct = familyProductService.createFamilyProduct(
                 request.getName(),
                 request.getEndTms(),
-                request.getProfileIds()
+                request.getProfileIds(),
+                request.getProjectIds()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(new FamilyProductResponse(familyProduct));
     }
@@ -64,7 +65,8 @@ public class FamilyProductController {
         FamilyProduct familyProduct = familyProductService.updateFamilyProduct(
                 id,
                 request.getName(),
-                request.getEndTms()
+            request.getEndTms(),
+            request.getProjectIds()
         );
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
@@ -85,6 +87,15 @@ public class FamilyProductController {
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
 
+    @PutMapping("/{id}/projects")
+    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
+    public ResponseEntity<FamilyProductResponse> assignProjects(
+            @PathVariable String id,
+            @Valid @RequestBody AssignProjectsRequest request) {
+        FamilyProduct familyProduct = familyProductService.assignProjectsToFamily(id, request.getProjectIds());
+        return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
+    }
+
     @Data
     public static class CreateFamilyProductRequest {
         @NotBlank(message = "Name is required")
@@ -94,12 +105,15 @@ public class FamilyProductController {
         private LocalDateTime endTms;
 
         private Set<String> profileIds;
+
+        private Set<String> projectIds;
     }
 
     @Data
     public static class UpdateFamilyProductRequest {
         private String name;
         private LocalDateTime endTms;
+        private Set<String> projectIds;
     }
 
     @Data
@@ -109,11 +123,18 @@ public class FamilyProductController {
     }
 
     @Data
+    public static class AssignProjectsRequest {
+        @NotEmpty(message = "Project IDs cannot be empty")
+        private Set<String> projectIds;
+    }
+
+    @Data
     public static class FamilyProductResponse {
         private String id;
         private String name;
         private LocalDateTime endTms;
         private Set<String> profileIds;
+        private Set<String> projectIds;
         private boolean active;
 
         public FamilyProductResponse(FamilyProduct familyProduct) {
@@ -122,6 +143,11 @@ public class FamilyProductController {
             this.endTms = familyProduct.getEndTms();
             this.profileIds = familyProduct.getProfiles() != null
                     ? familyProduct.getProfiles().stream()
+                    .map(p -> p.getId())
+                    .collect(Collectors.toSet())
+                    : Set.of();
+                this.projectIds = familyProduct.getProjects() != null
+                    ? familyProduct.getProjects().stream()
                     .map(p -> p.getId())
                     .collect(Collectors.toSet())
                     : Set.of();

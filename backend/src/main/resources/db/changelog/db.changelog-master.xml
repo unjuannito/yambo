@@ -28,4 +28,5 @@
     <include file="db/changelog/changes/16-add-product-images.xml"/>
     <include file="db/changelog/changes/17-fix-images-column-type.xml"/>
     <include file="db/changelog/changes/18-add-project-roles.xml"/>
+    <include file="db/changelog/changes/19-family-product-projects.xml"/>
 </databaseChangeLog>

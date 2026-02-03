@@ -8,7 +8,6 @@ import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
-import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +29,6 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final FamilyProductRepository familyProductRepository;
-    private final ProjectRepository projectRepository;
     private final AuthService authService;
 
     public Product getProductById(@NonNull String productId) {
@@ -54,7 +52,7 @@ public class ProductService {
         return productRepository.findAll(spec, pageable);
     }
 
-    public Product createProduct(@NonNull String name, String projectId, String familyProductId, @NonNull BigDecimal basePrice, List<ProductOption> options, List<String> images) {
+    public Product createProduct(@NonNull String name, String familyProductId, @NonNull BigDecimal basePrice, List<ProductOption> options, List<String> images) {
         authService.getCurrentUser(true);
         // TODO: check if user can create in this family
 
@@ -62,25 +60,25 @@ public class ProductService {
             throw new BadRequestException("Product name already exists");
         }
 
-        if (projectId != null && !projectId.trim().isEmpty() && !projectRepository.existsById(projectId)) {
-            throw new BadRequestException("Project not found");
+        FamilyProduct familyProduct = null;
+        if (familyProductId != null && !familyProductId.trim().isEmpty()) {
+            familyProduct = familyProductRepository.findById(familyProductId)
+                    .orElseThrow(() -> new BadRequestException("Family product not found"));
         }
 
         Product product = Product.builder()
                 .name(name)
-                .projectId(projectId)
                 .active(true)
                 .basePrice(basePrice)
                 .options(options != null ? options : new ArrayList<>())
                 .images(images != null ? images : new ArrayList<>())
+            .familyProduct(familyProduct)
                 .build();
-
-        // TODO: set familyProduct if provided
 
         return productRepository.save(product);
     }
 
-    public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images, List<ProductOption> options, BigDecimal basePrice, String familyProductId, String projectId) {
+    public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images, List<ProductOption> options, BigDecimal basePrice, String familyProductId) {
         Product product = getProductById(productId);
         // TODO: check if user can update
 
@@ -108,15 +106,14 @@ public class ProductService {
         }
 
         if (familyProductId != null) {
-            FamilyProduct familyProduct = familyProductRepository.findById(familyProductId).orElse(null);
-            product.setFamilyProduct(familyProduct);
-        }
-
-        if (projectId != null && !projectId.trim().isEmpty()) {
-            if (!projectRepository.existsById(projectId)) {
-                throw new BadRequestException("Project not found");
+            String trimmedFamilyId = familyProductId.trim();
+            if (trimmedFamilyId.isEmpty()) {
+                product.setFamilyProduct(null);
+            } else {
+                FamilyProduct familyProduct = familyProductRepository.findById(trimmedFamilyId)
+                        .orElseThrow(() -> new BadRequestException("Family product not found"));
+                product.setFamilyProduct(familyProduct);
             }
-            product.setProjectId(projectId.trim());
         }
 
         return productRepository.save(product);
@@ -130,10 +127,9 @@ public class ProductService {
 
     public Page<Product> listProductsForProject(@NonNull String projectId, String name, Boolean active, @NonNull Pageable pageable) {
         Specification<Product> spec = Specification.where(null);
-        spec = spec.and(ProductSpecifications.projectIdEquals(projectId));
+        spec = spec.and(ProductSpecifications.projectIdInFamilyProjects(projectId));
         spec = spec.and(ProductSpecifications.nameContains(name));
         spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
-        spec = spec.and(ProductSpecifications.userHasAccess(Set.of()));
         return productRepository.findAll(spec, pageable);
     }
 

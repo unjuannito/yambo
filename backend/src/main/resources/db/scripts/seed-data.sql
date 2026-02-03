@@ -42,6 +42,16 @@ VALUES
     ('FAM00003', 'PREMIUM');
 
 -- ========================================
+-- 2.1 FAMILY PRODUCT - PROJECT RELATIONS
+-- ========================================
+
+INSERT INTO family_product_project (family_product_id, project_id)
+VALUES
+    ('FAM00001', 'PRJ00001'),
+    ('FAM00002', 'PRJ00002'),
+    ('FAM00003', 'PRJ00001');
+
+-- ========================================
 -- 3. PRODUCTS
 -- ========================================
 

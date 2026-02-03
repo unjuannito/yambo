@@ -56,20 +56,18 @@ class ProductControllerTest {
         Product product = Product.builder()
                 .id("PROD001")
                 .name("Merch 1")
-                .projectId("PRJ001")
                 .active(true)
                 .basePrice(BigDecimal.TEN)
                 .options(List.of())
                 .images(List.of("img.png"))
                 .build();
 
-        when(productService.createProduct(eq("Merch 1"), eq("PRJ001"), eq("FAM001"), eq(BigDecimal.TEN), any(), any()))
+        when(productService.createProduct(eq("Merch 1"), eq("FAM001"), eq(BigDecimal.TEN), any(), any()))
                 .thenReturn(product);
 
         String payload = """
                 {
                     "name": "Merch 1",
-                    "projectId": "PRJ001",
                     "familyProductId": "FAM001",
                     "basePrice": 10.00,
                     "options": [],
@@ -82,7 +80,6 @@ class ProductControllerTest {
                 .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("PROD001"))
-                .andExpect(jsonPath("$.projectId").value("PRJ001"))
                 .andExpect(jsonPath("$.basePrice").value(10));
     }
 
@@ -134,7 +131,7 @@ class ProductControllerTest {
                 .basePrice(BigDecimal.valueOf(12))
                 .build();
 
-        when(productService.updateProduct(eq("PROD001"), eq("Merch Updated"), eq(false), any(), any(), eq(BigDecimal.valueOf(12)), eq(null), eq("PRJ001")))
+        when(productService.updateProduct(eq("PROD001"), eq("Merch Updated"), eq(false), any(), any(), eq(BigDecimal.valueOf(12)), eq(null)))
                 .thenReturn(product);
 
         String payload = """
@@ -142,7 +139,7 @@ class ProductControllerTest {
                     "name": "Merch Updated",
                     "active": false,
                     "basePrice": 12.00,
-                    "projectId": "PRJ001"
+                                        "familyProductId": null
                 }
                 """;
 

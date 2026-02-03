@@ -7,7 +7,6 @@ import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.ProductRepository;
-import es.yambo_alco.web.repository.ProjectRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,8 +35,6 @@ class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
 
-        @Mock
-        private ProjectRepository projectRepository;
 
     @Mock
     private AuthService authService;
@@ -189,7 +186,6 @@ class ProductServiceTest {
     void createProduct_WhenValidData_ShouldCreateAndReturnProduct() {
         // Given
         String name = "New Product";
-        String projectId = "PRJ001";
         String familyProductId = null;
 
         User user = User.builder()
@@ -199,7 +195,6 @@ class ProductServiceTest {
 
         Product expectedProduct = Product.builder()
                 .name(name)
-                .projectId(projectId)
                 .active(true)
                 .basePrice(BigDecimal.valueOf(10.00))
                 .options(new ArrayList<>())
@@ -207,11 +202,10 @@ class ProductServiceTest {
 
         when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.existsByName(name)).thenReturn(false);
-        when(projectRepository.existsById(projectId)).thenReturn(true);
         when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
 
         // When
-        Product result = productService.createProduct(name, projectId, familyProductId, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+        Product result = productService.createProduct(name, familyProductId, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
 
 
         // Then
@@ -225,7 +219,6 @@ class ProductServiceTest {
     void createProduct_WhenNameAlreadyExists_ShouldThrowException() {
         // Given
         String name = "Existing Product";
-        String projectId = "PRJ001";
 
         User user = User.builder()
                 .id("U001")
@@ -237,7 +230,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.createProduct(name, projectId, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
+                () -> productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
         assertEquals("Product name already exists", exception.getMessage());
         verify(authService).getCurrentUser(true);
         verify(productRepository).existsByName(name);
@@ -245,10 +238,9 @@ class ProductServiceTest {
     }
 
     @Test
-    void createProduct_WhenProjectDoesNotExist_ShouldThrowException() {
+        void createProduct_WhenNoFamilyProduct_ShouldCreateProduct() {
         // Given
         String name = "New Product";
-        String projectId = "PRJ404";
 
         User user = User.builder()
                 .id("U001")
@@ -256,18 +248,15 @@ class ProductServiceTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
-        when(productRepository.existsByName(name)).thenReturn(false);
-        when(projectRepository.existsById(projectId)).thenReturn(false);
+                when(productRepository.existsByName(name)).thenReturn(false);
 
-        // When & Then
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.createProduct(name, projectId, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
-        assertEquals("Project not found", exception.getMessage());
-        verify(authService).getCurrentUser(true);
-        verify(productRepository).existsByName(name);
-        verify(projectRepository).existsById(projectId);
-        verify(productRepository, never()).save(any());
-    }
+                // When & Then
+                Product result = productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+                assertNotNull(result);
+                verify(authService).getCurrentUser(true);
+                verify(productRepository).existsByName(name);
+                verify(productRepository).save(any());
+        }
 
     @Test
     void updateProduct_WhenValidData_ShouldUpdateAndReturnProduct() {
@@ -299,7 +288,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, newName, newActive, null, null, null, null, null);
+        Product result = productService.updateProduct(productId, newName, newActive, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -332,7 +321,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.updateProduct(productId, newName, null, null, null, null, null, null));
+                () -> productService.updateProduct(productId, newName, null, null, null, null, null));
         assertEquals("Product name already exists", exception.getMessage());
         verify(productRepository).findById(productId);
         verify(authService).getCurrentUser(true);
@@ -370,7 +359,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, sameName, newActive, null, null, null, null, null);
+        Product result = productService.updateProduct(productId, sameName, newActive, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -408,7 +397,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, null, newActive, null, null, null, null, null);
+        Product result = productService.updateProduct(productId, null, newActive, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);

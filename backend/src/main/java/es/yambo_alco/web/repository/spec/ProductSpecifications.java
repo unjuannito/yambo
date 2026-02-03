@@ -3,6 +3,7 @@ package es.yambo_alco.web.repository.spec;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Project;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
@@ -23,6 +24,17 @@ public final class ProductSpecifications {
 
     public static Specification<Product> projectIdEquals(String projectId) {
         return (root, query, cb) -> projectId == null ? null : cb.equal(root.get("projectId"), projectId);
+    }
+
+    public static Specification<Product> projectIdInFamilyProjects(String projectId) {
+        return (root, query, cb) -> {
+            if (projectId == null) {
+                return null;
+            }
+            Join<Product, FamilyProduct> familyJoin = root.join("familyProduct", JoinType.LEFT);
+            Join<FamilyProduct, Project> projectJoin = familyJoin.join("projects", JoinType.LEFT);
+            return cb.equal(projectJoin.get("id"), projectId);
+        };
     }
 
     public static Specification<Product> userHasAccess(Set<String> profileIds) {

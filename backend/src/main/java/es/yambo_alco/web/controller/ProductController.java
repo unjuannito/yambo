@@ -31,7 +31,6 @@ public class ProductController {
         BigDecimal basePrice = normalizeBasePrice(request.getBasePrice());
         Product product = productService.createProduct(
                 request.getName(),
-                request.getProjectId(),
                 request.getFamilyProductId(),
                 basePrice,
                 request.getOptions(),
@@ -70,8 +69,7 @@ public class ProductController {
                 request.getImages(),
                 request.getOptions(),
                 basePrice,
-                request.getFamilyProductId(),
-                request.getProjectId());
+            request.getFamilyProductId());
         return ResponseEntity.ok(new ProductResponse(product));
     }
 
@@ -95,8 +93,6 @@ public class ProductController {
         @NotBlank(message = "Name is required")
         private String name;
 
-        private String projectId;
-
         private String familyProductId;
 
         @NotNull(message = "Base price is required")
@@ -115,14 +111,12 @@ public class ProductController {
         private List<ProductOption> options;
         private BigDecimal basePrice;
         private String familyProductId;
-        private String projectId;
     }
 
     @Data
     public static class ProductResponse {
         private String id;
         private String name;
-        private String projectId;
         private String familyProductId;
         private boolean active;
         private BigDecimal basePrice;
@@ -132,7 +126,6 @@ public class ProductController {
         public ProductResponse(Product product) {
             this.id = product.getId();
             this.name = product.getName();
-            this.projectId = product.getProjectId();
             this.familyProductId = product.getFamilyProduct() != null ? product.getFamilyProduct().getId() : null;
             this.active = product.isActive();
             this.basePrice = product.getBasePrice();
