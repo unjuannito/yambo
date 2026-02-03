@@ -29,11 +29,12 @@ public class OrderService {
     private final AuthService authService;
 
     @Transactional
-    public Order createOrder(@NonNull Integer customerId, @NonNull List<OrderProduct> orderProducts) {
+    public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
         if (orderProducts.isEmpty()) {
             throw new BadRequestException("Order must contain at least one product");
         }
 
+        // Get current user for validation
         User currentUser = authService.getCurrentUser(true);
         LocalDateTime now = LocalDateTime.now();
 
@@ -42,7 +43,6 @@ public class OrderService {
             Product product = productRepository.findById(op.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
             
-            // Validate product access
             validateProductAccess(currentUser, product, now);
         }
 
@@ -73,20 +73,28 @@ public class OrderService {
         
         // Check if family is currently valid (within time range)
         if (now.isBefore(family.getStartTms())) {
-            throw new BadRequestException("Product '" + product.getName() + "' is not yet available. Available from: " + family.getStartTms());
+            throw new BadRequestException(
+                String.format("Product '%s' is not yet available. Available from: %s", 
+                    product.getName(), family.getStartTms())
+            );
         }
         if (now.isAfter(family.getEndTms())) {
-            throw new BadRequestException("Product '" + product.getName() + "' is no longer available. Expired on: " + family.getEndTms());
+            throw new BadRequestException(
+                String.format("Product '%s' is no longer available. Expired on: %s", 
+                    product.getName(), family.getEndTms())
+            );
         }
 
-        // Check if user has the required profile
-        Profile requiredProfile = family.getProfile();
-        if (requiredProfile != null) {
+        // Check if user has required profile
+        if (family.getProfile() != null) {
             boolean hasProfile = user.getProfiles().stream()
-                    .anyMatch(p -> p.getId().equals(requiredProfile.getId()));
+                    .anyMatch(p -> p.getId().equals(family.getProfile().getId()));
             
             if (!hasProfile) {
-                throw new BadRequestException("You don't have access to product '" + product.getName() + "'. Required profile: " + requiredProfile.getName());
+                throw new BadRequestException(
+                    String.format("You don't have access to product '%s'. Required profile: %s", 
+                        product.getName(), family.getProfile().getName())
+                );
             }
         }
     }
@@ -96,7 +104,7 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
-    public Page<Order> listOrders(Integer customerId, OrderStatus status, 
+    public Page<Order> listOrders(String customerId, OrderStatus status, 
                                    LocalDateTime startDate, LocalDateTime endDate,
                                    @NonNull Pageable pageable) {
         Specification<Order> spec = Specification.where(null);
@@ -145,7 +153,7 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    public List<Order> getOrdersByCustomer(@NonNull Integer customerId) {
+    public List<Order> getOrdersByCustomer(@NonNull String customerId) {
         Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
         return orderRepository.findAll(spec);
     }

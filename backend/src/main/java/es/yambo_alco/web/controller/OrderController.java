@@ -35,6 +35,7 @@ public class OrderController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
+        User currentUser = authService.getCurrentUser(true);
         List<OrderProduct> orderProducts = request.getProducts().stream()
                 .map(p -> OrderProduct.builder()
                         .productId(p.getProductId())
@@ -44,7 +45,7 @@ public class OrderController {
                         .build())
                 .collect(Collectors.toList());
 
-        Order order = orderService.createOrder(request.getCustomerId(), orderProducts);
+        Order order = orderService.createOrder(currentUser.getId(), orderProducts);
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new OrderResponse(order, products));
     }
@@ -52,7 +53,7 @@ public class OrderController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<OrderResponse>> listOrders(
-            @RequestParam(required = false) Integer customerId,
+            @RequestParam(required = false) String customerId,
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
@@ -94,9 +95,8 @@ public class OrderController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<OrderResponse>> getMyOrders() {
         User user = authService.getCurrentUser(true);
-        // Assuming user ID can be used as customerId or there's a mapping
-        // For now, we'll use a placeholder - needs proper implementation
-        List<Order> orders = orderService.getOrdersByCustomer(Integer.parseInt(user.getId(), 16));
+
+        List<Order> orders = orderService.getOrdersByCustomer(user.getId());
         List<OrderResponse> response = orders.stream()
                 .map(order -> {
                     List<OrderProduct> products = orderService.getOrderProducts(order.getId());
@@ -108,9 +108,6 @@ public class OrderController {
 
     @Data
     public static class CreateOrderRequest {
-        @NotNull(message = "Customer ID is required")
-        private Integer customerId;
-
         @NotEmpty(message = "Order must contain at least one product")
         private List<OrderProductRequest> products;
     }
@@ -138,9 +135,8 @@ public class OrderController {
     @Data
     public static class OrderResponse {
         private String id;
-        private Integer customerId;
+        private String customerId;
         private OrderStatus status;
-        private Integer paymentId;
         private LocalDateTime createdAt;
         private List<OrderProductResponse> products;
 
@@ -148,7 +144,6 @@ public class OrderController {
             this.id = order.getId();
             this.customerId = order.getCustomerId();
             this.status = order.getStatus();
-            this.paymentId = order.getPaymentId();
             this.createdAt = order.getCreatedAt();
             this.products = products.stream()
                     .map(OrderProductResponse::new)

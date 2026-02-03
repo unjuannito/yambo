@@ -48,7 +48,7 @@ class OrderServiceTest {
     @Test
     void createOrder_WhenNoProducts_ShouldThrowException() {
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.createOrder(1001, List.of()));
+                () -> orderService.createOrder("USER001", List.of()));
         assertEquals("Order must contain at least one product", exception.getMessage());
         verify(orderRepository, never()).save(any());
     }
@@ -65,7 +65,7 @@ class OrderServiceTest {
         when(productRepository.findById("PROD404")).thenReturn(Optional.empty());
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                () -> orderService.createOrder(1001, List.of(orderProduct)));
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
         assertEquals("Product not found: PROD404", exception.getMessage());
         verify(orderRepository, never()).save(any());
     }
@@ -100,7 +100,7 @@ class OrderServiceTest {
             return saved;
         });
 
-        Order result = orderService.createOrder(1001, List.of(orderProduct));
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
 
         assertEquals("ORD001", result.getId());
         verify(orderRepository).save(any(Order.class));
@@ -149,7 +149,7 @@ class OrderServiceTest {
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.createOrder(1001, List.of(orderProduct)));
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
         assertTrue(exception.getMessage().contains("no longer available"));
     }
 
@@ -192,7 +192,7 @@ class OrderServiceTest {
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.createOrder(1001, List.of(orderProduct)));
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
         assertTrue(exception.getMessage().contains("not yet available"));
     }
 
@@ -240,7 +240,7 @@ class OrderServiceTest {
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.createOrder(1001, List.of(orderProduct)));
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
         assertTrue(exception.getMessage().contains("don't have access"));
         assertTrue(exception.getMessage().contains("Required profile: Premium"));
     }
@@ -288,7 +288,7 @@ class OrderServiceTest {
             return saved;
         });
 
-        Order result = orderService.createOrder(1001, List.of(orderProduct));
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
 
         assertEquals("ORD001", result.getId());
         verify(orderRepository).save(any(Order.class));
@@ -387,7 +387,7 @@ class OrderServiceTest {
         when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
             .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
 
-        orderService.listOrders(1001, OrderStatus.CONFIRMED, LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
+        orderService.listOrders("USER001", OrderStatus.CONFIRMED, LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
 
         verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
     }

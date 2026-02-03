@@ -24,14 +24,11 @@ public class Order {
     private String id;
 
     @Column(name = "customer_id", nullable = false)
-    private Integer customerId;
+    private String customerId;
 
     @Column(nullable = false)
     @Enumerated(EnumType.ORDINAL)
     private OrderStatus status;
-
-    @Column(name = "payment_id")
-    private Integer paymentId;
 
     @Builder.Default
     @Column(name = "created_at", nullable = false)
