@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="21-01-create-promotion-invitation" author="yambo">
+        <createTable tableName="promotion_invitation">
+            <column name="id" type="bigserial" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="token" type="varchar(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invited_by" type="char(8)">
+                <constraints nullable="true" foreignKeyName="fk_promotion_invited_by" references="user(id)"/>
+            </column>
+        </createTable>
+        <createIndex indexName="idx_promotion_invitation_token" tableName="promotion_invitation">
+            <column name="token"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="21-02-create-promotion-invitation-family-product" author="yambo">
+        <createTable tableName="promotion_invitation_family_product">
+            <column name="promotion_invitation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="family_product_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="promotion_invitation_family_product"
+                       columnNames="promotion_invitation_id, family_product_id"
+                       constraintName="pk_promotion_invitation_family_product"/>
+        <addForeignKeyConstraint
+            baseTableName="promotion_invitation_family_product"
+            baseColumnNames="promotion_invitation_id"
+            referencedTableName="promotion_invitation"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_invitation_family_product_inv"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="promotion_invitation_family_product"
+            baseColumnNames="family_product_id"
+            referencedTableName="family_product"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_invitation_family_product_family"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="21-03-create-promotion-invitation-registration" author="yambo">
+        <createTable tableName="promotion_invitation_registration">
+            <column name="id" type="bigserial" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="promotion_invitation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="registered_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="promotion_invitation_registration"
+            baseColumnNames="promotion_invitation_id"
+            referencedTableName="promotion_invitation"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_invitation_registration_inv"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="promotion_invitation_registration"
+            baseColumnNames="user_id"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_invitation_registration_user"
+            onDelete="CASCADE"/>
+        <addUniqueConstraint
+            tableName="promotion_invitation_registration"
+            columnNames="promotion_invitation_id, user_id"
+            constraintName="uk_promotion_invitation_registration_unique"/>
+    </changeSet>
+
+</databaseChangeLog>

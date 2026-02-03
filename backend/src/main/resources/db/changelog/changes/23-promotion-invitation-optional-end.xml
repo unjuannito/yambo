@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="23-01-make-promotion-invitation-end-nullable" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="promotion_invitation" columnName="expires_at"/>
+        </preConditions>
+        <sql>
+            ALTER TABLE promotion_invitation DROP CONSTRAINT IF EXISTS chk_promotion_invitation_range;
+        </sql>
+        <dropNotNullConstraint tableName="promotion_invitation" columnName="expires_at" columnDataType="timestamp"/>
+    </changeSet>
+
+</databaseChangeLog>

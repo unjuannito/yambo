@@ -30,4 +30,7 @@
     <include file="db/changelog/changes/18-add-project-roles.xml"/>
     <include file="db/changelog/changes/19-family-product-projects.xml"/>
     <include file="db/changelog/changes/20-family-product-start-and-drop-promotions.xml"/>
+    <include file="db/changelog/changes/21-promotion-invitations.xml"/>
+    <include file="db/changelog/changes/22-promotion-invitation-start.xml"/>
+    <include file="db/changelog/changes/23-promotion-invitation-optional-end.xml"/>
 </databaseChangeLog>
