@@ -11,16 +11,16 @@
             <column name="profile_id" type="char(8)"/>
         </addColumn>
 
-        <sql>
+        <sql><![CDATA[
             UPDATE family_product fp
             SET profile_id = (
                 SELECT MIN(fpp.profile_id)
                 FROM family_product_profile fpp
                 WHERE fpp.family_product_id = fp.id
             )
-        </sql>
+        ]]></sql>
 
-        <sql>
+        <sql><![CDATA[
             WITH canonical AS (
                 SELECT profile_id, MIN(id) AS keep_id
                 FROM family_product
@@ -33,9 +33,9 @@
             JOIN canonical c ON c.profile_id = fp.profile_id
             WHERE p.family_product_id = fp.id
               AND p.family_product_id <> c.keep_id
-        </sql>
+        ]]></sql>
 
-        <sql>
+        <sql><![CDATA[
             WITH canonical AS (
                 SELECT profile_id, MIN(id) AS keep_id
                 FROM family_product
@@ -48,9 +48,9 @@
             JOIN canonical c ON c.profile_id = fp.profile_id
             WHERE fpproj.family_product_id = fp.id
               AND fpproj.family_product_id <> c.keep_id
-        </sql>
+        ]]></sql>
 
-        <sql>
+        <sql><![CDATA[
             WITH canonical AS (
                 SELECT profile_id, MIN(id) AS keep_id
                 FROM family_product
@@ -63,9 +63,9 @@
             JOIN canonical c ON c.profile_id = fp.profile_id
             WHERE pifp.family_product_id = fp.id
               AND pifp.family_product_id <> c.keep_id
-        </sql>
+        ]]></sql>
 
-        <sql>
+        <sql><![CDATA[
             WITH canonical AS (
                 SELECT profile_id, MIN(id) AS keep_id
                 FROM family_product
@@ -76,7 +76,7 @@
             USING canonical c
             WHERE fp.profile_id = c.profile_id
               AND fp.id <> c.keep_id
-        </sql>
+        ]]></sql>
 
         <addNotNullConstraint tableName="family_product" columnName="profile_id" columnDataType="char(8)"/>
         <addUniqueConstraint tableName="family_product" columnNames="profile_id" constraintName="uk_family_product_profile"/>
