@@ -2,8 +2,7 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.Order;
-import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -27,6 +26,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ProductRepository productRepository;
+    private final AuthService authService;
 
     @Transactional
     public Order createOrder(@NonNull Integer customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -34,17 +34,22 @@ public class OrderService {
             throw new BadRequestException("Order must contain at least one product");
         }
 
-        // Validate all products exist
+        User currentUser = authService.getCurrentUser(true);
+        LocalDateTime now = LocalDateTime.now();
+
+        // Validate all products exist and user has access
         for (OrderProduct op : orderProducts) {
-            if (!productRepository.existsById(op.getProductId())) {
-                throw new ResourceNotFoundException("Product not found: " + op.getProductId());
-            }
+            Product product = productRepository.findById(op.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
+            
+            // Validate product access
+            validateProductAccess(currentUser, product, now);
         }
 
         Order order = Order.builder()
                 .customerId(customerId)
                 .status(OrderStatus.PENDING_CONFIRMATION)
-                .createdAt(LocalDateTime.now())
+                .createdAt(now)
                 .build();
 
         order = orderRepository.save(order);
@@ -56,6 +61,34 @@ public class OrderService {
         }
 
         return order;
+    }
+
+    private void validateProductAccess(User user, Product product, LocalDateTime now) {
+        // If product has no family, it's accessible to all
+        if (product.getFamilyProduct() == null) {
+            return;
+        }
+
+        FamilyProduct family = product.getFamilyProduct();
+        
+        // Check if family is currently valid (within time range)
+        if (now.isBefore(family.getStartTms())) {
+            throw new BadRequestException("Product '" + product.getName() + "' is not yet available. Available from: " + family.getStartTms());
+        }
+        if (now.isAfter(family.getEndTms())) {
+            throw new BadRequestException("Product '" + product.getName() + "' is no longer available. Expired on: " + family.getEndTms());
+        }
+
+        // Check if user has the required profile
+        Profile requiredProfile = family.getProfile();
+        if (requiredProfile != null) {
+            boolean hasProfile = user.getProfiles().stream()
+                    .anyMatch(p -> p.getId().equals(requiredProfile.getId()));
+            
+            if (!hasProfile) {
+                throw new BadRequestException("You don't have access to product '" + product.getName() + "'. Required profile: " + requiredProfile.getName());
+            }
+        }
     }
 
     public Order getOrderById(@NonNull String orderId) {
