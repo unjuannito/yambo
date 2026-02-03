@@ -1,4 +1,4 @@
--- Sample data for Yambo products, families, promotions, and orders
+-- Sample data for Yambo products, families, and orders
 -- Run this script after the database schema is created
 
 -- ========================================
@@ -15,16 +15,16 @@ VALUES
 -- ========================================
 
 -- Family: Ropa Barrio (expires in 1 year)
-INSERT INTO family_product (id, name, end_tms) 
-VALUES ('FAM00001', 'Ropa Barrio', CURRENT_TIMESTAMP + INTERVAL '1 year');
+INSERT INTO family_product (id, name, start_tms, end_tms) 
+VALUES ('FAM00001', 'Ropa Barrio', CURRENT_TIMESTAMP - INTERVAL '7 days', CURRENT_TIMESTAMP + INTERVAL '1 year');
 
 -- Family: Ropa Premium (expires in 2 years)
-INSERT INTO family_product (id, name, end_tms) 
-VALUES ('FAM00002', 'Ropa Premium', CURRENT_TIMESTAMP + INTERVAL '2 years');
+INSERT INTO family_product (id, name, start_tms, end_tms) 
+VALUES ('FAM00002', 'Ropa Premium', CURRENT_TIMESTAMP - INTERVAL '14 days', CURRENT_TIMESTAMP + INTERVAL '2 years');
 
 -- Family: Accesorios (expires in 6 months)
-INSERT INTO family_product (id, name, end_tms) 
-VALUES ('FAM00003', 'Accesorios', CURRENT_TIMESTAMP + INTERVAL '6 months');
+INSERT INTO family_product (id, name, start_tms, end_tms) 
+VALUES ('FAM00003', 'Accesorios', CURRENT_TIMESTAMP - INTERVAL '3 days', CURRENT_TIMESTAMP + INTERVAL '6 months');
 
 -- ========================================
 -- 2. FAMILY PRODUCT - PROFILE RELATIONS
@@ -125,38 +125,7 @@ VALUES (
 );
 
 -- ========================================
--- 4. PROMOTIONS
--- ========================================
-
--- Active promotion for STUDENT profile (30 days)
-INSERT INTO promotion (id, start_tms, end_tms, profile_id)
-VALUES (
-    'PROMO001',
-    CURRENT_TIMESTAMP - INTERVAL '5 days',
-    CURRENT_TIMESTAMP + INTERVAL '25 days',
-    'STUDENT'
-);
-
--- Future promotion for PREMIUM profile (starts in 10 days, lasts 60 days)
-INSERT INTO promotion (id, start_tms, end_tms, profile_id)
-VALUES (
-    'PROMO002',
-    CURRENT_TIMESTAMP + INTERVAL '10 days',
-    CURRENT_TIMESTAMP + INTERVAL '70 days',
-    'PREMIUM'
-);
-
--- Expired promotion for BASIC profile
-INSERT INTO promotion (id, start_tms, end_tms, profile_id)
-VALUES (
-    'PROMO003',
-    CURRENT_TIMESTAMP - INTERVAL '60 days',
-    CURRENT_TIMESTAMP - INTERVAL '30 days',
-    'BASIC'
-);
-
--- ========================================
--- 5. SAMPLE ORDERS
+-- 4. SAMPLE ORDERS
 -- ========================================
 
 -- Order 1: PENDING_CONFIRMATION (status=0)

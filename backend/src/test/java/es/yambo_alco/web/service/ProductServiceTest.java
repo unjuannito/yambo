@@ -247,12 +247,21 @@ class ProductServiceTest {
                 .profiles(Set.of(Profile.builder().id("ADMIN").build()))
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
-                when(productRepository.existsByName(name)).thenReturn(false);
+        Product expectedProduct = Product.builder()
+                .name(name)
+                .active(true)
+                .basePrice(BigDecimal.valueOf(10.00))
+                .options(new ArrayList<>())
+                .images(new ArrayList<>())
+                .build();
 
-                // When & Then
-                Product result = productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
-                assertNotNull(result);
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.existsByName(name)).thenReturn(false);
+        when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
+
+        // When & Then
+        Product result = productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+        assertNotNull(result);
                 verify(authService).getCurrentUser(true);
                 verify(productRepository).existsByName(name);
                 verify(productRepository).save(any());

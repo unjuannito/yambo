@@ -84,7 +84,7 @@ public class ProductController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PriceResponse> getProductPrice(@PathVariable String id) {
         Product product = productService.getProductById(id);
-        // TODO: Calculate price with promotions
+        // TODO: Calculate price with rules
         return ResponseEntity.ok(new PriceResponse(product.getBasePrice(), product.getBasePrice()));
     }
 

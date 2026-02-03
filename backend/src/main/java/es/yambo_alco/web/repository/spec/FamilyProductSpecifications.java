@@ -26,7 +26,13 @@ public final class FamilyProductSpecifications {
     }
 
     public static Specification<FamilyProduct> activeAt(LocalDateTime dateTime) {
-        return (root, query, cb) -> dateTime == null ? null : cb.greaterThanOrEqualTo(root.get("endTms"), dateTime);
+        return (root, query, cb) -> {
+            if (dateTime == null) return null;
+            return cb.and(
+                    cb.lessThanOrEqualTo(root.get("startTms"), dateTime),
+                    cb.greaterThanOrEqualTo(root.get("endTms"), dateTime)
+            );
+        };
     }
 
     public static Specification<FamilyProduct> expired() {

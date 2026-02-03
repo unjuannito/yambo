@@ -31,6 +31,7 @@ public class FamilyProductController {
     public ResponseEntity<FamilyProductResponse> createFamilyProduct(@Valid @RequestBody CreateFamilyProductRequest request) {
         FamilyProduct familyProduct = familyProductService.createFamilyProduct(
                 request.getName(),
+            request.getStartTms(),
                 request.getEndTms(),
                 request.getProfileIds(),
                 request.getProjectIds()
@@ -65,8 +66,9 @@ public class FamilyProductController {
         FamilyProduct familyProduct = familyProductService.updateFamilyProduct(
                 id,
                 request.getName(),
-            request.getEndTms(),
-            request.getProjectIds()
+                request.getStartTms(),
+                request.getEndTms(),
+                request.getProjectIds()
         );
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
@@ -101,6 +103,9 @@ public class FamilyProductController {
         @NotBlank(message = "Name is required")
         private String name;
 
+        @NotNull(message = "Start date is required")
+        private LocalDateTime startTms;
+
         @NotNull(message = "End date is required")
         private LocalDateTime endTms;
 
@@ -112,6 +117,7 @@ public class FamilyProductController {
     @Data
     public static class UpdateFamilyProductRequest {
         private String name;
+        private LocalDateTime startTms;
         private LocalDateTime endTms;
         private Set<String> projectIds;
     }
@@ -132,6 +138,7 @@ public class FamilyProductController {
     public static class FamilyProductResponse {
         private String id;
         private String name;
+        private LocalDateTime startTms;
         private LocalDateTime endTms;
         private Set<String> profileIds;
         private Set<String> projectIds;
@@ -140,6 +147,7 @@ public class FamilyProductController {
         public FamilyProductResponse(FamilyProduct familyProduct) {
             this.id = familyProduct.getId();
             this.name = familyProduct.getName();
+                this.startTms = familyProduct.getStartTms();
             this.endTms = familyProduct.getEndTms();
             this.profileIds = familyProduct.getProfiles() != null
                     ? familyProduct.getProfiles().stream()
@@ -151,7 +159,9 @@ public class FamilyProductController {
                     .map(p -> p.getId())
                     .collect(Collectors.toSet())
                     : Set.of();
-            this.active = familyProduct.getEndTms().isAfter(LocalDateTime.now());
+                LocalDateTime now = LocalDateTime.now();
+                this.active = (familyProduct.getStartTms() == null || !familyProduct.getStartTms().isAfter(now))
+                    && familyProduct.getEndTms().isAfter(now);
         }
     }
 }

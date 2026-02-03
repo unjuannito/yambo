@@ -31,16 +31,15 @@ public class FamilyProductService {
     private final ProjectRepository projectRepository;
 
     @Transactional
-    public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime endTms,
+    public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms, @NonNull LocalDateTime endTms,
                                              Set<String> profileIds, Set<String> projectIds) {
         // Validate name uniqueness
         if (familyProductRepository.existsByName(name)) {
             throw new BadRequestException("Family product name already exists");
         }
 
-        // Validate end date is in the future
-        if (endTms.isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("End date must be in the future");
+        if (startTms.isAfter(endTms)) {
+            throw new BadRequestException("Start date must be before end date");
         }
 
         Set<Profile> profiles = resolveProfiles(profileIds);
@@ -48,6 +47,7 @@ public class FamilyProductService {
 
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .name(name)
+            .startTms(startTms)
                 .endTms(endTms)
                 .profiles(profiles)
             .projects(projects)
@@ -83,7 +83,7 @@ public class FamilyProductService {
     }
 
     @Transactional
-    public FamilyProduct updateFamilyProduct(@NonNull String id, String name, LocalDateTime endTms, Set<String> projectIds) {
+    public FamilyProduct updateFamilyProduct(@NonNull String id, String name, LocalDateTime startTms, LocalDateTime endTms, Set<String> projectIds) {
         FamilyProduct familyProduct = getFamilyProductById(id);
 
         if (name != null && !name.trim().isEmpty()) {
@@ -93,8 +93,17 @@ public class FamilyProductService {
             familyProduct.setName(name.trim());
         }
 
+        if (startTms != null) {
+            familyProduct.setStartTms(startTms);
+        }
+
         if (endTms != null) {
             familyProduct.setEndTms(endTms);
+        }
+
+        if (familyProduct.getStartTms() != null && familyProduct.getEndTms() != null
+                && familyProduct.getStartTms().isAfter(familyProduct.getEndTms())) {
+            throw new BadRequestException("Start date must be before end date");
         }
 
         if (projectIds != null) {

@@ -28,6 +28,9 @@ public class FamilyProduct {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "start_tms", nullable = false)
+    private LocalDateTime startTms;
+
     @Column(name = "end_tms", nullable = false)
     private LocalDateTime endTms;
 
