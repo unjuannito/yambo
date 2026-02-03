@@ -38,10 +38,10 @@ public class PromotionInvitation {
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "promotion_invitation_family_product",
+        name = "promotion_invitation_profile",
         joinColumns = @JoinColumn(name = "promotion_invitation_id"),
-        inverseJoinColumns = @JoinColumn(name = "family_product_id")
+        inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
     @Builder.Default
-    private Set<FamilyProduct> familyProducts = Set.of();
+    private Set<Profile> profiles = Set.of();
 }

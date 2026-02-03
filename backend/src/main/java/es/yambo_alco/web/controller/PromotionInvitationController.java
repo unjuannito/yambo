@@ -34,7 +34,7 @@ public class PromotionInvitationController {
         User user = authService.getCurrentUser(true);
         PromotionInvitation invitation = promotionInvitationService.createPromotionInvitation(
             user.getId(),
-            request.getFamilyProductIds(),
+            request.getProfileIds(),
             request.getStartTms(),
             request.getEndTms());
         return ResponseEntity.status(HttpStatus.CREATED).body(new PromotionInvitationResponse(invitation));
@@ -73,7 +73,7 @@ public class PromotionInvitationController {
     @Data
     public static class PromotionInvitationRequest {
         @NotEmpty
-        private Set<String> familyProductIds;
+        private Set<String> profileIds;
 
         private LocalDateTime startTms;
 
@@ -104,7 +104,7 @@ public class PromotionInvitationController {
         private LocalDateTime startTms;
         private LocalDateTime expiresAt;
         private String invitedBy;
-        private Set<String> familyProductIds;
+        private Set<String> profileIds;
 
         public PromotionInvitationResponse(PromotionInvitation invitation) {
             this.id = invitation.getId();
@@ -113,8 +113,8 @@ public class PromotionInvitationController {
             this.startTms = invitation.getStartTms();
             this.expiresAt = invitation.getExpiresAt();
             this.invitedBy = invitation.getInvitedBy();
-            this.familyProductIds = invitation.getFamilyProducts().stream()
-                    .map(fp -> fp.getId())
+                this.profileIds = invitation.getProfiles().stream()
+                    .map(profile -> profile.getId())
                     .collect(Collectors.toSet());
         }
     }

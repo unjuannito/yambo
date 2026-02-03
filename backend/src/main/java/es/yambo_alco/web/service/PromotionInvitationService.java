@@ -2,12 +2,11 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.PromotionInvitation;
 import es.yambo_alco.web.model.PromotionInvitationRegistration;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.repository.FamilyProductRepository;
+import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.PromotionInvitationRegistrationRepository;
 import es.yambo_alco.web.repository.PromotionInvitationRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -21,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,16 +27,16 @@ public class PromotionInvitationService {
 
     private final PromotionInvitationRepository promotionInvitationRepository;
     private final PromotionInvitationRegistrationRepository promotionInvitationRegistrationRepository;
-    private final FamilyProductRepository familyProductRepository;
+    private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
-    public PromotionInvitation createPromotionInvitation(String invitedBy, Set<String> familyProductIds, LocalDateTime startTms, LocalDateTime endTms) {
-        if (familyProductIds == null || familyProductIds.isEmpty()) {
-            throw new BadRequestException("Family product IDs are required");
+    public PromotionInvitation createPromotionInvitation(String invitedBy, Set<String> profileIds, LocalDateTime startTms, LocalDateTime endTms) {
+        if (profileIds == null || profileIds.isEmpty()) {
+            throw new BadRequestException("Profile IDs are required");
         }
 
         LocalDateTime start = startTms != null ? startTms : LocalDateTime.now();
@@ -46,9 +44,9 @@ public class PromotionInvitationService {
             throw new BadRequestException("Start date must be before end date");
         }
 
-        Set<FamilyProduct> familyProducts = Set.copyOf(familyProductRepository.findAllById(familyProductIds));
-        if (familyProducts.size() != familyProductIds.size()) {
-            throw new BadRequestException("One or more family products not found");
+        Set<Profile> profiles = Set.copyOf(profileRepository.findAllById(profileIds));
+        if (profiles.size() != profileIds.size()) {
+            throw new BadRequestException("One or more profiles not found");
         }
 
         PromotionInvitation invitation = PromotionInvitation.builder()
@@ -57,7 +55,7 @@ public class PromotionInvitationService {
             .startTms(start)
                 .expiresAt(endTms)
                 .invitedBy(invitedBy)
-                .familyProducts(familyProducts)
+                .profiles(profiles)
                 .build();
 
         return promotionInvitationRepository.save(invitation);
@@ -76,10 +74,7 @@ public class PromotionInvitationService {
             throw new BadRequestException("Promotion invitation expired");
         }
 
-        Set<Profile> dropProfiles = invitation.getFamilyProducts().stream()
-            .map(FamilyProduct::getProfile)
-            .filter(java.util.Objects::nonNull)
-            .collect(Collectors.toSet());
+        Set<Profile> invitationProfiles = invitation.getProfiles();
 
         User user;
         if (currentUser != null) {
@@ -105,7 +100,7 @@ public class PromotionInvitationService {
         if (user.getProfiles() == null) {
             user.setProfiles(new HashSet<>());
         }
-        user.getProfiles().addAll(dropProfiles);
+        user.getProfiles().addAll(invitationProfiles);
         userRepository.save(user);
 
         if (!promotionInvitationRegistrationRepository.existsByPromotionInvitationIdAndUserId(invitation.getId(), user.getId())) {

@@ -2,11 +2,10 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.PromotionInvitation;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.repository.FamilyProductRepository;
+import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.PromotionInvitationRegistrationRepository;
 import es.yambo_alco.web.repository.PromotionInvitationRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -36,7 +35,7 @@ class PromotionInvitationServiceTest {
     private PromotionInvitationRegistrationRepository promotionInvitationRegistrationRepository;
 
     @Mock
-    private FamilyProductRepository familyProductRepository;
+        private ProfileRepository profileRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -48,19 +47,19 @@ class PromotionInvitationServiceTest {
     private PromotionInvitationService promotionInvitationService;
 
     @Test
-    void createPromotionInvitation_WhenNoFamilyProducts_ShouldThrow() {
+        void createPromotionInvitation_WhenNoProfiles_ShouldThrow() {
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> promotionInvitationService.createPromotionInvitation("USER1", Set.of(), null, LocalDateTime.now().plusDays(1)));
-        assertEquals("Family product IDs are required", exception.getMessage());
+                assertEquals("Profile IDs are required", exception.getMessage());
     }
 
     @Test
-    void createPromotionInvitation_WhenFamilyMissing_ShouldThrow() {
-        when(familyProductRepository.findAllById(Set.of("FAM001"))).thenReturn(java.util.List.of());
+        void createPromotionInvitation_WhenProfileMissing_ShouldThrow() {
+                when(profileRepository.findAllById(Set.of("BASIC"))).thenReturn(java.util.List.of());
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> promotionInvitationService.createPromotionInvitation("USER1", Set.of("FAM001"), null, LocalDateTime.now().plusDays(1)));
-        assertEquals("One or more family products not found", exception.getMessage());
+                                () -> promotionInvitationService.createPromotionInvitation("USER1", Set.of("BASIC"), null, LocalDateTime.now().plusDays(1)));
+                assertEquals("One or more profiles not found", exception.getMessage());
     }
 
     @Test
@@ -68,7 +67,7 @@ class PromotionInvitationServiceTest {
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> promotionInvitationService.createPromotionInvitation(
                         "USER1",
-                        Set.of("FAM001"),
+                        Set.of("BASIC"),
                         LocalDateTime.now().plusDays(2),
                         LocalDateTime.now().plusDays(1)));
         assertEquals("Start date must be before end date", exception.getMessage());
@@ -76,21 +75,21 @@ class PromotionInvitationServiceTest {
 
     @Test
     void createPromotionInvitation_WhenNoEnd_ShouldAllow() {
-        FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").build();
-        when(familyProductRepository.findAllById(Set.of("FAM001"))).thenReturn(java.util.List.of(familyProduct));
+        Profile profile = Profile.builder().id("BASIC").build();
+        when(profileRepository.findAllById(Set.of("BASIC"))).thenReturn(java.util.List.of(profile));
         when(promotionInvitationRepository.save(any(PromotionInvitation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         PromotionInvitation invitation = promotionInvitationService.createPromotionInvitation(
                 "USER1",
-                Set.of("FAM001"),
+                Set.of("BASIC"),
                 null,
                 null);
 
         assertNotNull(invitation.getStartTms());
         assertNull(invitation.getExpiresAt());
         assertEquals("USER1", invitation.getInvitedBy());
-        assertEquals(1, invitation.getFamilyProducts().size());
+                assertEquals(1, invitation.getProfiles().size());
     }
 
     @Test
@@ -100,7 +99,7 @@ class PromotionInvitationServiceTest {
                 .token("tok")
             .startTms(LocalDateTime.now().minusDays(1))
                 .expiresAt(LocalDateTime.now().minusHours(1))
-                .familyProducts(Set.of())
+                .profiles(Set.of())
                 .build();
 
         when(promotionInvitationRepository.findByToken("tok")).thenReturn(Optional.of(invitation));
@@ -113,13 +112,12 @@ class PromotionInvitationServiceTest {
     @Test
     void acceptInvitation_WhenCurrentUser_ShouldAssignProfilesAndRegister() {
         Profile profile = Profile.builder().id("BASIC").build();
-                FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").profile(profile).build();
         PromotionInvitation invitation = PromotionInvitation.builder()
                 .id(1L)
                 .token("tok")
                 .startTms(LocalDateTime.now().minusDays(1))
                 .expiresAt(LocalDateTime.now().plusHours(1))
-                .familyProducts(Set.of(familyProduct))
+                .profiles(Set.of(profile))
                 .build();
 
         User user = User.builder().id("USER1").profiles(new java.util.HashSet<>()).build();
@@ -138,13 +136,12 @@ class PromotionInvitationServiceTest {
     @Test
     void acceptInvitation_WhenNewUser_ShouldCreateAndRegister() {
         Profile profile = Profile.builder().id("BASIC").build();
-                FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").profile(profile).build();
         PromotionInvitation invitation = PromotionInvitation.builder()
                 .id(2L)
                 .token("tok2")
                 .startTms(LocalDateTime.now().minusDays(1))
                 .expiresAt(LocalDateTime.now().plusHours(1))
-                .familyProducts(Set.of(familyProduct))
+                .profiles(Set.of(profile))
                 .build();
 
         when(promotionInvitationRepository.findByToken("tok2")).thenReturn(Optional.of(invitation));
@@ -172,7 +169,7 @@ class PromotionInvitationServiceTest {
                 .token("tok3")
                 .startTms(LocalDateTime.now().minusDays(1))
                 .expiresAt(LocalDateTime.now().plusHours(1))
-                .familyProducts(Set.of())
+                .profiles(Set.of())
                 .build();
 
         when(promotionInvitationRepository.findByToken("tok3")).thenReturn(Optional.of(invitation));
@@ -199,7 +196,7 @@ class PromotionInvitationServiceTest {
                 .token("tok4")
                 .startTms(LocalDateTime.now().plusDays(1))
                 .expiresAt(LocalDateTime.now().plusDays(2))
-                .familyProducts(Set.of())
+                .profiles(Set.of())
                 .build();
 
         when(promotionInvitationRepository.findByToken("tok4")).thenReturn(Optional.of(invitation));
@@ -216,7 +213,7 @@ class PromotionInvitationServiceTest {
                                 .token("tok5")
                                 .startTms(LocalDateTime.now().minusDays(1))
                                 .expiresAt(null)
-                                .familyProducts(Set.of())
+                                .profiles(Set.of())
                                 .build();
 
                 when(promotionInvitationRepository.findByToken("tok5")).thenReturn(Optional.of(invitation));
@@ -242,7 +239,7 @@ class PromotionInvitationServiceTest {
                                 .token("tok10")
                                 .startTms(LocalDateTime.now().minusDays(1))
                                 .expiresAt(null)
-                                .familyProducts(Set.of())
+                                .profiles(Set.of())
                                 .build();
 
                 when(promotionInvitationRepository.findById(10L)).thenReturn(Optional.of(invitation));

@@ -1,7 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
-import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.PromotionInvitation;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
@@ -64,7 +64,7 @@ class PromotionInvitationControllerTest {
                 .startTms(LocalDateTime.now())
                 .expiresAt(null)
                 .invitedBy("USER1")
-                .familyProducts(Set.of(FamilyProduct.builder().id("FAM001").build()))
+            .profiles(Set.of(Profile.builder().id("BASIC").build()))
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -72,7 +72,7 @@ class PromotionInvitationControllerTest {
 
         String payload = """
                 {
-                "familyProductIds": ["FAM001"],
+                "profileIds": ["BASIC"],
             "startTms": "2026-02-01T09:00:00"
                 }
                 """;
@@ -82,7 +82,7 @@ class PromotionInvitationControllerTest {
                 .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").value("tok"))
-                .andExpect(jsonPath("$.familyProductIds[0]").value("FAM001"))
+                .andExpect(jsonPath("$.profileIds[0]").value("BASIC"))
                 .andExpect(jsonPath("$.expiresAt").value(nullValue()));
     }
 
@@ -117,7 +117,7 @@ class PromotionInvitationControllerTest {
                 .createdAt(LocalDateTime.now())
                 .startTms(LocalDateTime.now())
                 .expiresAt(null)
-                .familyProducts(Set.of(FamilyProduct.builder().id("FAM002").build()))
+            .profiles(Set.of(Profile.builder().id("BASIC").build()))
                 .build();
 
         when(promotionInvitationService.getAllInvitations()).thenReturn(java.util.List.of(invitation));
@@ -125,7 +125,7 @@ class PromotionInvitationControllerTest {
         mockMvc.perform(get("/promotion-invitations"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].token").value("tok2"))
-            .andExpect(jsonPath("$[0].familyProductIds[0]").value("FAM002"))
+            .andExpect(jsonPath("$[0].profileIds[0]").value("BASIC"))
             .andExpect(jsonPath("$[0].expiresAt").value(nullValue()));
     }
 
@@ -138,7 +138,7 @@ class PromotionInvitationControllerTest {
             .createdAt(LocalDateTime.now())
             .startTms(LocalDateTime.now().minusDays(1))
             .expiresAt(LocalDateTime.now())
-            .familyProducts(Set.of(FamilyProduct.builder().id("FAM003").build()))
+            .profiles(Set.of(Profile.builder().id("BASIC").build()))
             .build();
 
         when(promotionInvitationService.disableInvitation(3L)).thenReturn(invitation);
