@@ -60,9 +60,11 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void createOrder_WithAuth_ShouldCreateOrder() throws Exception {
+        User user = User.builder().id("USER001").build();
+        
         Order order = Order.builder()
                 .id("ORD001")
-                .customerId(1001)
+                .customerId("USER001")
                 .status(OrderStatus.PENDING_CONFIRMATION)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -77,12 +79,12 @@ class OrderControllerTest {
                         .build()
         );
 
-        when(orderService.createOrder(eq(1001), any())).thenReturn(order);
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(orderService.createOrder(eq("USER001"), any())).thenReturn(order);
         when(orderService.getOrderProducts("ORD001")).thenReturn(products);
 
         String payload = """
                 {
-                    "customerId": 1001,
                     "products": [
                         {"productId": "PROD001", "quantity": 2, "price": 10.0, "configuration": "{}"}
                     ]
@@ -103,7 +105,7 @@ class OrderControllerTest {
     void listOrders_WithAuth_ShouldReturnOrders() throws Exception {
         Order order = Order.builder()
                 .id("ORD001")
-                .customerId(1001)
+                .customerId("USER001")
                 .status(OrderStatus.CONFIRMED)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -123,7 +125,7 @@ class OrderControllerTest {
     void getOrder_WithAuth_ShouldReturnOrder() throws Exception {
         Order order = Order.builder()
                 .id("ORD001")
-                .customerId(1001)
+                .customerId("USER001")
                 .status(OrderStatus.CONFIRMED)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -142,7 +144,7 @@ class OrderControllerTest {
     void updateOrderStatus_WithPermission_ShouldUpdate() throws Exception {
         Order order = Order.builder()
                 .id("ORD001")
-                .customerId(1001)
+                .customerId("USER001")
                 .status(OrderStatus.IN_PROGRESS)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -171,21 +173,21 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void getMyOrders_WithAuth_ShouldReturnOrders() throws Exception {
-        User user = User.builder().id("0000000a").build();
+        User user = User.builder().id("USER001").build();
         Order order = Order.builder()
                 .id("ORD001")
-                .customerId(10)
+                .customerId("USER001")
                 .status(OrderStatus.CONFIRMED)
                 .createdAt(LocalDateTime.now())
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
-        when(orderService.getOrdersByCustomer(10)).thenReturn(List.of(order));
+        when(orderService.getOrdersByCustomer("USER001")).thenReturn(List.of(order));
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 
         mockMvc.perform(get("/orders/my"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("ORD001"))
-                .andExpect(jsonPath("$[0].customerId").value(10));
+                .andExpect(jsonPath("$[0].customerId").value("USER001"));
     }
 }

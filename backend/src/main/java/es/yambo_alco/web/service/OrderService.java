@@ -2,8 +2,7 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.Order;
-import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -27,24 +26,30 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ProductRepository productRepository;
+    private final AuthService authService;
 
     @Transactional
-    public Order createOrder(@NonNull Integer customerId, @NonNull List<OrderProduct> orderProducts) {
+    public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
         if (orderProducts.isEmpty()) {
             throw new BadRequestException("Order must contain at least one product");
         }
 
-        // Validate all products exist
+        // Get current user for validation
+        User currentUser = authService.getCurrentUser(true);
+        LocalDateTime now = LocalDateTime.now();
+
+        // Validate all products exist and user has access
         for (OrderProduct op : orderProducts) {
-            if (!productRepository.existsById(op.getProductId())) {
-                throw new ResourceNotFoundException("Product not found: " + op.getProductId());
-            }
+            Product product = productRepository.findById(op.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
+            
+            validateProductAccess(currentUser, product, now);
         }
 
         Order order = Order.builder()
                 .customerId(customerId)
                 .status(OrderStatus.PENDING_CONFIRMATION)
-                .createdAt(LocalDateTime.now())
+                .createdAt(now)
                 .build();
 
         order = orderRepository.save(order);
@@ -58,12 +63,48 @@ public class OrderService {
         return order;
     }
 
+    private void validateProductAccess(User user, Product product, LocalDateTime now) {
+        // If product has no family, it's accessible to all
+        if (product.getFamilyProduct() == null) {
+            return;
+        }
+
+        FamilyProduct family = product.getFamilyProduct();
+        
+        // Check if family is currently valid (within time range)
+        if (now.isBefore(family.getStartTms())) {
+            throw new BadRequestException(
+                String.format("Product '%s' is not yet available. Available from: %s", 
+                    product.getName(), family.getStartTms())
+            );
+        }
+        if (now.isAfter(family.getEndTms())) {
+            throw new BadRequestException(
+                String.format("Product '%s' is no longer available. Expired on: %s", 
+                    product.getName(), family.getEndTms())
+            );
+        }
+
+        // Check if user has required profile
+        if (family.getProfile() != null) {
+            boolean hasProfile = user.getProfiles().stream()
+                    .anyMatch(p -> p.getId().equals(family.getProfile().getId()));
+            
+            if (!hasProfile) {
+                throw new BadRequestException(
+                    String.format("You don't have access to product '%s'. Required profile: %s", 
+                        product.getName(), family.getProfile().getName())
+                );
+            }
+        }
+    }
+
     public Order getOrderById(@NonNull String orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
-    public Page<Order> listOrders(Integer customerId, OrderStatus status, 
+    public Page<Order> listOrders(String customerId, OrderStatus status, 
                                    LocalDateTime startDate, LocalDateTime endDate,
                                    @NonNull Pageable pageable) {
         Specification<Order> spec = Specification.where(null);
@@ -112,7 +153,7 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    public List<Order> getOrdersByCustomer(@NonNull Integer customerId) {
+    public List<Order> getOrdersByCustomer(@NonNull String customerId) {
         Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
         return orderRepository.findAll(spec);
     }

@@ -2,8 +2,7 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.Order;
-import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -20,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,13 +39,16 @@ class OrderServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private AuthService authService;
+
     @InjectMocks
     private OrderService orderService;
 
     @Test
     void createOrder_WhenNoProducts_ShouldThrowException() {
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.createOrder(1001, List.of()));
+                () -> orderService.createOrder("USER001", List.of()));
         assertEquals("Order must contain at least one product", exception.getMessage());
         verify(orderRepository, never()).save(any());
     }
@@ -59,16 +62,29 @@ class OrderServiceTest {
                 .configuration("{}")
                 .build();
 
-        when(productRepository.existsById("PROD404")).thenReturn(false);
+        when(productRepository.findById("PROD404")).thenReturn(Optional.empty());
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                () -> orderService.createOrder(1001, List.of(orderProduct)));
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
         assertEquals("Product not found: PROD404", exception.getMessage());
         verify(orderRepository, never()).save(any());
     }
 
     @Test
     void createOrder_WhenValid_ShouldCreateOrderAndProducts() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null) // No family = accessible to all
+                .build();
+
         OrderProduct orderProduct = OrderProduct.builder()
                 .productId("PROD001")
                 .quantity(2)
@@ -76,14 +92,15 @@ class OrderServiceTest {
                 .configuration("{}")
                 .build();
 
-        when(productRepository.existsById("PROD001")).thenReturn(true);
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
             saved.setId("ORD001");
             return saved;
         });
 
-        Order result = orderService.createOrder(1001, List.of(orderProduct));
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
 
         assertEquals("ORD001", result.getId());
         verify(orderRepository).save(any(Order.class));
@@ -91,6 +108,191 @@ class OrderServiceTest {
         ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
         verify(orderProductRepository).save(captor.capture());
         assertEquals("ORD001", captor.getValue().getOrderId());
+    }
+
+    @Test
+    void createOrder_WhenProductExpired_ShouldThrowException() {
+        Profile profile = Profile.builder()
+                .id("PROFILE001")
+                .name("Premium")
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of(profile))
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().minusDays(10))
+                .endTms(LocalDateTime.now().minusDays(1)) // Expired
+                .profile(profile)
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration("{}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertTrue(exception.getMessage().contains("no longer available"));
+    }
+
+    @Test
+    void createOrder_WhenProductNotYetAvailable_ShouldThrowException() {
+        Profile profile = Profile.builder()
+                .id("PROFILE001")
+                .name("Premium")
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of(profile))
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().plusDays(1)) // Not yet available
+                .endTms(LocalDateTime.now().plusDays(10))
+                .profile(profile)
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration("{}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertTrue(exception.getMessage().contains("not yet available"));
+    }
+
+    @Test
+    void createOrder_WhenUserLacksRequiredProfile_ShouldThrowException() {
+        Profile requiredProfile = Profile.builder()
+                .id("PROFILE001")
+                .name("Premium")
+                .build();
+
+        Profile userProfile = Profile.builder()
+                .id("PROFILE002")
+                .name("Basic")
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of(userProfile))
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().minusDays(1))
+                .endTms(LocalDateTime.now().plusDays(10))
+                .profile(requiredProfile)
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration("{}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertTrue(exception.getMessage().contains("don't have access"));
+        assertTrue(exception.getMessage().contains("Required profile: Premium"));
+    }
+
+    @Test
+    void createOrder_WhenUserHasRequiredProfileAndTimeValid_ShouldCreateOrder() {
+        Profile profile = Profile.builder()
+                .id("PROFILE001")
+                .name("Premium")
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of(profile))
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().minusDays(1))
+                .endTms(LocalDateTime.now().plusDays(10))
+                .profile(profile)
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration("{}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
+
+        assertEquals("ORD001", result.getId());
+        verify(orderRepository).save(any(Order.class));
+        verify(orderProductRepository).save(any(OrderProduct.class));
     }
 
     @Test
@@ -185,7 +387,7 @@ class OrderServiceTest {
         when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
             .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
 
-        orderService.listOrders(1001, OrderStatus.CONFIRMED, LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
+        orderService.listOrders("USER001", OrderStatus.CONFIRMED, LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
 
         verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
     }

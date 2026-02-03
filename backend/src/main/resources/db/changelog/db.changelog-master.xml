@@ -35,4 +35,5 @@
     <include file="db/changelog/changes/23-promotion-invitation-optional-end.xml"/>
     <include file="db/changelog/changes/24-family-product-single-profile.xml"/>
     <include file="db/changelog/changes/25-promotion-invitations-profiles.xml"/>
+    <include file="db/changelog/changes/26-order-customer-id-to-string.xml"/>
 </databaseChangeLog>
