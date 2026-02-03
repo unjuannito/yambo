@@ -23,4 +23,16 @@
     <include file="db/changelog/changes/11-family-product-updates.xml"/>
     <include file="db/changelog/changes/12-project-product-updates.xml"/>
     <include file="db/changelog/changes/13-seed-permissions-data.xml"/>
+    <include file="db/changelog/changes/14-order-product-details.xml"/>
+    <include file="db/changelog/changes/15-new-permissions.xml"/>
+    <include file="db/changelog/changes/16-add-product-images.xml"/>
+    <include file="db/changelog/changes/17-fix-images-column-type.xml"/>
+    <include file="db/changelog/changes/18-add-project-roles.xml"/>
+    <include file="db/changelog/changes/19-family-product-projects.xml"/>
+    <include file="db/changelog/changes/20-family-product-start-and-drop-promotions.xml"/>
+    <include file="db/changelog/changes/21-promotion-invitations.xml"/>
+    <include file="db/changelog/changes/22-promotion-invitation-start.xml"/>
+    <include file="db/changelog/changes/23-promotion-invitation-optional-end.xml"/>
+    <include file="db/changelog/changes/24-family-product-single-profile.xml"/>
+    <include file="db/changelog/changes/25-promotion-invitations-profiles.xml"/>
 </databaseChangeLog>

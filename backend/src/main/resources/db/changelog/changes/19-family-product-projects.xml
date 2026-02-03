@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="19-01-create-family-product-project" author="yambo">
+        <createTable tableName="family_product_project">
+            <column name="family_product_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_family_product_project"/>
+            </column>
+            <column name="project_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_family_product_project"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="family_product_project"
+            baseColumnNames="family_product_id"
+            referencedTableName="family_product"
+            referencedColumnNames="id"
+            constraintName="fk_family_product_project_family"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="family_product_project"
+            baseColumnNames="project_id"
+            referencedTableName="project"
+            referencedColumnNames="id"
+            constraintName="fk_family_product_project_project"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

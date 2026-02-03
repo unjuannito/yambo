@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+import io.jsonwebtoken.JwtException;
 
 import java.io.IOException;
 
@@ -59,8 +60,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
             filterChain.doFilter(request, response);
-        } catch (Exception ex) {
+        } catch (JwtException ex) {
+            SecurityContextHolder.clearContext();
             exceptionResolver.resolveException(request, response, null, ex);
+            return;
+        } catch (Exception ex) {
+            SecurityContextHolder.clearContext();
+            exceptionResolver.resolveException(request, response, null, ex);
+            return;
         }
     }
 }

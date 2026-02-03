@@ -17,6 +17,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -31,6 +34,7 @@ class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
 
     @Mock
     private AuthService authService;
@@ -87,7 +91,7 @@ class ProductServiceTest {
         Profile adminProfile = Profile.builder().id("ADMIN").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profiles(Set.of(adminProfile))
+                .profile(adminProfile)
                 .build();
 
         Product product = Product.builder()
@@ -122,7 +126,7 @@ class ProductServiceTest {
         Profile userProfile = Profile.builder().id("USER").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profiles(Set.of(adminProfile))
+                .profile(adminProfile)
                 .build();
 
         Product product = Product.builder()
@@ -182,7 +186,6 @@ class ProductServiceTest {
     void createProduct_WhenValidData_ShouldCreateAndReturnProduct() {
         // Given
         String name = "New Product";
-        String projectId = "PRJ001";
         String familyProductId = null;
 
         User user = User.builder()
@@ -192,8 +195,9 @@ class ProductServiceTest {
 
         Product expectedProduct = Product.builder()
                 .name(name)
-                .projectId(projectId)
                 .active(true)
+                .basePrice(BigDecimal.valueOf(10.00))
+                .options(new ArrayList<>())
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -201,7 +205,8 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
 
         // When
-        Product result = productService.createProduct(name, projectId, familyProductId);
+        Product result = productService.createProduct(name, familyProductId, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+
 
         // Then
         assertEquals(expectedProduct, result);
@@ -214,7 +219,6 @@ class ProductServiceTest {
     void createProduct_WhenNameAlreadyExists_ShouldThrowException() {
         // Given
         String name = "Existing Product";
-        String projectId = "PRJ001";
 
         User user = User.builder()
                 .id("U001")
@@ -226,12 +230,42 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.createProduct(name, projectId, null));
+                () -> productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
         assertEquals("Product name already exists", exception.getMessage());
         verify(authService).getCurrentUser(true);
         verify(productRepository).existsByName(name);
         verify(productRepository, never()).save(any());
     }
+
+    @Test
+        void createProduct_WhenNoFamilyProduct_ShouldCreateProduct() {
+        // Given
+        String name = "New Product";
+
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of(Profile.builder().id("ADMIN").build()))
+                .build();
+
+        Product expectedProduct = Product.builder()
+                .name(name)
+                .active(true)
+                .basePrice(BigDecimal.valueOf(10.00))
+                .options(new ArrayList<>())
+                .images(new ArrayList<>())
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.existsByName(name)).thenReturn(false);
+        when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
+
+        // When & Then
+        Product result = productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+        assertNotNull(result);
+                verify(authService).getCurrentUser(true);
+                verify(productRepository).existsByName(name);
+                verify(productRepository).save(any());
+        }
 
     @Test
     void updateProduct_WhenValidData_ShouldUpdateAndReturnProduct() {
@@ -263,7 +297,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, newName, newActive);
+        Product result = productService.updateProduct(productId, newName, newActive, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -296,7 +330,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.updateProduct(productId, newName, null));
+                () -> productService.updateProduct(productId, newName, null, null, null, null, null));
         assertEquals("Product name already exists", exception.getMessage());
         verify(productRepository).findById(productId);
         verify(authService).getCurrentUser(true);
@@ -334,7 +368,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, sameName, newActive);
+        Product result = productService.updateProduct(productId, sameName, newActive, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -372,7 +406,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, null, newActive);
+        Product result = productService.updateProduct(productId, null, newActive, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -423,4 +457,25 @@ class ProductServiceTest {
         verify(productRepository).findById(productId);
         // Note: checkAccess is not called when product doesn't exist
     }
+
+        @Test
+        void listProductsForProject_ShouldReturnProjectProducts() {
+                // Given
+                String projectId = "PRJ001";
+                Pageable pageable = PageRequest.of(0, 10);
+                List<Product> products = List.of(
+                                Product.builder().id("P001").name("Project Product 1").projectId(projectId).active(true).build()
+                );
+                Page<Product> expectedPage = new PageImpl<>(products, pageable, products.size());
+
+                doReturn(expectedPage).when(productRepository)
+                                .findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
+
+                // When
+                Page<Product> result = productService.listProductsForProject(projectId, null, true, pageable);
+
+                // Then
+                assertEquals(expectedPage, result);
+                verify(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
+        }
 }

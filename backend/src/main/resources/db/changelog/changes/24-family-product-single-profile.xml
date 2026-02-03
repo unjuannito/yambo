@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="24-add-profile-to-family-product" author="yambo">
+        <addColumn tableName="family_product">
+            <column name="profile_id" type="char(8)"/>
+        </addColumn>
+
+        <sql>
+            UPDATE family_product fp
+            SET profile_id = (
+                SELECT MIN(fpp.profile_id)
+                FROM family_product_profile fpp
+                WHERE fpp.family_product_id = fp.id
+            )
+        </sql>
+
+        <sql>
+            WITH canonical AS (
+                SELECT profile_id, MIN(id) AS keep_id
+                FROM family_product
+                WHERE profile_id IS NOT NULL
+                GROUP BY profile_id
+            )
+            UPDATE product p
+            SET family_product_id = c.keep_id
+            FROM family_product fp
+            JOIN canonical c ON c.profile_id = fp.profile_id
+            WHERE p.family_product_id = fp.id
+              AND p.family_product_id <> c.keep_id
+        </sql>
+
+        <sql>
+            WITH canonical AS (
+                SELECT profile_id, MIN(id) AS keep_id
+                FROM family_product
+                WHERE profile_id IS NOT NULL
+                GROUP BY profile_id
+            )
+            UPDATE family_product_project fpproj
+            SET family_product_id = c.keep_id
+            FROM family_product fp
+            JOIN canonical c ON c.profile_id = fp.profile_id
+            WHERE fpproj.family_product_id = fp.id
+              AND fpproj.family_product_id <> c.keep_id
+        </sql>
+
+        <sql>
+            WITH canonical AS (
+                SELECT profile_id, MIN(id) AS keep_id
+                FROM family_product
+                WHERE profile_id IS NOT NULL
+                GROUP BY profile_id
+            )
+            UPDATE promotion_invitation_family_product pifp
+            SET family_product_id = c.keep_id
+            FROM family_product fp
+            JOIN canonical c ON c.profile_id = fp.profile_id
+            WHERE pifp.family_product_id = fp.id
+              AND pifp.family_product_id <> c.keep_id
+        </sql>
+
+        <sql>
+            WITH canonical AS (
+                SELECT profile_id, MIN(id) AS keep_id
+                FROM family_product
+                WHERE profile_id IS NOT NULL
+                GROUP BY profile_id
+            )
+            DELETE FROM family_product fp
+            USING canonical c
+            WHERE fp.profile_id = c.profile_id
+              AND fp.id <> c.keep_id
+        </sql>
+
+        <addNotNullConstraint tableName="family_product" columnName="profile_id" columnDataType="char(8)"/>
+        <addUniqueConstraint tableName="family_product" columnNames="profile_id" constraintName="uk_family_product_profile"/>
+        <addForeignKeyConstraint
+            baseTableName="family_product"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_family_product_profile"
+            onDelete="RESTRICT"/>
+
+        <dropTable tableName="family_product_profile"/>
+    </changeSet>
+
+</databaseChangeLog>

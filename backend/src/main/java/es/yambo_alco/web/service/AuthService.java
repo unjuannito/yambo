@@ -41,13 +41,42 @@ public class AuthService implements UserDetailsService {
 
 
     public User getCurrentUser(boolean throwIfNotAuthenticated) {
-        if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null) {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication();
+
+        if (authentication == null) {
             if (throwIfNotAuthenticated) {
                 throw new UnauthorizedException("User is not authenticated");
             }
             return null;
         }
-        return (User) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {
+            if (throwIfNotAuthenticated) {
+                throw new UnauthorizedException("User is not authenticated");
+            }
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User user) {
+            return user;
+        }
+
+        if (principal instanceof String email) {
+            if ("anonymousUser".equalsIgnoreCase(email)) {
+                if (throwIfNotAuthenticated) {
+                    throw new UnauthorizedException("User is not authenticated");
+                }
+                return null;
+            }
+            return (User) loadUserByEmail(email);
+        }
+
+        if (throwIfNotAuthenticated) {
+            throw new UnauthorizedException("User is not authenticated");
+        }
+        return null;
     }
 
     public String reload() {

@@ -1,6 +1,4 @@
 package es.yambo_alco.web.controller;
-
-import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;

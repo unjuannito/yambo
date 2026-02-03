@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="14-add-order-product-configuration" author="yambo">
+        <addColumn tableName="order_product">
+            <column name="configuration" type="json" defaultValue="{}">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="14-add-order-product-price" author="yambo">
+        <addColumn tableName="order_product">
+            <column name="price" type="decimal(10,2)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            ALTER TABLE order_product ADD CONSTRAINT chk_order_product_price_positive 
+            CHECK (price >= 0)
+        </sql>
+    </changeSet>
+
+    <changeSet id="14-add-order-product-quantity" author="yambo">
+        <addColumn tableName="order_product">
+            <column name="quantity" type="int" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            ALTER TABLE order_product ADD CONSTRAINT chk_order_product_quantity_positive 
+            CHECK (quantity > 0)
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

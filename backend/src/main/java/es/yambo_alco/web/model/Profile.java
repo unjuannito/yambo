@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 
 import org.springframework.security.core.GrantedAuthority;
 import java.util.Set;
@@ -13,12 +14,14 @@ import java.util.Set;
 @Entity
 @Table(name = "profile")
 @Data
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Profile implements GrantedAuthority {
     @Id
     @CustomId
+    @EqualsAndHashCode.Include
     private String id;
 
     @Column(nullable = false)
@@ -33,8 +36,8 @@ public class Profile implements GrantedAuthority {
     @Builder.Default
     private Set<Permission> permissions = Set.of();
 
-    @ManyToMany(mappedBy = "profiles", fetch = FetchType.LAZY)
-    private Set<FamilyProduct> familyProducts;
+    @OneToOne(mappedBy = "profile", fetch = FetchType.LAZY)
+    private FamilyProduct familyProduct;
 
     @Override
     public String getAuthority() {
