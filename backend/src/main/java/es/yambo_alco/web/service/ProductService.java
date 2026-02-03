@@ -6,9 +6,12 @@ import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.PermissionAction;
+import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
+import es.yambo_alco.web.util.PermissionCheckService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
@@ -30,24 +33,44 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final FamilyProductRepository familyProductRepository;
     private final AuthService authService;
+    private final PermissionCheckService permissionCheck;
 
     public Product getProductById(@NonNull String productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        checkAccess(product);
+        
+        // If user has product admin permissions, they can access any product
+        boolean isProductAdmin = permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE) ||
+                                 permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE);
+        
+        if (!isProductAdmin) {
+            checkAccess(product);
+        }
+        
         return product;
     }
 
     public Page<Product> listProducts(String name, Boolean active, @NonNull Pageable pageable) {
         User user = authService.getCurrentUser(true);
-        Set<String> profileIds = user.getProfiles().stream()
-                .map(p -> p.getId())
-                .collect(Collectors.toSet());
-
+        
+        // If user has product update or read permission, they can see all products
+        boolean isProductAdmin = permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE) ||
+                                 permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE);
+        
         Specification<Product> spec = Specification.where(null);
         spec = spec.and(ProductSpecifications.nameContains(name));
-        spec = spec.and(ProductSpecifications.activeEquals(active));
-        spec = spec.and(ProductSpecifications.userHasAccess(profileIds));
+        
+        if (isProductAdmin) {
+            // Admins can see all products, including inactive ones if not filtered
+            spec = spec.and(ProductSpecifications.activeEquals(active));
+        } else {
+            // Regular users only see active products they have access to
+            Set<String> profileIds = user.getProfiles().stream()
+                    .map(p -> p.getId())
+                    .collect(Collectors.toSet());
+            spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
+            spec = spec.and(ProductSpecifications.userHasAccess(profileIds));
+        }
 
         return productRepository.findAll(spec, pageable);
     }

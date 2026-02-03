@@ -6,7 +6,10 @@ import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.PermissionAction;
+import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,9 +38,11 @@ class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
 
-
     @Mock
     private AuthService authService;
+
+    @Mock
+    private PermissionCheckService permissionCheck;
 
     @InjectMocks
     private ProductService productService;
@@ -59,6 +64,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
 
         // When
         Product result = productService.getProductById(productId);
@@ -67,6 +74,42 @@ class ProductServiceTest {
         assertEquals(product, result);
         verify(productRepository).findById(productId);
         verify(authService).getCurrentUser(true);
+    }
+
+    @Test
+    void getProductById_WhenProductExistsAndUserIsAdmin_ShouldReturnProductWithoutAccessCheck() {
+        // Given
+        String productId = "P001";
+        Profile adminProfile = Profile.builder().id("ADMIN").build();
+        Profile userProfile = Profile.builder().id("USER").build();
+        FamilyProduct familyProduct = FamilyProduct.builder()
+                .id("F001")
+                .profile(adminProfile)
+                .build();
+
+        Product product = Product.builder()
+                .id(productId)
+                .name("Test Product")
+                .active(true)
+                .familyProduct(familyProduct)
+                .build();
+
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of(userProfile)) // User doesn't have access to family
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(true);
+
+        // When
+        Product result = productService.getProductById(productId);
+
+        // Then
+        assertEquals(product, result);
+        verify(productRepository).findById(productId);
+        verify(permissionCheck).hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE);
+        verify(authService, never()).getCurrentUser(anyBoolean()); // Access check is skipped for admins
     }
 
     @Test
@@ -108,6 +151,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
 
         // When
         Product result = productService.getProductById(productId);
@@ -143,6 +188,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
 
         // When & Then
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
@@ -171,6 +218,8 @@ class ProductServiceTest {
         Page<Product> expectedPage = new PageImpl<>(products, pageable, products.size());
 
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
         doReturn(expectedPage).when(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
 
         // When
@@ -179,6 +228,38 @@ class ProductServiceTest {
         // Then
         assertEquals(expectedPage, result);
         verify(authService).getCurrentUser(true);
+        verify(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
+    }
+
+    @Test
+    void listProducts_WhenUserIsAdmin_ShouldReturnAllProducts() {
+        // Given
+        String name = "test";
+        Boolean active = null; // Admin can see inactive products too
+        Pageable pageable = PageRequest.of(0, 10);
+
+        User user = User.builder()
+                .id("U001")
+                .profiles(Set.of(Profile.builder().id("ADMIN").build()))
+                .build();
+
+        List<Product> products = List.of(
+                Product.builder().id("P001").name("Test Product 1").active(true).build(),
+                Product.builder().id("P002").name("Test Product 2").active(false).build()
+        );
+        Page<Product> expectedPage = new PageImpl<>(products, pageable, products.size());
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(true);
+        doReturn(expectedPage).when(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
+
+        // When
+        Page<Product> result = productService.listProducts(name, active, pageable);
+
+        // Then
+        assertEquals(expectedPage, result);
+        verify(authService).getCurrentUser(true);
+        verify(permissionCheck).hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE);
         verify(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
     }
 
@@ -293,6 +374,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
         when(productRepository.existsByName(newName)).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
@@ -326,6 +409,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
         when(productRepository.existsByName(newName)).thenReturn(true);
 
         // When & Then
@@ -433,6 +518,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE)).thenReturn(false);
+        when(permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE)).thenReturn(false);
 
         // When
         productService.deleteProduct(productId);
