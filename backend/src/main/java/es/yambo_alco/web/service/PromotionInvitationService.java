@@ -77,8 +77,9 @@ public class PromotionInvitationService {
         }
 
         Set<Profile> dropProfiles = invitation.getFamilyProducts().stream()
-                .flatMap(fp -> fp.getProfiles().stream())
-                .collect(Collectors.toSet());
+            .map(FamilyProduct::getProfile)
+            .filter(java.util.Objects::nonNull)
+            .collect(Collectors.toSet());
 
         User user;
         if (currentUser != null) {

@@ -44,7 +44,7 @@ class FamilyProductServiceTest {
         LocalDateTime end = LocalDateTime.now().plusDays(1);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> familyProductService.createFamilyProduct("Drop", start, end, null, null));
+                                () -> familyProductService.createFamilyProduct("Drop", start, end, null));
 
         assertEquals("Start date must be before end date", exception.getMessage());
         verify(familyProductRepository, never()).save(any());
@@ -54,11 +54,14 @@ class FamilyProductServiceTest {
     void createFamilyProduct_WhenValid_ShouldCreate() {
         LocalDateTime start = LocalDateTime.now().minusDays(1);
         LocalDateTime end = LocalDateTime.now().plusDays(10);
-        Profile profile = Profile.builder().id("BASIC").build();
         Project project = Project.builder().id("PRJ001").build();
 
         when(familyProductRepository.existsByName("Drop")).thenReturn(false);
-        when(profileRepository.findById("BASIC")).thenReturn(Optional.of(profile));
+                when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
+                        Profile p = invocation.getArgument(0);
+                        p.setId("BASIC");
+                        return p;
+                });
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -66,14 +69,14 @@ class FamilyProductServiceTest {
                 "Drop",
                 start,
                 end,
-                Set.of("BASIC"),
                 Set.of("PRJ001")
         );
 
         assertEquals("Drop", result.getName());
         assertEquals(start, result.getStartTms());
         assertEquals(end, result.getEndTms());
-        assertEquals(1, result.getProfiles().size());
+                assertNotNull(result.getProfile());
+                assertEquals("BASIC", result.getProfile().getId());
         assertEquals(1, result.getProjects().size());
         verify(familyProductRepository).save(any(FamilyProduct.class));
     }

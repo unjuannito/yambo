@@ -91,7 +91,7 @@ class ProductServiceTest {
         Profile adminProfile = Profile.builder().id("ADMIN").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profiles(Set.of(adminProfile))
+                .profile(adminProfile)
                 .build();
 
         Product product = Product.builder()
@@ -126,7 +126,7 @@ class ProductServiceTest {
         Profile userProfile = Profile.builder().id("USER").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profiles(Set.of(adminProfile))
+                .profile(adminProfile)
                 .build();
 
         Product product = Product.builder()

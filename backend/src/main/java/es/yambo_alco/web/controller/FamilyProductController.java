@@ -33,7 +33,6 @@ public class FamilyProductController {
                 request.getName(),
             request.getStartTms(),
                 request.getEndTms(),
-                request.getProfileIds(),
                 request.getProjectIds()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(new FamilyProductResponse(familyProduct));
@@ -80,12 +79,12 @@ public class FamilyProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{id}/profiles")
+    @PutMapping("/{id}/profile")
     @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
-    public ResponseEntity<FamilyProductResponse> assignProfiles(
+    public ResponseEntity<FamilyProductResponse> assignProfile(
             @PathVariable String id,
-            @Valid @RequestBody AssignProfilesRequest request) {
-        FamilyProduct familyProduct = familyProductService.assignProfilesToFamily(id, request.getProfileIds());
+            @Valid @RequestBody AssignProfileRequest request) {
+        FamilyProduct familyProduct = familyProductService.assignProfileToFamily(id, request.getProfileId());
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
 
@@ -109,8 +108,6 @@ public class FamilyProductController {
         @NotNull(message = "End date is required")
         private LocalDateTime endTms;
 
-        private Set<String> profileIds;
-
         private Set<String> projectIds;
     }
 
@@ -123,9 +120,9 @@ public class FamilyProductController {
     }
 
     @Data
-    public static class AssignProfilesRequest {
-        @NotEmpty(message = "Profile IDs cannot be empty")
-        private Set<String> profileIds;
+    public static class AssignProfileRequest {
+        @NotBlank(message = "Profile ID cannot be empty")
+        private String profileId;
     }
 
     @Data
@@ -140,7 +137,7 @@ public class FamilyProductController {
         private String name;
         private LocalDateTime startTms;
         private LocalDateTime endTms;
-        private Set<String> profileIds;
+        private String profileId;
         private Set<String> projectIds;
         private boolean active;
 
@@ -149,11 +146,9 @@ public class FamilyProductController {
             this.name = familyProduct.getName();
                 this.startTms = familyProduct.getStartTms();
             this.endTms = familyProduct.getEndTms();
-            this.profileIds = familyProduct.getProfiles() != null
-                    ? familyProduct.getProfiles().stream()
-                    .map(p -> p.getId())
-                    .collect(Collectors.toSet())
-                    : Set.of();
+            this.profileId = familyProduct.getProfile() != null
+                    ? familyProduct.getProfile().getId()
+                    : null;
                 this.projectIds = familyProduct.getProjects() != null
                     ? familyProduct.getProjects().stream()
                     .map(p -> p.getId())

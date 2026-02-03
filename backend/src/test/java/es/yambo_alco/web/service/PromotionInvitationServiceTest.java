@@ -113,7 +113,7 @@ class PromotionInvitationServiceTest {
     @Test
     void acceptInvitation_WhenCurrentUser_ShouldAssignProfilesAndRegister() {
         Profile profile = Profile.builder().id("BASIC").build();
-        FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").profiles(Set.of(profile)).build();
+                FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").profile(profile).build();
         PromotionInvitation invitation = PromotionInvitation.builder()
                 .id(1L)
                 .token("tok")
@@ -138,7 +138,7 @@ class PromotionInvitationServiceTest {
     @Test
     void acceptInvitation_WhenNewUser_ShouldCreateAndRegister() {
         Profile profile = Profile.builder().id("BASIC").build();
-        FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").profiles(Set.of(profile)).build();
+                FamilyProduct familyProduct = FamilyProduct.builder().id("FAM001").profile(profile).build();
         PromotionInvitation invitation = PromotionInvitation.builder()
                 .id(2L)
                 .token("tok2")

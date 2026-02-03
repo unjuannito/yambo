@@ -32,7 +32,7 @@ public class FamilyProductService {
 
     @Transactional
     public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms, @NonNull LocalDateTime endTms,
-                                             Set<String> profileIds, Set<String> projectIds) {
+                                             Set<String> projectIds) {
         // Validate name uniqueness
         if (familyProductRepository.existsByName(name)) {
             throw new BadRequestException("Family product name already exists");
@@ -42,14 +42,14 @@ public class FamilyProductService {
             throw new BadRequestException("Start date must be before end date");
         }
 
-        Set<Profile> profiles = resolveProfiles(profileIds);
+        Profile profile = createProfileForFamily(name);
         Set<Project> projects = resolveProjects(projectIds);
 
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .name(name)
             .startTms(startTms)
                 .endTms(endTms)
-                .profiles(profiles)
+                .profile(profile)
             .projects(projects)
                 .build();
 
@@ -91,6 +91,9 @@ public class FamilyProductService {
                 throw new BadRequestException("Family product name already exists");
             }
             familyProduct.setName(name.trim());
+            if (familyProduct.getProfile() != null) {
+                familyProduct.getProfile().setName(name.trim());
+            }
         }
 
         if (startTms != null) {
@@ -121,10 +124,11 @@ public class FamilyProductService {
     }
 
     @Transactional
-    public FamilyProduct assignProfilesToFamily(@NonNull String familyId, @NonNull Set<String> profileIds) {
+    public FamilyProduct assignProfileToFamily(@NonNull String familyId, @NonNull String profileId) {
         FamilyProduct familyProduct = getFamilyProductById(familyId);
-
-        familyProduct.setProfiles(resolveProfiles(profileIds));
+        Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found: " + profileId));
+        familyProduct.setProfile(profile);
         return familyProductRepository.save(familyProduct);
     }
 
@@ -135,16 +139,12 @@ public class FamilyProductService {
         return familyProductRepository.save(familyProduct);
     }
 
-    private Set<Profile> resolveProfiles(Set<String> profileIds) {
-        Set<Profile> profiles = new HashSet<>();
-        if (profileIds != null && !profileIds.isEmpty()) {
-            for (String profileId : profileIds) {
-                Profile profile = profileRepository.findById(profileId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Profile not found: " + profileId));
-                profiles.add(profile);
-            }
-        }
-        return profiles;
+    private Profile createProfileForFamily(String familyName) {
+        Profile profile = Profile.builder()
+                .name(familyName)
+                .permissions(Set.of())
+                .build();
+        return profileRepository.save(profile);
     }
 
     private Set<Project> resolveProjects(Set<String> projectIds) {

@@ -36,8 +36,8 @@ public class Profile implements GrantedAuthority {
     @Builder.Default
     private Set<Permission> permissions = Set.of();
 
-    @ManyToMany(mappedBy = "profiles", fetch = FetchType.LAZY)
-    private Set<FamilyProduct> familyProducts;
+    @OneToOne(mappedBy = "profile", fetch = FetchType.LAZY)
+    private FamilyProduct familyProduct;
 
     @Override
     public String getAuthority() {

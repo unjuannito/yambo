@@ -33,4 +33,5 @@
     <include file="db/changelog/changes/21-promotion-invitations.xml"/>
     <include file="db/changelog/changes/22-promotion-invitation-start.xml"/>
     <include file="db/changelog/changes/23-promotion-invitation-optional-end.xml"/>
+    <include file="db/changelog/changes/24-family-product-single-profile.xml"/>
 </databaseChangeLog>

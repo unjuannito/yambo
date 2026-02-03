@@ -55,7 +55,7 @@ public final class FamilyProductSpecifications {
     public static Specification<FamilyProduct> hasProfileId(String profileId) {
         return (root, query, cb) -> {
             if (profileId == null) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profiles", JoinType.LEFT);
+            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
             return cb.equal(profileJoin.get("id"), profileId);
         };
     }
@@ -63,7 +63,7 @@ public final class FamilyProductSpecifications {
     public static Specification<FamilyProduct> hasAnyProfile(Set<String> profileIds) {
         return (root, query, cb) -> {
             if (profileIds == null || profileIds.isEmpty()) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profiles", JoinType.LEFT);
+            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
             return profileJoin.get("id").in(profileIds);
         };
     }
@@ -71,7 +71,7 @@ public final class FamilyProductSpecifications {
     public static Specification<FamilyProduct> hasProfileName(String profileName) {
         return (root, query, cb) -> {
             if (profileName == null) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profiles", JoinType.LEFT);
+            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
             return cb.like(cb.lower(profileJoin.get("name")), "%" + profileName.toLowerCase() + "%");
         };
     }

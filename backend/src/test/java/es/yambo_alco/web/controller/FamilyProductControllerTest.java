@@ -57,11 +57,11 @@ class FamilyProductControllerTest {
                 .name("Drop")
                 .startTms(start)
                 .endTms(end)
-                .profiles(Set.of(Profile.builder().id("BASIC").build()))
+                .profile(Profile.builder().id("BASIC").build())
                 .projects(Set.of(Project.builder().id("PRJ001").build()))
                 .build();
 
-        when(familyProductService.createFamilyProduct(anyString(), any(LocalDateTime.class), any(LocalDateTime.class), any(), any()))
+        when(familyProductService.createFamilyProduct(anyString(), any(LocalDateTime.class), any(LocalDateTime.class), any()))
                 .thenReturn(familyProduct);
 
         String payload = """
@@ -69,7 +69,6 @@ class FamilyProductControllerTest {
                     "name": "Drop",
                     "startTms": "2026-01-01T10:00:00",
                     "endTms": "2026-02-01T10:00:00",
-                    "profileIds": ["BASIC"],
                     "projectIds": ["PRJ001"]
                 }
                 """;
@@ -81,6 +80,7 @@ class FamilyProductControllerTest {
                 .andExpect(jsonPath("$.id").value("FAM001"))
                 .andExpect(jsonPath("$.startTms").exists())
                 .andExpect(jsonPath("$.endTms").exists())
+                .andExpect(jsonPath("$.profileId").value("BASIC"))
                 .andExpect(jsonPath("$.projectIds[0]").value("PRJ001"));
     }
 

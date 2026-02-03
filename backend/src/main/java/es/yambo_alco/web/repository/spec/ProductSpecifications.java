@@ -46,7 +46,7 @@ public final class ProductSpecifications {
             }
             // Allow products without family or with family that has matching profiles
             Join<Product, FamilyProduct> familyJoin = root.join("familyProduct", JoinType.LEFT);
-            Join<FamilyProduct, Profile> profileJoin = familyJoin.join("profiles", JoinType.LEFT);
+            Join<FamilyProduct, Profile> profileJoin = familyJoin.join("profile", JoinType.LEFT);
             return cb.or(
                 cb.isNull(familyJoin),
                 profileJoin.get("id").in(profileIds)

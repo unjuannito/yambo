@@ -143,8 +143,8 @@ public class ProductService {
             return;
         }
 
-        boolean hasAccess = product.getFamilyProduct().getProfiles().stream()
-                .anyMatch(p -> userProfileIds.contains(p.getId()));
+        boolean hasAccess = product.getFamilyProduct().getProfile() != null
+            && userProfileIds.contains(product.getFamilyProduct().getProfile().getId());
 
         if (!hasAccess) {
             throw new ResourceNotFoundException("Product not found");

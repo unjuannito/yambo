@@ -34,13 +34,9 @@ public class FamilyProduct {
     @Column(name = "end_tms", nullable = false)
     private LocalDateTime endTms;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "family_product_profile",
-        joinColumns = @JoinColumn(name = "family_product_id"),
-        inverseJoinColumns = @JoinColumn(name = "profile_id")
-    )
-    private Set<Profile> profiles;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id", nullable = false, unique = true)
+    private Profile profile;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
