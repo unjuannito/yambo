@@ -4,6 +4,8 @@ import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.OrderService;
 import jakarta.validation.Valid;
@@ -31,6 +33,8 @@ public class OrderController {
 
     private final OrderService orderService;
     private final AuthService authService;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -47,7 +51,7 @@ public class OrderController {
 
         Order order = orderService.createOrder(currentUser.getId(), orderProducts);
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new OrderResponse(order, products));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new OrderResponse(order, products, userRepository, productRepository));
     }
 
     @GetMapping
@@ -61,7 +65,7 @@ public class OrderController {
         Page<Order> orders = orderService.listOrders(customerId, status, startDate, endDate, pageable);
         Page<OrderResponse> response = orders.map(order -> {
             List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-            return new OrderResponse(order, products);
+            return new OrderResponse(order, products, userRepository, productRepository);
         });
         return ResponseEntity.ok(response);
     }
@@ -71,7 +75,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> getOrder(@PathVariable String id) {
         Order order = orderService.getOrderById(id);
         List<OrderProduct> products = orderService.getOrderProducts(id);
-        return ResponseEntity.ok(new OrderResponse(order, products));
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository));
     }
 
     @PutMapping("/{id}/status")
@@ -81,7 +85,7 @@ public class OrderController {
             @Valid @RequestBody UpdateOrderStatusRequest request) {
         Order order = orderService.updateOrderStatus(id, request.getStatus());
         List<OrderProduct> products = orderService.getOrderProducts(id);
-        return ResponseEntity.ok(new OrderResponse(order, products));
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository));
     }
 
     @DeleteMapping("/{id}")
@@ -100,7 +104,7 @@ public class OrderController {
         List<OrderResponse> response = orders.stream()
                 .map(order -> {
                     List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-                    return new OrderResponse(order, products);
+                    return new OrderResponse(order, products, userRepository, productRepository);
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
@@ -135,34 +139,59 @@ public class OrderController {
     @Data
     public static class OrderResponse {
         private String id;
-        private String customerId;
+        private UserInfo user;
         private OrderStatus status;
         private LocalDateTime createdAt;
         private List<OrderProductResponse> products;
 
-        public OrderResponse(Order order, List<OrderProduct> products) {
+        public OrderResponse(Order order, List<OrderProduct> products, UserRepository userRepository, ProductRepository productRepository) {
             this.id = order.getId();
-            this.customerId = order.getCustomerId();
             this.status = order.getStatus();
             this.createdAt = order.getCreatedAt();
+            
+            // Get customer details
+            userRepository.findById(order.getCustomerId()).ifPresent(user -> {
+                this.user = new UserInfo(user.getId(), user.getName(), user.getEmail());
+            });
+            
+            // Map products with details
             this.products = products.stream()
-                    .map(OrderProductResponse::new)
+                    .map(p -> new OrderProductResponse(p, productRepository))
                     .collect(Collectors.toList());
+        }
+    }
+
+    @Data
+    public static class UserInfo {
+        private String id;
+        private String name;
+        private String email;
+
+        public UserInfo(String id, String name, String email) {
+            this.id = id;
+            this.name = name;
+            this.email = email;
         }
     }
 
     @Data
     public static class OrderProductResponse {
         private String productId;
+        private String productName;
         private Integer quantity;
         private BigDecimal price;
         private String configuration;
 
-        public OrderProductResponse(OrderProduct orderProduct) {
+        public OrderProductResponse(OrderProduct orderProduct, ProductRepository productRepository) {
             this.productId = orderProduct.getProductId();
             this.quantity = orderProduct.getQuantity();
             this.price = orderProduct.getPrice();
             this.configuration = orderProduct.getConfiguration();
+            
+            // Get product name
+            productRepository.findById(orderProduct.getProductId()).ifPresent(product -> {
+                this.productName = product.getName();
+            });
         }
     }
 }

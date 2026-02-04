@@ -3,8 +3,11 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.util.PermissionCheckService;
@@ -23,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -52,9 +56,30 @@ class OrderControllerTest {
     @MockitoBean
     private PermissionCheckService permissionCheckService;
 
+    @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
+    private ProductRepository productRepository;
+
     @BeforeEach
     void setUp() {
         when(permissionCheckService.hasPermission(anyString(), anyString())).thenReturn(true);
+        
+        // Setup default user mock
+        User mockUser = User.builder()
+                .id("USER001")
+                .name("Test User")
+                .email("test@example.com")
+                .build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(mockUser));
+        
+        // Setup default product mock
+        Product mockProduct = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(mockProduct));
     }
 
     @Test
@@ -96,7 +121,11 @@ class OrderControllerTest {
                 .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("ORD001"))
+                .andExpect(jsonPath("$.user.id").value("USER001"))
+                .andExpect(jsonPath("$.user.name").value("Test User"))
+                .andExpect(jsonPath("$.user.email").value("test@example.com"))
                 .andExpect(jsonPath("$.products[0].productId").value("PROD001"))
+                .andExpect(jsonPath("$.products[0].productName").value("Test Product"))
                 .andExpect(jsonPath("$.products[0].quantity").value(2));
     }
 
@@ -117,6 +146,7 @@ class OrderControllerTest {
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("ORD001"))
+                .andExpect(jsonPath("$.content[0].user.name").value("Test User"))
                 .andExpect(jsonPath("$.content[0].status").value("CONFIRMED"));
     }
 
@@ -136,6 +166,8 @@ class OrderControllerTest {
         mockMvc.perform(get("/orders/ORD001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("ORD001"))
+                .andExpect(jsonPath("$.user.name").value("Test User"))
+                .andExpect(jsonPath("$.user.email").value("test@example.com"))
                 .andExpect(jsonPath("$.status").value("CONFIRMED"));
     }
 
@@ -160,6 +192,7 @@ class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.name").value("Test User"))
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
     }
 
@@ -188,6 +221,8 @@ class OrderControllerTest {
         mockMvc.perform(get("/orders/my"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("ORD001"))
-                .andExpect(jsonPath("$[0].customerId").value("USER001"));
+                .andExpect(jsonPath("$[0].user.id").value("USER001"))
+                .andExpect(jsonPath("$[0].user.name").value("Test User"))
+                .andExpect(jsonPath("$[0].user.email").value("test@example.com"));
     }
 }
