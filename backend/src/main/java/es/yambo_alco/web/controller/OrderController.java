@@ -44,8 +44,10 @@ public class OrderController {
                 .map(p -> OrderProduct.builder()
                         .productId(p.getProductId())
                         .quantity(p.getQuantity())
-                        .price(p.getPrice())
-                        .configuration(p.getConfiguration() != null ? p.getConfiguration() : "{}")
+                        .price(BigDecimal.ZERO) // Price will be calculated by service
+                        .configuration(p.getConfiguration() != null && !p.getConfiguration().trim().isEmpty() 
+                            ? p.getConfiguration() 
+                            : null)
                         .build())
                 .collect(Collectors.toList());
 
@@ -123,9 +125,6 @@ public class OrderController {
 
         @NotNull(message = "Quantity is required")
         private Integer quantity;
-
-        @NotNull(message = "Price is required")
-        private BigDecimal price;
 
         private String configuration;
     }

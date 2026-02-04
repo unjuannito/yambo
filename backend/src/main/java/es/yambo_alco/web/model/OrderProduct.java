@@ -17,14 +17,16 @@ import org.hibernate.type.SqlTypes;
 @AllArgsConstructor
 @Entity
 @Table(name = "order_product", schema = "public")
-@IdClass(OrderProductId.class)
 public class OrderProduct {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false)
+    private String id;
+
     @Column(name = "order_id", nullable = false)
     private String orderId;
 
-    @Id
     @Column(name = "product_id", nullable = false)
     private String productId;
 
@@ -36,10 +38,9 @@ public class OrderProduct {
     @JoinColumn(name = "product_id", insertable = false, updatable = false)
     private Product product;
 
-    @Builder.Default
-    @Column(nullable = false, columnDefinition = "json")
+    @Column(columnDefinition = "json")
     @JdbcTypeCode(SqlTypes.JSON)
-    private String configuration = "{}";
+    private String configuration;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;

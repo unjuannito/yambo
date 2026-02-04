@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="27-order-product-single-id" author="cabrasky">
+        <comment>Change order_product from composite key to single UUID primary key to allow multiple products with same productId but different configurations</comment>
+        
+        <!-- Drop the composite primary key constraint -->
+        <dropPrimaryKey tableName="order_product" constraintName="order_product_pkey"/>
+        
+        <!-- Add new UUID primary key column -->
+        <addColumn tableName="order_product">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        
+        <!-- Add the new primary key constraint -->
+        <addPrimaryKey tableName="order_product" columnNames="id" constraintName="order_product_pkey"/>
+        
+        <!-- Make configuration nullable and drop the default value -->
+        <dropDefaultValue tableName="order_product" columnName="configuration"/>
+        <dropNotNullConstraint tableName="order_product" columnName="configuration" columnDataType="json"/>
+        
+        <!-- Add index on order_id for performance -->
+        <createIndex tableName="order_product" indexName="idx_order_product_order_id">
+            <column name="order_id"/>
+        </createIndex>
+        
+        <!-- Add index on product_id for performance -->
+        <createIndex tableName="order_product" indexName="idx_order_product_product_id">
+            <column name="product_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

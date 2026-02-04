@@ -16,6 +16,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -38,12 +39,16 @@ public class OrderService {
         User currentUser = authService.getCurrentUser(true);
         LocalDateTime now = LocalDateTime.now();
 
-        // Validate all products exist and user has access
+        // Validate all products exist, calculate prices, and check user access
         for (OrderProduct op : orderProducts) {
             Product product = productRepository.findById(op.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
             
             validateProductAccess(currentUser, product, now);
+            
+            // Calculate the actual price based on product options and configuration
+            BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
+            op.setPrice(calculatedPrice);
         }
 
         Order order = Order.builder()
@@ -61,6 +66,58 @@ public class OrderService {
         }
 
         return order;
+    }
+
+    private BigDecimal calculatePrice(Product product, String configurationJson) {
+        BigDecimal totalPrice = product.getBasePrice();
+        
+        if (configurationJson == null || configurationJson.trim().isEmpty()) {
+            return totalPrice;
+        }
+        
+        try {
+            // Parse configuration JSON
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> configuration = mapper.readValue(configurationJson, java.util.Map.class);
+            
+            // Get product options
+            List<ProductOption> options = product.getOptions();
+            if (options == null || options.isEmpty()) {
+                return totalPrice;
+            }
+            
+            // Calculate price based on selected options
+            for (ProductOption option : options) {
+                Object selectedValue = configuration.get(option.getName());
+                if (selectedValue == null) {
+                    continue;
+                }
+                
+                // Add option base price if exists
+                if (option.getPrice() != null) {
+                    totalPrice = totalPrice.add(option.getPrice());
+                }
+                
+                // For select type, add the price of the selected value
+                if ("select".equals(option.getType()) && option.getValues() != null) {
+                    String selectedValueStr = selectedValue.toString();
+                    for (OptionValue value : option.getValues()) {
+                        if (value.getLabel().equals(selectedValueStr) || value.getId().equals(selectedValueStr)) {
+                            if (value.getPrice() != null) {
+                                totalPrice = totalPrice.add(value.getPrice());
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // If parsing fails, just return base price
+            return totalPrice;
+        }
+        
+        return totalPrice;
     }
 
     private void validateProductAccess(User user, Product product, LocalDateTime now) {

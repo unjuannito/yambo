@@ -59,7 +59,7 @@ class OrderServiceTest {
                 .productId("PROD404")
                 .quantity(1)
                 .price(BigDecimal.TEN)
-                .configuration("{}")
+                .configuration(null)
                 .build();
 
         when(productRepository.findById("PROD404")).thenReturn(Optional.empty());
@@ -89,7 +89,7 @@ class OrderServiceTest {
                 .productId("PROD001")
                 .quantity(2)
                 .price(BigDecimal.TEN)
-                .configuration("{}")
+                .configuration(null)
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -108,6 +108,7 @@ class OrderServiceTest {
         ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
         verify(orderProductRepository).save(captor.capture());
         assertEquals("ORD001", captor.getValue().getOrderId());
+        assertEquals(BigDecimal.TEN, captor.getValue().getPrice()); // Price should be calculated from basePrice
     }
 
     @Test
@@ -142,7 +143,7 @@ class OrderServiceTest {
                 .productId("PROD001")
                 .quantity(1)
                 .price(BigDecimal.TEN)
-                .configuration("{}")
+                .configuration(null)
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -185,7 +186,7 @@ class OrderServiceTest {
                 .productId("PROD001")
                 .quantity(1)
                 .price(BigDecimal.TEN)
-                .configuration("{}")
+                .configuration(null)
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -233,7 +234,7 @@ class OrderServiceTest {
                 .productId("PROD001")
                 .quantity(1)
                 .price(BigDecimal.TEN)
-                .configuration("{}")
+                .configuration(null)
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -277,7 +278,7 @@ class OrderServiceTest {
                 .productId("PROD001")
                 .quantity(1)
                 .price(BigDecimal.TEN)
-                .configuration("{}")
+                .configuration(null)
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
@@ -390,5 +391,322 @@ class OrderServiceTest {
         orderService.listOrders("USER001", OrderStatus.CONFIRMED, LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
 
         verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    @Test
+    void createOrder_WithNoConfiguration_ShouldUseBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration(null)
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("25.00"), captor.getValue().getPrice());
+    }
+
+    @Test
+    void createOrder_WithEmptyConfiguration_ShouldUseBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("25.00"), captor.getValue().getPrice());
+    }
+
+    @Test
+    void createOrder_WithOptionPrice_ShouldAddToBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        ProductOption option = ProductOption.builder()
+                .name("CustomText")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(option));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"CustomText\":\"My Name\"}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("30.00"), captor.getValue().getPrice()); // 25 + 5
+    }
+
+    @Test
+    void createOrder_WithSelectOptionValue_ShouldAddValuePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        OptionValue smallValue = OptionValue.builder()
+                .id("small")
+                .label("Small")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        OptionValue largeValue = OptionValue.builder()
+                .id("large")
+                .label("Large")
+                .price(new BigDecimal("3.00"))
+                .build();
+
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(smallValue, largeValue))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(sizeOption));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"Size\":\"Large\"}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("28.00"), captor.getValue().getPrice()); // 25 + 3
+    }
+
+    @Test
+    void createOrder_WithMultipleOptions_ShouldAddAllPrices() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        OptionValue colorRed = OptionValue.builder()
+                .id("red")
+                .label("Red")
+                .price(new BigDecimal("2.00"))
+                .build();
+
+        OptionValue colorBlue = OptionValue.builder()
+                .id("blue")
+                .label("Blue")
+                .price(new BigDecimal("2.50"))
+                .build();
+
+        ProductOption colorOption = ProductOption.builder()
+                .name("Color")
+                .type("select")
+                .values(List.of(colorRed, colorBlue))
+                .build();
+
+        ProductOption customNameOption = ProductOption.builder()
+                .name("CustomName")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(colorOption, customNameOption));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"Color\":\"Blue\",\"CustomName\":\"John\"}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("32.50"), captor.getValue().getPrice()); // 25 + 2.5 + 5
+    }
+
+    @Test
+    void createOrder_WithInvalidConfiguration_ShouldUseBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{invalid json")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("25.00"), captor.getValue().getPrice()); // Falls back to base price
+    }
+
+    @Test
+    void createOrder_WithNonExistentOptionInConfig_ShouldIgnoreIt() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        ProductOption option = ProductOption.builder()
+                .name("RealOption")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(option));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"FakeOption\":\"value\",\"RealOption\":\"My Name\"}")
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("30.00"), captor.getValue().getPrice()); // Only adds real option: 25 + 5
     }
 }
