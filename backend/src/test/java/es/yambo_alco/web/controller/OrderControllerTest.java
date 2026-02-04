@@ -111,7 +111,7 @@ class OrderControllerTest {
         String payload = """
                 {
                     "products": [
-                        {"productId": "PROD001", "quantity": 2, "price": 10.0, "configuration": "{}"}
+                        {"productId": "PROD001", "quantity": 2}
                     ]
                 }
                 """;
