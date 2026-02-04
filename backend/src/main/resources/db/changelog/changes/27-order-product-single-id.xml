@@ -9,11 +9,7 @@
         <comment>Change order_product from composite key to single UUID primary key to allow multiple products with same productId but different configurations</comment>
         
         <!-- Drop the composite primary key constraint -->
-<<<<<<< HEAD
-        <dropPrimaryKey tableName="order_product" constraintName="order_product_pkey"/>
-=======
         <dropPrimaryKey tableName="order_product" constraintName="pk_order_product"/>
->>>>>>> origin/develop
         
         <!-- Add new UUID primary key column -->
         <addColumn tableName="order_product">
@@ -23,11 +19,7 @@
         </addColumn>
         
         <!-- Add the new primary key constraint -->
-<<<<<<< HEAD
-        <addPrimaryKey tableName="order_product" columnNames="id" constraintName="order_product_pkey"/>
-=======
         <addPrimaryKey tableName="order_product" columnNames="id" constraintName="pk_order_product"/>
->>>>>>> origin/develop
         
         <!-- Make configuration nullable and drop the default value -->
         <dropDefaultValue tableName="order_product" columnName="configuration"/>
