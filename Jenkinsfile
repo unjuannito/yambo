@@ -41,7 +41,7 @@ pipeline {
                         echo "📌 Branch build: ${env.BRANCH_NAME}"
                         env.IS_PR = 'false'
 
-                        def semverPattern = /^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$/
+                        def semverPattern = /^\d+\.\d+\.\d+([_-][a-zA-Z0-9]+)?$/
                         if (!env.FRONTEND_TAG.matches(semverPattern)) {
                             error "Invalid frontend version format: ${env.FRONTEND_TAG}"
                         }
