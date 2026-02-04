@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -21,8 +22,8 @@ public class OrderProduct {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", nullable = false)
-    private String id;
+    @Column(name = "id", nullable = false, columnDefinition = "UUID")
+    private UUID id;
 
     @Column(name = "order_id", nullable = false)
     private String orderId;
