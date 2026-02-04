@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -35,6 +38,7 @@ public class OrderProduct {
 
     @Builder.Default
     @Column(nullable = false, columnDefinition = "json")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String configuration = "{}";
 
     @Column(nullable = false, precision = 10, scale = 2)
