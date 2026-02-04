@@ -20,8 +20,17 @@ pipeline {
         stage('Read Versions') {
             steps {
                 script {
-                    env.FRONTEND_TAG = readFile('frontend/VERSION').trim()
-                    env.BACKEND_TAG  = readFile('backend/VERSION').trim()
+                    // Read frontend version from package.json
+                    env.FRONTEND_TAG = sh(
+                        script: "grep '\"version\"' frontend/package.json | head -1 | sed 's/.*\"version\": \"\\(.*\\)\".*/\\1/'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    // Read backend version from pom.xml (get project version, not parent)
+                    env.BACKEND_TAG = sh(
+                        script: "grep '<artifactId>web</artifactId>' backend/pom.xml -A 1 | grep '<version>' | sed 's/.*<version>\\(.*\\)<\\/version>.*/\\1/'",
+                        returnStdout: true
+                    ).trim()
 
                     if (env.CHANGE_ID) {
                         echo "🔀 Pull Request #${env.CHANGE_ID} detected (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
