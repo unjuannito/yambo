@@ -15,13 +15,7 @@ export interface UserFilters {
 }
 
 export interface UpdateProfilesRequest {
-    profiles: string[];
-}
-
-export interface UpdateProfileRequest {
-    id: string;
-    name: string;
-    email: string;
+    profileIds: string[];
 }
 
 export class AdminUserService extends ApiService {
@@ -37,14 +31,7 @@ export class AdminUserService extends ApiService {
     ): Promise<User> {
         return await this.put<User, UpdateProfilesRequest>(
             `/admin/users/profiles?userId=${userId}`,
-            { profiles: profileIds }
-        );
-    }
-
-    public async updateUserProfile(data: UpdateProfileRequest): Promise<User> {
-        return await this.put<User, UpdateProfileRequest>(
-            "/admin/users/profile",
-            data
+            { profileIds }
         );
     }
 

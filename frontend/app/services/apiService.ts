@@ -25,7 +25,7 @@ export class ApiService {
     private static onTokenExpired: (() => void) | null = null;
 
     constructor() {
-        this.baseUrl = import.meta.env.DEV ? "http://localhost:8080" : "/api";
+        this.baseUrl = "/api";
         this.axiosInstance = axios.create({
             baseURL: this.baseUrl,
             headers: {

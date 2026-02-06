@@ -12,8 +12,6 @@ export interface AuthResponse {
 export class AuthService extends ApiService {
     public async login(email: string, password: string): Promise<string> {
         const { token } = await this.post<AuthResponse, LoginRequest>('/auth/login', { email, password });
-        // Poner en la consola q ha llegado aqui para debugear
-        console.log('Login successful, token received:', token);
         ApiService.setToken(token);
         return token;
     }

@@ -30,6 +30,12 @@ const variantClasses = {
         "bg-green-500 border-green-500 text-white hover:bg-green-600 hover:border-green-600",
 };
 
+const sizeClasses = {
+    sm: "px-3 py-1.5 text-sm",
+    md: "px-4 py-2 text-base",
+    lg: "px-5 py-2.5 text-lg",
+};
+
 export default function ButtonComponent({
     size = "md",
     disabled,
@@ -48,7 +54,7 @@ export default function ButtonComponent({
             transition-[border] duration-150 ease-linear
             select-none whitespace-normal
             cursor-pointer disabled:cursor-not-allowed disabled:opacity-50
-            px-4 py-2
+            ${sizeClasses[size]}
             ${variantClasses[variant]}
             ${loading ? "disabled:cursor-wait" : ""}
             ${className}

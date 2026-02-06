@@ -1,8 +1,8 @@
-import Hero from "../../components/home/Hero";
-import AboutUs from "../../components/home/AboutUs";
-import FeaturedProjects from "../../components/home/FeaturedProjects";
-import ActivitiesPreview from "../../components/home/ActivitiesPreview";
-import MonitorsGallery from "../../components/home/MonitorsGallery";
+import Hero from "~/components/home/Hero";
+import AboutUs from "~/components/home/AboutUs";
+import FeaturedProjects from "~/components/home/FeaturedProjects";
+import ActivitiesPreview from "~/components/home/ActivitiesPreview";
+import MonitorsGallery from "~/components/home/MonitorsGallery";
 import type { Route } from "./+types";
 
 export function meta({ }: Route.MetaArgs) {

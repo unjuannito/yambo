@@ -7,7 +7,7 @@ import { useDataFetch } from "./useDataFetch";
  */
 export function useProfiles() {
     const profileService = useMemo(() => new ProfileService(), []);
-    
+
     return useDataFetch({
         fetchFn: () => profileService.getAllProfiles(),
     });
