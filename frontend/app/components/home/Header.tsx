@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BurgerButton } from "../common/BurgerButton";
+import { BurgerButton } from "~/components/common/BurgerButton";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);

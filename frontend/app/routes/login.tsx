@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "../hooks/useAuth";
-import ButtonComponent from "../components/common/forms/ButtonComponent";
+import { useAuth } from "~/hooks/useAuth";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import type { Route } from "./+types/login";
 import InputComponent from "~/components/common/forms/InputComponent";
 import toast from "react-hot-toast";

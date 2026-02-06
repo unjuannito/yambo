@@ -1,7 +1,8 @@
-import { useContext, type ReactNode } from 'react';
+import { useContext, useEffect, useRef, type ReactNode } from 'react';
 import { Navigate } from 'react-router';
 import { AuthContext } from '~/context/AuthContext';
 import type { RequiredPermission } from '~/types/authContextType';
+import toast from 'react-hot-toast';
 
 export function RequirePermission({
     permission,
@@ -18,16 +19,24 @@ export function RequirePermission({
     if (!context) throw new Error('RequirePermission must be used within an AuthProvider');
 
     const { loading, hasPermission } = context;
+    const toastShown = useRef(false);
 
-    if (loading) return null; // o un spinner
-    if(!hasPermission(permission)) {
-        console.log('No tienes permiso para acceder a esta sección' + JSON.stringify(permission));
+    useEffect(() => {
+        if (!loading && !hasPermission(permission) && !toastShown.current) {
+            toastShown.current = true;
+            toast.error('No tienes permiso para acceder a esta sección');
+        }
+    }, [loading, hasPermission, permission]);
+
+    if (loading) return null;
+    
+    if (!hasPermission(permission)) {
         if (redirect) {
             return <Navigate to={redirectTo} replace />;
         } else {
             return <></>;
         }
     }
-    if (!hasPermission(permission)) return <Navigate to={redirectTo || "/"} replace />;
+    
     return <>{children}</>;
 }

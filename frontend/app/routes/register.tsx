@@ -71,7 +71,6 @@ export default function Register() {
             await reload();
             navigate("/mi-espacio", { replace: true });
         } catch (error: any) {
-            console.log(error);
             switch (error.response?.data?.message) {
                 case "Invitation already used":
                     toast.error("El token de invitación ya fue utilizado.");

@@ -1,5 +1,5 @@
 import { ApiService } from './apiService';
-import type { CurrentUser } from '../types/userType';
+import type { CurrentUser } from '~/types/userType';
 
 export interface UpdateProfileRequest {
   name: string;

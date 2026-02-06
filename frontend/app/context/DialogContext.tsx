@@ -1,6 +1,6 @@
 import { createContext, useState, useRef, useEffect } from "react";
 import type { ReactNode } from "react";
-import ButtonComponent from "../components/common/forms/ButtonComponent";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import toast from "react-hot-toast";
 
 type DialogVariant = "info" | "warning" | "danger" | "success";

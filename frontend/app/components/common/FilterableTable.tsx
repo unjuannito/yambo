@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { DataTable } from "./DataTable";
 import type { TableColumn } from "./DataTable";
 import { FiltersSection } from "./FiltersSection";
@@ -7,7 +7,6 @@ import type { ColumnFilter, FilterValues } from "./types/tableTypes";
 import type { PagedInfo, PagedResponse } from "~/types/apiType";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { twMerge } from "tailwind-merge";
-import toast from "react-hot-toast";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
     filter?: ColumnFilter;
@@ -26,17 +25,29 @@ interface ServerSideProps<T> {
     initialFilters?: FilterValues;
 }
 
+export type ViewMode = 'table' | 'grid';
+
+export interface DisplayConfig<T> {
+    type?: ViewMode;
+    emptyMessage?: string;
+    loadingMessage?: string;
+    renderItem?: (item: T) => React.ReactNode;
+    gridClassName?: string;
+    onRowClick?: (item: T) => void;
+}
+
+export interface FeaturesConfig {
+    enableFilters?: boolean;
+    enablePagination?: boolean;
+}
+
 export interface FilterableTableProps<T> {
     columns: FilterableColumn<T>[];
     keyField: keyof T;
-    emptyMessage?: string;
     className?: string;
-    onRowClick?: (item: T) => void;
-    enableFilters?: boolean;
-    enablePagination?: boolean;
-
+    display?: DisplayConfig<T>;
+    features?: FeaturesConfig;
     serverSide?: ServerSideProps<T>;
-
     data?: T[];
 }
 
@@ -51,15 +62,33 @@ const EMPTY_FILTERS: FilterValues = {};
 export function FilterableTable<T>({
     columns,
     keyField,
-    emptyMessage = "No se encontraron resultados",
     className = "",
-    onRowClick,
-    enableFilters = true,
-    enablePagination = true,
+    display = {},
+    features = {},
     serverSide,
     data: clientData,
 }: FilterableTableProps<T>) {
+    const {
+        type: viewMode = 'table',
+        emptyMessage = "No se encontraron resultados",
+        loadingMessage = "Cargando datos...",
+        renderItem: renderGridItem,
+        gridClassName = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
+        onRowClick,
+    } = display;
+
+    const {
+        enableFilters = true,
+        enablePagination = true,
+    } = features;
+
     const isServerSide = Boolean(serverSide);
+    const isGridMode = viewMode === 'grid';
+
+    // Validate grid mode requirements
+    if (isGridMode && !renderGridItem) {
+        throw new Error('renderGridItem is required when viewMode is "grid"');
+    }
 
     // Server-side state
     const [serverData, setServerData] = useState<T[]>([]);
@@ -77,13 +106,8 @@ export function FilterableTable<T>({
 
     // Client-side state
     const [clientPage, setClientPage] = useState(0);
-    const [clientFilters, setClientFilters] =
-        useState<FilterValues>(EMPTY_FILTERS);
+    const [clientFilters, setClientFilters] = useState<FilterValues>(EMPTY_FILTERS);
     const clientPageSize = 10;
-
-    // Refs for stable callbacks
-    const filtersRef = useRef(filters);
-    filtersRef.current = filters;
 
     // Server-side fetch
     const executeFetch = useCallback(async () => {
@@ -158,12 +182,12 @@ export function FilterableTable<T>({
     }, [columns]);
 
     const enhancedColumns = useMemo(() => {
-        if (!onRowClick) return columns;
+        if (isGridMode || !onRowClick) return columns;
         return columns.map((col) => ({
             ...col,
             className: twMerge(`cursor-pointer hover:bg-gray-50 ${col.className || ""}`),
         }));
-    }, [columns, onRowClick]);
+    }, [columns, onRowClick, isGridMode]);
 
     // Client-side filtering
     const filteredData = useMemo(() => {
@@ -231,6 +255,64 @@ export function FilterableTable<T>({
 
     const activeFilters = isServerSide ? filters : clientFilters;
 
+    // Render content based on view mode
+    const renderContent = () => {
+        if (isLoading) {
+            return <LoadingSpinner message={loadingMessage} size="md" />;
+        }
+
+        if (paginatedData.length === 0) {
+            return (
+                <div className="text-center py-12">
+                    <p className="text-gray-500">{emptyMessage}</p>
+                </div>
+            );
+        }
+
+        if (isGridMode && renderGridItem) {
+            return (
+                <>
+                    <div className={gridClassName}>
+                        {paginatedData.map((item) => (
+                            <div
+                                key={String(item[keyField])}
+                                onClick={() => onRowClick?.(item)}
+                                className={onRowClick ? "cursor-pointer" : ""}
+                            >
+                                {renderGridItem(item)}
+                            </div>
+                        ))}
+                    </div>
+                    {enablePagination && (
+                        <Pagination
+                            page={displayPageInfo.number}
+                            totalPages={displayPageInfo.totalPages}
+                            onPageChange={handlePageChange}
+                        />
+                    )}
+                </>
+            );
+        }
+
+        return (
+            <>
+                <DataTable
+                    data={paginatedData}
+                    columns={enhancedColumns}
+                    keyField={keyField}
+                    onRowClick={onRowClick}
+                />
+                {enablePagination && (
+                    <Pagination
+                        page={displayPageInfo.number}
+                        totalPages={displayPageInfo.totalPages}
+                        onPageChange={handlePageChange}
+                    />
+                )}
+            </>
+        );
+    };
+
     return (
         <div className={twMerge(`flex flex-col gap-4 ${className}`)}>
             {/* Filters Section */}
@@ -244,36 +326,13 @@ export function FilterableTable<T>({
 
             {/* Error Message */}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                     {error}
                 </div>
             )}
 
-            {/* Loading / Table / Empty */}
-            {isLoading ? (
-                <LoadingSpinner message="Cargando datos..." size="md" />
-            ) : paginatedData.length > 0 ? (
-                <>
-                    <DataTable
-                        data={paginatedData}
-                        columns={enhancedColumns}
-                        keyField={keyField}
-                        onRowClick={onRowClick}
-                    />
-                    {/* Pagination */}
-                    {enablePagination && (
-                        <Pagination
-                            page={displayPageInfo.number}
-                            totalPages={displayPageInfo.totalPages}
-                            onPageChange={handlePageChange}
-                        />
-                    )}
-                </>
-            ) : (
-                <span className="text-center text-gray-500">
-                    {emptyMessage}
-                </span>
-            )}
+            {/* Content */}
+            {renderContent()}
         </div>
     );
 }

@@ -1,8 +1,9 @@
 import { createContext, useState, useEffect, useCallback, type ReactNode, useContext } from 'react';
-import { AuthService } from '../services/authService';
-import { UserService } from '../services/userService';
-import { ApiService } from '../services/apiService';
+import { AuthService } from '~/services/authService';
+import { UserService } from '~/services/userService';
+import { ApiService } from '~/services/apiService';
 import { Navigate } from 'react-router';
+import toast from 'react-hot-toast';
 
 import type { CurrentUser, Permission } from '~/types/userType';
 import type { AuthContextType, RequiredPermission } from '~/types/authContextType';
@@ -28,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         // Set up global token expiration handler
         ApiService.setOnTokenExpired(handleTokenExpired);
-        
+
         if (authService.isAuthenticated()) {
             reloadUser();
         } else {
@@ -52,20 +53,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         //TODO: redirigir a logout
     };
 
-    const hasPermission = (required: RequiredPermission | RequiredPermission[], matchAll = true): boolean => {
-        if (!user?.permissions) return false;
+    const hasPermission = (required: RequiredPermission | RequiredPermission[], matchAll = true, showToast = false): boolean => {
+        if (!user?.permissions) {
+            if (showToast) {
+                toast.error('No tienes permisos para realizar esta acción');
+            }
+            return false;
+        }
 
         const hasPermissionObj = (perm: RequiredPermission): boolean => {
             return user.permissions.some(p => p.obj === perm.obj && p.actions.includes(perm.action));
         };
 
-        if (Array.isArray(required)) {
-            return matchAll
-                ? required.every(hasPermissionObj)
-                : required.some(hasPermissionObj);
+        const hasAccess = Array.isArray(required)
+            ? (matchAll ? required.every(hasPermissionObj) : required.some(hasPermissionObj))
+            : hasPermissionObj(required);
+
+        if (!hasAccess && showToast) {
+            toast.error('No tienes los permisos necesarios para realizar esta acción');
         }
 
-        return hasPermissionObj(required);
+        return hasAccess;
     }
 
     const reloadUser = async () => {
