@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -126,6 +127,36 @@ public class UserService {
 		}
 
 		user.setProfiles(profilesSet);
+		return userRepository.save(user);
+	}
+
+	public User updateUser(@NonNull String userId, @NonNull String name, @NonNull String email, Set<String> profileIds) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		// Check if email is already taken by another user
+		if (!user.getEmail().equals(email)) {
+			Optional<User> existingUser = userRepository.findByEmail(email);
+			if (existingUser.isPresent()) {
+				throw new BadRequestException("Email is already in use");
+			}
+		}
+
+		// Update name and email
+		user.setName(name);
+		user.setEmail(email);
+
+		// Update profiles if provided
+		if (profileIds != null && !profileIds.isEmpty()) {
+			Set<Profile> profilesSet = new HashSet<>();
+			for (String profileId : profileIds) {
+				Profile profile = profileRepository.findById(profileId)
+						.orElseThrow(() -> new ResourceNotFoundException("Profile not found: " + profileId));
+				profilesSet.add(profile);
+			}
+			user.setProfiles(profilesSet);
+		}
+
 		return userRepository.save(user);
 	}
 

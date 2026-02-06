@@ -5,12 +5,15 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.repository.PermissionRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,33 @@ public class ProfileService {
 
     public List<Profile> getAllProfiles() {
         return profileRepository.findAll();
+    }
+
+    public Page<Profile> listProfiles(String search, List<String> permissionIds, Pageable pageable) {
+        Page<Profile> profiles = profileRepository.findAll(pageable);
+
+        if (search != null && !search.trim().isEmpty()) {
+            String searchLower = search.toLowerCase();
+            profiles = profiles.map(profile -> {
+                boolean matches = profile.getId().toLowerCase().contains(searchLower) ||
+                        (profile.getName() != null && profile.getName().toLowerCase().contains(searchLower));
+                return matches ? profile : null;
+            });
+            List<Profile> filtered = profiles.getContent().stream()
+                    .filter(p -> p != null)
+                    .collect(Collectors.toList());
+            return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+        }
+
+        if (permissionIds != null && !permissionIds.isEmpty()) {
+            List<Profile> filtered = profiles.getContent().stream()
+                    .filter(profile -> profile.getPermissions().stream()
+                            .anyMatch(perm -> permissionIds.contains(perm.getId())))
+                    .collect(Collectors.toList());
+            return new org.springframework.data.domain.PageImpl<>(filtered, pageable, filtered.size());
+        }
+
+        return profiles;
     }
 
     public Profile getProfileById(String id) {
@@ -35,24 +65,41 @@ public class ProfileService {
     @Transactional
     public Profile updateProfilePermissions(String profileId, Set<String> permissionIds) {
         Profile profile = getProfileById(profileId);
-        
+
         Set<Permission> permissions = new HashSet<>();
         for (String permissionId : permissionIds) {
             Permission permission = permissionRepository.findById(permissionId)
                     .orElseThrow(() -> new RuntimeException("Permission not found: " + permissionId));
             permissions.add(permission);
         }
-        
+
         profile.setPermissions(permissions);
         return profileRepository.save(profile);
     }
 
     @Transactional
-    public Profile createProfile(String profileId, Set<String> permissionIds) {
-        if (profileRepository.existsById(profileId)) {
-            throw new RuntimeException("Profile already exists: " + profileId);
+    public Profile updateProfile(String profileId, String name, Set<String> permissionIds) {
+        Profile profile = getProfileById(profileId);
+
+        if (name != null && !name.isBlank()) {
+            profile.setName(name);
         }
 
+        if (permissionIds != null) {
+            Set<Permission> permissions = new HashSet<>();
+            for (String permissionId : permissionIds) {
+                Permission permission = permissionRepository.findById(permissionId)
+                        .orElseThrow(() -> new RuntimeException("Permission not found: " + permissionId));
+                permissions.add(permission);
+            }
+            profile.setPermissions(permissions);
+        }
+
+        return profileRepository.save(profile);
+    }
+
+    @Transactional
+    public Profile createProfile(String name, Set<String> permissionIds) {
         Set<Permission> permissions = new HashSet<>();
         if (permissionIds != null) {
             for (String permissionId : permissionIds) {
@@ -63,7 +110,8 @@ public class ProfileService {
         }
 
         Profile profile = Profile.builder()
-                .id(profileId)
+                .id(es.yambo_alco.web.util.IdGenerator.generateId())
+                .name(name)
                 .permissions(permissions)
                 .build();
 

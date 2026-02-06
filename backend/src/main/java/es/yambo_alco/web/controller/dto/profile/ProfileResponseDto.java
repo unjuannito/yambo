@@ -17,5 +17,4 @@ public class ProfileResponseDto {
     private String id;
     private String name;
     private List<PermissionResponseDto> permissions;
-    private boolean isDefault;
 }

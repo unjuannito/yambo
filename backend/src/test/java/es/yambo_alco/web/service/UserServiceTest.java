@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -32,16 +33,16 @@ public class UserServiceTest {
     private UserRepository userRepository;
     private PasswordEncoder passwordEncoder;
         private UserService userService;
-        private ProfileRepository roleRepository;
+        private ProfileRepository profileRepository;
     private PendingDeletionService pendingDeletionService;
 
     @BeforeEach
     public void setup() {
         userRepository = Mockito.mock(UserRepository.class);
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
-        roleRepository = Mockito.mock(ProfileRepository.class);
+        profileRepository = Mockito.mock(ProfileRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
-        userService = new UserService(userRepository, passwordEncoder, roleRepository, pendingDeletionService);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, pendingDeletionService);
     }
 
     @Test
@@ -186,8 +187,8 @@ public class UserServiceTest {
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
-        when(roleRepository.findById("ROLE_USER")).thenReturn(Optional.of(role1));
-        when(roleRepository.findById("ROLE_ADMIN")).thenReturn(Optional.of(role2));
+        when(profileRepository.findById("ROLE_USER")).thenReturn(Optional.of(role1));
+        when(profileRepository.findById("ROLE_ADMIN")).thenReturn(Optional.of(role2));
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
@@ -244,7 +245,7 @@ public class UserServiceTest {
         User existingUser = User.builder().id("U0000001").build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
-        when(roleRepository.findById("NON_EXISTENT_ROLE")).thenReturn(Optional.empty());
+        when(profileRepository.findById("NON_EXISTENT_ROLE")).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of("NON_EXISTENT_ROLE")))
@@ -319,5 +320,89 @@ public class UserServiceTest {
 
         verify(userRepository, never()).delete(any(User.class));
         verify(pendingDeletionService, never()).scheduleDeletion(any(), any(), any());
+    }
+
+    @Test
+    public void updateUser_WhenValidData_ShouldUpdateNameEmailAndProfiles() {
+        // Given
+        User user = User.builder()
+                .id("U0000001")
+                .name("Old Name")
+                .email("old@example.com")
+                .profiles(new HashSet<>())
+                .build();
+
+        Profile profile1 = Profile.builder().id("P0000001").name("Profile 1").build();
+        Profile profile2 = Profile.builder().id("P0000002").name("Profile 2").build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(profileRepository.findById("P0000001")).thenReturn(Optional.of(profile1));
+        when(profileRepository.findById("P0000002")).thenReturn(Optional.of(profile2));
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        // When
+        User result = userService.updateUser("U0000001", "New Name", "new@example.com", 
+                Set.of("P0000001", "P0000002"));
+
+        // Then
+        assertThat(result.getName()).isEqualTo("New Name");
+        assertThat(result.getEmail()).isEqualTo("new@example.com");
+        assertThat(result.getProfiles()).hasSize(2);
+        assertThat(result.getProfiles()).contains(profile1, profile2);
+    }
+
+    @Test
+    public void updateUser_WhenEmailAlreadyExists_ShouldThrowException() {
+        // Given
+        User user = User.builder()
+                .id("U0000001")
+                .name("User 1")
+                .email("user1@example.com")
+                .build();
+
+        User existingUser = User.builder()
+                .id("U0000002")
+                .name("User 2")
+                .email("user2@example.com")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("user2@example.com")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser("U0000001", "New Name", "user2@example.com", Set.of("P0000001")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Email is already in use");
+    }
+
+    @Test
+    public void updateUser_WhenProfileNotFound_ShouldThrowException() {
+        // Given
+        User user = User.builder()
+                .id("U0000001")
+                .name("User 1")
+                .email("user1@example.com")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("user1@example.com")).thenReturn(Optional.of(user));
+        when(profileRepository.findById("P0000001")).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser("U0000001", "New Name", "user1@example.com", Set.of("P0000001")))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Profile not found: P0000001");
+    }
+
+    @Test
+    public void updateUser_WhenUserNotFound_ShouldThrowException() {
+        // Given
+        when(userRepository.findById("U0000999")).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser("U0000999", "New Name", "new@example.com", Set.of("P0000001")))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("User not found");
     }
 }
