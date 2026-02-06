@@ -133,6 +133,7 @@ public class AdminUserController {
         private String name;
         private AdminUserProfileResponse[] profiles;
         private AdminUserPermissionResponse[] permissions;
+        private String createdAt;
         private boolean enabled;
 
         public AdminUserResponse(User user) {
@@ -152,6 +153,7 @@ public class AdminUserController {
             this.permissions = resourceActions.entrySet().stream()
                     .map(entry -> new AdminUserPermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
                     .toArray(AdminUserPermissionResponse[]::new);
+            this.createdAt = user.getCreatedAt() != null ? user.getCreatedAt().toString() : null;
 
             this.enabled = user.isEnabled();
         }

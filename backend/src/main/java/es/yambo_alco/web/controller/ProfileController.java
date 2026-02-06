@@ -9,6 +9,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +26,18 @@ import java.util.stream.Collectors;
 public class ProfileController {
 
     private final ProfileService profileService;
+
+    @GetMapping("/list")
+    @PreAuthorize("@permissionCheck.hasPermission('profile', 'read')")
+    public ResponseEntity<Page<ProfileResponseDto>> listProfiles(
+            @RequestParam(required = false) String id,
+            @RequestParam(required = false) List<String> permissions,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Profile> profilesPage = profileService.listProfiles(id, permissions, pageable);
+        return ResponseEntity.ok(profilesPage.map(this::mapToProfileResponseDto));
+    }
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('profile', 'read')")
@@ -62,10 +77,20 @@ public class ProfileController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{profileId}")
+    @PreAuthorize("@permissionCheck.hasPermission('profile', 'update')")
+    public ResponseEntity<ProfileResponseDto> updateProfile(
+            @PathVariable String profileId,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        Profile updatedProfile = profileService.updateProfile(profileId, request.getName(), request.getPermissionIds());
+        ProfileResponseDto response = mapToProfileResponseDto(updatedProfile);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('profile', 'create')")
     public ResponseEntity<ProfileResponseDto> createProfile(@Valid @RequestBody CreateProfileRequest request) {
-        Profile profile = profileService.createProfile(request.getProfileId(), request.getPermissionIds());
+        Profile profile = profileService.createProfile(request.getName(), request.getPermissionIds());
         ProfileResponseDto response = mapToProfileResponseDto(profile);
         return ResponseEntity.ok(response);
     }
@@ -84,7 +109,6 @@ public class ProfileController {
                 .permissions(profile.getPermissions().stream()
                         .map(this::mapToPermissionResponseDto)
                         .collect(Collectors.toList()))
-                .isDefault(false) 
                 .build();
     }
 
@@ -105,15 +129,18 @@ public class ProfileController {
     }
 
     @Data
-    public static class CreateProfileRequest {
-        @NotBlank(message = "Profile ID cannot be blank")
-        private String profileId;
+    public static class UpdateProfileRequest {
+        @NotBlank(message = "Profile name cannot be blank")
+        private String name;
 
         private Set<String> permissionIds;
     }
 
     @Data
-    public static class UpdateProfileDefaultStatusRequest {
-        private Boolean isDefault;
+    public static class CreateProfileRequest {
+        @NotBlank(message = "Profile name cannot be blank")
+        private String name;
+
+        private Set<String> permissionIds;
     }
 }
