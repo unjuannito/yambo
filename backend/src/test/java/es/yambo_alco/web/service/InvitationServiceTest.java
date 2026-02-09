@@ -45,13 +45,17 @@ class InvitationServiceTest {
     @Mock
     private MailService mailService;
 
+    @Mock
+    private SettingsService settingsService;
+
     private InvitationService invitationService;
 
     @BeforeEach
     void setUp() {
         invitationService = new InvitationService(invitationRepository, roleRepository, userRepository, passwordEncoder,
-                mailService);
+                mailService, settingsService);
         ReflectionTestUtils.setField(invitationService, "expirationHours", 72L);
+        when(settingsService.getDomain()).thenReturn("http://localhost:5173");
     }
 
     @Test

@@ -24,12 +24,7 @@ public class HtmlMailService implements MailService {
     
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
-
-    @Value("${spring.mail.from:noreply@yambo-alco.es}")
-    private String fromEmail;
-
-    @Value("${spring.mail.from-name:Yambo}")
-    private String fromName;
+    private final SettingsService settingsService;
 
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
@@ -37,6 +32,10 @@ public class HtmlMailService implements MailService {
     @Override
     public void sendInvitation(String to, String subject, String body) {
         try {
+            // Get from email and name from database settings
+            String fromEmail = settingsService.getEmailFrom();
+            String fromName = settingsService.getEmailFromName();
+            
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             

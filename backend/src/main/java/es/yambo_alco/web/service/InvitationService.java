@@ -31,6 +31,7 @@ public class InvitationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
+    private final SettingsService settingsService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${invitation.expiration.hours:72}")
@@ -106,7 +107,7 @@ public class InvitationService {
     }
 
     private String buildInvitationLink(String token) {
-        String frontend = System.getenv().getOrDefault("FRONTEND_URL", "http://localhost:5173");
+        String frontend = settingsService.getDomain();
         return frontend + "/register?invitation=" + token;
     }
 

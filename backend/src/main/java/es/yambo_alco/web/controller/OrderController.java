@@ -45,8 +45,8 @@ public class OrderController {
                         .productId(p.getProductId())
                         .quantity(p.getQuantity())
                         .price(BigDecimal.ZERO) // Price will be calculated by service
-                        .configuration(p.getConfiguration() != null && !p.getConfiguration().trim().isEmpty() 
-                            ? p.getConfiguration() 
+                        .configuration(p.getConfiguration() != null && !p.getConfiguration().trim().isEmpty()
+                            ? p.getConfiguration()
                             : null)
                         .build())
                 .collect(Collectors.toList());
