@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { settingsService } from "~/services/settingsService";
 
 interface PaymentInstructionsProps {
     orderId: string;
@@ -11,13 +12,45 @@ export default function PaymentInstructions({
     totalAmount,
     onClose,
 }: PaymentInstructionsProps) {
-    const [iban] = useState<string>("ES00 0000 0000 0000 0000 0000");
-    const [legalName] = useState<string>("Yambo ALCO");
+    const [iban, setIban] = useState<string>("");
+    const [legalName, setLegalName] = useState<string>("");
+    const [loading, setLoading] = useState(true);
 
     const generatePaymentReference = () => {
         const year = new Date().getFullYear();
         return `merch-${year}-${orderId}`;
     };
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const settings = await settingsService.getAllSettings();
+
+                // Find IBAN setting
+                const ibanSetting = settings.find((s) => s.key === "bank.iban");
+                if (ibanSetting) {
+                    setIban(ibanSetting.value);
+                }
+
+                // Find legal name setting
+                const legalNameSetting = settings.find(
+                    (s) => s.key === "organization.legal_name",
+                );
+                if (legalNameSetting) {
+                    setLegalName(legalNameSetting.value);
+                } else {
+                    setLegalName("Yambo ALCO");
+                }
+            } catch (error) {
+                console.error("Error loading payment settings:", error);
+                setLegalName("Yambo ALCO");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadSettings();
+    }, []);
 
     const paymentReference = generatePaymentReference();
 
@@ -25,6 +58,21 @@ export default function PaymentInstructions({
         navigator.clipboard.writeText(text);
         alert(`${label} copiado al portapapeles`);
     };
+
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
+                    <div className="text-center py-12">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                        <p className="mt-4 text-gray-600">
+                            Cargando información de pago...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
