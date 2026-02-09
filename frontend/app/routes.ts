@@ -30,6 +30,7 @@ export default [
             "routes/dashboard/invitations/promotion-invitations.tsx",
         ),
         route("mi-espacio/admin/pedidos", "routes/dashboard/orders/index.tsx"),
+        route("mi-espacio/admin/configuracion", "routes/dashboard/settings/index.tsx"),
 
         // Proyectos
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),

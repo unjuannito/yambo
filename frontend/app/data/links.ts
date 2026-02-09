@@ -29,6 +29,12 @@ const LINKS_MAP: Link[] = [
 
     // Administración
     {
+        name: "settings",
+        href: "/mi-espacio/admin/configuracion",
+        label: "Configuración",
+        need: { obj: "settings", action: "read" },
+    },
+    {
         name: "users",
         href: "/mi-espacio/admin/usuarios",
         label: "Usuarios",
