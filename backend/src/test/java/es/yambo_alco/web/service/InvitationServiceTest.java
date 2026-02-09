@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -45,13 +46,17 @@ class InvitationServiceTest {
     @Mock
     private MailService mailService;
 
+    @Mock
+    private SettingsService settingsService;
+
     private InvitationService invitationService;
 
     @BeforeEach
     void setUp() {
         invitationService = new InvitationService(invitationRepository, roleRepository, userRepository, passwordEncoder,
-                mailService);
+                mailService, settingsService);
         ReflectionTestUtils.setField(invitationService, "expirationHours", 72L);
+        lenient().when(settingsService.getDomain()).thenReturn("http://localhost:5173");
     }
 
     @Test

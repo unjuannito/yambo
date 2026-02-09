@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,6 +38,12 @@ public class TestSecurityConfig {
     @Primary
     public PermissionCheckService permissionCheckService() {
         return mock(PermissionCheckService.class);
+    }
+
+    @Bean
+    @Primary
+    public JavaMailSender javaMailSender() {
+        return mock(JavaMailSender.class);
     }
 
     // Use mocked AuthService (which implements UserDetailsService) to avoid multiple UserDetailsService beans

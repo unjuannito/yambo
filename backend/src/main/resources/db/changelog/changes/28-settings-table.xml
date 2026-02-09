@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="28-01-create-settings-table" author="yambo">
+        <createTable tableName="settings">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="key" type="varchar(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="value" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="description" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="category" type="varchar(100)">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+            tableName="settings"
+            columnNames="key"
+            constraintName="uk_settings_key"/>
+    </changeSet>
+
+    <changeSet id="28-02-seed-default-settings" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM settings</sqlCheck>
+        </preConditions>
+
+        <!-- Bank settings -->
+        <insert tableName="settings">
+            <column name="id" value="SET00001"/>
+            <column name="key" value="bank.iban"/>
+            <column name="value" value=""/>
+            <column name="description" value="IBAN de la cuenta bancaria de la asociación"/>
+            <column name="category" value="bank"/>
+        </insert>
+
+        <!-- Email settings -->
+        <insert tableName="settings">
+            <column name="id" value="SET00002"/>
+            <column name="key" value="email.host"/>
+            <column name="value" value=""/>
+            <column name="description" value="Servidor SMTP para envío de correos"/>
+            <column name="category" value="email"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SET00003"/>
+            <column name="key" value="email.port"/>
+            <column name="value" value="587"/>
+            <column name="description" value="Puerto SMTP"/>
+            <column name="category" value="email"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SET00004"/>
+            <column name="key" value="email.username"/>
+            <column name="value" value=""/>
+            <column name="description" value="Usuario SMTP"/>
+            <column name="category" value="email"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SET00005"/>
+            <column name="key" value="email.password"/>
+            <column name="value" value=""/>
+            <column name="description" value="Contraseña SMTP (encriptada)"/>
+            <column name="category" value="email"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SET00006"/>
+            <column name="key" value="email.from"/>
+            <column name="value" value="noreply@yambo.es"/>
+            <column name="description" value="Dirección de correo del remitente"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

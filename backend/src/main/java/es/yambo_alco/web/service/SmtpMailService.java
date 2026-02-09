@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 public class SmtpMailService implements MailService {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpMailService.class);
-    
+
     private final JavaMailSender mailSender;
 
     @Override
@@ -24,11 +24,11 @@ public class SmtpMailService implements MailService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, false); // false = plain text, true = HTML
-            
+
             mailSender.send(message);
             log.info("Invitation email sent successfully to: {}", to);
         } catch (MessagingException e) {

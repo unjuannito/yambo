@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add SETTINGS resource permissions -->
+    <changeSet id="29-01-seed-settings-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'SETTINGS'</sqlCheck>
+        </preConditions>
+
+        <!-- SETTINGS permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PSET_CRT"/>
+            <column name="resource" value="SETTINGS"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PSET_RD"/>
+            <column name="resource" value="SETTINGS"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PSET_UPD"/>
+            <column name="resource" value="SETTINGS"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PSET_DEL"/>
+            <column name="resource" value="SETTINGS"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!-- Add SETTINGS permissions to admin profile if it exists -->
+    <changeSet id="29-02-add-settings-permissions-to-admin" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin'</sqlCheck>
+                <sqlCheck expectedResult="4">SELECT COUNT(*) FROM permission WHERE resource = 'SETTINGS'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO profile_permission (profile_id, permission_id)
+            SELECT 
+                (SELECT id FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin' LIMIT 1),
+                id
+            FROM permission
+            WHERE resource = 'SETTINGS'
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

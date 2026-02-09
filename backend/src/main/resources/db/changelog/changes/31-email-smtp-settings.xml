@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- Add email SMTP settings -->
+    <changeSet id="31-01-add-email-smtp-auth" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'email.smtp.auth'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0011"/>
+            <column name="key" value="email.smtp.auth"/>
+            <column name="value" value="true"/>
+            <column name="description" value="Habilitar autenticación SMTP"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="31-02-add-email-smtp-starttls-enable" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'email.smtp.starttls.enable'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0012"/>
+            <column name="key" value="email.smtp.starttls.enable"/>
+            <column name="value" value="true"/>
+            <column name="description" value="Habilitar STARTTLS para conexión segura"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="31-03-add-email-smtp-starttls-required" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'email.smtp.starttls.required'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0013"/>
+            <column name="key" value="email.smtp.starttls.required"/>
+            <column name="value" value="true"/>
+            <column name="description" value="Requerir STARTTLS"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="31-04-add-email-smtp-connectiontimeout" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'email.smtp.connectiontimeout'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0014"/>
+            <column name="key" value="email.smtp.connectiontimeout"/>
+            <column name="value" value="5000"/>
+            <column name="description" value="Tiempo máximo de conexión SMTP en milisegundos"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="31-05-add-email-smtp-timeout" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'email.smtp.timeout'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0015"/>
+            <column name="key" value="email.smtp.timeout"/>
+            <column name="value" value="5000"/>
+            <column name="description" value="Tiempo máximo de espera SMTP en milisegundos"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="31-06-add-email-smtp-writetimeout" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'email.smtp.writetimeout'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0016"/>
+            <column name="key" value="email.smtp.writetimeout"/>
+            <column name="value" value="5000"/>
+            <column name="description" value="Tiempo máximo de escritura SMTP en milisegundos"/>
+            <column name="category" value="email"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

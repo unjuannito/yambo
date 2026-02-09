@@ -43,9 +43,9 @@ public class OrderService {
         for (OrderProduct op : orderProducts) {
             Product product = productRepository.findById(op.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
-            
+
             validateProductAccess(currentUser, product, now);
-            
+
             // Calculate the actual price based on product options and configuration
             BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
             op.setPrice(calculatedPrice);
@@ -70,35 +70,35 @@ public class OrderService {
 
     private BigDecimal calculatePrice(Product product, String configurationJson) {
         BigDecimal totalPrice = product.getBasePrice();
-        
+
         if (configurationJson == null || configurationJson.trim().isEmpty()) {
             return totalPrice;
         }
-        
+
         try {
             // Parse configuration JSON
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             @SuppressWarnings("unchecked")
             java.util.Map<String, Object> configuration = mapper.readValue(configurationJson, java.util.Map.class);
-            
+
             // Get product options
             List<ProductOption> options = product.getOptions();
             if (options == null || options.isEmpty()) {
                 return totalPrice;
             }
-            
+
             // Calculate price based on selected options
             for (ProductOption option : options) {
                 Object selectedValue = configuration.get(option.getName());
                 if (selectedValue == null) {
                     continue;
                 }
-                
+
                 // Add option base price if exists
                 if (option.getPrice() != null) {
                     totalPrice = totalPrice.add(option.getPrice());
                 }
-                
+
                 // For select type, add the price of the selected value
                 if ("select".equals(option.getType()) && option.getValues() != null) {
                     String selectedValueStr = selectedValue.toString();
@@ -116,7 +116,7 @@ public class OrderService {
             // If parsing fails, just return base price
             return totalPrice;
         }
-        
+
         return totalPrice;
     }
 
@@ -127,31 +127,28 @@ public class OrderService {
         }
 
         FamilyProduct family = product.getFamilyProduct();
-        
+
         // Check if family is currently valid (within time range)
         if (now.isBefore(family.getStartTms())) {
             throw new BadRequestException(
-                String.format("Product '%s' is not yet available. Available from: %s", 
-                    product.getName(), family.getStartTms())
-            );
+                    String.format("Product '%s' is not yet available. Available from: %s",
+                            product.getName(), family.getStartTms()));
         }
         if (now.isAfter(family.getEndTms())) {
             throw new BadRequestException(
-                String.format("Product '%s' is no longer available. Expired on: %s", 
-                    product.getName(), family.getEndTms())
-            );
+                    String.format("Product '%s' is no longer available. Expired on: %s",
+                            product.getName(), family.getEndTms()));
         }
 
         // Check if user has required profile
         if (family.getProfile() != null) {
             boolean hasProfile = user.getProfiles().stream()
                     .anyMatch(p -> p.getId().equals(family.getProfile().getId()));
-            
+
             if (!hasProfile) {
                 throw new BadRequestException(
-                    String.format("You don't have access to product '%s'. Required profile: %s", 
-                        product.getName(), family.getProfile().getName())
-                );
+                        String.format("You don't have access to product '%s'. Required profile: %s",
+                                product.getName(), family.getProfile().getName()));
             }
         }
     }
@@ -161,11 +158,11 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
-    public Page<Order> listOrders(String customerId, OrderStatus status, 
-                                   LocalDateTime startDate, LocalDateTime endDate,
-                                   @NonNull Pageable pageable) {
+    public Page<Order> listOrders(String customerId, OrderStatus status,
+            LocalDateTime startDate, LocalDateTime endDate,
+            @NonNull Pageable pageable) {
         Specification<Order> spec = Specification.where(null);
-        
+
         if (customerId != null) {
             spec = spec.and(OrderSpecifications.customerIdEquals(customerId));
         }
@@ -182,7 +179,7 @@ public class OrderService {
     @Transactional
     public Order updateOrderStatus(@NonNull String orderId, @NonNull OrderStatus status) {
         Order order = getOrderById(orderId);
-        
+
         // Validate status transition
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException("Cannot update status of cancelled order");
@@ -198,7 +195,7 @@ public class OrderService {
     @Transactional
     public Order cancelOrder(@NonNull String orderId) {
         Order order = getOrderById(orderId);
-        
+
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new BadRequestException("Cannot cancel delivered order");
         }
@@ -219,14 +216,13 @@ public class OrderService {
         // Verify order exists
         getOrderById(orderId);
         return orderProductRepository.findAll(
-            es.yambo_alco.web.repository.spec.OrderProductSpecifications.orderIdEquals(orderId)
-        );
+                es.yambo_alco.web.repository.spec.OrderProductSpecifications.orderIdEquals(orderId));
     }
 
     @Transactional
     public void deleteOrder(@NonNull String orderId) {
         Order order = getOrderById(orderId);
-        
+
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new BadRequestException("Cannot delete delivered order");
         }

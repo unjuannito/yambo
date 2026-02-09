@@ -37,4 +37,9 @@
     <include file="db/changelog/changes/25-promotion-invitations-profiles.xml"/>
     <include file="db/changelog/changes/26-order-customer-id-to-string.xml"/>
     <include file="db/changelog/changes/27-order-product-single-id.xml"/>
+    <include file="db/changelog/changes/28-settings-table.xml"/>
+    <include file="db/changelog/changes/29-settings-permissions.xml"/>
+    <include file="db/changelog/changes/30-organization-legal-name.xml"/>
+    <include file="db/changelog/changes/31-email-smtp-settings.xml"/>
+    <include file="db/changelog/changes/32-app-domain-setting.xml"/>
 </databaseChangeLog>

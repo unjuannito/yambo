@@ -26,6 +26,9 @@ class HtmlMailServiceTest {
     private TemplateEngine templateEngine;
 
     @Mock
+    private SettingsService settingsService;
+
+    @Mock
     private MimeMessage mimeMessage;
 
     @InjectMocks
@@ -33,9 +36,10 @@ class HtmlMailServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(htmlMailService, "fromEmail", "noreply@yambo-alco.es");
-        ReflectionTestUtils.setField(htmlMailService, "fromName", "Yambo");
         ReflectionTestUtils.setField(htmlMailService, "expirationHours", 72L);
+        // Mock SettingsService responses
+        when(settingsService.getEmailFrom()).thenReturn("noreply@yambo-alco.es");
+        when(settingsService.getEmailFromName()).thenReturn("Yambo");
     }
 
     @Test
