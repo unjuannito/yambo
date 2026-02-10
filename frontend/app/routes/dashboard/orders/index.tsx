@@ -10,9 +10,11 @@ import type {
 import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
+import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
 import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
+import { exportOrdersToExcel } from "~/utils/exportOrdersToExcel";
+import { Modal } from "~/components/common/Modal";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -30,6 +32,8 @@ export default function Orders() {
     const [bulkStatus, setBulkStatus] = useState("");
     const [products, setProducts] = useState<Product[]>([]);
     const [drops, setDrops] = useState<FamilyProduct[]>([]);
+    const [selectedDropIds, setSelectedDropIds] = useState<string[]>([]);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     const [statusOptions] = useState([
         { value: "", label: "Todos" },
@@ -133,84 +137,18 @@ export default function Orders() {
             // Fetch all orders without pagination
             const allOrders = await orderService.getAllOrders(0, 10000);
 
-            // Prepare data for Excel
-            const excelData = allOrders.content.flatMap((order) => {
-                if (!order.products || order.products.length === 0) {
-                    return [
-                        {
-                            "ID Pedido": order.id,
-                            Cliente: order.user?.name || "N/A",
-                            Email: order.user?.email || "",
-                            Estado: order.status,
-                            Fecha: new Date(order.createdAt).toLocaleString(
-                                "es-ES",
-                            ),
-                            Producto: "",
-                            Drop: "",
-                            "Fin Drop": "",
-                            Cantidad: 0,
-                            Precio: 0,
-                            Configuración: "",
-                            Subtotal: 0,
-                        },
-                    ];
-                }
-
-                return order.products.map((product) => {
-                    const productData = products.find(p => p.id === product.productId);
-                    const productDrop = productData?.familyProductId
-                        ? drops.find(drop => drop.id === productData.familyProductId)
-                        : null;
-
-                    return {
-                        "ID Pedido": order.id,
-                        Cliente: order.user?.name || "N/A",
-                        Email: order.user?.email || "",
-                        Estado: order.status,
-                        Fecha: new Date(order.createdAt).toLocaleString("es-ES"),
-                        Producto: product.productName || product.productId,
-                        Drop: productDrop?.name || "",
-                        "Fin Drop": productDrop?.endTms ? new Date(productDrop.endTms).toLocaleDateString('es-ES') : "",
-                        Cantidad: product.quantity,
-                        Precio: product.price,
-                        Configuración: product.configuration || "",
-                        Subtotal: product.price * product.quantity,
-                    };
-                });
+            await exportOrdersToExcel({
+                orders: allOrders.content,
+                products,
+                drops,
+                selectedDropIds
             });
 
-            // Create worksheet and workbook
-            const ws = XLSX.utils.json_to_sheet(excelData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Pedidos");
-
-            // Auto-size columns
-            const maxWidth = excelData.reduce(
-                (w, r) => Math.max(w, r["ID Pedido"]?.length || 0),
-                10,
-            );
-            ws["!cols"] = [
-                { wch: 10 }, // ID Pedido
-                { wch: 20 }, // Cliente
-                { wch: 25 }, // Email
-                { wch: 20 }, // Estado
-                { wch: 20 }, // Fecha
-                { wch: 20 }, // Producto
-                { wch: 15 }, // Drop
-                { wch: 15 }, // Fin Drop
-                { wch: 10 }, // Cantidad
-                { wch: 10 }, // Precio
-                { wch: 30 }, // Configuración
-                { wch: 10 }, // Subtotal
-            ];
-
-            // Generate file
-            const fileName = `pedidos_${new Date().toISOString().split("T")[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-
+            const dropsLabel = selectedDropIds.length > 0 ? `${selectedDropIds.length} drops seleccionados` : 'todos los drops';
             toast.success(
-                `Exportado ${allOrders.content.length} pedidos a Excel`,
+                `Exportados ${allOrders.content.length} pedidos (${dropsLabel}) a Excel con múltiples hojas`,
             );
+            setIsExportModalOpen(false);
         } catch (error: any) {
             console.error("Error exporting to Excel:", error);
             toast.error("Error al exportar a Excel");
@@ -222,33 +160,33 @@ export default function Orders() {
     const orderTableColumns: FilterableColumn<Order>[] = [
         {
             key: "checkbox",
-            header: () => {
-                const allSelected =
-                    selectedOrders.length > 0 &&
-                    selectedOrders.length === allOrdersOnPage.length;
-                const someSelected =
-                    selectedOrders.length > 0 &&
-                    selectedOrders.length < allOrdersOnPage.length;
-
-                return (
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            checked={allSelected}
-                            ref={(el) => {
-                                if (el) el.indeterminate = someSelected;
-                            }}
-                            onChange={toggleSelectAll}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                            title={
-                                allSelected
-                                    ? "Deseleccionar todos"
-                                    : "Seleccionar todos los visibles"
+            header: (
+                <div className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={
+                            selectedOrders.length > 0 &&
+                            selectedOrders.length === allOrdersOnPage.length
+                        }
+                        ref={(el) => {
+                            if (el) {
+                                el.indeterminate =
+                                    selectedOrders.length > 0 &&
+                                    selectedOrders.length <
+                                        allOrdersOnPage.length;
                             }
-                        />
-                    </div>
-                );
-            },
+                        }}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        title={
+                            selectedOrders.length > 0 &&
+                            selectedOrders.length === allOrdersOnPage.length
+                                ? "Deseleccionar todos"
+                                : "Seleccionar todos los visibles"
+                        }
+                    />
+                </div>
+            ),
             render: (order: Order) => (
                 <input
                     type="checkbox"
@@ -410,53 +348,28 @@ export default function Orders() {
             <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-bold">Pedidos</h1>
-                    <button
-                        onClick={exportToExcel}
-                        disabled={isExporting}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {isExporting ? (
-                            <>
-                                <svg
-                                    className="animate-spin h-5 w-5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    ></circle>
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
-                                </svg>
-                                Exportando...
-                            </>
-                        ) : (
-                            <>
-                                <svg
-                                    className="w-5 h-5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                </svg>
-                                Exportar a Excel
-                            </>
-                        )}
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsExportModalOpen(true)}
+                            disabled={isExporting}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                            </svg>
+                            Exportar a Excel
+                        </button>
+                    </div>
                 </div>
 
                 {/* Bulk Actions Toolbar */}
@@ -509,9 +422,63 @@ export default function Orders() {
                         emptyMessage: "No se encontraron pedidos",
                         loadingMessage: "Cargando pedidos...",
                     }}
+                    features={{ enableLoadMore: true }}
                     serverSide={{ fetchData: fetchOrdersData }}
                 />
             </main>
+
+            <Modal
+                isOpen={isExportModalOpen}
+                onClose={() => {
+                    if (!isExporting) setIsExportModalOpen(false);
+                }}
+                title="Exportar pedidos"
+                size="md"
+                footer={
+                    <>
+                        <button
+                            onClick={() => setIsExportModalOpen(false)}
+                            disabled={isExporting}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={exportToExcel}
+                            disabled={isExporting}
+                            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                            {isExporting ? "Exportando..." : "Exportar"}
+                        </button>
+                    </>
+                }
+            >
+                <div className="flex flex-col gap-4">
+                    <p className="text-sm text-gray-600">
+                        Selecciona los drops a incluir. Si no eliges ninguno, se exportan todos.
+                    </p>
+                    <MultiSelectComponent
+                        label="Filtrar por Drops"
+                        value={selectedDropIds}
+                        options={drops.map((drop) => ({
+                            value: drop.id,
+                            label: drop.name,
+                        }))}
+                        placeholder="Todos los drops"
+                        name="selectedDrops"
+                        onChange={(e) => {
+                            const select = e.target as HTMLSelectElement;
+                            const values = Array.from(select.selectedOptions).map(
+                                (opt) => opt.value,
+                            );
+                            setSelectedDropIds(values);
+                        }}
+                    />
+                    <div className="text-xs text-gray-500">
+                        Se exportan todos los pedidos con sus hojas de resumen y detalle.
+                    </div>
+                </div>
+            </Modal>
 
             {/* Order Details Modal */}
             {selectedOrder && (
@@ -738,5 +705,6 @@ export default function Orders() {
                 </div>
             )}
         </RequirePermission>
+
     );
 }

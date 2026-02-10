@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { DataTable } from "./DataTable";
 import type { TableColumn } from "./DataTable";
 import { FiltersSection } from "./FiltersSection";
@@ -39,6 +39,8 @@ export interface DisplayConfig<T> {
 export interface FeaturesConfig {
     enableFilters?: boolean;
     enablePagination?: boolean;
+    enableLoadMore?: boolean;
+    loadMoreLabel?: string;
 }
 
 export interface FilterableTableProps<T> {
@@ -80,6 +82,8 @@ export function FilterableTable<T>({
     const {
         enableFilters = true,
         enablePagination = true,
+        enableLoadMore = false,
+        loadMoreLabel = "Cargar más",
     } = features;
 
     const isServerSide = Boolean(serverSide);
@@ -103,6 +107,7 @@ export function FilterableTable<T>({
     );
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const skipNextFetchRef = useRef(false);
 
     // Client-side state
     const [clientPage, setClientPage] = useState(0);
@@ -112,6 +117,10 @@ export function FilterableTable<T>({
     // Server-side fetch
     const executeFetch = useCallback(async () => {
         if (!serverSide?.fetchData) return;
+        if (skipNextFetchRef.current) {
+            skipNextFetchRef.current = false;
+            return;
+        }
 
         setIsLoading(true);
         setError(null);
@@ -153,6 +162,48 @@ export function FilterableTable<T>({
         [isServerSide]
     );
 
+    const handleLoadMore = useCallback(async () => {
+        if (isServerSide) {
+            if (!serverSide?.fetchData) return;
+            if (isLoading) return;
+            const nextPage = pageInfo.number + 1;
+            if (nextPage >= pageInfo.totalPages) return;
+
+            setIsLoading(true);
+            setError(null);
+            try {
+                const result = await serverSide.fetchData({
+                    page: nextPage,
+                    size: pageInfo.size,
+                    filters,
+                });
+                if (result) {
+                    setServerData((prev) => [...prev, ...result.content]);
+                    skipNextFetchRef.current = true;
+                    setPageInfo(result.page);
+                }
+            } catch (err) {
+                const errorMessage =
+                    err instanceof Error
+                        ? err.message
+                        : "Error al cargar los datos";
+                setError(errorMessage);
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            setClientPage((prev) => prev + 1);
+        }
+    }, [
+        filters,
+        isLoading,
+        isServerSide,
+        pageInfo.number,
+        pageInfo.size,
+        pageInfo.totalPages,
+        serverSide?.fetchData,
+    ]);
+
     const handleFiltersChange = useCallback(
         (newFilters: FilterValues) => {
             if (isServerSide) {
@@ -174,7 +225,7 @@ export function FilterableTable<T>({
             .filter((col) => col.filter?.enabled)
             .map((col) => ({
                 key: col.key,
-                label: col.header,
+                label: typeof col.header === "string" ? col.header : "",
                 type: col.filter?.type || "text",
                 placeholder: col.filter?.placeholder,
                 options: col.filter?.options,
@@ -232,6 +283,9 @@ export function FilterableTable<T>({
     const paginatedData = useMemo(() => {
         if (isServerSide) return data;
         if (!enablePagination) return filteredData;
+        if (enableLoadMore) {
+            return filteredData.slice(0, (clientPage + 1) * clientPageSize);
+        }
         const startIndex = clientPage * clientPageSize;
         return filteredData.slice(startIndex, startIndex + clientPageSize);
     }, [
@@ -239,6 +293,7 @@ export function FilterableTable<T>({
         clientPage,
         clientPageSize,
         enablePagination,
+        enableLoadMore,
         isServerSide,
         data,
     ]);
@@ -269,6 +324,10 @@ export function FilterableTable<T>({
             );
         }
 
+        const canLoadMore =
+            enableLoadMore &&
+            displayPageInfo.number + 1 < displayPageInfo.totalPages;
+
         if (isGridMode && renderGridItem) {
             return (
                 <>
@@ -290,6 +349,17 @@ export function FilterableTable<T>({
                             onPageChange={handlePageChange}
                         />
                     )}
+                    {canLoadMore && (
+                        <div className="flex justify-center">
+                            <button
+                                onClick={handleLoadMore}
+                                disabled={isLoading}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                            >
+                                {isLoading ? loadingMessage : loadMoreLabel}
+                            </button>
+                        </div>
+                    )}
                 </>
             );
         }
@@ -302,12 +372,23 @@ export function FilterableTable<T>({
                     keyField={keyField}
                     onRowClick={onRowClick}
                 />
-                {enablePagination && (
+                {enablePagination && !enableLoadMore && (
                     <Pagination
                         page={displayPageInfo.number}
                         totalPages={displayPageInfo.totalPages}
                         onPageChange={handlePageChange}
                     />
+                )}
+                {canLoadMore && (
+                    <div className="flex justify-center">
+                        <button
+                            onClick={handleLoadMore}
+                            disabled={isLoading}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                        >
+                            {isLoading ? loadingMessage : loadMoreLabel}
+                        </button>
+                    </div>
                 )}
             </>
         );
