@@ -42,4 +42,5 @@
     <include file="db/changelog/changes/30-organization-legal-name.xml"/>
     <include file="db/changelog/changes/31-email-smtp-settings.xml"/>
     <include file="db/changelog/changes/32-app-domain-setting.xml"/>
+    <include file="db/changelog/changes/33-order-user-foreign-key.xml"/>
 </databaseChangeLog>
