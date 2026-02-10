@@ -36,7 +36,9 @@ export class InvitationService extends ApiService {
     }
 
     public async register(invitationToken: string, data: { password: string; name: string }): Promise<{ token: string }> {
-        return await this.post<{ token: string }, { password: string; name: string }>(`/auth/register?invitation=${invitationToken}`, data);
+        const response = await this.post<{ token: string }, { password: string; name: string }>(`/auth/register?invitation=${invitationToken}`, data);
+        ApiService.setToken(response.token);
+        return response;
     }
 }
 
