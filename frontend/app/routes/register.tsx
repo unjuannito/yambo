@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { invitationService } from "~/services/invitationService";
 import { promotionInvitationService } from "~/services/promotionInvitationService";
 import toast from "react-hot-toast";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
+import { AuthLayout } from "~/routes/AuthLayout";
 import { useAuth } from "~/hooks/useAuth";
 
 export const ssr = false;
@@ -25,6 +26,7 @@ export default function Register() {
     const { reload, login: authLogin } = useAuth();
     const invitationToken = searchParams.get("invitation");
     const promotionToken = searchParams.get("promotion");
+    const hasRedirected = useRef(false);
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -35,19 +37,15 @@ export default function Register() {
     const isPromotion = !!promotionToken;
 
     useEffect(() => {
-        if (!invitationToken && !promotionToken) {
+        if (!invitationToken && !promotionToken && !hasRedirected.current) {
+            hasRedirected.current = true;
             toast.error("No se proporcionó un token de invitación válido.");
+            navigate("/login", { replace: true });
         }
-    }, [invitationToken, promotionToken]);
+    }, [invitationToken, promotionToken, navigate]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-
-        const token = invitationToken || promotionToken;
-        if (!token) {
-            toast.error("No se proporcionó un token de invitación válido.");
-            return;
-        }
 
         if (!formData.name.trim()) {
             toast.error("Por favor, ingresa tu nombre completo.");
@@ -128,98 +126,116 @@ export default function Register() {
         }
     }
 
-    return (
-        <main className="min-h-screen flex items-center justify-center min-h-[calc(100vh-4rem)] bg-gradient-to-br from-yellow-100 via-orange-100 to-pink-100">
-            <div className="bg-white shadow-xl rounded-2xl px-8 py-10 max-w-md w-full space-y-6">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-800">
-                        Registro
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        Completa tu registro para acceder a la plataforma.
-                    </p>
-                </div>
-                <form
-                    onSubmit={handleSubmit}
-                    method="post"
-                    noValidate
-                    className="space-y-4"
-                >
-                    <InputComponent
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) =>
-                            setFormData({ ...formData, name: e.target.value })
-                        }
-                        label="Nombre Completo"
-                        required
-                        disabled={loading}
-                    />
-                    {isPromotion && (
-                        <InputComponent
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) =>
-                                setFormData({ ...formData, email: e.target.value })
-                            }
-                            label="Correo Electrónico"
-                            required
-                            disabled={loading}
-                        />
-                    )}
-                    <InputComponent
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                password: e.target.value,
-                            })
-                        }
-                        label="Contraseña"
-                        required
-                        disabled={loading}
-                    />
-                    <InputComponent
-                        type="password"
-                        value={formData.passwordConfirm}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                passwordConfirm: e.target.value,
-                            })
-                        }
-                        label="Confirmar Contraseña"
-                        required
-                        disabled={loading}
-                    />
-                    <ButtonComponent
-                        type="submit"
-                        className="w-full"
-                        variant="primary"
-                        loading={loading}
-                        disabled={
-                            loading ||
-                            !formData.name.trim() ||
-                            (isPromotion && !formData.email.trim()) ||
-                            !formData.password.trim() ||
-                            !formData.passwordConfirm.trim() ||
-                            formData.password !== formData.passwordConfirm
-                        }
-                        suppressHydrationWarning
-                    >
-                        Registrarse
-                    </ButtonComponent>
-                </form>
+    // Guard: redirect if no token present
+    if (!invitationToken && !promotionToken) {
+        return null;
+    }
 
+    const promotionBanner = isPromotion ? (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700">
+                Registro con promoción por perfil
+            </p>
+        </div>
+    ) : undefined;
+
+    const footer = isPromotion ? (
+        <>
+            <p className="text-sm text-center text-gray-600 mb-3">
+                ¿Ya tienes una cuenta?
+            </p>
+            <ButtonComponent
+                variant="neutral"
+                className="w-full"
+                onClick={() => {
+                    navigate(`/login?promotion=${promotionToken}`);
+                }}
+                disabled={loading}
+            >
+                Iniciar sesión y aplicar promoción
+            </ButtonComponent>
+        </>
+    ) : undefined;
+
+    return (
+        <AuthLayout
+            title="Registro"
+            subtitle="Completa tu registro para acceder a la plataforma."
+            banner={promotionBanner}
+            footer={footer}
+        >
+            <form
+                onSubmit={handleSubmit}
+                method="post"
+                noValidate
+                className="space-y-4"
+            >
+                <InputComponent
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                    }
+                    label="Nombre Completo"
+                    required
+                    disabled={loading}
+                />
                 {isPromotion && (
-                    <div className="border-t pt-4">
-                        <p className="text-sm text-center text-gray-600 mb-3">
-                            ¿Ya tienes una cuenta? <a className="text-blue-600" href={`/login?promotion=${promotionToken}`}>Inicia sesión aquí.</a>
-                        </p>
-                    </div>
+                    <InputComponent
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                            setFormData({ ...formData, email: e.target.value })
+                        }
+                        label="Correo Electrónico"
+                        required
+                        disabled={loading}
+                    />
                 )}
-            </div>
-        </main>
+                <InputComponent
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) =>
+                        setFormData({
+                            ...formData,
+                            password: e.target.value,
+                        })
+                    }
+                    label="Contraseña"
+                    required
+                    disabled={loading}
+                />
+                <InputComponent
+                    type="password"
+                    value={formData.passwordConfirm}
+                    onChange={(e) =>
+                        setFormData({
+                            ...formData,
+                            passwordConfirm: e.target.value,
+                        })
+                    }
+                    label="Confirmar Contraseña"
+                    required
+                    disabled={loading}
+                />
+                <ButtonComponent
+                    type="submit"
+                    className="w-full"
+                    variant="primary"
+                    loading={loading}
+                    disabled={
+                        loading ||
+                        !formData.name.trim() ||
+                        (isPromotion && !formData.email.trim()) ||
+                        !formData.password.trim() ||
+                        !formData.passwordConfirm.trim() ||
+                        formData.password !== formData.passwordConfirm
+                    }
+                    suppressHydrationWarning
+                >
+                    Registrarse
+                </ButtonComponent>
+            </form>
+        </AuthLayout>
     );
 }

@@ -20,9 +20,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const handleTokenExpired = useCallback(() => {
         console.log('Token expired, logging out user');
         setUser(null);
-        // Redirect to login page
+        toast.error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
         if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+            window.location.href = '/';
         }
     }, []);
 
