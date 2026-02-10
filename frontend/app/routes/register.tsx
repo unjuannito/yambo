@@ -23,10 +23,11 @@ export function meta() {
 export default function Register() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { reload, login: authLogin } = useAuth();
+    const { reload, login: authLogin, isAuthenticated } = useAuth();
     const invitationToken = searchParams.get("invitation");
     const promotionToken = searchParams.get("promotion");
     const hasRedirected = useRef(false);
+    const hasAppliedPromotion = useRef(false);
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -43,6 +44,40 @@ export default function Register() {
             navigate("/login", { replace: true });
         }
     }, [invitationToken, promotionToken, navigate]);
+
+    useEffect(() => {
+        const applyPromotionIfLoggedIn = async () => {
+            if (!promotionToken || !isAuthenticated() || hasAppliedPromotion.current) {
+                return;
+            }
+
+            hasAppliedPromotion.current = true;
+            setLoading(true);
+            try {
+                await promotionInvitationService.acceptPromotionInvitation(
+                    promotionToken,
+                );
+                toast.success("Promoción aplicada correctamente.");
+                await reload();
+                navigate("/mi-espacio", { replace: true });
+            } catch (error: any) {
+                switch (error.response?.data?.message) {
+                    case "Promotion invitation not found":
+                        toast.error("El token de promoción no es válido.");
+                        break;
+                    case "Promotion invitation expired":
+                        toast.error("El token de promoción ha expirado.");
+                        break;
+                    default:
+                        toast.error("Error al aplicar la promoción.");
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void applyPromotionIfLoggedIn();
+    }, [isAuthenticated, navigate, promotionToken, reload]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
