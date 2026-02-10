@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, useRef, type ReactNode, useContext } from 'react';
 import { AuthService } from '~/services/authService';
 import { UserService } from '~/services/userService';
 import { ApiService } from '~/services/apiService';
@@ -12,10 +12,30 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const authService = new AuthService();
 const userService = new UserService();
 
+// Helper function to decode JWT and get expiration time
+function getTokenExpiration(token: string): number | null {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        const payload = JSON.parse(jsonPayload);
+        return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
+    } catch (error) {
+        console.error('Error decoding token:', error);
+        return null;
+    }
+}
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<CurrentUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const tokenRenewalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleTokenExpired = useCallback(() => {
         console.log('Token expired, logging out user');
@@ -26,30 +46,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
+    // Auto-renew token before it expires
+    const setupTokenRenewal = useCallback(() => {
+        // Clear existing timer
+        if (tokenRenewalTimerRef.current) {
+            clearInterval(tokenRenewalTimerRef.current);
+        }
+
+        const token = authService.getToken();
+        if (!token) {
+            return;
+        }
+
+        const expirationTime = getTokenExpiration(token);
+        if (!expirationTime) {
+            return;
+        }
+
+        // Check token expiration every minute
+        tokenRenewalTimerRef.current = setInterval(async () => {
+            const currentToken = authService.getToken();
+            if (!currentToken) {
+                if (tokenRenewalTimerRef.current) {
+                    clearInterval(tokenRenewalTimerRef.current);
+                }
+                return;
+            }
+
+            const expTime = getTokenExpiration(currentToken);
+            if (!expTime) {
+                return;
+            }
+
+            const now = Date.now();
+            const timeUntilExpiration = expTime - now;
+
+            // Renew token if it expires in less than 10 minutes (600000ms)
+            if (timeUntilExpiration < 600000 && timeUntilExpiration > 0) {
+                try {
+                    console.log('Token about to expire, refreshing...');
+                    await authService.reload();
+                    console.log('Token refreshed successfully');
+                    // Setup a new renewal check with the new token
+                    setupTokenRenewal();
+                } catch (error) {
+                    console.error('Failed to refresh token:', error);
+                }
+            }
+        }, 300000); // Check every 5 minutes
+    }, []);
+
     useEffect(() => {
         // Set up global token expiration handler
         ApiService.setOnTokenExpired(handleTokenExpired);
 
         if (authService.isAuthenticated()) {
             reloadUser();
+            setupTokenRenewal();
         } else {
             setLoading(false);
         }
 
         return () => {
             ApiService.setOnTokenExpired(null);
+            if (tokenRenewalTimerRef.current) {
+                clearInterval(tokenRenewalTimerRef.current);
+            }
         };
-    }, [handleTokenExpired]);
+    }, [handleTokenExpired, setupTokenRenewal]);
 
 
     const login = async (email: string, password: string) => {
         await authService.login(email, password);
         await reloadUser();
+        setupTokenRenewal(); // Setup auto-renewal after login
     };
 
     const logout = () => {
         authService.logout();
         setUser(null);
+        if (tokenRenewalTimerRef.current) {
+            clearInterval(tokenRenewalTimerRef.current);
+        }
         //TODO: redirigir a logout
     };
 
@@ -90,6 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const reload = async () => {
         setLoading(true);
         await reloadUser();
+        setupTokenRenewal(); // Setup auto-renewal after manual reload
     };
 
     const isAuthenticated = (): boolean => authService.isAuthenticated();
