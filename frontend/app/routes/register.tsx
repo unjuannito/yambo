@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { invitationService } from "~/services/invitationService";
+import { promotionInvitationService } from "~/services/promotionInvitationService";
 import toast from "react-hot-toast";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
+import { AuthLayout } from "~/routes/AuthLayout";
 import { useAuth } from "~/hooks/useAuth";
-import { ApiService } from "~/services/apiService";
 
 export const ssr = false;
 
@@ -22,31 +23,37 @@ export function meta() {
 export default function Register() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { reload } = useAuth();
+    const { reload, login: authLogin } = useAuth();
     const invitationToken = searchParams.get("invitation");
+    const promotionToken = searchParams.get("promotion");
+    const hasRedirected = useRef(false);
     const [formData, setFormData] = useState({
+        email: "",
         password: "",
         passwordConfirm: "",
         name: "",
     });
     const [loading, setLoading] = useState(false);
+    const isPromotion = !!promotionToken;
 
     useEffect(() => {
-        if (!invitationToken) {
+        if (!invitationToken && !promotionToken && !hasRedirected.current) {
+            hasRedirected.current = true;
             toast.error("No se proporcionó un token de invitación válido.");
+            navigate("/login", { replace: true });
         }
-    }, [invitationToken]);
+    }, [invitationToken, promotionToken, navigate]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
-        if (!invitationToken) {
-            toast.error("No se proporcionó un token de invitación válido.");
+        if (!formData.name.trim()) {
+            toast.error("Por favor, ingresa tu nombre completo.");
             return;
         }
 
-        if (!formData.name.trim()) {
-            toast.error("Por favor, ingresa tu nombre completo.");
+        if (isPromotion && !formData.email.trim()) {
+            toast.error("Por favor, ingresa tu correo electrónico.");
             return;
         }
 
@@ -60,16 +67,40 @@ export default function Register() {
             return;
         }
 
+        if (formData.password !== formData.passwordConfirm) {
+            toast.error("Las contraseñas no coinciden.");
+            return;
+        }
+
         setLoading(true);
         try {
-            const { token } = await invitationService.register(
-                invitationToken,
-                formData
-            );
-            toast.success("Registro exitoso. Iniciando sesión...");
-            ApiService.setToken(token);
-            await reload();
-            navigate("/mi-espacio", { replace: true });
+            if (isPromotion) {
+                // Promotion invitation flow
+                await promotionInvitationService.acceptPromotionInvitation(
+                    promotionToken!,
+                    {
+                        email: formData.email,
+                        password: formData.password,
+                        name: formData.name,
+                    }
+                );
+                toast.success("Registro exitoso. Iniciando sesión...");
+                // Login after registration
+                await authLogin(formData.email, formData.password);
+                navigate("/mi-espacio", { replace: true });
+            } else {
+                // Regular invitation flow
+                await invitationService.register(
+                    invitationToken!,
+                    {
+                        password: formData.password,
+                        name: formData.name,
+                    }
+                );
+                toast.success("Registro exitoso. Iniciando sesión...");
+                await reload();
+                navigate("/mi-espacio", { replace: true });
+            }
         } catch (error: any) {
             switch (error.response?.data?.message) {
                 case "Invitation already used":
@@ -81,6 +112,12 @@ export default function Register() {
                 case "Email already registered":
                     toast.error("El correo electrónico ya está registrado.");
                     break;
+                case "Promotion invitation not found":
+                    toast.error("El token de promoción no es válido.");
+                    break;
+                case "Promotion invitation expired":
+                    toast.error("El token de promoción ha expirado.");
+                    break;
                 default:
                     toast.error("Error al registrar el usuario.");
             }
@@ -89,77 +126,116 @@ export default function Register() {
         }
     }
 
+    // Guard: redirect if no token present
+    if (!invitationToken && !promotionToken) {
+        return null;
+    }
+
+    const promotionBanner = isPromotion ? (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700">
+                Registro con promoción por perfil
+            </p>
+        </div>
+    ) : undefined;
+
+    const footer = isPromotion ? (
+        <>
+            <p className="text-sm text-center text-gray-600 mb-3">
+                ¿Ya tienes una cuenta?
+            </p>
+            <ButtonComponent
+                variant="neutral"
+                className="w-full"
+                onClick={() => {
+                    navigate(`/login?promotion=${promotionToken}`);
+                }}
+                disabled={loading}
+            >
+                Iniciar sesión y aplicar promoción
+            </ButtonComponent>
+        </>
+    ) : undefined;
+
     return (
-        <main className="min-h-screen flex items-center justify-center min-h-[calc(100vh-4rem)] bg-gradient-to-br from-yellow-100 via-orange-100 to-pink-100">
-            <div className="bg-white shadow-xl rounded-2xl px-8 py-10 max-w-md w-full space-y-6">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-800">
-                        Registro
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        Completa tu registro para acceder a la plataforma.
-                    </p>
-                </div>
-                <form
-                    onSubmit={handleSubmit}
-                    method="post"
-                    noValidate
-                    className="space-y-4"
+        <AuthLayout
+            title="Registro"
+            subtitle="Completa tu registro para acceder a la plataforma."
+            banner={promotionBanner}
+            footer={footer}
+        >
+            <form
+                onSubmit={handleSubmit}
+                method="post"
+                noValidate
+                className="space-y-4"
+            >
+                <InputComponent
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                    }
+                    label="Nombre Completo"
+                    required
+                    disabled={loading}
+                />
+                {isPromotion && (
+                    <InputComponent
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                            setFormData({ ...formData, email: e.target.value })
+                        }
+                        label="Correo Electrónico"
+                        required
+                        disabled={loading}
+                    />
+                )}
+                <InputComponent
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) =>
+                        setFormData({
+                            ...formData,
+                            password: e.target.value,
+                        })
+                    }
+                    label="Contraseña"
+                    required
+                    disabled={loading}
+                />
+                <InputComponent
+                    type="password"
+                    value={formData.passwordConfirm}
+                    onChange={(e) =>
+                        setFormData({
+                            ...formData,
+                            passwordConfirm: e.target.value,
+                        })
+                    }
+                    label="Confirmar Contraseña"
+                    required
+                    disabled={loading}
+                />
+                <ButtonComponent
+                    type="submit"
+                    className="w-full"
+                    variant="primary"
+                    loading={loading}
+                    disabled={
+                        loading ||
+                        !formData.name.trim() ||
+                        (isPromotion && !formData.email.trim()) ||
+                        !formData.password.trim() ||
+                        !formData.passwordConfirm.trim() ||
+                        formData.password !== formData.passwordConfirm
+                    }
+                    suppressHydrationWarning
                 >
-                    <InputComponent
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) =>
-                            setFormData({ ...formData, name: e.target.value })
-                        }
-                        label="Nombre Completo"
-                        required
-                        disabled={loading}
-                    />
-                    <InputComponent
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                password: e.target.value,
-                            })
-                        }
-                        label="Contraseña"
-                        required
-                        disabled={loading}
-                    />
-                    <InputComponent
-                        type="password"
-                        value={formData.passwordConfirm}
-                        onChange={(e) =>
-                            setFormData({
-                                ...formData,
-                                passwordConfirm: e.target.value,
-                            })
-                        }
-                        label="Confirmar Contraseña"
-                        required
-                        disabled={loading}
-                    />
-                    <ButtonComponent
-                        type="submit"
-                        className="w-full"
-                        variant="primary"
-                        loading={loading}
-                        disabled={
-                            loading ||
-                            !formData.name.trim() ||
-                            !formData.password.trim() ||
-                            !formData.passwordConfirm.trim() ||
-                            formData.password !== formData.passwordConfirm
-                        }
-                        suppressHydrationWarning
-                    >
-                        Registrarse
-                    </ButtonComponent>
-                </form>
-            </div>
-        </main>
+                    Registrarse
+                </ButtonComponent>
+            </form>
+        </AuthLayout>
     );
 }
