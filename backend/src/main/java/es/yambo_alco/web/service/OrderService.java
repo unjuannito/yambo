@@ -7,8 +7,11 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
 import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.OrderSpecifications;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,15 +22,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
     private final AuthService authService;
+    private final MailService mailService;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -63,6 +71,13 @@ public class OrderService {
         for (OrderProduct op : orderProducts) {
             op.setOrderId(order.getId());
             orderProductRepository.save(op);
+        }
+
+        // Send email notification for new order (don't fail the order creation if email fails)
+        try {
+            sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_CONFIRMATION);
+        } catch (Exception e) {
+            log.error("Failed to send order creation email for order: {}. Order created successfully.", order.getId(), e);
         }
 
         return order;
@@ -188,8 +203,145 @@ public class OrderService {
             throw new BadRequestException("Cannot change status of delivered order");
         }
 
+        OrderStatus previousStatus = order.getStatus();
         order.setStatus(status);
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Send email notification if status changed (don't fail the update if email fails)
+        if (previousStatus != status) {
+            try {
+                sendOrderStatusUpdateEmail(order, status);
+            } catch (Exception e) {
+                log.error("Failed to send order status update email for order: {}. Status update completed successfully.", orderId, e);
+            }
+        }
+
+        return savedOrder;
+    }
+
+    private void sendOrderStatusUpdateEmail(Order order, OrderStatus newStatus) {
+        // Get user details
+        User user = userRepository.findById(order.getCustomerId())
+                .orElse(null);
+
+        if (user == null) {
+            log.warn("Cannot send email notification for order {}: user {} not found", order.getId(), order.getCustomerId());
+            return;
+        }
+
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            log.warn("Cannot send email notification for order {}: user {} has no email", order.getId(), order.getCustomerId());
+            return;
+        }
+
+        // Get order products with details
+        List<OrderProduct> orderProducts = getOrderProducts(order.getId());
+        List<MailService.OrderProductInfo> productInfos = orderProducts.stream()
+                .map(op -> {
+                    Product product = productRepository.findById(op.getProductId()).orElse(null);
+                    String productName = product != null ? product.getName() : "Unknown Product";
+                    String configuration = formatConfiguration(op.getConfiguration(), product);
+                    return new MailService.OrderProductInfo(
+                            productName,
+                            op.getQuantity(),
+                            op.getPrice(),
+                            configuration
+                    );
+                })
+                .collect(Collectors.toList());
+
+        // Calculate total price
+        BigDecimal totalPrice = orderProducts.stream()
+                .map(op -> op.getPrice().multiply(new BigDecimal(op.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Send email notification
+        mailService.sendOrderStatusUpdate(
+                user.getEmail(),
+                user.getName(),
+                order.getId(),
+                order.getCreatedAt(),
+                newStatus,
+                productInfos,
+                totalPrice
+        );
+
+        log.info("Order status update email sent for order: {} to user: {}", order.getId(), user.getEmail());
+    }
+
+    private String formatConfiguration(String configurationJson, Product product) {
+        if (configurationJson == null || configurationJson.trim().isEmpty() || configurationJson.equals("{}")) {
+            return null;
+        }
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> config = mapper.readValue(configurationJson, java.util.Map.class);
+
+            if (config.isEmpty() || product == null || product.getOptions() == null) {
+                return null;
+            }
+
+            String formatted = config.entrySet().stream()
+                    .filter(entry -> entry.getValue() != null)
+                    .filter(entry -> !(entry.getValue() instanceof String) || !((String) entry.getValue()).isBlank())
+                    .filter(entry -> isValidOption(entry.getKey(), entry.getValue(), product.getOptions()))
+                    .map(entry -> formatOptionValue(entry.getKey(), entry.getValue(), product.getOptions()))
+                    .collect(Collectors.joining(", "));
+
+            return formatted.isEmpty() ? null : formatted;
+        } catch (Exception e) {
+            // If parsing fails, return raw JSON
+            return configurationJson;
+        }
+    }
+
+    private boolean isValidOption(String optionName, Object value, List<ProductOption> options) {
+        ProductOption option = options.stream()
+                .filter(opt -> opt.getName().equals(optionName))
+                .findFirst()
+                .orElse(null);
+
+        if (option == null) {
+            return false; // Option doesn't exist in product
+        }
+
+        // For select type, validate the value is one of the valid options
+        if ("select".equals(option.getType()) && option.getValues() != null) {
+            String valueStr = value.toString();
+            return option.getValues().stream()
+                    .anyMatch(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr));
+        }
+
+        // For other types (checkbox, text_input), just check it exists
+        return true;
+    }
+
+    private String formatOptionValue(String optionName, Object value, List<ProductOption> options) {
+        ProductOption option = options.stream()
+                .filter(opt -> opt.getName().equals(optionName))
+                .findFirst()
+                .orElse(null);
+
+        if (option == null) {
+            return optionName + ": " + value;
+        }
+
+        // For select type, try to get the label instead of the id
+        if ("select".equals(option.getType()) && option.getValues() != null) {
+            String valueStr = value.toString();
+            OptionValue optionValue = option.getValues().stream()
+                    .filter(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr))
+                    .findFirst()
+                    .orElse(null);
+
+            if (optionValue != null) {
+                return optionName + ": " + optionValue.getLabel();
+            }
+        }
+
+        return optionName + ": " + value;
     }
 
     @Transactional

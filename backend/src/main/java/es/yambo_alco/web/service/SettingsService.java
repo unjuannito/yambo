@@ -105,6 +105,19 @@ public class SettingsService {
         }
     }
 
+    public String getOrganizationLegalName() {
+        return getSettingValue("organization.legal_name", "Yambo ALCO");
+    }
+
+    public void setOrganizationLegalName(@NonNull String legalName) {
+        Optional<Settings> existing = findSettingByKey("organization.legal_name");
+        if (existing.isPresent()) {
+            updateSetting("organization.legal_name", legalName, null, null);
+        } else {
+            createSetting("organization.legal_name", legalName, "Nombre legal de la organización", "organization");
+        }
+    }
+
     public String getEmailHost() {
         return getSettingValue("email.host", "");
     }
