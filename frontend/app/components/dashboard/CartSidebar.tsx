@@ -11,7 +11,8 @@ export default function CartSidebar() {
       Object.entries(configuration)
         .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
         .reduce((acc, [key, value]) => {
-          acc[key] = value;
+          // Extract ID from object if present, otherwise use value as-is
+          acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
           return acc;
         }, {} as Record<string, any>)
     );
@@ -26,6 +27,10 @@ export default function CartSidebar() {
         }
         if (typeof value === "boolean") {
           return value ? key : null;
+        }
+        // If value is an object with label, use the label
+        if (typeof value === 'object' && value !== null && 'label' in value) {
+          return `${key}: ${value.label}`;
         }
         return `${key}: ${value}`;
       })

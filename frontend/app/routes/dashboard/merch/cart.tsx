@@ -3,7 +3,8 @@ import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { orderService } from "~/services/orderService";
-import { useState } from "react";
+import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
+import { useState, useEffect } from "react";
 import type { Route } from "./+types/cart";
 import toast from "react-hot-toast";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
@@ -23,17 +24,32 @@ export default function CartPage() {
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string>("");
   const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [drops, setDrops] = useState<FamilyProduct[]>([]);
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
+
+  useEffect(() => {
+    const loadDrops = async () => {
+      try {
+        const response = await familyProductService.listFamilyProducts(0, 200);
+        setDrops(response.content);
+      } catch (error) {
+        console.error("Error loading drops:", error);
+      }
+    };
+
+    loadDrops();
+  }, []);
 
   const generateConfigKey = (configuration: Record<string, any>): string => {
     return JSON.stringify(
       Object.entries(configuration)
         .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
         .reduce((acc, [key, value]) => {
-          acc[key] = value;
+          // Extract ID from object if present, otherwise use value as-is
+          acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
           return acc;
         }, {} as Record<string, any>)
     );
@@ -48,6 +64,10 @@ export default function CartPage() {
         }
         if (typeof value === "boolean") {
           return value ? key : null;
+        }
+        // If value is an object with label, use the label
+        if (typeof value === 'object' && value !== null && 'label' in value) {
+          return `${key}: ${value.label}`;
         }
         return `${key}: ${value}`;
       })
@@ -64,7 +84,13 @@ export default function CartPage() {
     setIsSubmitting(true);
     try {
       const orderProducts = items.map(item => {
-        const configStr = JSON.stringify(item.configuration);
+        // Normalize configuration to only include IDs for backend
+        const normalizedConfig = Object.entries(item.configuration).reduce((acc, [key, value]) => {
+          acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
+          return acc;
+        }, {} as Record<string, any>);
+
+        const configStr = JSON.stringify(normalizedConfig);
         return {
           productId: item.product.id,
           quantity: item.quantity,
@@ -163,6 +189,9 @@ export default function CartPage() {
           {items.map((item) => {
             const configKey = generateConfigKey(item.configuration);
             const configText = formatConfiguration(item.configuration);
+            const itemDrop = item.product.familyProductId
+              ? drops.find(drop => drop.id === item.product.familyProductId)
+              : null;
 
             return (
               <div key={`${item.product.id}-${configKey}`} className="bg-white rounded-lg shadow-md p-6">
@@ -185,6 +214,23 @@ export default function CartPage() {
                   {/* Details */}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.product.name}</h3>
+
+                    {itemDrop && (
+                      <div className="mb-2">
+                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium text-xs">
+                          {itemDrop.name}
+                        </span>
+                        {itemDrop.endTms && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Disponible hasta: {new Date(itemDrop.endTms).toLocaleDateString('es-ES', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     {configText && (
                       <p className="text-sm text-gray-600 mb-2">

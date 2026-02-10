@@ -145,7 +145,7 @@ export function FilterableTable<T>({
     const handlePageChange = useCallback(
         (page: number) => {
             if (isServerSide) {
-                setPageInfo((prev) => ({ ...prev, page }));
+                setPageInfo((prev) => ({ ...prev, number: page }));
             } else {
                 setClientPage(page);
             }

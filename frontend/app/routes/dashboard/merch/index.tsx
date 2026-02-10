@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { productService, type Product } from "~/services/productService";
+import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { useAuth } from "~/hooks/useAuth";
 import { useNavigate } from "react-router";
 import type { Route } from "./+types/index";
@@ -22,6 +23,8 @@ export default function Merch() {
     const { hasPermission } = useAuth();
     const navigate = useNavigate();
     const [products, setProducts] = useState<Product[]>([]);
+    const [drops, setDrops] = useState<FamilyProduct[]>([]);
+    const [selectedDrop, setSelectedDrop] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(
@@ -32,25 +35,24 @@ export default function Merch() {
     );
 
     useEffect(() => {
-        const loadProducts = async () => {
+        const loadData = async () => {
             try {
                 setLoading(true);
-                const response = await productService.getAllProducts(
-                    0,
-                    50,
-                    undefined,
-                    true,
-                );
-                setProducts(response.content);
+                const [productsResponse, dropsResponse] = await Promise.all([
+                    productService.getAllProducts(0, 50, undefined, true),
+                    familyProductService.listFamilyProducts(0, 50, undefined, true),
+                ]);
+                setProducts(productsResponse.content);
+                setDrops(dropsResponse.content);
             } catch (err) {
                 setError("Error al cargar los artículos");
-                console.error("Error loading products:", err);
+                console.error("Error loading data:", err);
             } finally {
                 setLoading(false);
             }
         };
 
-        loadProducts();
+        loadData();
     }, []);
 
     const openImageModal = (product: Product, index: number) => {
@@ -92,53 +94,80 @@ export default function Merch() {
         },
     ];
 
-    const renderItem = (product: Product) => (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-            <ImageCarousel
-                images={product.images || []}
-                alt={product.name}
-                className="mb-0 h-92"
-                onImageClick={(index) => openImageModal(product, index)}
-                showArrowsOnHover={false}
-            />
-            <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                            {product.name}
-                        </h3>
-                        <p className="text-2xl font-bold text-blue-600">
-                            {product.basePrice.toFixed(2)} €
-                        </p>
+    const renderItem = (product: Product) => {
+        const productDrop = product.familyProductId 
+            ? drops.find(drop => drop.id === product.familyProductId)
+            : null;
+        
+        return (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <ImageCarousel
+                    images={product.images || []}
+                    alt={product.name}
+                    className="mb-0 h-92"
+                    onImageClick={(index) => openImageModal(product, index)}
+                    showArrowsOnHover={false}
+                />
+                <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                {product.name}
+                            </h3>
+                            {productDrop && (
+                                <div className="mb-2 text-sm">
+                                    <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                                        {productDrop.name}
+                                    </span>
+                                    {productDrop.endTms && (
+                                        <p className="mt-1 text-gray-600">
+                                            Disponible hasta: {new Date(productDrop.endTms).toLocaleDateString('es-ES', {
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric'
+                                            })}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                            <p className="text-2xl font-bold text-blue-600">
+                                {product.basePrice.toFixed(2)} €
+                            </p>
+                        </div>
+                        {hasPermission({ obj: "product", action: "update" }) && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(
+                                        `/mi-espacio/merch/${product.id}/configurar`,
+                                    );
+                                }}
+                                className="ml-4 px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+                                title="Editar producto"
+                            >
+                                Editar
+                            </button>
+                        )}
                     </div>
-                    {hasPermission({ obj: "product", action: "update" }) && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(
-                                    `/mi-espacio/merch/${product.id}/configurar`,
-                                );
-                            }}
-                            className="ml-4 px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
-                            title="Editar producto"
-                        >
-                            Editar
-                        </button>
+                    {product.options && product.options.length > 0 && (
+                        <p className="text-sm text-gray-600 mb-4">
+                            {product.options.length} opción
+                            {product.options.length !== 1 ? "es" : ""} disponible
+                            {product.options.length !== 1 ? "s" : ""}
+                        </p>
                     )}
+                    <ButtonComponent variant="primary">
+                        Más información
+                    </ButtonComponent>
                 </div>
-                {product.options && product.options.length > 0 && (
-                    <p className="text-sm text-gray-600 mb-4">
-                        {product.options.length} opción
-                        {product.options.length !== 1 ? "es" : ""} disponible
-                        {product.options.length !== 1 ? "s" : ""}
-                    </p>
-                )}
-                <ButtonComponent variant="primary">
-                    Más información
-                </ButtonComponent>
             </div>
-        </div>
-    );
+        );
+    };
+
+    // Filtrar productos por drop seleccionado
+    const filteredProducts = selectedDrop
+        ? products.filter(product => product.familyProductId === selectedDrop)
+        : products;
 
     if (loading) {
         return (
@@ -186,7 +215,7 @@ export default function Merch() {
                     </ButtonComponent>
                 )}
             </div>
-            <div className="text-center mb-4">
+            <div className="text-center mb-6">
                 <p className="text-gray-600">
                     Artículos disponibles de nuestra campaña de merch
                 </p>
@@ -196,10 +225,81 @@ export default function Merch() {
                 </p>
             </div>
 
+            {/* Sección de Drops Disponibles */}
+            {drops.length > 0 && (
+                <div className="mb-8">
+                    <h2 className="text-2xl font-semibold mb-4">Drops Disponibles</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {drops.map((drop) => {
+                            const isSelected = selectedDrop === drop.id;
+                            const productCount = products.filter(
+                                p => p.familyProductId === drop.id
+                            ).length;
+                            return (
+                                <button
+                                    key={drop.id}
+                                    onClick={() => setSelectedDrop(isSelected ? null : drop.id)}
+                                    className={`p-6 rounded-lg shadow-md transition-all duration-200 text-left ${
+                                        isSelected
+                                            ? "bg-blue-600 text-white ring-4 ring-blue-300"
+                                            : "bg-white hover:shadow-lg hover:scale-105"
+                                    }`}
+                                >
+                                    <h3 className={`text-xl font-bold mb-2 ${
+                                        isSelected ? "text-white" : "text-gray-900"
+                                    }`}>
+                                        {drop.name}
+                                    </h3>
+                                    <div className={`text-sm ${
+                                        isSelected ? "text-blue-100" : "text-gray-600"
+                                    }`}>
+                                        {drop.startTms && (
+                                            <p className="mb-1">
+                                                Inicio: {new Date(drop.startTms).toLocaleDateString()}
+                                            </p>
+                                        )}
+                                        {drop.endTms && (
+                                            <p className="mb-2">
+                                                Fin: {new Date(drop.endTms).toLocaleDateString()}
+                                            </p>
+                                        )}
+                                        <p className={`font-medium ${
+                                            isSelected ? "text-blue-100" : "text-blue-600"
+                                        }`}>
+                                            {productCount} {productCount === 1 ? "artículo" : "artículos"}
+                                        </p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {selectedDrop && (
+                        <div className="mt-4">
+                            <ButtonComponent
+                                variant="secondary"
+                                onClick={() => setSelectedDrop(null)}
+                            >
+                                Mostrar todos los artículos
+                            </ButtonComponent>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Sección de Productos */}
+            <div className="mb-4">
+                <h2 className="text-2xl font-semibold mb-4">
+                    {selectedDrop 
+                        ? `Artículos del Drop: ${drops.find(d => d.id === selectedDrop)?.name || ""}`
+                        : "Todos los Artículos"
+                    }
+                </h2>
+            </div>
+
             <FilterableTable
                 columns={columns}
                 keyField="id"
-                data={products}
+                data={filteredProducts}
                 display={{
                     type: "grid",
                     renderItem,

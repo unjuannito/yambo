@@ -60,8 +60,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
 
     const [product, setProduct] = useState<Product>(() => emptyProduct());
 
-    const canShowImportTools = useMemo(() => mode === "create", [mode]);
-
     if (!isAuthenticated()) {
         return <Navigate to="/login" replace />;
     }
@@ -99,30 +97,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
 
         loadProducts();
     }, [isEditing, navigate, productId]);
-
-    const loadProduct = (productToLoad: Product) => {
-        setProduct(productToLoad);
-        setJsonInput("");
-        setJsonError("");
-    };
-
-    const importFromJson = () => {
-        try {
-            const parsed = JSON.parse(jsonInput);
-            setProduct(parsed);
-            setJsonError("");
-            alert("Producto importado exitosamente!");
-        } catch {
-            setJsonError("Formato JSON inválido. Por favor revisa tu entrada.");
-        }
-    };
-
-    const createNewProduct = () => {
-        setProduct(emptyProduct());
-        setSelectedProductId("");
-        setJsonInput("");
-        setJsonError("");
-    };
 
     const addOption = () => {
         setProduct({
@@ -182,6 +156,12 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         const existing = newOptions[optionIndex];
 
         const nextValues = [...(existing.values ?? [])];
+        
+        // Auto-generate id from label in lowercase
+        if (updates.label !== undefined) {
+            updates.id = updates.label.toLowerCase();
+        }
+        
         nextValues[valueIndex] = {
             ...nextValues[valueIndex],
             ...updates,
@@ -282,74 +262,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     {isEditing ? "Modifica los detalles del producto" : "Crea un nuevo producto con todas sus opciones"}
                 </p>
             </div>
-
-            {canShowImportTools && (
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <div className="space-y-4">
-                        <div className="flex gap-4">
-                            <div className="flex-1 space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Cargar Producto Existente</label>
-                                <div className="flex gap-2">
-                                    <select
-                                        value={selectedProductId}
-                                        onChange={(e) => setSelectedProductId(e.target.value)}
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="">Seleccionar un producto</option>
-                                        {savedProducts.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.name || "Producto sin título"}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <button
-                                        onClick={() => {
-                                            if (selectedProductId !== "") {
-                                                const productToLoad = savedProducts.find((p) => p.id === selectedProductId);
-                                                if (productToLoad) {
-                                                    loadProduct(productToLoad);
-                                                }
-                                            }
-                                        }}
-                                        disabled={selectedProductId === ""}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                                    >
-                                        Cargar
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex items-end">
-                                <button
-                                    onClick={createNewProduct}
-                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                                >
-                                    + Nuevo Producto
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="block text-sm font-medium text-gray-700">Importar desde JSON</label>
-                            <textarea
-                                value={jsonInput}
-                                onChange={(e) => {
-                                    setJsonInput(e.target.value);
-                                    setJsonError("");
-                                }}
-                                placeholder="Pega tu JSON de producto aquí..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm min-h-[120px]"
-                            />
-                            {jsonError && <p className="text-sm text-red-600">{jsonError}</p>}
-                            <button
-                                onClick={importFromJson}
-                                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                            >
-                                📤 Importar JSON
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="space-y-6">

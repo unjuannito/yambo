@@ -52,7 +52,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       Object.entries(configuration)
         .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
         .reduce((acc, [key, value]) => {
-          acc[key] = value;
+          // Extract ID from object if present, otherwise use value as-is
+          acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
           return acc;
         }, {} as Record<string, any>)
     );

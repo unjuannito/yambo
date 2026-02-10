@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { productService, type Product, type ProductOption } from "~/services/productService";
+import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
 import { Navigate } from "react-router";
@@ -16,6 +17,7 @@ export default function ProductPage() {
     const { isAuthenticated } = useAuth();
     const { addItem } = useCart();
     const [product, setProduct] = useState<Product | null>(null);
+    const [drop, setDrop] = useState<FamilyProduct | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [configuration, setConfiguration] = useState<Record<string, any>>({});
@@ -35,6 +37,16 @@ export default function ProductPage() {
 
                 setProduct(prod);
                 setTotalPrice(prod.basePrice);
+
+                // Load drop if product has one
+                if (prod.familyProductId) {
+                    try {
+                        const dropData = await familyProductService.getFamilyProduct(prod.familyProductId);
+                        setDrop(dropData);
+                    } catch (err) {
+                        console.error("Error loading drop:", err);
+                    }
+                }
             } catch (err) {
                 setError("Error al cargar el producto");
                 console.error("Error loading product:", err);
@@ -60,7 +72,8 @@ export default function ProductPage() {
             const selectedValue = configuration[option.name];
 
             if (option.type === "select" && selectedValue) {
-                const value = option.values?.find((v) => v.id === selectedValue);
+                const valueId = typeof selectedValue === 'object' ? selectedValue.id : selectedValue;
+                const value = option.values?.find((v) => v.id === valueId);
                 if (value?.price) price += value.price;
             } else if (option.type === "text_input" && selectedValue && selectedValue.trim() !== "") {
                 if (option.price) price += option.price;
@@ -71,7 +84,14 @@ export default function ProductPage() {
     };
 
     const handleSelectChange = (optionName: string, value: string) => {
-        setConfiguration({ ...configuration, [optionName]: value });
+        // Store both id and label for display purposes
+        const option = product?.options.find(opt => opt.name === optionName);
+        const selectedOption = option?.values?.find(v => v.id === value);
+        
+        setConfiguration({ 
+            ...configuration, 
+            [optionName]: selectedOption ? { id: value, label: selectedOption.label } : value 
+        });
     };
 
     const handleCheckboxChange = (optionName: string, checked: boolean) => {
@@ -126,11 +146,16 @@ export default function ProductPage() {
     const renderOption = (option: ProductOption) => {
         switch (option.type) {
             case "select":
+                const selectedValue = configuration[option.name];
+                const selectValue = selectedValue 
+                    ? (typeof selectedValue === 'object' ? selectedValue.id : selectedValue)
+                    : "";
+                
                 return (
                     <SelectComponent
                         label={option.name}
                         required={option.required}
-                        value={configuration[option.name] || ""}
+                        value={selectValue}
                         onChange={(e) => handleSelectChange(option.name, e.target.value)}
                         options={[
                             { value: "", label: `Seleccionar ${option.name}` },
@@ -251,6 +276,25 @@ export default function ProductPage() {
                             <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
                             <span className="text-2xl font-bold text-blue-600">{product.basePrice.toFixed(2)}€</span>
                         </div>
+                        {drop && (
+                            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full font-medium text-sm">
+                                        {drop.name}
+                                    </span>
+                                </div>
+                                {drop.endTms && (
+                                    <p className="text-sm text-gray-700">
+                                        <span className="font-medium">Disponible hasta:</span>{' '}
+                                        {new Date(drop.endTms).toLocaleDateString('es-ES', {
+                                            day: 'numeric',
+                                            month: 'long',
+                                            year: 'numeric'
+                                        })}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <div className="space-y-6">
                             <h2 className="text-xl font-semibold">Opciones</h2>
                             {product.options.map((option, index) => (
@@ -274,7 +318,8 @@ export default function ProductPage() {
                                 if (!selectedValue) return null;
 
                                 if (option.type === "select") {
-                                    const value = option.values?.find((v) => v.id === selectedValue);
+                                    const valueId = typeof selectedValue === 'object' ? selectedValue.id : selectedValue;
+                                    const value = option.values?.find((v) => v.id === valueId);
                                     if (value?.price) {
                                         return (
                                             <div key={option.name} className="flex justify-between text-sm">

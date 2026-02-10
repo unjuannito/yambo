@@ -29,7 +29,7 @@ export function Pagination({
             </div>
             <ButtonComponent
                 variant="neutral"
-                onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+                onClick={() => {onPageChange(Math.min(totalPages - 1, page + 1))}}
                 disabled={page >= totalPages - 1}
             >
                 {nextLabel}
