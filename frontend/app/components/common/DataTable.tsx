@@ -24,7 +24,7 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <div
-      className={twMerge(`overflow-x-auto bg-white rounded-lg shadow overflow-hidden ${className}`)}
+      className={twMerge(`overflow-x-auto bg-white rounded-lg shadow ${className}`)}
     >
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">

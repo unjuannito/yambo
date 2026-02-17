@@ -391,7 +391,7 @@ export function FilterableTable<T>({
     };
 
     return (
-        <div className={twMerge(`flex flex-col gap-4 ${className}`)}>
+        <div className={twMerge(`flex flex-col gap-4 min-w-0 ${className}`)}>
             {/* Filters Section */}
             {enableFilters && filterFields.length > 0 && (
                 <FiltersSection
