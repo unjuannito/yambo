@@ -3,8 +3,10 @@ import {
     useRef,
     useEffect,
     useId,
-    useLayoutEffect
+    useCallback,
+    useLayoutEffect,
 } from "react";
+import { createPortal } from "react-dom";
 
 import LabelComponent from "./LabelComponent";
 import ButtonComponent from "./ButtonComponent";
@@ -45,15 +47,15 @@ export default function MultiSelectComponent({
 
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
-    const [visibleCount, setVisibleCount] = useState(selectedValues.length);
-    const [reloadValueContainer, setReloadValueContainer] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null);
     const labelRef = useRef<HTMLLabelElement>(null);
     const multiSelectRef = useRef<HTMLDivElement>(null);
-    const containerRef = useRef<HTMLSpanElement>(null);
     const selectRef = useRef<HTMLSelectElement>(null);
+    const triggerRef = useRef<HTMLSpanElement>(null);
     const inputId = useId();
+
+    const [maxVisibleTags, setMaxVisibleTags] = useState(3);
 
     const filteredOptions = options.filter((option) =>
         option.label.toLowerCase().includes(search.toLowerCase())
@@ -118,58 +120,69 @@ export default function MultiSelectComponent({
     }, [isOpen]);
 
     /* ===============================
-       Resize observer
+       Dropdown position (portal)
+       =============================== */
+
+    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+    const updateDropdownPosition = useCallback(() => {
+        if (!multiSelectRef.current) return;
+        const rect = multiSelectRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const maxDropdownHeight = 320;
+        const openAbove = spaceBelow < maxDropdownHeight && spaceAbove > spaceBelow;
+
+        const availableHeight = Math.min(maxDropdownHeight, openAbove ? spaceAbove - 8 : spaceBelow - 8);
+
+        setDropdownStyle({
+            position: "fixed",
+            left: rect.left,
+            width: rect.width,
+            zIndex: 9999,
+            maxHeight: availableHeight,
+            ...(openAbove
+                ? { bottom: window.innerHeight - rect.top + 4 }
+                : { top: rect.bottom + 4 }),
+        });
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        updateDropdownPosition();
+
+        const handleScrollOrResize = () => updateDropdownPosition();
+        window.addEventListener("scroll", handleScrollOrResize, true);
+        window.addEventListener("resize", handleScrollOrResize);
+        return () => {
+            window.removeEventListener("scroll", handleScrollOrResize, true);
+            window.removeEventListener("resize", handleScrollOrResize);
+        };
+    }, [isOpen, updateDropdownPosition]);
+
+    /* ===============================
+       Calculate visible tags from width
        =============================== */
 
     useLayoutEffect(() => {
-        if (!containerRef.current) return;
+        const el = triggerRef.current;
+        if (!el) return;
 
-        const ro = new ResizeObserver(() => {
-            setReloadValueContainer(true);
-        });
+        const compute = () => {
+            const availableWidth = el.getBoundingClientRect().width - 40; // arrow + padding
+            const avgTagWidth = 130; // approximate px per tag
+            const plusBadgeWidth = 70;
+            const fitCount = Math.max(1, Math.floor((availableWidth - plusBadgeWidth) / avgTagWidth));
+            setMaxVisibleTags(
+                selectedValues.length <= fitCount + 1 ? selectedValues.length : fitCount
+            );
+        };
 
-        ro.observe(containerRef.current);
+        compute();
+        const ro = new ResizeObserver(compute);
+        ro.observe(el);
         return () => ro.disconnect();
     }, [selectedValues]);
-
-    useLayoutEffect(() => {
-        if (reloadValueContainer) {
-            setVisibleCount(selectedValues.length);
-            setReloadValueContainer(false);
-            return;
-        }
-        const container = containerRef.current;
-        if (!container) return;
-
-        const rect = container.getBoundingClientRect();
-        const children = [...container.children];
-
-        const overflowingItems = children
-            .map((child, index) => {
-                const c = child.getBoundingClientRect();
-                const overflowX = c.right > rect.right || c.left < rect.left;
-                const isPlusSign = child.id === "plusSign";
-                const distanceToEnd = rect.right - c.right;
-
-                if (overflowX) {
-                    return {
-                        child,
-                        index,
-                        width: c.width,
-                        overflowX,
-                        isPlusSign,
-                        distanceToEnd,
-                    };
-                }
-
-                return null; // Retornar null para los elementos que no tengan overflow
-            })
-            .filter(item => item !== null); // Eliminar los nulls
-        if (overflowingItems.length > 0) {
-            setVisibleCount(Math.max(0, visibleCount - overflowingItems.length));
-        }
-
-    }, [reloadValueContainer, visibleCount]);
 
     const multiselectElement = (
         <>
@@ -191,49 +204,43 @@ export default function MultiSelectComponent({
 
             <div className="relative" ref={multiSelectRef}>
                 <span
+                    ref={triggerRef}
                     className={twMerge(`w-full border rounded pl-3 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`)}
                     onClick={() => {
                         setIsOpen(!isOpen);
                     }}
                 >
-                    <span className={`w-full justify-start text-gray-400 text-ellipsis truncate flex gap-1 select-none`}>
+                    <span className="w-full justify-start text-gray-400 text-ellipsis truncate flex gap-1 select-none overflow-hidden">
                         {selectedValues.length > 0 ? (
-                            <>
-                                <span id="!1" ref={containerRef} className="w-full flex justify-start gap-1 ">
-                                    {selectedValues.slice(0, visibleCount).map((item) => (
-                                        <span
-                                            key={item}
-                                            className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-1 py-1 rounded whitespace-nowrap flex-shrink-0  truncate gap-0.5"
+                            <span className="w-full flex justify-start gap-1 overflow-hidden">
+                                {selectedValues.slice(0, maxVisibleTags).map((item) => (
+                                    <span
+                                        key={item}
+                                        className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0 gap-0.5"
+                                    >
+                                        {options.find((opt) => opt.value === item)?.label || item}
+                                        <ButtonComponent
+                                            type="button"
+                                            variant="base"
+                                            onClick={(e) => removeOption(item, e)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    removeOption(item, e as any);
+                                                }
+                                            }}
+                                            className="p-0 px-0 py-0"
                                         >
-                                            {options.find((opt) => opt.value === item)?.label || item}
-                                            <ButtonComponent
-                                                type="button"
-                                                variant="base"
-                                                onClick={(e) => removeOption(item, e)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter" || e.key === " ") {
-                                                        e.preventDefault();
-                                                        removeOption(item, e as any);
-                                                    }
-                                                }}
-                                                className="p-0 px-0 py-0"
-                                            >
-                                                X
-                                            </ButtonComponent>
-                                        </span>
-                                    ))}
-                                    {visibleCount == 0 &&
-                                        <span className="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded flex-shrink-0">
-                                            {selectedValues.length} seleccionado{selectedValues.length > 1 ? "s" : ""}
-                                        </span>
-                                    }
-                                    {visibleCount > 0 && visibleCount < selectedValues.length &&
-                                        <span id="plusSign" className="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded flex-shrink-0 select-none">
-                                            + {selectedValues.length - visibleCount}
-                                        </span>
-                                    }
-                                </span>
-                            </>
+                                            X
+                                        </ButtonComponent>
+                                    </span>
+                                ))}
+                                {selectedValues.length > maxVisibleTags && (
+                                    <span className="inline-flex items-center bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded flex-shrink-0 select-none">
+                                        +{selectedValues.length - maxVisibleTags} más
+                                    </span>
+                                )}
+                            </span>
                         ) : (
                             placeholder
                         )}
@@ -245,23 +252,26 @@ export default function MultiSelectComponent({
                         ▼
                     </span>
                 </span>
-                <div
-                    ref={dropdownRef}
-                    className={`${isOpen ? "flex" : "hidden"} absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-2 flex-col gap-2`}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget)
-                            e.preventDefault();
-                    }}
-                >
+                {isOpen && createPortal(
+                    <div
+                        ref={dropdownRef}
+                        style={dropdownStyle}
+                        className="bg-white border border-gray-300 rounded-md shadow-lg p-2 flex flex-col gap-2"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget)
+                                e.preventDefault();
+                        }}
+                    >
                     <input
                         name={`${label}-search`}
                         placeholder="Buscar..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="box-border w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        autoFocus={isOpen}
+                        className="box-border w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shrink-0"
                     />
 
-                    <ul className="max-h-60 overflow-y-auto">
+                    <ul className="overflow-y-auto" style={{ maxHeight: (dropdownStyle.maxHeight as number ?? 320) - 56 }}>
                         {
                             filteredOptions.length > 0 ? (
                                 filteredOptions.map((option) => (
@@ -280,7 +290,9 @@ export default function MultiSelectComponent({
                                 </div>
                             )}
                     </ul>
-                </div>
+                    </div>,
+                    document.body
+                )}
             </div>
         </>
     );

@@ -32,12 +32,12 @@ export function Modal({
             onClick={onClose}
         >
             <div
-                className={`bg-white rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto`}
+                className={`bg-white rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 {title && (
-                    <div className="flex justify-between items-center p-6 border-b">
+                    <div className="flex justify-between items-center p-6 border-b shrink-0">
                         <h2 className="text-2xl font-bold">{title}</h2>
                         <button
                             onClick={onClose}
@@ -50,13 +50,13 @@ export function Modal({
                 )}
 
                 {/* Body */}
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto">
                     {children}
                 </div>
 
                 {/* Footer */}
                 {footer && (
-                    <div className="flex justify-end gap-2 p-6 border-t">
+                    <div className="flex justify-end gap-2 p-6 border-t shrink-0">
                         {footer}
                     </div>
                 )}

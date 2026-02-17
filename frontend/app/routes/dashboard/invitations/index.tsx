@@ -14,7 +14,7 @@ import type {
     CreateInvitationRequest,
 } from "~/services/invitationService";
 import { profileService } from "~/services/profileService";
-import { MultiSelect } from "~/components/common/forms/MultiSelect";
+import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
@@ -248,22 +248,23 @@ export default function Invitations() {
                             }
                             required
                         />
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Perfiles
-                            </label>
-                            <MultiSelect
-                                value={form.profileIds}
-                                options={profileOptions}
-                                onChange={(selected) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-                                        profileIds: selected,
-                                    }))
-                                }
-                                placeholder="Seleccionar perfiles..."
-                            />
-                        </div>
+                        <MultiSelectComponent
+                            label="Perfiles"
+                            name="profileIds"
+                            value={form.profileIds}
+                            options={profileOptions}
+                            onChange={(e) => {
+                                const selected = Array.from(
+                                    (e.target as HTMLSelectElement).selectedOptions,
+                                    option => option.value
+                                );
+                                setForm((prev) => ({
+                                    ...prev,
+                                    profileIds: selected,
+                                }));
+                            }}
+                            placeholder="Seleccionar perfiles..."
+                        />
                     </div>
                 </Modal>
             </main>

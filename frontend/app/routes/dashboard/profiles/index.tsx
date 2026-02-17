@@ -9,6 +9,7 @@ import type {
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
+import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import {
     profileService,
     type Profile,
@@ -139,15 +140,6 @@ export default function Profiles() {
                 getErrorMessage(err, "Error al eliminar el perfil"),
             );
         }
-    };
-
-    const togglePermission = (permissionId: string) => {
-        setForm((prev) => ({
-            ...prev,
-            permissionIds: prev.permissionIds.includes(permissionId)
-                ? prev.permissionIds.filter((id) => id !== permissionId)
-                : [...prev.permissionIds, permissionId],
-        }));
     };
 
     const permissionOptions = useMemo(
@@ -312,112 +304,23 @@ export default function Profiles() {
                             required
                         />
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
-                                Permisos ({form.permissionIds.length}{" "}
-                                seleccionado(s))
-                            </label>
-                            <div className="border border-gray-300 rounded-lg overflow-hidden max-h-96 overflow-y-auto">
-                                {allPermissions.length === 0 ? (
-                                    <p className="text-gray-500 text-sm p-4">
-                                        No hay permisos disponibles
-                                    </p>
-                                ) : (
-                                    <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50 sticky top-0">
-                                            <tr>
-                                                <th className="w-12 px-4 py-3 text-left">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={
-                                                            form.permissionIds
-                                                                .length ===
-                                                                allPermissions.length &&
-                                                            allPermissions.length >
-                                                                0
-                                                        }
-                                                        onChange={(e) => {
-                                                            if (
-                                                                e.target.checked
-                                                            ) {
-                                                                setForm(
-                                                                    (prev) => ({
-                                                                        ...prev,
-                                                                        permissionIds:
-                                                                            allPermissions.map(
-                                                                                (
-                                                                                    p,
-                                                                                ) =>
-                                                                                    p.id,
-                                                                            ),
-                                                                    }),
-                                                                );
-                                                            } else {
-                                                                setForm(
-                                                                    (prev) => ({
-                                                                        ...prev,
-                                                                        permissionIds:
-                                                                            [],
-                                                                    }),
-                                                                );
-                                                            }
-                                                        }}
-                                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                                                    />
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Descripción
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    ID
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
-                                            {allPermissions.map(
-                                                (permission) => (
-                                                    <tr
-                                                        key={permission.id}
-                                                        onClick={() =>
-                                                            togglePermission(
-                                                                permission.id,
-                                                            )
-                                                        }
-                                                        className="hover:bg-gray-50 cursor-pointer transition-colors"
-                                                    >
-                                                        <td
-                                                            className="w-12 px-4 py-3"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={form.permissionIds.includes(
-                                                                    permission.id,
-                                                                )}
-                                                                onChange={() =>
-                                                                    togglePermission(
-                                                                        permission.id,
-                                                                    )
-                                                                }
-                                                                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-900">
-                                                            {
-                                                                permission.description
-                                                            }
-                                                        </td>
-                                                        <td className="px-4 py-3 text-xs text-gray-500 font-mono">
-                                                            {permission.id}
-                                                        </td>
-                                                    </tr>
-                                                ),
-                                            )}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        </div>
+                        <MultiSelectComponent
+                            label="Permisos"
+                            name="permissionIds"
+                            value={form.permissionIds}
+                            options={permissionOptions}
+                            placeholder="Seleccionar permisos..."
+                            onChange={(e) => {
+                                const selected = Array.from(
+                                    (e.target as HTMLSelectElement).selectedOptions,
+                                    (option) => option.value,
+                                );
+                                setForm((prev) => ({
+                                    ...prev,
+                                    permissionIds: selected,
+                                }));
+                            }}
+                        />
                     </div>
                 </Modal>
             </main>
