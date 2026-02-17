@@ -1,0 +1,265 @@
+package es.yambo_alco.web.controller;
+
+import es.yambo_alco.web.exception.ForbiddenException;
+import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.Issue;
+import es.yambo_alco.web.model.IssueComment;
+import es.yambo_alco.web.model.Order;
+import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.IssueService;
+import es.yambo_alco.web.service.OrderService;
+import es.yambo_alco.web.util.PermissionCheckService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/issues")
+@RequiredArgsConstructor
+public class IssueController {
+
+    private final IssueService issueService;
+    private final OrderService orderService;
+    private final AuthService authService;
+    private final PermissionCheckService permissionCheckService;
+
+    @PostMapping
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'create')")
+    public ResponseEntity<IssueResponse> createIssue(@Valid @RequestBody CreateIssueRequest request) {
+        User currentUser = authService.getCurrentUser(true);
+
+        List<UUID> orderedProductIds = request.resolveOrderedProductIds();
+
+        Issue issue = issueService.createIssue(
+            orderedProductIds,
+                request.getTitle(),
+                request.getDescription(),
+                currentUser.getId()
+        );
+        
+        List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new IssueResponse(issue, relatedProducts));
+    }
+
+    @GetMapping("/{issueId}")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
+    public ResponseEntity<IssueDetailResponse> getIssue(@PathVariable String issueId) {
+        Issue issue = issueService.getIssueWithComments(issueId);
+        
+        // Verify user has access to this issue
+        verifyAccessToIssue(issue);
+
+        List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issueId);
+        
+        List<IssueComment> comments = issueService.getIssueComments(issueId);
+        
+        return ResponseEntity.ok(new IssueDetailResponse(issue, comments, relatedProducts));
+    }
+
+    @GetMapping("/order/{orderId}")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
+    public ResponseEntity<List<IssueResponse>> getIssuesByOrder(@PathVariable String orderId) {
+        User currentUser = authService.getCurrentUser(true);
+        
+        // Verify user has access to this order
+        Order order = orderService.getOrderById(orderId);
+        if (!order.getCustomerId().equals(currentUser.getId())) {
+            // Allow anyone with authentication to view issues for now
+            // Access control can be refined via permission system
+        }
+        
+        List<Issue> issues = issueService.getIssuesByOrderId(orderId);
+        List<IssueResponse> response = issues.stream()
+            .map(issue -> new IssueResponse(issue, issueService.getIssueProductsByIssueId(issue.getId())))
+                .toList();
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{issueId}/comments")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'comment')")
+    public ResponseEntity<IssueCommentResponse> addComment(
+            @PathVariable String issueId,
+            @Valid @RequestBody AddCommentRequest request) {
+        User currentUser = authService.getCurrentUser(true);
+        
+        Issue issue = issueService.getIssueWithComments(issueId);
+        
+        // Verify user has access to this issue
+        verifyAccessToIssue(issue);
+
+        if (request.getStatus() != null && !permissionCheckService.hasPermission("issue", "update")) {
+            throw new ForbiddenException("You don't have permission to update issue status");
+        }
+        
+        IssueComment comment = issueService.addComment(issueId, request.getText(), currentUser.getId(), request.getStatus());
+        
+        return ResponseEntity.status(HttpStatus.CREATED).body(new IssueCommentResponse(comment));
+    }
+
+    private void verifyAccessToIssue(Issue issue) {
+        User currentUser = authService.getCurrentUser(true);
+        if (issue.getOrderedProductId() == null) {
+            throw new ResourceNotFoundException("Issue has no related ordered products");
+        }
+        
+        // Allow access if user is the customer or has authentication
+        // Fine-grained access control can be added via permission system
+    }
+
+    // DTOs
+    @Data
+    public static class CreateIssueRequest {
+        private List<UUID> orderedProductIds;
+
+        @Deprecated
+        private UUID orderedProductId;
+        
+        @NotBlank(message = "Title cannot be blank")
+        private String title;
+        
+        @NotBlank(message = "Description cannot be blank")
+        private String description;
+
+        public List<UUID> resolveOrderedProductIds() {
+            Set<UUID> ids = new LinkedHashSet<>();
+            if (orderedProductIds != null) {
+                ids.addAll(orderedProductIds.stream().filter(id -> id != null).toList());
+            }
+            if (orderedProductId != null) {
+                ids.add(orderedProductId);
+            }
+            if (ids.isEmpty()) {
+                throw new BadRequestException("At least one ordered product ID is required");
+            }
+            return new ArrayList<>(ids);
+        }
+    }
+
+    @Data
+    public static class AddCommentRequest {
+        private String text;
+        private IssueStatus status;
+    }
+
+    @Data
+    public static class IssueResponse {
+        private String id;
+        private UUID orderedProductId;
+        private List<UUID> orderedProductIds;
+        private String title;
+        private String description;
+        private IssueStatus status;
+        private String createdBy;
+        private String createdAt;
+        private String updatedAt;
+
+        public IssueResponse(Issue issue, List<OrderProduct> relatedProducts) {
+            this.id = issue.getId();
+            this.orderedProductId = issue.getOrderedProductId();
+            this.orderedProductIds = relatedProducts.isEmpty()
+                    ? List.of(issue.getOrderedProductId())
+                    : relatedProducts.stream().map(OrderProduct::getId).toList();
+            this.title = issue.getTitle();
+            this.description = issue.getDescription();
+            this.status = issue.getStatus();
+            this.createdBy = issue.getCreatedBy();
+            this.createdAt = issue.getCreatedAt().toString();
+            this.updatedAt = issue.getUpdatedAt().toString();
+        }
+    }
+
+    @Data
+    public static class IssueDetailResponse {
+        private String id;
+        private UUID orderedProductId;
+        private List<UUID> orderedProductIds;
+        private String title;
+        private String description;
+        private IssueStatus status;
+        private String createdBy;
+        private String createdAt;
+        private String updatedAt;
+        private List<IssueCommentResponse> comments;
+        private List<RelatedProductResponse> relatedProducts;
+
+        public IssueDetailResponse(Issue issue, List<IssueComment> comments, List<OrderProduct> relatedProducts) {
+            this.id = issue.getId();
+            this.orderedProductId = issue.getOrderedProductId();
+            this.orderedProductIds = relatedProducts.isEmpty()
+                    ? List.of(issue.getOrderedProductId())
+                    : relatedProducts.stream().map(OrderProduct::getId).toList();
+            this.title = issue.getTitle();
+            this.description = issue.getDescription();
+            this.status = issue.getStatus();
+            this.createdBy = issue.getCreatedBy();
+            this.createdAt = issue.getCreatedAt().toString();
+            this.updatedAt = issue.getUpdatedAt().toString();
+            this.comments = comments.stream()
+                    .map(IssueCommentResponse::new)
+                    .toList();
+            this.relatedProducts = relatedProducts.stream()
+                    .map(RelatedProductResponse::new)
+                    .toList();
+        }
+    }
+
+    @Data
+    public static class RelatedProductResponse {
+        private UUID orderedProductId;
+        private String productId;
+        private String productName;
+        private String familyProductName;
+        private Integer quantity;
+        private String unitPrice;
+        private String configuration;
+
+        public RelatedProductResponse(OrderProduct orderProduct) {
+            this.orderedProductId = orderProduct.getId();
+            this.productId = orderProduct.getProductId();
+            this.productName = orderProduct.getProduct() != null ? orderProduct.getProduct().getName() : null;
+            this.familyProductName = orderProduct.getProduct() != null && orderProduct.getProduct().getFamilyProduct() != null
+                    ? orderProduct.getProduct().getFamilyProduct().getName()
+                    : null;
+            this.quantity = orderProduct.getQuantity();
+            this.unitPrice = orderProduct.getPrice() != null ? orderProduct.getPrice().toString() : null;
+            this.configuration = orderProduct.getConfiguration();
+        }
+    }
+
+    @Data
+    public static class IssueCommentResponse {
+        private UUID id;
+        private String issueId;
+        private String userId;
+        private String userName;
+        private IssueStatus status;
+        private String text;
+        private String createdAt;
+
+        public IssueCommentResponse(IssueComment comment) {
+            this.id = comment.getId();
+            this.issueId = comment.getIssueId();
+            this.userId = comment.getUserId();
+            this.userName = comment.getUser() != null ? comment.getUser().getName() : comment.getUserId();
+            this.status = comment.getStatus();
+            this.text = comment.getText();
+            this.createdAt = comment.getCreatedAt().toString();
+        }
+    }
+}

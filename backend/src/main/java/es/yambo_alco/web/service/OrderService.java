@@ -205,6 +205,9 @@ public class OrderService {
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(status);
+        if ((status == OrderStatus.DELIVERED || status == OrderStatus.CANCELLED) && order.getClosedAt() == null) {
+            order.setClosedAt(LocalDateTime.now());
+        }
         Order savedOrder = orderRepository.save(order);
 
         // Send email notification if status changed (don't fail the update if email fails)

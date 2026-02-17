@@ -4,6 +4,7 @@ import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.service.SettingsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -190,6 +191,19 @@ public class SettingsController {
         return ResponseEntity.ok("SMTP advanced configuration updated successfully");
     }
 
+    @GetMapping("/issues/creation-window-days")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
+    public ResponseEntity<Map<String, Integer>> getIssueCreationWindowDays() {
+        return ResponseEntity.ok(Map.of("days", settingsService.getIssueCreationWindowDays()));
+    }
+
+    @PutMapping("/issues/creation-window-days")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
+    public ResponseEntity<String> setIssueCreationWindowDays(@Valid @RequestBody IssueCreationWindowDaysRequest request) {
+        settingsService.setIssueCreationWindowDays(request.getDays());
+        return ResponseEntity.ok("Issue creation window updated successfully");
+    }
+
     // DTOs
     @Data
     public static class SettingsResponse {
@@ -275,5 +289,11 @@ public class SettingsController {
         private Integer connectionTimeout;
         private Integer timeout;
         private Integer writeTimeout;
+    }
+
+    @Data
+    public static class IssueCreationWindowDaysRequest {
+        @NotNull(message = "Days cannot be null")
+        private Integer days;
     }
 }

@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,6 +12,17 @@ public interface MailService {
     void sendOrderStatusUpdate(String to, String userName, String orderId,
             LocalDateTime orderDate, OrderStatus newStatus,
             List<OrderProductInfo> products, BigDecimal totalPrice);
+
+    void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
+            String productName, String orderId, String createdBy, LocalDateTime createdAt);
+
+    void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
+            String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
+            IssueStatus oldStatus, IssueStatus newStatus);
+
+    void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
+            String productName, IssueStatus oldStatus, IssueStatus newStatus,
+            String changedBy, LocalDateTime changedAt);
 
     /**
      * Generates a payment reference in the format: merch-{year}-{orderId}

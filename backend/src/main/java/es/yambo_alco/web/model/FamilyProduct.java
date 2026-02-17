@@ -1,5 +1,6 @@
 package es.yambo_alco.web.model;
 
+import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,6 +34,11 @@ public class FamilyProduct {
 
     @Column(name = "end_tms", nullable = false)
     private LocalDateTime endTms;
+
+    @Builder.Default
+    @Column(nullable = false)
+    @Enumerated(EnumType.ORDINAL)
+    private FamilyProductStatus status = FamilyProductStatus.ACTIVE;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", nullable = false, unique = true)

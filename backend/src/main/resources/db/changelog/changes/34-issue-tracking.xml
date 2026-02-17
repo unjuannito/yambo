@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add status column to family_product table -->
+    <changeSet id="34-add-family-product-status" author="yambo">
+        <comment>Add status column to family_product for tracking drop lifecycle (ACTIVE, COMPLETED, ARCHIVED)</comment>
+        
+        <addColumn tableName="family_product">
+            <column name="status" type="integer" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Create issue table for tracking product issues/tickets -->
+    <changeSet id="34-create-issue-table" author="yambo">
+        <comment>Create issue table for JIRA-like issue tracking on ordered products</comment>
+        
+        <createTable tableName="issue">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ordered_product_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="title" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="integer" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Add foreign key constraint to order_product -->
+        <addForeignKeyConstraint
+            baseTableName="issue"
+            baseColumnNames="ordered_product_id"
+            referencedTableName="order_product"
+            referencedColumnNames="id"
+            constraintName="fk_issue_ordered_product"
+            onDelete="CASCADE"/>
+
+        <!-- Add foreign key constraint to user -->
+        <addForeignKeyConstraint
+            baseTableName="issue"
+            baseColumnNames="created_by"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_issue_created_by_user"
+            onDelete="RESTRICT"/>
+
+        <!-- Create index for better query performance -->
+        <createIndex tableName="issue" indexName="idx_issue_ordered_product_id">
+            <column name="ordered_product_id"/>
+        </createIndex>
+        <createIndex tableName="issue" indexName="idx_issue_created_by">
+            <column name="created_by"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Create issue_comment table for issue comments/tracking -->
+    <changeSet id="34-create-issue-comment-table" author="yambo">
+        <comment>Create issue_comment table for issue comments and activity tracking</comment>
+        
+        <createTable tableName="issue_comment">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="issue_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="text" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Add foreign key constraint to issue -->
+        <addForeignKeyConstraint
+            baseTableName="issue_comment"
+            baseColumnNames="issue_id"
+            referencedTableName="issue"
+            referencedColumnNames="id"
+            constraintName="fk_issue_comment_issue"
+            onDelete="CASCADE"/>
+
+        <!-- Add foreign key constraint to user -->
+        <addForeignKeyConstraint
+            baseTableName="issue_comment"
+            baseColumnNames="user_id"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_issue_comment_user"
+            onDelete="CASCADE"/>
+
+        <!-- Create index for better query performance -->
+        <createIndex tableName="issue_comment" indexName="idx_issue_comment_issue_id">
+            <column name="issue_id"/>
+        </createIndex>
+        <createIndex tableName="issue_comment" indexName="idx_issue_comment_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

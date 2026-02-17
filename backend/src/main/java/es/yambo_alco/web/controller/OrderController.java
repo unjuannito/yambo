@@ -175,6 +175,7 @@ public class OrderController {
 
     @Data
     public static class OrderProductResponse {
+        private String id;
         private String productId;
         private String productName;
         private Integer quantity;
@@ -182,6 +183,7 @@ public class OrderController {
         private String configuration;
 
         public OrderProductResponse(OrderProduct orderProduct, ProductRepository productRepository) {
+            this.id = orderProduct.getId() != null ? orderProduct.getId().toString() : null;
             this.productId = orderProduct.getProductId();
             this.quantity = orderProduct.getQuantity();
             this.price = orderProduct.getPrice();

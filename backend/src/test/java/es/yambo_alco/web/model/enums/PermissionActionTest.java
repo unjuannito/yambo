@@ -14,6 +14,7 @@ class PermissionActionTest {
         assertEquals("read", PermissionAction.READ.getValue());
         assertEquals("update", PermissionAction.UPDATE.getValue());
         assertEquals("delete", PermissionAction.DELETE.getValue());
+        assertEquals("comment", PermissionAction.COMMENT.getValue());
     }
 
     @Test
@@ -22,6 +23,7 @@ class PermissionActionTest {
         assertEquals(PermissionAction.READ, PermissionAction.fromValue("read"));
         assertEquals(PermissionAction.UPDATE, PermissionAction.fromValue("update"));
         assertEquals(PermissionAction.DELETE, PermissionAction.fromValue("delete"));
+        assertEquals(PermissionAction.COMMENT, PermissionAction.fromValue("comment"));
     }
 
     @Test
@@ -30,6 +32,7 @@ class PermissionActionTest {
         assertEquals(PermissionAction.READ, PermissionAction.fromValue("READ"));
         assertEquals(PermissionAction.UPDATE, PermissionAction.fromValue("UPDATE"));
         assertEquals(PermissionAction.DELETE, PermissionAction.fromValue("DELETE"));
+        assertEquals(PermissionAction.COMMENT, PermissionAction.fromValue("COMMENT"));
     }
 
     @Test
@@ -59,14 +62,21 @@ class PermissionActionTest {
         assertEquals("read", PermissionAction.READ.toString());
         assertEquals("update", PermissionAction.UPDATE.toString());
         assertEquals("delete", PermissionAction.DELETE.toString());
+        assertEquals("comment", PermissionAction.COMMENT.toString());
     }
 
     @Test
     void values_ShouldContainAllActions() {
         PermissionAction[] actions = PermissionAction.values();
-        assertEquals(4, actions.length);
+        assertEquals(5, actions.length);
         assertArrayEquals(
-                new PermissionAction[]{PermissionAction.CREATE, PermissionAction.READ, PermissionAction.UPDATE, PermissionAction.DELETE},
+            new PermissionAction[]{
+                PermissionAction.CREATE,
+                PermissionAction.READ,
+                PermissionAction.UPDATE,
+                PermissionAction.DELETE,
+                PermissionAction.COMMENT
+            },
                 actions
         );
     }

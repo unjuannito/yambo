@@ -14,7 +14,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 public class SettingsServiceTest {
@@ -660,5 +659,62 @@ public class SettingsServiceTest {
 
         // Then
         verify(settingsRepository).save(any(Settings.class));
+    }
+
+    @Test
+    public void getIssueCreationWindowDays_WhenSettingExists_ShouldReturnParsedValue() {
+        // Given
+        Settings setting = Settings.builder()
+                .key("issues.creation_window_days")
+                .value("45")
+                .build();
+
+        when(settingsRepository.findByKey("issues.creation_window_days")).thenReturn(Optional.of(setting));
+
+        // When
+        int result = settingsService.getIssueCreationWindowDays();
+
+        // Then
+        assertThat(result).isEqualTo(45);
+    }
+
+    @Test
+    public void getIssueCreationWindowDays_WhenSettingMissing_ShouldReturnDefault() {
+        // Given
+        when(settingsRepository.findByKey("issues.creation_window_days")).thenReturn(Optional.empty());
+
+        // When
+        int result = settingsService.getIssueCreationWindowDays();
+
+        // Then
+        assertThat(result).isEqualTo(30);
+    }
+
+    @Test
+    public void getIssueCreationWindowDays_WhenSettingInvalidOrNegative_ShouldReturnDefault() {
+        // Given
+        Settings invalid = Settings.builder().key("issues.creation_window_days").value("abc").build();
+        Settings negative = Settings.builder().key("issues.creation_window_days").value("-2").build();
+
+        when(settingsRepository.findByKey("issues.creation_window_days"))
+                .thenReturn(Optional.of(invalid))
+                .thenReturn(Optional.of(negative));
+
+        // When
+        int invalidResult = settingsService.getIssueCreationWindowDays();
+        int negativeResult = settingsService.getIssueCreationWindowDays();
+
+        // Then
+        assertThat(invalidResult).isEqualTo(30);
+        assertThat(negativeResult).isEqualTo(30);
+    }
+
+    @Test
+    public void setIssueCreationWindowDays_WithNegativeValue_ShouldThrowBadRequest() {
+        assertThatThrownBy(() -> settingsService.setIssueCreationWindowDays(-1))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Issue creation window days must be 0 or greater");
+
+        verify(settingsRepository, never()).save(any(Settings.class));
     }
 }
