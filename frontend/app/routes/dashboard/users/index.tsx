@@ -10,6 +10,7 @@ import { Modal } from "~/components/common/Modal";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
@@ -50,8 +51,8 @@ export default function Users() {
                     label: profile.name,
                 }));
                 setProfileOptions(options);
-            } catch (error) {
-                toast.error("Error al cargar los perfiles");
+            } catch (err) {
+                toast.error(getErrorMessage(err, "Error al cargar los perfiles"));
             }
         };
         fetchProfiles();
@@ -99,8 +100,8 @@ export default function Users() {
             }
             resetForm();
             setRefreshKey(prev => prev + 1);
-        } catch (error: any) {
-            toast.error(error.message || "Error al actualizar los perfiles del usuario");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al actualizar los perfiles del usuario"));
         } finally {
             setSaving(false);
         }
@@ -115,8 +116,8 @@ export default function Users() {
             await adminUserService.deleteUser(userId);
             toast.success("Usuario eliminado correctamente");
             setRefreshKey(prev => prev + 1);
-        } catch (error: any) {
-            toast.error(error.message || "Error al eliminar el usuario");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al eliminar el usuario"));
         }
     };
 
@@ -211,7 +212,7 @@ export default function Users() {
             header: "Acciones",
             render: (user: User) => (
                 <div className="flex gap-2">
-                    <RequirePermission permission={{ obj: "user", action: "update" }}>
+                    <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                         <ButtonComponent
                             onClick={() => startEdit(user)}
                             variant="primary"
@@ -220,7 +221,7 @@ export default function Users() {
                             Editar
                         </ButtonComponent>
                     </RequirePermission>
-                    <RequirePermission permission={{ obj: "user", action: "delete" }}>
+                    <RequirePermission permission={{ obj: "user", action: "delete" }} redirect={false}>
                         <ButtonComponent
                             onClick={() => handleDelete(user.id, user.name)}
                             variant="destructive"

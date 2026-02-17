@@ -3,8 +3,10 @@ import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { useAuth } from "~/hooks/useAuth";
 import { useNavigate } from "react-router";
+import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { getErrorMessage } from "~/types/error";
+import { ErrorMessage } from "~/components/common/ErrorMessage";
 import type { Route } from "./+types/index";
-import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import ImageCarousel from "~/components/common/ImageCarousel";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -45,8 +47,7 @@ export default function Merch() {
                 setProducts(productsResponse.content);
                 setDrops(dropsResponse.content);
             } catch (err) {
-                setError("Error al cargar los artículos");
-                console.error("Error loading data:", err);
+                setError(getErrorMessage(err, "Error al cargar los artículos"));
             } finally {
                 setLoading(false);
             }
@@ -95,10 +96,10 @@ export default function Merch() {
     ];
 
     const renderItem = (product: Product) => {
-        const productDrop = product.familyProductId 
+        const productDrop = product.familyProductId
             ? drops.find(drop => drop.id === product.familyProductId)
             : null;
-        
+
         return (
             <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                 <ImageCarousel
@@ -171,34 +172,21 @@ export default function Merch() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-                            Merch
-                        </h1>
-                        <div className="flex justify-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                        </div>
-                    </div>
+            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-bold mb-6">Merch</h1>
+                <div className="flex justify-center py-12">
+                    <LoadingSpinner size="lg" message="Cargando artículos..." />
                 </div>
-            </div>
+            </main>
         );
     }
 
     if (error) {
         return (
-            <RequirePermission
-                permission={{ obj: "product", action: "read" }}
-                redirectTo="/mi-espacio"
-            >
-                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                    <h1 className="text-3xl font-bold mb-6">Merch</h1>
-                    <div className="text-center">
-                        <p className="text-red-600">{error}</p>
-                    </div>
-                </main>
-            </RequirePermission>
+            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-bold mb-6">Merch</h1>
+                <ErrorMessage message={error} />
+            </main>
         );
     }
 
@@ -289,7 +277,7 @@ export default function Merch() {
             {/* Sección de Productos */}
             <div className="mb-4">
                 <h2 className="text-2xl font-semibold mb-4">
-                    {selectedDrop 
+                    {selectedDrop
                         ? `Artículos del Drop: ${drops.find(d => d.id === selectedDrop)?.name || ""}`
                         : "Todos los Artículos"
                     }

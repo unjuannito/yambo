@@ -8,8 +8,10 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { projectService, type Project } from "~/services/projectService";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta() {
@@ -35,13 +37,13 @@ const EMPTY_FORM: DropForm = {
 
 export default function MerchFamilies() {
     const { hasPermission } = useAuth();
-    const canCreate = hasPermission({ obj: "family_product", action: "create" });
     const canUpdate = hasPermission({ obj: "family_product", action: "update" });
     const canDelete = hasPermission({ obj: "family_product", action: "delete" });
 
     const [drops, setDrops] = useState<FamilyProduct[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form, setForm] = useState<DropForm>({ ...EMPTY_FORM });
@@ -50,14 +52,15 @@ export default function MerchFamilies() {
     const loadData = useCallback(async () => {
         try {
             setLoading(true);
+            setError(null);
             const [dropsResponse, projectsResponse] = await Promise.all([
                 familyProductService.listFamilyProducts(0, 200),
                 projectService.listProjects(0, 200),
             ]);
             setDrops(dropsResponse.content);
             setProjects(projectsResponse.content);
-        } catch (error) {
-            toast.error("Error al cargar los drops de productos");
+        } catch (err) {
+            setError(getErrorMessage(err, "Error al cargar los drops de productos"));
         } finally {
             setLoading(false);
         }
@@ -115,8 +118,8 @@ export default function MerchFamilies() {
             }
             resetForm();
             await loadData();
-        } catch (error: any) {
-            toast.error(error.message || "No se pudo guardar el drop");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "No se pudo guardar el drop"));
         } finally {
             setSaving(false);
         }
@@ -139,8 +142,8 @@ export default function MerchFamilies() {
             await familyProductService.deleteFamilyProduct(drop.id);
             toast.success("Drop eliminado correctamente");
             await loadData();
-        } catch (error: any) {
-            toast.error(error.message || "No se pudo eliminar el drop");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "No se pudo eliminar el drop"));
         }
     };
 
@@ -225,16 +228,14 @@ export default function MerchFamilies() {
             <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">Drops de Merch</h1>
-                    {canCreate && (
-                        <RequirePermission permission={{ obj: "family_product", action: "create" }}>
-                            <ButtonComponent
-                                variant="primary"
-                                onClick={openCreateModal}
-                            >
-                                Crear Drop
-                            </ButtonComponent>
-                        </RequirePermission>
-                    )}
+                    <RequirePermission permission={{ obj: "family_product", action: "create" }} redirect={false}>
+                        <ButtonComponent
+                            variant="primary"
+                            onClick={openCreateModal}
+                        >
+                            Crear Drop
+                        </ButtonComponent>
+                    </RequirePermission>
                 </div>
 
                 <section className="bg-white rounded-lg shadow p-6">
@@ -242,6 +243,8 @@ export default function MerchFamilies() {
                         <div className="flex justify-center py-8">
                             <LoadingSpinner size="md" message="Cargando drops..." />
                         </div>
+                    ) : error ? (
+                        <ErrorMessage message={error} onRetry={loadData} />
                     ) : (
                         <FilterableTable
                             columns={columns}

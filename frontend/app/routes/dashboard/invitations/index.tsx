@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Route } from "./+types/invitations";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { DataTable } from "~/components/common/DataTable";
 import type { TableColumn } from "~/components/common/DataTable";
 import { Modal } from "~/components/common/Modal";
@@ -13,6 +15,7 @@ import type {
 } from "~/services/invitationService";
 import { profileService } from "~/services/profileService";
 import { MultiSelect } from "~/components/common/forms/MultiSelect";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
@@ -25,6 +28,7 @@ export function meta({}: Route.MetaArgs) {
 export default function Invitations() {
     const [invitations, setInvitations] = useState<Invitation[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [profileOptions, setProfileOptions] = useState<
@@ -36,27 +40,30 @@ export default function Invitations() {
         profileIds: [],
     });
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [invData, profiles] = await Promise.all([
-                    invitationService.getAllInvitations(),
-                    profileService.getAllProfiles(),
-                ]);
-                setInvitations(invData);
-                const options = profiles.map((profile) => ({
-                    value: profile.id,
-                    label: profile.name,
-                }));
-                setProfileOptions(options);
-            } catch (error) {
-                toast.error("Error al cargar los datos");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const [invData, profiles] = await Promise.all([
+                invitationService.getAllInvitations(),
+                profileService.getAllProfiles(),
+            ]);
+            setInvitations(invData);
+            const options = profiles.map((profile) => ({
+                value: profile.id,
+                label: profile.name,
+            }));
+            setProfileOptions(options);
+        } catch (err) {
+            setError(getErrorMessage(err, "Error al cargar los datos"));
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        void fetchData();
+    }, [fetchData]);
 
     const resetForm = () => {
         setForm({ email: "", name: "", profileIds: [] });
@@ -75,8 +82,8 @@ export default function Invitations() {
                 await invitationService.deleteInvitation(id);
                 setInvitations((prev) => prev.filter((inv) => inv.id !== id));
                 toast.success("Invitación eliminada correctamente");
-            } catch (error: any) {
-                toast.error(error.message || "Error al eliminar la invitación");
+            } catch (err) {
+                toast.error(getErrorMessage(err, "Error al eliminar la invitación"));
             }
         }
     };
@@ -86,21 +93,15 @@ export default function Invitations() {
             toast.error("El email es obligatorio");
             return;
         }
-        
+
         try {
             setSaving(true);
             const newInvitation = await invitationService.createInvitation(form);
             setInvitations((prev) => [newInvitation, ...prev]);
             toast.success("Invitación creada correctamente");
             resetForm();
-        } catch (error: any) {
-            if (error instanceof MailAuthenticationException) {
-                toast.error(
-                    "Error de autenticación de correo. Por favor, revise la configuración.",
-                );
-            } else {
-                toast.error(error.message || "Error al crear la invitación");
-            }
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al crear la invitación"));
         } finally {
             setSaving(false);
         }
@@ -183,6 +184,7 @@ export default function Invitations() {
                     <h1 className="text-3xl font-bold">Invitaciones</h1>
                     <RequirePermission
                         permission={{ obj: "invitation", action: "create" }}
+                        redirect={false}
                     >
                         <ButtonComponent
                             variant="primary"
@@ -195,7 +197,11 @@ export default function Invitations() {
 
                 <section className="bg-white rounded-lg shadow p-6">
                     {loading ? (
-                        <div className="text-center py-8">Cargando...</div>
+                        <div className="flex justify-center py-8">
+                            <LoadingSpinner size="md" message="Cargando invitaciones..." />
+                        </div>
+                    ) : error ? (
+                        <ErrorMessage message={error} onRetry={fetchData} />
                     ) : (
                         <DataTable
                             columns={invitationColumns}

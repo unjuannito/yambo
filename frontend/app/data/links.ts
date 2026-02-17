@@ -64,6 +64,12 @@ const LINKS_MAP: Link[] = [
         label: "Pedidos",
         need: { obj: "order", action: "read" },
     },
+    {
+        name: "adminIssues",
+        href: "/mi-espacio/admin/incidencias",
+        label: "Incidencias (Admin)",
+        need: { obj: "issue", action: "read" },
+    },
 
     // Proyectos
     {
@@ -96,6 +102,12 @@ const LINKS_MAP: Link[] = [
         name: "myOrders",
         href: "/mi-espacio/mis-pedidos",
         label: "Mis Pedidos",
+        need: null,
+    },
+    {
+        name: "issues",
+        href: "/mi-espacio/incidencias",
+        label: "Incidencias",
         need: null,
     },
 ];

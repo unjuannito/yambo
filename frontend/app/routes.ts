@@ -38,6 +38,11 @@ export default [
         // Pedidos de usuario
         route("mi-espacio/mis-pedidos", "routes/dashboard/orders/my-orders.tsx"),
 
+        // Incidencias
+        route("mi-espacio/incidencias", "routes/dashboard/issues/index.tsx"),
+        route("mi-espacio/incidencias/:issueId", "routes/dashboard/issues/$issueId.tsx"),
+        route("mi-espacio/admin/incidencias", "routes/dashboard/issues/admin.tsx"),
+
         // Merch (con CartContext)
         layout("routes/dashboard/_layout-merch.tsx", [
             route("mi-espacio/merch", "routes/dashboard/merch/index.tsx"),

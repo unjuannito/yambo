@@ -45,11 +45,11 @@ export class ApiError extends Error {
       `Path: ${this.path}`,
       `Time: ${this.timestamp}`,
     ];
-    
+
     if (this.details) {
       parts.push(`Details: ${this.details}`);
     }
-    
+
     return parts.join('\n');
   }
 
@@ -64,7 +64,7 @@ export class ApiError extends Error {
    * Check if error is authentication related
    */
   isAuthError(): boolean {
-    return this.type === 'AUTHENTICATION_FAILED' || 
+    return this.type === 'AUTHENTICATION_FAILED' ||
            this.type === 'UNAUTHORIZED' ||
            this.type === 'ACCESS_DENIED';
   }
@@ -75,4 +75,14 @@ export class ApiError extends Error {
   isValidationError(): boolean {
     return this.type === 'VALIDATION_ERROR';
   }
+}
+
+/**
+ * Extract a user-friendly error message from any caught error.
+ * Centralises error message extraction across the entire frontend.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) return err.getUserMessage();
+  if (err instanceof Error) return err.message;
+  return fallback;
 }

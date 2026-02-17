@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router";
 import { invitationService } from "~/services/invitationService";
 import { promotionInvitationService } from "~/services/promotionInvitationService";
+import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -60,16 +61,20 @@ export default function Register() {
                 toast.success("Promoción aplicada correctamente.");
                 await reload();
                 navigate("/mi-espacio", { replace: true });
-            } catch (error: any) {
-                switch (error.response?.data?.message) {
-                    case "Promotion invitation not found":
-                        toast.error("El token de promoción no es válido.");
-                        break;
-                    case "Promotion invitation expired":
-                        toast.error("El token de promoción ha expirado.");
-                        break;
-                    default:
-                        toast.error("Error al aplicar la promoción.");
+            } catch (err) {
+                if (err instanceof ApiError) {
+                    switch (err.message) {
+                        case "Promotion invitation not found":
+                            toast.error("El token de promoción no es válido.");
+                            break;
+                        case "Promotion invitation expired":
+                            toast.error("El token de promoción ha expirado.");
+                            break;
+                        default:
+                            toast.error("Error al aplicar la promoción.");
+                    }
+                } else {
+                    toast.error("Error al aplicar la promoción.");
                 }
             } finally {
                 setLoading(false);
@@ -136,25 +141,29 @@ export default function Register() {
                 await reload();
                 navigate("/mi-espacio", { replace: true });
             }
-        } catch (error: any) {
-            switch (error.response?.data?.message) {
-                case "Invitation already used":
-                    toast.error("El token de invitación ya fue utilizado.");
-                    break;
-                case "Invitation expired":
-                    toast.error("El token de invitación ha expirado.");
-                    break;
-                case "Email already registered":
-                    toast.error("El correo electrónico ya está registrado.");
-                    break;
-                case "Promotion invitation not found":
-                    toast.error("El token de promoción no es válido.");
-                    break;
-                case "Promotion invitation expired":
-                    toast.error("El token de promoción ha expirado.");
-                    break;
-                default:
-                    toast.error("Error al registrar el usuario.");
+        } catch (err) {
+            if (err instanceof ApiError) {
+                switch (err.message) {
+                    case "Invitation already used":
+                        toast.error("El token de invitación ya fue utilizado.");
+                        break;
+                    case "Invitation expired":
+                        toast.error("El token de invitación ha expirado.");
+                        break;
+                    case "Email already registered":
+                        toast.error("El correo electrónico ya está registrado.");
+                        break;
+                    case "Promotion invitation not found":
+                        toast.error("El token de promoción no es válido.");
+                        break;
+                    case "Promotion invitation expired":
+                        toast.error("El token de promoción ha expirado.");
+                        break;
+                    default:
+                        toast.error("Error al registrar el usuario.");
+                }
+            } else {
+                toast.error("Error al registrar el usuario.");
             }
         } finally {
             setLoading(false);

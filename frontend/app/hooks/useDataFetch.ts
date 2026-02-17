@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ApiError } from "~/types/error";
+import { ApiError, getErrorMessage } from "~/types/error";
 interface UseDataFetchOptions<T> {
     fetchFn: () => Promise<T>;
     onError?: (error: ApiError | Error) => void;
@@ -37,16 +37,13 @@ export function useDataFetch<T>({
             setError(null);
             const result = await fetchFn();
             setData(result);
-        } catch (err: any) {
-            const errorMessage =
-                err instanceof ApiError
-                    ? err.getUserMessage()
-                    : err.message || "Error al cargar datos";
+        } catch (err) {
+            const errorMessage = getErrorMessage(err, "Error al cargar datos");
 
             setError(errorMessage);
 
             if (onError) {
-                onError(err);
+                onError(err instanceof ApiError ? err : err instanceof Error ? err : new Error(errorMessage));
             }
         } finally {
             setLoading(false);

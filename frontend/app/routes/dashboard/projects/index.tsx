@@ -6,9 +6,11 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { Modal } from "~/components/common/Modal";
 import { projectService, type Project } from "~/services/projectService";
 import { useAuth } from "~/hooks/useAuth";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta() {
@@ -30,6 +32,7 @@ export default function Projects() {
     const { hasPermission } = useAuth();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState<ProjectForm>({ ...EMPTY_FORM });
     const [editing, setEditing] = useState<string | null>(null);
@@ -42,10 +45,11 @@ export default function Projects() {
     const loadProjects = useCallback(async () => {
         try {
             setLoading(true);
+            setError(null);
             const response = await projectService.listProjects(0, 200);
             setProjects(response.content);
-        } catch (error) {
-            toast.error("Error al cargar los proyectos");
+        } catch (err) {
+            setError(getErrorMessage(err, "Error al cargar los proyectos"));
         } finally {
             setLoading(false);
         }
@@ -92,8 +96,8 @@ export default function Projects() {
             }
             resetForm();
             await loadProjects();
-        } catch (error: any) {
-            toast.error(error.message || "No se pudo guardar el proyecto");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "No se pudo guardar el proyecto"));
         } finally {
             setSaving(false);
         }
@@ -115,8 +119,8 @@ export default function Projects() {
             await projectService.deleteProject(project.id);
             toast.success("Proyecto eliminado correctamente");
             await loadProjects();
-        } catch (error: any) {
-            toast.error(error.message || "No se pudo eliminar el proyecto");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "No se pudo eliminar el proyecto"));
         }
     };
 
@@ -203,6 +207,8 @@ export default function Projects() {
                         <div className="flex justify-center py-8">
                             <LoadingSpinner size="md" message="Cargando proyectos..." />
                         </div>
+                    ) : error ? (
+                        <ErrorMessage message={error} onRetry={loadProjects} />
                     ) : (
                         <FilterableTable
                             columns={columns}

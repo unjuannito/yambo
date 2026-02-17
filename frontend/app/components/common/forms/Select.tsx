@@ -7,13 +7,13 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
     children: ReactNode;
 }
 
-export function Select({ 
-    label, 
-    error, 
-    helperText, 
-    className = '', 
+export function Select({
+    label,
+    error,
+    helperText,
+    className = '',
     children,
-    ...props 
+    ...props
 }: SelectProps) {
     return (
         <div className="w-full">

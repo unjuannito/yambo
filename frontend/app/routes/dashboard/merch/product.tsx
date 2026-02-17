@@ -9,6 +9,9 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import SelectComponent from "~/components/common/forms/SelectComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
+import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { ErrorMessage } from "~/components/common/ErrorMessage";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export default function ProductPage() {
@@ -43,13 +46,12 @@ export default function ProductPage() {
                     try {
                         const dropData = await familyProductService.getFamilyProduct(prod.familyProductId);
                         setDrop(dropData);
-                    } catch (err) {
-                        console.error("Error loading drop:", err);
+                    } catch {
+                        // Drop data is supplementary; product still usable without it
                     }
                 }
             } catch (err) {
-                setError("Error al cargar el producto");
-                console.error("Error loading product:", err);
+                setError(getErrorMessage(err, "Error al cargar el producto"));
             } finally {
                 setLoading(false);
             }
@@ -87,10 +89,10 @@ export default function ProductPage() {
         // Store both id and label for display purposes
         const option = product?.options.find(opt => opt.name === optionName);
         const selectedOption = option?.values?.find(v => v.id === value);
-        
-        setConfiguration({ 
-            ...configuration, 
-            [optionName]: selectedOption ? { id: value, label: selectedOption.label } : value 
+
+        setConfiguration({
+            ...configuration,
+            [optionName]: selectedOption ? { id: value, label: selectedOption.label } : value
         });
     };
 
@@ -147,10 +149,10 @@ export default function ProductPage() {
         switch (option.type) {
             case "select":
                 const selectedValue = configuration[option.name];
-                const selectValue = selectedValue 
+                const selectValue = selectedValue
                     ? (typeof selectedValue === 'object' ? selectedValue.id : selectedValue)
                     : "";
-                
+
                 return (
                     <SelectComponent
                         label={option.name}
@@ -196,44 +198,41 @@ export default function ProductPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    </div>
+            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <div className="flex justify-center py-12">
+                    <LoadingSpinner size="lg" message="Cargando producto..." />
                 </div>
-            </div>
+            </main>
         );
     }
 
     if (error || !product) {
         return (
-            <div className="min-h-screen bg-gray-50 py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-8">Producto no encontrado</h1>
-                        <p className="text-red-600">{error}</p>
-                        <button
-                            onClick={() => navigate("/mi-espacio/merch")}
-                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                            Volver al merch
-                        </button>
-                    </div>
+            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-bold mb-6">Producto no encontrado</h1>
+                <ErrorMessage message={error || "Producto no disponible"} className="mb-4" />
+                <div>
+                    <ButtonComponent
+                        onClick={() => navigate("/mi-espacio/merch")}
+                        variant="neutral"
+                    >
+                        Volver al merch
+                    </ButtonComponent>
                 </div>
-            </div>
+            </main>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
             <div className="mb-6">
-                <button
+                <ButtonComponent
                     onClick={() => navigate("/mi-espacio/merch")}
-                    className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900"
+                    variant="neutral"
+                    size="sm"
                 >
                     ← Volver al merch
-                </button>
+                </ButtonComponent>
             </div>
 
             <div className="grid lg:grid-cols-4 gap-6">
@@ -407,6 +406,6 @@ export default function ProductPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </main>
     );
 }

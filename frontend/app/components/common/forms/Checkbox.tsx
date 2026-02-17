@@ -3,11 +3,11 @@ interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
     description?: string;
 }
 
-export function Checkbox({ 
-    label, 
-    description, 
-    className = '', 
-    ...props 
+export function Checkbox({
+    label,
+    description,
+    className = '',
+    ...props
 }: CheckboxProps) {
     return (
         <label className="flex items-start cursor-pointer">

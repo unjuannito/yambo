@@ -4,7 +4,9 @@ import { RequirePermission } from "~/components/common/RequirePermission";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { settingsService, type EmailConfig } from "~/services/settingsService";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
@@ -14,15 +16,20 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
+type SettingsTab = "organization" | "application" | "bank" | "email";
+
 export default function Settings() {
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<SettingsTab>("organization");
+    const [savingTab, setSavingTab] = useState<SettingsTab | null>(null);
 
     // Organization settings
     const [organizationLegalName, setOrganizationLegalName] = useState("");
 
     // Application settings
     const [domain, setDomain] = useState("");
+    const [issueCreationWindowDays, setIssueCreationWindowDays] = useState("30");
 
     // Bank settings
     const [iban, setIban] = useState("");
@@ -48,6 +55,8 @@ export default function Settings() {
         writeTimeout: 5000,
     });
 
+    const currentHost = typeof window !== "undefined" ? window.location.origin : "";
+
     useEffect(() => {
         loadSettings();
     }, []);
@@ -55,12 +64,14 @@ export default function Settings() {
     const loadSettings = async () => {
         try {
             setLoading(true);
-            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue] = await Promise.all([
+            setError(null);
+            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue, issueCreationWindowDaysValue] = await Promise.all([
                 settingsService.getAllSettings(),
                 settingsService.getDomain(),
                 settingsService.getIban(),
                 settingsService.getEmailConfig(),
                 settingsService.getSmtpAdvancedConfig(),
+                settingsService.getIssueCreationWindowDays(),
             ]);
 
             // Load organization settings
@@ -73,8 +84,9 @@ export default function Settings() {
             setIban(ibanValue);
             setEmailConfig(emailConfigValue);
             setSmtpConfig(smtpConfigValue);
-        } catch (error: any) {
-            toast.error(error.message || "Error al cargar la configuración");
+            setIssueCreationWindowDays(String(issueCreationWindowDaysValue));
+        } catch (err) {
+            setError(getErrorMessage(err, "Error al cargar la configuración"));
         } finally {
             setLoading(false);
         }
@@ -82,54 +94,63 @@ export default function Settings() {
 
     const handleSaveOrganizationSettings = async () => {
         try {
-            setSaving(true);
+            setSavingTab("organization");
             await settingsService.updateSettingsBulk({
                 "organization.legal_name": organizationLegalName,
             });
             toast.success("Configuración de la organización guardada correctamente");
-        } catch (error: any) {
-            toast.error(error.message || "Error al guardar la configuración de la organización");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración de la organización"));
         } finally {
-            setSaving(false);
+            setSavingTab(null);
         }
     };
 
     const handleSaveApplicationSettings = async () => {
         try {
-            setSaving(true);
-            await settingsService.setDomain(domain);
+            setSavingTab("application");
+            const parsedIssueCreationWindowDays = Number(issueCreationWindowDays);
+            if (!Number.isInteger(parsedIssueCreationWindowDays) || parsedIssueCreationWindowDays < 0) {
+                toast.error("Los días para crear incidencias deben ser un número entero mayor o igual a 0");
+                return;
+            }
+
+            await Promise.all([
+                settingsService.setDomain(domain),
+                settingsService.setIssueCreationWindowDays(parsedIssueCreationWindowDays),
+            ]);
             toast.success("Configuración de la aplicación guardada correctamente");
-        } catch (error: any) {
-            toast.error(error.message || "Error al guardar la configuración de la aplicación");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración de la aplicación"));
         } finally {
-            setSaving(false);
+            setSavingTab(null);
         }
     };
 
     const handleSaveBankSettings = async () => {
         try {
-            setSaving(true);
+            setSavingTab("bank");
             await settingsService.setIban(iban);
             toast.success("Configuración bancaria guardada correctamente");
-        } catch (error: any) {
-            toast.error(error.message || "Error al guardar la configuración bancaria");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración bancaria"));
         } finally {
-            setSaving(false);
+            setSavingTab(null);
         }
     };
 
     const handleSaveEmailSettings = async () => {
         try {
-            setSaving(true);
+            setSavingTab("email");
             await Promise.all([
                 settingsService.updateEmailConfig(emailConfig),
                 settingsService.updateSmtpAdvancedConfig(smtpConfig),
             ]);
             toast.success("Configuración de email guardada correctamente");
-        } catch (error: any) {
-            toast.error(error.message || "Error al guardar la configuración de email");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración de email"));
         } finally {
-            setSaving(false);
+            setSavingTab(null);
         }
     };
 
@@ -143,254 +164,306 @@ export default function Settings() {
         );
     }
 
+    if (error) {
+        return (
+            <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
+                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                    <h1 className="text-3xl font-bold mb-6">Configuración General</h1>
+                    <ErrorMessage message={error} onRetry={loadSettings} />
+                </main>
+            </RequirePermission>
+        );
+    }
+
     return (
         <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
             <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-6">Configuración General</h1>
+                <h1 className="text-3xl font-bold mb-2">Configuración General</h1>
+                <p className="text-gray-600 mb-6">Gestiona la configuración del sistema por secciones.</p>
 
-                <div className="space-y-8">
-                    {/* Configuración de la Organización */}
-                    <section className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold mb-4">Configuración de la Organización</h2>
-                        <div className="space-y-4">
-                            <InputComponent
-                                label="Nombre Legal de la Organización"
-                                type="text"
-                                value={organizationLegalName}
-                                onChange={(e) => setOrganizationLegalName(e.target.value)}
-                                placeholder="Yambo ALCO"
-                                required
-                            />
-                            <p className="text-sm text-gray-600">
-                                Este nombre se mostrará como beneficiario en las instrucciones de pago de los pedidos.
-                            </p>
-                            <RequirePermission permission={{ obj: "settings", action: "update" }}>
-                                <div className="flex justify-end">
-                                    <ButtonComponent
-                                        onClick={handleSaveOrganizationSettings}
-                                        variant="primary"
-                                        disabled={saving}
-                                    >
-                                        {saving ? "Guardando..." : "Guardar Configuración de la Organización"}
-                                    </ButtonComponent>
-                                </div>
-                            </RequirePermission>
-                        </div>
-                    </section>
+                <section className="bg-white rounded-lg shadow p-4 mb-6">
+                    <div className="flex flex-wrap gap-2">
+                        <ButtonComponent
+                            variant={activeTab === "organization" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("organization")}
+                        >
+                            Organización
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant={activeTab === "application" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("application")}
+                        >
+                            Aplicación
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant={activeTab === "bank" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("bank")}
+                        >
+                            Banco
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant={activeTab === "email" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("email")}
+                        >
+                            Email
+                        </ButtonComponent>
+                    </div>
+                </section>
 
-                    {/* Configuración de la Aplicación */}
-                    <section className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold mb-4">Configuración de la Aplicación</h2>
-                        <div className="space-y-4">
-                            <div className="flex gap-2">
-                                <div className="flex-1">
-                                    <InputComponent
-                                        label="Dominio de la Aplicación"
-                                        type="text"
-                                        value={domain}
-                                        onChange={(e) => setDomain(e.target.value)}
-                                        placeholder={window.location.origin}
-                                        required
-                                    />
-                                </div>
-                                <div className="flex items-end">
-                                    <ButtonComponent
-                                        onClick={() => setDomain(window.location.origin)}
-                                        variant="secondary"
-                                        disabled={saving}
-                                    >
-                                        Usar Host Actual
-                                    </ButtonComponent>
-                                </div>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                                Este dominio se utilizará para generar enlaces correctos en los correos electrónicos enviados por la aplicación.
-                            </p>
-                            <RequirePermission permission={{ obj: "settings", action: "update" }}>
-                                <div className="flex justify-end">
-                                    <ButtonComponent
-                                        onClick={handleSaveApplicationSettings}
-                                        variant="primary"
-                                        disabled={saving}
-                                    >
-                                        {saving ? "Guardando..." : "Guardar Configuración de la Aplicación"}
-                                    </ButtonComponent>
-                                </div>
-                            </RequirePermission>
-                        </div>
-                    </section>
-
-                    {/* Configuración Bancaria */}
-                    <section className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold mb-4">Configuración Bancaria</h2>
-                        <div className="space-y-4">
-                            <InputComponent
-                                label="IBAN"
-                                type="text"
-                                value={iban}
-                                onChange={(e) => setIban(e.target.value)}
-                                placeholder="ES00 0000 0000 0000 0000 0000"
-                                required
-                            />
-                            <RequirePermission permission={{ obj: "settings", action: "update" }}>
-                                <div className="flex justify-end">
-                                    <ButtonComponent
-                                        onClick={handleSaveBankSettings}
-                                        variant="primary"
-                                        disabled={saving}
-                                    >
-                                        {saving ? "Guardando..." : "Guardar Configuración Bancaria"}
-                                    </ButtonComponent>
-                                </div>
-                            </RequirePermission>
-                        </div>
-                    </section>
-
-                    {/* Configuración de Email */}
-                    <section className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-semibold mb-4">Configuración de Correo Electrónico</h2>
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InputComponent
-                                    label="Servidor SMTP"
-                                    type="text"
-                                    value={emailConfig.host}
-                                    onChange={(e) => setEmailConfig({ ...emailConfig, host: e.target.value })}
-                                    placeholder="smtp.gmail.com"
-                                    required
-                                />
-                                <InputComponent
-                                    label="Puerto"
-                                    type="text"
-                                    value={emailConfig.port}
-                                    onChange={(e) => setEmailConfig({ ...emailConfig, port: e.target.value })}
-                                    placeholder="587"
-                                    required
-                                />
-                            </div>
-                            <InputComponent
-                                label="Usuario"
-                                type="text"
-                                value={emailConfig.username}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, username: e.target.value })}
-                                placeholder="usuario@ejemplo.com"
-                                required
-                            />
-                            <InputComponent
-                                label="Contraseña"
-                                type="password"
-                                value={emailConfig.password}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, password: e.target.value })}
-                                placeholder="Dejar vacío para no modificar"
-                            />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InputComponent
-                                    label="Correo del Remitente"
-                                    type="email"
-                                    value={emailConfig.from}
-                                    onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })}
-                                    placeholder="noreply@yambo.es"
-                                    required
-                                />
-                                <InputComponent
-                                    label="Nombre del Remitente"
-                                    type="text"
-                                    value={emailConfig.fromName || ""}
-                                    onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
-                                    placeholder="Yambo"
-                                />
-                            </div>
-
-                            {/* Advanced SMTP Settings */}
-                            <div className="border-t pt-4 mt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAdvanced(!showAdvanced)}
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                {activeTab === "organization" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración de la Organización</h2>
+                        <InputComponent
+                            label="Nombre Legal de la Organización"
+                            type="text"
+                            value={organizationLegalName}
+                            onChange={(e) => setOrganizationLegalName(e.target.value)}
+                            placeholder="Yambo ALCO"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Este nombre se mostrará como beneficiario en las instrucciones de pago de los pedidos.
+                        </p>
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveOrganizationSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
                                 >
-                                    <svg
-                                        className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                    Configuración Avanzada SMTP
-                                </button>
-
-                                {showAdvanced && (
-                                    <div className="mt-4 space-y-4 pl-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <label className="flex items-center space-x-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={smtpConfig.auth}
-                                                    onChange={(e) => setSmtpConfig({ ...smtpConfig, auth: e.target.checked })}
-                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <span className="text-sm">Autenticación SMTP</span>
-                                            </label>
-                                            <label className="flex items-center space-x-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={smtpConfig.starttlsEnable}
-                                                    onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsEnable: e.target.checked })}
-                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <span className="text-sm">Habilitar STARTTLS</span>
-                                            </label>
-                                            <label className="flex items-center space-x-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={smtpConfig.starttlsRequired}
-                                                    onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsRequired: e.target.checked })}
-                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <span className="text-sm">Requerir STARTTLS</span>
-                                            </label>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <InputComponent
-                                                label="Timeout de Conexión (ms)"
-                                                type="number"
-                                                value={String(smtpConfig.connectionTimeout)}
-                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, connectionTimeout: Number(e.target.value) })}
-                                                placeholder="5000"
-                                            />
-                                            <InputComponent
-                                                label="Timeout de Lectura (ms)"
-                                                type="number"
-                                                value={String(smtpConfig.timeout)}
-                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, timeout: Number(e.target.value) })}
-                                                placeholder="5000"
-                                            />
-                                            <InputComponent
-                                                label="Timeout de Escritura (ms)"
-                                                type="number"
-                                                value={String(smtpConfig.writeTimeout)}
-                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, writeTimeout: Number(e.target.value) })}
-                                                placeholder="5000"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
+                                    {savingTab === "organization" ? "Guardando..." : "Guardar Configuración de la Organización"}
+                                </ButtonComponent>
                             </div>
-
-                            <RequirePermission permission={{ obj: "settings", action: "update" }}>
-                                <div className="flex justify-end">
-                                    <ButtonComponent
-                                        onClick={handleSaveEmailSettings}
-                                        variant="primary"
-                                        disabled={saving}
-                                    >
-                                        {saving ? "Guardando..." : "Guardar Configuración de Email"}
-                                    </ButtonComponent>
-                                </div>
-                            </RequirePermission>
-                        </div>
+                        </RequirePermission>
                     </section>
-                </div>
+                )}
+
+                {activeTab === "application" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración de la Aplicación</h2>
+                        <div className="flex gap-2">
+                            <div className="flex-1">
+                                <InputComponent
+                                    label="Dominio de la Aplicación"
+                                    type="text"
+                                    value={domain}
+                                    onChange={(e) => setDomain(e.target.value)}
+                                    placeholder={currentHost}
+                                    required
+                                />
+                            </div>
+                            <div className="flex items-end">
+                                <ButtonComponent
+                                    onClick={() => setDomain(currentHost)}
+                                    variant="neutral"
+                                    disabled={savingTab !== null}
+                                >
+                                    Usar Host Actual
+                                </ButtonComponent>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                            Este dominio se utilizará para generar enlaces correctos en los correos electrónicos enviados por la aplicación.
+                        </p>
+                        <InputComponent
+                            label="Días para crear incidencias tras cerrar pedido"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={issueCreationWindowDays}
+                            onChange={(e) => setIssueCreationWindowDays(e.target.value)}
+                            placeholder="30"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Pasado este plazo, no se podrán crear nuevas incidencias para pedidos cerrados.
+                        </p>
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveApplicationSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
+                                >
+                                    {savingTab === "application" ? "Guardando..." : "Guardar Configuración de la Aplicación"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
+
+                {activeTab === "bank" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración Bancaria</h2>
+                        <InputComponent
+                            label="IBAN"
+                            type="text"
+                            value={iban}
+                            onChange={(e) => setIban(e.target.value)}
+                            placeholder="ES00 0000 0000 0000 0000 0000"
+                            required
+                        />
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveBankSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
+                                >
+                                    {savingTab === "bank" ? "Guardando..." : "Guardar Configuración Bancaria"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
+
+                {activeTab === "email" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración de Correo Electrónico</h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InputComponent
+                                label="Servidor SMTP"
+                                type="text"
+                                value={emailConfig.host}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, host: e.target.value })}
+                                placeholder="smtp.gmail.com"
+                                required
+                            />
+                            <InputComponent
+                                label="Puerto"
+                                type="text"
+                                value={emailConfig.port}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, port: e.target.value })}
+                                placeholder="587"
+                                required
+                            />
+                        </div>
+                        <InputComponent
+                            label="Usuario"
+                            type="text"
+                            value={emailConfig.username}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, username: e.target.value })}
+                            placeholder="usuario@ejemplo.com"
+                            required
+                        />
+                        <InputComponent
+                            label="Contraseña"
+                            type="password"
+                            value={emailConfig.password}
+                            onChange={(e) => setEmailConfig({ ...emailConfig, password: e.target.value })}
+                            placeholder="Dejar vacío para no modificar"
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InputComponent
+                                label="Correo del Remitente"
+                                type="email"
+                                value={emailConfig.from}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })}
+                                placeholder="noreply@yambo.es"
+                                required
+                            />
+                            <InputComponent
+                                label="Nombre del Remitente"
+                                type="text"
+                                value={emailConfig.fromName || ""}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
+                                placeholder="Yambo"
+                            />
+                        </div>
+
+                        <div className="border-t pt-4 mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                            >
+                                <svg
+                                    className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                                Configuración Avanzada SMTP
+                            </button>
+
+                            {showAdvanced && (
+                                <div className="mt-4 space-y-4 pl-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={smtpConfig.auth}
+                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, auth: e.target.checked })}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Autenticación SMTP</span>
+                                        </label>
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={smtpConfig.starttlsEnable}
+                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsEnable: e.target.checked })}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Habilitar STARTTLS</span>
+                                        </label>
+                                        <label className="flex items-center space-x-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={smtpConfig.starttlsRequired}
+                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsRequired: e.target.checked })}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Requerir STARTTLS</span>
+                                        </label>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <InputComponent
+                                            label="Timeout de Conexión (ms)"
+                                            type="number"
+                                            value={String(smtpConfig.connectionTimeout)}
+                                            onChange={(e) => setSmtpConfig({ ...smtpConfig, connectionTimeout: Number(e.target.value) })}
+                                            placeholder="5000"
+                                        />
+                                        <InputComponent
+                                            label="Timeout de Lectura (ms)"
+                                            type="number"
+                                            value={String(smtpConfig.timeout)}
+                                            onChange={(e) => setSmtpConfig({ ...smtpConfig, timeout: Number(e.target.value) })}
+                                            placeholder="5000"
+                                        />
+                                        <InputComponent
+                                            label="Timeout de Escritura (ms)"
+                                            type="number"
+                                            value={String(smtpConfig.writeTimeout)}
+                                            onChange={(e) => setSmtpConfig({ ...smtpConfig, writeTimeout: Number(e.target.value) })}
+                                            placeholder="5000"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveEmailSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
+                                >
+                                    {savingTab === "email" ? "Guardando..." : "Guardar Configuración de Email"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
             </main>
         </RequirePermission>
     );

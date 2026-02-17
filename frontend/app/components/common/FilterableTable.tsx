@@ -6,6 +6,8 @@ import { Pagination } from "./Pagination";
 import type { ColumnFilter, FilterValues } from "./types/tableTypes";
 import type { PagedInfo, PagedResponse } from "~/types/apiType";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { ErrorMessage } from "./ErrorMessage";
+import { getErrorMessage } from "~/types/error";
 import { twMerge } from "tailwind-merge";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
@@ -135,10 +137,7 @@ export function FilterableTable<T>({
                 setPageInfo(result.page);
             }
         } catch (err) {
-            const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : "Error al cargar los datos";
+            const errorMessage = getErrorMessage(err, "Error al cargar los datos");
             setError(errorMessage);
         } finally {
             setIsLoading(false);
@@ -183,10 +182,7 @@ export function FilterableTable<T>({
                     setPageInfo(result.page);
                 }
             } catch (err) {
-                const errorMessage =
-                    err instanceof Error
-                        ? err.message
-                        : "Error al cargar los datos";
+                const errorMessage = getErrorMessage(err, "Error al cargar los datos");
                 setError(errorMessage);
             } finally {
                 setIsLoading(false);
@@ -407,9 +403,7 @@ export function FilterableTable<T>({
 
             {/* Error Message */}
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                    {error}
-                </div>
+                <ErrorMessage message={error} onRetry={isServerSide ? executeFetch : undefined} />
             )}
 
             {/* Content */}

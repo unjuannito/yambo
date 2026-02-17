@@ -10,11 +10,17 @@ import type {
 import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
+import { issueService } from "~/services/issueService";
+import type { Issue } from "~/types/issueType";
+import { getIssueOrderedProductIds } from "~/utils/issueUtils";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
 import { exportOrdersToExcel } from "~/utils/exportOrdersToExcel";
 import { Modal } from "~/components/common/Modal";
+import { IssueStatusBadge } from "~/components/issues";
+import { useNavigate } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -24,9 +30,11 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Orders() {
+    const navigate = useNavigate();
     const [refreshKey, setRefreshKey] = useState(0);
     const [isExporting, setIsExporting] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedOrderIssues, setSelectedOrderIssues] = useState<Issue[]>([]);
     const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
     const [allOrdersOnPage, setAllOrdersOnPage] = useState<Order[]>([]);
     const [bulkStatus, setBulkStatus] = useState("");
@@ -52,14 +60,31 @@ export default function Orders() {
                 ]);
                 setProducts(productsResponse.content);
                 setDrops(dropsResponse.content);
-            } catch (error) {
-                console.error("Error loading products and drops:", error);
+            } catch (err) {
+                toast.error(getErrorMessage(err, "Error al cargar productos y drops"));
             }
         };
 
-
         loadData();
     }, []);
+
+    useEffect(() => {
+        const loadOrderIssues = async () => {
+            if (selectedOrder) {
+                try {
+                    const issues = await issueService.getIssuesByOrder(selectedOrder.id);
+                    setSelectedOrderIssues(issues);
+                } catch (err) {
+                    toast.error(getErrorMessage(err, "Error al cargar las incidencias"));
+                    setSelectedOrderIssues([]);
+                }
+            } else {
+                setSelectedOrderIssues([]);
+            }
+        };
+
+        loadOrderIssues();
+    }, [selectedOrder]);
     const fetchOrdersData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
             const result = await orderService.getAllOrders(
@@ -80,11 +105,9 @@ export default function Orders() {
             await orderService.updateOrderStatus(orderId, newStatus);
             toast.success("Estado del pedido actualizado");
             setRefreshKey((prev) => prev + 1); // Refresh table
-        } catch (error: any) {
-            console.error("Error updating order status:", error);
+        } catch (err) {
             toast.error(
-                error.response?.data?.message ||
-                    "Error al actualizar el estado",
+                getErrorMessage(err, "Error al actualizar el estado"),
             );
         }
     };
@@ -109,9 +132,8 @@ export default function Orders() {
             setSelectedOrders([]);
             setBulkStatus("");
             setRefreshKey((prev) => prev + 1);
-        } catch (error: any) {
-            console.error("Error updating orders:", error);
-            toast.error("Error al actualizar los pedidos");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al actualizar los pedidos"));
         }
     };
 
@@ -134,7 +156,6 @@ export default function Orders() {
     const exportToExcel = async () => {
         setIsExporting(true);
         try {
-            // Fetch all orders without pagination
             const allOrders = await orderService.getAllOrders(0, 10000);
 
             await exportOrdersToExcel({
@@ -149,9 +170,8 @@ export default function Orders() {
                 `Exportados ${allOrders.content.length} pedidos (${dropsLabel}) a Excel con múltiples hojas`,
             );
             setIsExportModalOpen(false);
-        } catch (error: any) {
-            console.error("Error exporting to Excel:", error);
-            toast.error("Error al exportar a Excel");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al exportar a Excel"));
         } finally {
             setIsExporting(false);
         }
@@ -592,6 +612,10 @@ export default function Orders() {
                                                     ? drops.find(drop => drop.id === productData.familyProductId)
                                                     : null;
 
+                                                const productIssue = selectedOrderIssues.find(
+                                                    issue => getIssueOrderedProductIds(issue).includes(product.id)
+                                                );
+
                                                 return (
                                                     <div
                                                         key={`${selectedOrder.id}-${product.productId}-${idx}`}
@@ -631,6 +655,20 @@ export default function Orders() {
                                                                             )}
                                                                         </p>
                                                                     )}
+                                                                {productIssue && (
+                                                                    <div className="mt-2 flex items-center gap-2">
+                                                                        <IssueStatusBadge status={productIssue.status} />
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setSelectedOrder(null);
+                                                                                navigate(`/mi-espacio/incidencias/${productIssue.id}`);
+                                                                            }}
+                                                                            className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                                                        >
+                                                                            Ver incidencia
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                         </div>
                                                         <div className="text-right ml-4">
                                                             <p className="text-sm text-gray-600">
@@ -708,3 +746,5 @@ export default function Orders() {
 
     );
 }
+
+

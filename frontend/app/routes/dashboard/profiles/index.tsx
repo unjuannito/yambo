@@ -14,6 +14,8 @@ import {
     type Profile,
     type Permission,
 } from "~/services/profileService";
+import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
@@ -50,9 +52,8 @@ export default function Profiles() {
             setLoading(true);
             const permissionsData = await profileService.getAllPermissions();
             setAllPermissions(permissionsData);
-        } catch (error: any) {
-            console.error("Error loading permissions:", error);
-            toast.error("Error al cargar los permisos");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al cargar los permisos"));
         } finally {
             setLoading(false);
         }
@@ -115,10 +116,9 @@ export default function Profiles() {
             }
             // Trigger table refresh by not needing to reload - FilterableTable will handle it
             resetForm();
-        } catch (error: any) {
-            console.error("Error saving profile:", error);
+        } catch (err) {
             toast.error(
-                error.response?.data?.message || "Error al guardar el perfil",
+                getErrorMessage(err, "Error al guardar el perfil"),
             );
         } finally {
             setSaving(false);
@@ -134,10 +134,9 @@ export default function Profiles() {
             await profileService.deleteProfile(profileId);
             toast.success("Perfil eliminado correctamente");
             // Table will auto-refresh
-        } catch (error: any) {
-            console.error("Error deleting profile:", error);
+        } catch (err) {
             toast.error(
-                error.response?.data?.message || "Error al eliminar el perfil",
+                getErrorMessage(err, "Error al eliminar el perfil"),
             );
         }
     };
@@ -239,16 +238,11 @@ export default function Profiles() {
 
     if (loading) {
         return (
-            <RequirePermission permission={{ obj: "profile", action: "read" }}>
+            <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
                 <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
                     <h1 className="text-3xl font-bold mb-6">Perfiles</h1>
                     <div className="flex justify-center py-12">
-                        <div className="text-center">
-                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                            <p className="mt-4 text-gray-600">
-                                Cargando perfiles...
-                            </p>
-                        </div>
+                        <LoadingSpinner size="lg" message="Cargando perfiles..." />
                     </div>
                 </main>
             </RequirePermission>
@@ -262,6 +256,7 @@ export default function Profiles() {
                     <h1 className="text-3xl font-bold">Perfiles</h1>
                     <RequirePermission
                         permission={{ obj: "profile", action: "create" }}
+                        redirect={false}
                     >
                         <ButtonComponent
                             variant="primary"

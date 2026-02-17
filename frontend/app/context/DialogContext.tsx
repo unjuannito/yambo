@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 
 type DialogVariant = "info" | "warning" | "danger" | "success";
 
-// Maps dialog semantic variants to button variants
 const variantToButtonVariant: Record<
     DialogVariant,
     "primary" | "destructive" | "success"
@@ -92,9 +91,10 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 resolverRef.current.reject?.(response?.errorMessage);
             }
 
-        } catch (error: any) {
-            toast.error(error.message || "Ha ocurrido un error");
-            resolverRef.current.reject?.(error);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Ha ocurrido un error";
+            toast.error(message);
+            resolverRef.current.reject?.(err);
 
         } finally {
             closeDialog();
@@ -102,7 +102,6 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     };
 
     const handleBackdropClick = (e: React.MouseEvent) => {
-        // Asegurarse de que el clic fue fuera del cuadro de diálogo
         if (e.target === e.currentTarget && !isLoading) {
             closeDialog();
             resolverRef.current.reject?.("user-cancelled");

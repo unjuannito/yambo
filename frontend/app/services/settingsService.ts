@@ -68,7 +68,6 @@ export class SettingsService extends ApiService {
         return await this.delete<string>(`/admin/settings/key/${key}`);
     }
 
-    // Métodos específicos
     public async getDomain(): Promise<string> {
         const response = await this.get<{ domain: string }>("/admin/settings/app/domain");
         return response.domain;
@@ -101,6 +100,15 @@ export class SettingsService extends ApiService {
 
     public async updateSmtpAdvancedConfig(config: Partial<SmtpAdvancedConfig>): Promise<string> {
         return await this.put<string, Partial<SmtpAdvancedConfig>>("/admin/settings/email/smtp", config);
+    }
+
+    public async getIssueCreationWindowDays(): Promise<number> {
+        const response = await this.get<{ days: number }>("/admin/settings/issues/creation-window-days");
+        return response.days;
+    }
+
+    public async setIssueCreationWindowDays(days: number): Promise<string> {
+        return await this.put<string, { days: number }>("/admin/settings/issues/creation-window-days", { days });
     }
 }
 

@@ -6,6 +6,7 @@ import { orderService } from "~/services/orderService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { useState, useEffect } from "react";
 import type { Route } from "./+types/cart";
+import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 
@@ -35,8 +36,8 @@ export default function CartPage() {
       try {
         const response = await familyProductService.listFamilyProducts(0, 200);
         setDrops(response.content);
-      } catch (error) {
-        console.error("Error loading drops:", error);
+      } catch (err) {
+        toast.error(getErrorMessage(err, "Error al cargar los drops"));
       }
     };
 
@@ -111,10 +112,9 @@ export default function CartPage() {
       toast.success("¡Pedido realizado con éxito!");
 
       setShowPaymentInstructions(true);
-    } catch (error: any) {
-      console.error("Error creating order:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Error al procesar el pedido";
-      toast.error(`Error: ${errorMessage}`);
+    } catch (err) {
+      const errorMessage = getErrorMessage(err, "Error al procesar el pedido");
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
