@@ -80,14 +80,6 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}/price")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PriceResponse> getProductPrice(@PathVariable String id) {
-        Product product = productService.getProductById(id);
-        // TODO: Calculate price with rules
-        return ResponseEntity.ok(new PriceResponse(product.getBasePrice(), product.getBasePrice()));
-    }
-
     @Data
     public static class CreateProductRequest {
         @NotBlank(message = "Name is required")

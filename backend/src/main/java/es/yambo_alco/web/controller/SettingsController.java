@@ -90,7 +90,6 @@ public class SettingsController {
         return ResponseEntity.ok("Setting deleted successfully");
     }
 
-    // Endpoints específicos para configuraciones comunes
     @GetMapping("/app/domain")
     @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
     public ResponseEntity<Map<String, String>> getDomain() {
@@ -199,12 +198,12 @@ public class SettingsController {
 
     @PutMapping("/issues/creation-window-days")
     @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
-    public ResponseEntity<String> setIssueCreationWindowDays(@Valid @RequestBody IssueCreationWindowDaysRequest request) {
+    public ResponseEntity<String> setIssueCreationWindowDays(
+            @Valid @RequestBody IssueCreationWindowDaysRequest request) {
         settingsService.setIssueCreationWindowDays(request.getDays());
         return ResponseEntity.ok("Issue creation window updated successfully");
     }
 
-    // DTOs
     @Data
     public static class SettingsResponse {
         private String id;

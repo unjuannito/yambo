@@ -43,18 +43,15 @@ public class OrderService {
             throw new BadRequestException("Order must contain at least one product");
         }
 
-        // Get current user for validation
         User currentUser = authService.getCurrentUser(true);
         LocalDateTime now = LocalDateTime.now();
 
-        // Validate all products exist, calculate prices, and check user access
         for (OrderProduct op : orderProducts) {
             Product product = productRepository.findById(op.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
 
             validateProductAccess(currentUser, product, now);
 
-            // Calculate the actual price based on product options and configuration
             BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
             op.setPrice(calculatedPrice);
         }
@@ -67,17 +64,16 @@ public class OrderService {
 
         order = orderRepository.save(order);
 
-        // Save order products
         for (OrderProduct op : orderProducts) {
             op.setOrderId(order.getId());
             orderProductRepository.save(op);
         }
 
-        // Send email notification for new order (don't fail the order creation if email fails)
         try {
             sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_CONFIRMATION);
         } catch (Exception e) {
-            log.error("Failed to send order creation email for order: {}. Order created successfully.", order.getId(), e);
+            log.error("Failed to send order creation email for order: {}. Order created successfully.", order.getId(),
+                    e);
         }
 
         return order;
@@ -91,30 +87,25 @@ public class OrderService {
         }
 
         try {
-            // Parse configuration JSON
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             @SuppressWarnings("unchecked")
             java.util.Map<String, Object> configuration = mapper.readValue(configurationJson, java.util.Map.class);
 
-            // Get product options
             List<ProductOption> options = product.getOptions();
             if (options == null || options.isEmpty()) {
                 return totalPrice;
             }
 
-            // Calculate price based on selected options
             for (ProductOption option : options) {
                 Object selectedValue = configuration.get(option.getName());
                 if (selectedValue == null) {
                     continue;
                 }
 
-                // Add option base price if exists
                 if (option.getPrice() != null) {
                     totalPrice = totalPrice.add(option.getPrice());
                 }
 
-                // For select type, add the price of the selected value
                 if ("select".equals(option.getType()) && option.getValues() != null) {
                     String selectedValueStr = selectedValue.toString();
                     for (OptionValue value : option.getValues()) {
@@ -143,7 +134,6 @@ public class OrderService {
 
         FamilyProduct family = product.getFamilyProduct();
 
-        // Check if family is currently valid (within time range)
         if (now.isBefore(family.getStartTms())) {
             throw new BadRequestException(
                     String.format("Product '%s' is not yet available. Available from: %s",
@@ -155,7 +145,6 @@ public class OrderService {
                             product.getName(), family.getEndTms()));
         }
 
-        // Check if user has required profile
         if (family.getProfile() != null) {
             boolean hasProfile = user.getProfiles().stream()
                     .anyMatch(p -> p.getId().equals(family.getProfile().getId()));
@@ -195,7 +184,6 @@ public class OrderService {
     public Order updateOrderStatus(@NonNull String orderId, @NonNull OrderStatus status) {
         Order order = getOrderById(orderId);
 
-        // Validate status transition
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException("Cannot update status of cancelled order");
         }
@@ -210,12 +198,13 @@ public class OrderService {
         }
         Order savedOrder = orderRepository.save(order);
 
-        // Send email notification if status changed (don't fail the update if email fails)
         if (previousStatus != status) {
             try {
                 sendOrderStatusUpdateEmail(order, status);
             } catch (Exception e) {
-                log.error("Failed to send order status update email for order: {}. Status update completed successfully.", orderId, e);
+                log.error(
+                        "Failed to send order status update email for order: {}. Status update completed successfully.",
+                        orderId, e);
             }
         }
 
@@ -223,21 +212,21 @@ public class OrderService {
     }
 
     private void sendOrderStatusUpdateEmail(Order order, OrderStatus newStatus) {
-        // Get user details
         User user = userRepository.findById(order.getCustomerId())
                 .orElse(null);
 
         if (user == null) {
-            log.warn("Cannot send email notification for order {}: user {} not found", order.getId(), order.getCustomerId());
+            log.warn("Cannot send email notification for order {}: user {} not found", order.getId(),
+                    order.getCustomerId());
             return;
         }
 
         if (user.getEmail() == null || user.getEmail().isBlank()) {
-            log.warn("Cannot send email notification for order {}: user {} has no email", order.getId(), order.getCustomerId());
+            log.warn("Cannot send email notification for order {}: user {} has no email", order.getId(),
+                    order.getCustomerId());
             return;
         }
 
-        // Get order products with details
         List<OrderProduct> orderProducts = getOrderProducts(order.getId());
         List<MailService.OrderProductInfo> productInfos = orderProducts.stream()
                 .map(op -> {
@@ -248,17 +237,14 @@ public class OrderService {
                             productName,
                             op.getQuantity(),
                             op.getPrice(),
-                            configuration
-                    );
+                            configuration);
                 })
                 .collect(Collectors.toList());
 
-        // Calculate total price
         BigDecimal totalPrice = orderProducts.stream()
                 .map(op -> op.getPrice().multiply(new BigDecimal(op.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Send email notification
         mailService.sendOrderStatusUpdate(
                 user.getEmail(),
                 user.getName(),
@@ -266,8 +252,7 @@ public class OrderService {
                 order.getCreatedAt(),
                 newStatus,
                 productInfos,
-                totalPrice
-        );
+                totalPrice);
 
         log.info("Order status update email sent for order: {} to user: {}", order.getId(), user.getEmail());
     }
@@ -310,7 +295,6 @@ public class OrderService {
             return false; // Option doesn't exist in product
         }
 
-        // For select type, validate the value is one of the valid options
         if ("select".equals(option.getType()) && option.getValues() != null) {
             String valueStr = value.toString();
             return option.getValues().stream()
@@ -331,7 +315,6 @@ public class OrderService {
             return optionName + ": " + value;
         }
 
-        // For select type, try to get the label instead of the id
         if ("select".equals(option.getType()) && option.getValues() != null) {
             String valueStr = value.toString();
             OptionValue optionValue = option.getValues().stream()
@@ -368,7 +351,6 @@ public class OrderService {
     }
 
     public List<OrderProduct> getOrderProducts(@NonNull String orderId) {
-        // Verify order exists
         getOrderById(orderId);
         return orderProductRepository.findAll(
                 es.yambo_alco.web.repository.spec.OrderProductSpecifications.orderIdEquals(orderId));

@@ -49,7 +49,6 @@ public class HtmlMailService implements MailService {
             helper.setTo(to);
             helper.setSubject(subject);
 
-            // Extract invitation link from body (assumes body contains the link)
             String invitationLink = extractInvitationLink(body);
 
             // Create context with variables for the template
@@ -57,10 +56,8 @@ public class HtmlMailService implements MailService {
             context.setVariable("invitationLink", invitationLink);
             context.setVariable("expirationHours", expirationHours);
 
-            // Process the template
             String htmlContent = templateEngine.process("emails/invitation", context);
 
-            // Set both plain text and HTML content
             helper.setText(body, htmlContent);
 
             mailSender.send(message);
@@ -74,16 +71,11 @@ public class HtmlMailService implements MailService {
         }
     }
 
-    /**
-     * Extract the invitation link from the plain text body.
-     * Looks for a URL starting with http:// or https://
-     */
     private String extractInvitationLink(String body) {
         if (body == null) {
             return "";
         }
 
-        // Simple extraction: find http:// or https:// followed by non-whitespace characters
         String[] words = body.split("\\s+");
         for (String word : words) {
             if (word.startsWith("http://") || word.startsWith("https://")) {
@@ -96,10 +88,9 @@ public class HtmlMailService implements MailService {
 
     @Override
     public void sendOrderStatusUpdate(String to, String userName, String orderId,
-                                       LocalDateTime orderDate, OrderStatus newStatus,
-                                       List<OrderProductInfo> products, BigDecimal totalPrice) {
+            LocalDateTime orderDate, OrderStatus newStatus,
+            List<OrderProductInfo> products, BigDecimal totalPrice) {
         try {
-            // Get from email and name from database settings
             String fromEmail = settingsService.getEmailFrom();
             String fromName = settingsService.getEmailFromName();
 
@@ -109,13 +100,11 @@ public class HtmlMailService implements MailService {
             helper.setFrom(fromEmail, fromName);
             helper.setTo(to);
 
-            // Set subject and template based on status
             String subject = getSubjectForStatus(newStatus);
             String template = getTemplateForStatus(newStatus);
 
             helper.setSubject(subject);
 
-            // Create context with variables for the template
             Context context = new Context();
             context.setVariable("userName", userName);
             context.setVariable("orderId", orderId);
@@ -124,18 +113,15 @@ public class HtmlMailService implements MailService {
             context.setVariable("totalPrice", totalPrice);
             context.setVariable("year", orderDate.getYear());
 
-            // Load payment settings from database
             context.setVariable("iban", settingsService.getIban());
             context.setVariable("legalName", settingsService.getOrganizationLegalName());
             context.setVariable("paymentReference", generatePaymentReference(orderDate, orderId));
 
-            // Process the template
             String htmlContent = templateEngine.process(template, context);
 
-            // Create plain text version
-            String plainText = createPlainTextOrderNotification(userName, orderId, orderDate, newStatus, products, totalPrice);
+            String plainText = createPlainTextOrderNotification(userName, orderId, orderDate, newStatus, products,
+                    totalPrice);
 
-            // Set both plain text and HTML content
             helper.setText(plainText, htmlContent);
 
             mailSender.send(message);
@@ -170,8 +156,8 @@ public class HtmlMailService implements MailService {
     }
 
     private String createPlainTextOrderNotification(String userName, String orderId,
-                                                     LocalDateTime orderDate, OrderStatus status,
-                                                     List<OrderProductInfo> products, BigDecimal totalPrice) {
+            LocalDateTime orderDate, OrderStatus status,
+            List<OrderProductInfo> products, BigDecimal totalPrice) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
 
@@ -188,8 +174,8 @@ public class HtmlMailService implements MailService {
         sb.append("Productos:\n");
         for (OrderProductInfo product : products) {
             sb.append("- ").append(product.getName())
-              .append(" x").append(product.getQuantity())
-              .append(" - ").append(product.getPrice()).append(" €");
+                    .append(" x").append(product.getQuantity())
+                    .append(" - ").append(product.getPrice()).append(" €");
             if (product.getConfiguration() != null && !product.getConfiguration().isEmpty()) {
                 sb.append(" (").append(product.getConfiguration()).append(")");
             }
@@ -225,7 +211,7 @@ public class HtmlMailService implements MailService {
 
     @Override
     public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
-                                 String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
         try {
             String fromEmail = settingsService.getEmailFrom();
             String fromName = settingsService.getEmailFromName();
@@ -248,7 +234,8 @@ public class HtmlMailService implements MailService {
             context.setVariable("issueLink", buildIssueLink(issueId));
 
             String htmlContent = templateEngine.process("emails/issue-created", context);
-            String plainText = createPlainTextIssueCreated(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt);
+            String plainText = createPlainTextIssueCreated(userName, issueId, issueTitle, productName, orderId,
+                    createdBy, createdAt);
 
             helper.setText(plainText, htmlContent);
             mailSender.send(message);
@@ -261,8 +248,8 @@ public class HtmlMailService implements MailService {
 
     @Override
     public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
-                                      String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
-                                      IssueStatus oldStatus, IssueStatus newStatus) {
+            String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
+            IssueStatus oldStatus, IssueStatus newStatus) {
         try {
             String fromEmail = settingsService.getEmailFrom();
             String fromName = settingsService.getEmailFromName();
@@ -289,7 +276,8 @@ public class HtmlMailService implements MailService {
             context.setVariable("issueLink", buildIssueLink(issueId));
 
             String htmlContent = templateEngine.process("emails/issue-comment-added", context);
-            String plainText = createPlainTextCommentAdded(userName, issueId, issueTitle, commentAuthor, commentText, commentDate, oldStatus, newStatus);
+            String plainText = createPlainTextCommentAdded(userName, issueId, issueTitle, commentAuthor, commentText,
+                    commentDate, oldStatus, newStatus);
 
             helper.setText(plainText, htmlContent);
             mailSender.send(message);
@@ -302,8 +290,8 @@ public class HtmlMailService implements MailService {
 
     @Override
     public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
-                                       String productName, IssueStatus oldStatus, IssueStatus newStatus,
-                                       String changedBy, LocalDateTime changedAt) {
+            String productName, IssueStatus oldStatus, IssueStatus newStatus,
+            String changedBy, LocalDateTime changedAt) {
         try {
             String fromEmail = settingsService.getEmailFrom();
             String fromName = settingsService.getEmailFromName();
@@ -330,7 +318,8 @@ public class HtmlMailService implements MailService {
             context.setVariable("issueLink", buildIssueLink(issueId));
 
             String htmlContent = templateEngine.process("emails/issue-status-changed", context);
-            String plainText = createPlainTextStatusChanged(userName, issueId, issueTitle, oldStatus, newStatus, changedBy, changedAt);
+            String plainText = createPlainTextStatusChanged(userName, issueId, issueTitle, oldStatus, newStatus,
+                    changedBy, changedAt);
 
             helper.setText(plainText, htmlContent);
             mailSender.send(message);
@@ -387,7 +376,7 @@ public class HtmlMailService implements MailService {
     }
 
     private String createPlainTextIssueCreated(String userName, String issueId, String issueTitle,
-                                               String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
         sb.append("Se ha reportado una nueva incidencia con uno de tus productos.\n\n");
@@ -405,8 +394,8 @@ public class HtmlMailService implements MailService {
     }
 
     private String createPlainTextCommentAdded(String userName, String issueId, String issueTitle,
-                                               String commentAuthor, String commentText, LocalDateTime commentDate,
-                                               IssueStatus oldStatus, IssueStatus newStatus) {
+            String commentAuthor, String commentText, LocalDateTime commentDate,
+            IssueStatus oldStatus, IssueStatus newStatus) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
         sb.append("Se ha añadido un nuevo comentario a una incidencia de tu pedido.\n\n");
@@ -417,10 +406,10 @@ public class HtmlMailService implements MailService {
         sb.append(commentText).append("\n\n");
         if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
             sb.append("Cambio de estado: ")
-                .append(getIssueStatusText(oldStatus))
-                .append(" → ")
-                .append(getIssueStatusText(newStatus))
-                .append("\n\n");
+                    .append(getIssueStatusText(oldStatus))
+                    .append(" → ")
+                    .append(getIssueStatusText(newStatus))
+                    .append("\n\n");
         }
         sb.append("Fecha: ").append(commentDate).append("\n\n");
         sb.append("Puedes responder desde tu panel de control.\n\n");
@@ -429,8 +418,8 @@ public class HtmlMailService implements MailService {
     }
 
     private String createPlainTextStatusChanged(String userName, String issueId, String issueTitle,
-                                                IssueStatus oldStatus, IssueStatus newStatus,
-                                                String changedBy, LocalDateTime changedAt) {
+            IssueStatus oldStatus, IssueStatus newStatus,
+            String changedBy, LocalDateTime changedAt) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
         sb.append("El estado de una incidencia ha sido actualizado.\n\n");
@@ -445,4 +434,3 @@ public class HtmlMailService implements MailService {
         return sb.toString();
     }
 }
-

@@ -81,7 +81,6 @@ public class SettingsService {
         settingsRepository.delete(setting);
     }
 
-    // Métodos específicos para configuraciones comunes
     public String getDomain() {
         return getSettingValue("app.domain", "http://localhost");
     }
@@ -212,7 +211,6 @@ public class SettingsService {
         }
     }
 
-    // SMTP Configuration Methods
     public boolean getEmailSmtpAuth() {
         return Boolean.parseBoolean(getSettingValue("email.smtp.auth", "true"));
     }
@@ -265,7 +263,8 @@ public class SettingsService {
         if (existing.isPresent()) {
             updateSetting("email.smtp.connectiontimeout", value, null, null);
         } else {
-            createSetting("email.smtp.connectiontimeout", value, "Tiempo máximo de conexión SMTP en milisegundos", "email");
+            createSetting("email.smtp.connectiontimeout", value, "Tiempo máximo de conexión SMTP en milisegundos",
+                    "email");
         }
     }
 
@@ -298,7 +297,8 @@ public class SettingsService {
     }
 
     public int getIssueCreationWindowDays() {
-        String value = getSettingValue(ISSUE_CREATION_WINDOW_DAYS_KEY, String.valueOf(DEFAULT_ISSUE_CREATION_WINDOW_DAYS));
+        String value = getSettingValue(ISSUE_CREATION_WINDOW_DAYS_KEY,
+                String.valueOf(DEFAULT_ISSUE_CREATION_WINDOW_DAYS));
         try {
             int days = Integer.parseInt(value);
             if (days < 0) {
@@ -324,8 +324,7 @@ public class SettingsService {
                     ISSUE_CREATION_WINDOW_DAYS_KEY,
                     value,
                     "Días máximos para crear incidencias tras el cierre de un pedido",
-                    "issues"
-            );
+                    "issues");
         }
     }
 }

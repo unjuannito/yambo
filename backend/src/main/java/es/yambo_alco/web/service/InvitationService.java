@@ -38,12 +38,10 @@ public class InvitationService {
     private long expirationHours;
 
     public Invitation createInvitation(String email, String invitedBy, Set<String> profileIds) {
-        // Check if email is already registered
         if (userRepository.existsByEmail(email)) {
             throw new BadRequestException("Email already registered");
         }
 
-        // Validate profiles exist
         Set<Profile> profiles = Set.of();
         if (profileIds != null && !profileIds.isEmpty()) {
             profiles = Set.copyOf(profileRepository.findAllById(profileIds));
@@ -86,7 +84,6 @@ public class InvitationService {
             throw new BadRequestException("Invitation expired");
         }
 
-        // Check if the email is already registered
         if (userRepository.existsByEmail(invitation.getEmail())) {
             throw new BadRequestException("Email already registered");
         }
@@ -119,7 +116,6 @@ public class InvitationService {
         Invitation invitation = invitationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
-        // Ensure the invitation is not null before deletion
         invitationRepository.delete(invitation);
     }
 

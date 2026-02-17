@@ -157,22 +157,4 @@ class ProductControllerTest {
         mockMvc.perform(delete("/products/PROD001"))
                 .andExpect(status().isNoContent());
     }
-
-    @Test
-    @WithMockUser
-    void getProductPrice_WithAuth_ShouldReturnPrice() throws Exception {
-        Product product = Product.builder()
-                .id("PROD001")
-                .name("Merch 1")
-                .active(true)
-                .basePrice(BigDecimal.TEN)
-                .build();
-
-        when(productService.getProductById("PROD001")).thenReturn(product);
-
-        mockMvc.perform(get("/products/PROD001/price"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.basePrice").value(10))
-                .andExpect(jsonPath("$.finalPrice").value(10));
-    }
 }

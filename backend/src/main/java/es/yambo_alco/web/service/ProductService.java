@@ -38,33 +38,29 @@ public class ProductService {
     public Product getProductById(@NonNull String productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        
-        // If user has product admin permissions, they can access any product
+
         boolean isProductAdmin = permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE) ||
-                                 permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE);
-        
+                permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE);
+
         if (!isProductAdmin) {
             checkAccess(product);
         }
-        
+
         return product;
     }
 
     public Page<Product> listProducts(String name, Boolean active, @NonNull Pageable pageable) {
         User user = authService.getCurrentUser(true);
-        
-        // If user has product update or read permission, they can see all products
+
         boolean isProductAdmin = permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE) ||
-                                 permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE);
-        
+                permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.CREATE);
+
         Specification<Product> spec = Specification.where(null);
         spec = spec.and(ProductSpecifications.nameContains(name));
-        
+
         if (isProductAdmin) {
-            // Admins can see all products, including inactive ones if not filtered
             spec = spec.and(ProductSpecifications.activeEquals(active));
         } else {
-            // Regular users only see active products they have access to
             Set<String> profileIds = user.getProfiles().stream()
                     .map(p -> p.getId())
                     .collect(Collectors.toSet());
@@ -75,7 +71,8 @@ public class ProductService {
         return productRepository.findAll(spec, pageable);
     }
 
-    public Product createProduct(@NonNull String name, String familyProductId, @NonNull BigDecimal basePrice, List<ProductOption> options, List<String> images) {
+    public Product createProduct(@NonNull String name, String familyProductId, @NonNull BigDecimal basePrice,
+            List<ProductOption> options, List<String> images) {
         authService.getCurrentUser(true);
         // TODO: check if user can create in this family
 
@@ -95,13 +92,14 @@ public class ProductService {
                 .basePrice(basePrice)
                 .options(options != null ? options : new ArrayList<>())
                 .images(images != null ? images : new ArrayList<>())
-            .familyProduct(familyProduct)
+                .familyProduct(familyProduct)
                 .build();
 
         return productRepository.save(product);
     }
 
-    public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images, List<ProductOption> options, BigDecimal basePrice, String familyProductId) {
+    public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images,
+            List<ProductOption> options, BigDecimal basePrice, String familyProductId) {
         Product product = getProductById(productId);
         // TODO: check if user can update
 
@@ -148,7 +146,8 @@ public class ProductService {
         productRepository.delete(product);
     }
 
-    public Page<Product> listProductsForProject(@NonNull String projectId, String name, Boolean active, @NonNull Pageable pageable) {
+    public Page<Product> listProductsForProject(@NonNull String projectId, String name, Boolean active,
+            @NonNull Pageable pageable) {
         Specification<Product> spec = Specification.where(null);
         spec = spec.and(ProductSpecifications.projectIdInFamilyProjects(projectId));
         spec = spec.and(ProductSpecifications.nameContains(name));
@@ -167,7 +166,7 @@ public class ProductService {
         }
 
         boolean hasAccess = product.getFamilyProduct().getProfile() != null
-            && userProfileIds.contains(product.getFamilyProduct().getProfile().getId());
+                && userProfileIds.contains(product.getFamilyProduct().getProfile().getId());
 
         if (!hasAccess) {
             throw new ResourceNotFoundException("Product not found");

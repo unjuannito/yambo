@@ -45,7 +45,8 @@ public class IssueService {
         }
 
         Set<UUID> uniqueOrderedProductIds = new LinkedHashSet<>(orderedProductIds);
-        List<OrderProduct> orderedProducts = new ArrayList<>(orderProductRepository.findAllById(uniqueOrderedProductIds));
+        List<OrderProduct> orderedProducts = new ArrayList<>(
+                orderProductRepository.findAllById(uniqueOrderedProductIds));
         if (orderedProducts.size() != uniqueOrderedProductIds.size()) {
             throw new ResourceNotFoundException("One or more ordered products were not found");
         }
@@ -57,14 +58,12 @@ public class IssueService {
         }
 
         Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
         validateIssueCreationWindow(order);
 
-        // Validate user exists
         User user = userRepository.findById(createdBy)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + createdBy));
 
-        // Validate title and description
         if (title == null || title.trim().isEmpty()) {
             throw new BadRequestException("Issue title cannot be empty");
         }
@@ -75,19 +74,18 @@ public class IssueService {
         UUID primaryOrderedProductId = orderedProducts.get(0).getId();
 
         Issue issue = Issue.builder()
-            .orderedProductId(primaryOrderedProductId)
+                .orderedProductId(primaryOrderedProductId)
                 .title(title.trim())
                 .description(description.trim())
                 .status(IssueStatus.OPEN)
                 .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
-            .orderProducts(new LinkedHashSet<>(orderedProducts))
+                .orderProducts(new LinkedHashSet<>(orderedProducts))
                 .build();
 
         Issue savedIssue = issueRepository.save(issue);
 
-        // Send email notification to customer
         try {
             User customer = userRepository.findById(order.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -100,8 +98,7 @@ public class IssueService {
                     productName,
                     order.getId(),
                     user.getName(),
-                    savedIssue.getCreatedAt()
-            );
+                    savedIssue.getCreatedAt());
         } catch (Exception e) {
             log.error("Failed to send issue created email for issue: {}", savedIssue.getId(), e);
             // Don't fail the request if email fails
@@ -123,11 +120,9 @@ public class IssueService {
 
     @Transactional
     public IssueComment addComment(String issueId, String text, String userId, IssueStatus status) {
-        // Validate issue exists
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResourceNotFoundException("Issue not found: " + issueId));
 
-        // Validate user exists
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
@@ -148,21 +143,20 @@ public class IssueService {
         IssueComment comment = IssueComment.builder()
                 .issueId(issueId)
                 .userId(userId)
-            .text(normalizedText)
+                .text(normalizedText)
                 .status(status)
                 .createdAt(LocalDateTime.now())
                 .build();
 
         IssueComment savedComment = issueCommentRepository.save(comment);
 
-        // Send email notification to customer (if comment is not from customer)
         try {
-                List<OrderProduct> issueProducts = getIssueProducts(issue);
-                OrderProduct primaryOrderProduct = issueProducts.get(0);
-                Order order = primaryOrderProduct.getOrder();
+            List<OrderProduct> issueProducts = getIssueProducts(issue);
+            OrderProduct primaryOrderProduct = issueProducts.get(0);
+            Order order = primaryOrderProduct.getOrder();
             User customer = userRepository.findById(order.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-                String productName = buildProductNames(issueProducts);
+            String productName = buildProductNames(issueProducts);
 
             // Don't send email to the comment author
             if (!userId.equals(customer.getId())) {
@@ -176,8 +170,7 @@ public class IssueService {
                         savedComment.getText(),
                         savedComment.getCreatedAt(),
                         status != null && previousStatus != status ? previousStatus : null,
-                        status != null && previousStatus != status ? status : null
-                );
+                        status != null && previousStatus != status ? status : null);
             }
         } catch (Exception e) {
             log.error("Failed to send issue comment email for issue: {}", issueId, e);
@@ -202,12 +195,12 @@ public class IssueService {
     @Transactional(readOnly = true)
     public List<OrderProduct> getIssueProductsByIssueId(String issueId) {
         List<OrderProduct> relatedProducts = issueRepository.findOrderProductsByIssueId(issueId).stream()
-            .collect(LinkedHashMap<UUID, OrderProduct>::new,
-                (map, item) -> map.putIfAbsent(item.getId(), item),
-                LinkedHashMap::putAll)
-            .values()
-            .stream()
-            .toList();
+                .collect(LinkedHashMap<UUID, OrderProduct>::new,
+                        (map, item) -> map.putIfAbsent(item.getId(), item),
+                        LinkedHashMap::putAll)
+                .values()
+                .stream()
+                .toList();
         if (!relatedProducts.isEmpty()) {
             return relatedProducts;
         }
@@ -235,8 +228,7 @@ public class IssueService {
 
         if (!allowedTransitions.contains(newStatus)) {
             throw new BadRequestException(
-                    "Invalid issue status transition: " + currentStatus + " -> " + newStatus
-            );
+                    "Invalid issue status transition: " + currentStatus + " -> " + newStatus);
         }
     }
 
@@ -253,8 +245,7 @@ public class IssueService {
         LocalDateTime deadline = order.getClosedAt().plusDays(issueCreationWindowDays);
         if (LocalDateTime.now().isAfter(deadline)) {
             throw new BadRequestException(
-                "Issues cannot be created more than " + issueCreationWindowDays + " days after order closure"
-            );
+                    "Issues cannot be created more than " + issueCreationWindowDays + " days after order closure");
         }
     }
 

@@ -5,7 +5,6 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Issue;
 import es.yambo_alco.web.model.IssueComment;
-import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.IssueStatus;
@@ -46,12 +45,11 @@ public class IssueController {
         List<UUID> orderedProductIds = request.resolveOrderedProductIds();
 
         Issue issue = issueService.createIssue(
-            orderedProductIds,
+                orderedProductIds,
                 request.getTitle(),
                 request.getDescription(),
-                currentUser.getId()
-        );
-        
+                currentUser.getId());
+
         List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new IssueResponse(issue, relatedProducts));
     }
@@ -60,34 +58,25 @@ public class IssueController {
     @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
     public ResponseEntity<IssueDetailResponse> getIssue(@PathVariable String issueId) {
         Issue issue = issueService.getIssueWithComments(issueId);
-        
-        // Verify user has access to this issue
         verifyAccessToIssue(issue);
 
         List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issueId);
-        
+
         List<IssueComment> comments = issueService.getIssueComments(issueId);
-        
+
         return ResponseEntity.ok(new IssueDetailResponse(issue, comments, relatedProducts));
     }
 
     @GetMapping("/order/{orderId}")
     @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
     public ResponseEntity<List<IssueResponse>> getIssuesByOrder(@PathVariable String orderId) {
-        User currentUser = authService.getCurrentUser(true);
-        
-        // Verify user has access to this order
-        Order order = orderService.getOrderById(orderId);
-        if (!order.getCustomerId().equals(currentUser.getId())) {
-            // Allow anyone with authentication to view issues for now
-            // Access control can be refined via permission system
-        }
-        
+        orderService.getOrderById(orderId);
+
         List<Issue> issues = issueService.getIssuesByOrderId(orderId);
         List<IssueResponse> response = issues.stream()
-            .map(issue -> new IssueResponse(issue, issueService.getIssueProductsByIssueId(issue.getId())))
+                .map(issue -> new IssueResponse(issue, issueService.getIssueProductsByIssueId(issue.getId())))
                 .toList();
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -97,18 +86,17 @@ public class IssueController {
             @PathVariable String issueId,
             @Valid @RequestBody AddCommentRequest request) {
         User currentUser = authService.getCurrentUser(true);
-        
+
         Issue issue = issueService.getIssueWithComments(issueId);
-        
-        // Verify user has access to this issue
         verifyAccessToIssue(issue);
 
         if (request.getStatus() != null && !permissionCheckService.hasPermission("issue", "update")) {
             throw new ForbiddenException("You don't have permission to update issue status");
         }
-        
-        IssueComment comment = issueService.addComment(issueId, request.getText(), currentUser.getId(), request.getStatus());
-        
+
+        IssueComment comment = issueService.addComment(issueId, request.getText(), currentUser.getId(),
+                request.getStatus());
+
         return ResponseEntity.status(HttpStatus.CREATED).body(new IssueCommentResponse(comment));
     }
 
@@ -117,22 +105,19 @@ public class IssueController {
         if (issue.getOrderedProductId() == null) {
             throw new ResourceNotFoundException("Issue has no related ordered products");
         }
-        
-        // Allow access if user is the customer or has authentication
-        // Fine-grained access control can be added via permission system
+
     }
 
-    // DTOs
     @Data
     public static class CreateIssueRequest {
         private List<UUID> orderedProductIds;
 
         @Deprecated
         private UUID orderedProductId;
-        
+
         @NotBlank(message = "Title cannot be blank")
         private String title;
-        
+
         @NotBlank(message = "Description cannot be blank")
         private String description;
 
@@ -233,9 +218,10 @@ public class IssueController {
             this.orderedProductId = orderProduct.getId();
             this.productId = orderProduct.getProductId();
             this.productName = orderProduct.getProduct() != null ? orderProduct.getProduct().getName() : null;
-            this.familyProductName = orderProduct.getProduct() != null && orderProduct.getProduct().getFamilyProduct() != null
-                    ? orderProduct.getProduct().getFamilyProduct().getName()
-                    : null;
+            this.familyProductName = orderProduct.getProduct() != null
+                    && orderProduct.getProduct().getFamilyProduct() != null
+                            ? orderProduct.getProduct().getFamilyProduct().getName()
+                            : null;
             this.quantity = orderProduct.getQuantity();
             this.unitPrice = orderProduct.getPrice() != null ? orderProduct.getPrice().toString() : null;
             this.configuration = orderProduct.getConfiguration();

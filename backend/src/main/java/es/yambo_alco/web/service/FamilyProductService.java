@@ -31,9 +31,9 @@ public class FamilyProductService {
     private final ProjectRepository projectRepository;
 
     @Transactional
-    public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms, @NonNull LocalDateTime endTms,
-                                             Set<String> projectIds) {
-        // Validate name uniqueness
+    public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms,
+            @NonNull LocalDateTime endTms,
+            Set<String> projectIds) {
         if (familyProductRepository.existsByName(name)) {
             throw new BadRequestException("Family product name already exists");
         }
@@ -47,10 +47,10 @@ public class FamilyProductService {
 
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .name(name)
-            .startTms(startTms)
+                .startTms(startTms)
                 .endTms(endTms)
                 .profile(profile)
-            .projects(projects)
+                .projects(projects)
                 .build();
 
         return familyProductRepository.save(familyProduct);
@@ -62,9 +62,9 @@ public class FamilyProductService {
     }
 
     public Page<FamilyProduct> listFamilyProducts(String name, Boolean active, String profileId,
-                                                   @NonNull Pageable pageable) {
+            @NonNull Pageable pageable) {
         Specification<FamilyProduct> spec = Specification.where(null);
-        
+
         if (name != null) {
             spec = spec.and(FamilyProductSpecifications.nameContains(name));
         }
@@ -83,7 +83,8 @@ public class FamilyProductService {
     }
 
     @Transactional
-    public FamilyProduct updateFamilyProduct(@NonNull String id, String name, LocalDateTime startTms, LocalDateTime endTms, Set<String> projectIds) {
+    public FamilyProduct updateFamilyProduct(@NonNull String id, String name, LocalDateTime startTms,
+            LocalDateTime endTms, Set<String> projectIds) {
         FamilyProduct familyProduct = getFamilyProductById(id);
 
         if (name != null && !name.trim().isEmpty()) {
