@@ -56,14 +56,14 @@ public class Issue {
     @JoinColumn(name = "ordered_product_id", insertable = false, updatable = false)
     private OrderProduct orderedProduct;
 
-        @Builder.Default
-        @ManyToMany(fetch = FetchType.LAZY)
-        @JoinTable(
-            name = "issue_order_product",
-            joinColumns = @JoinColumn(name = "issue_id"),
-            inverseJoinColumns = @JoinColumn(name = "order_product_id")
-        )
-        private Set<OrderProduct> orderProducts = new HashSet<>();
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "issue_order_product",
+        joinColumns = @JoinColumn(name = "issue_id"),
+        inverseJoinColumns = @JoinColumn(name = "order_product_id")
+    )
+    private Set<OrderProduct> orderProducts = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", insertable = false, updatable = false)
