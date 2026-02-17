@@ -43,4 +43,10 @@
     <include file="db/changelog/changes/31-email-smtp-settings.xml"/>
     <include file="db/changelog/changes/32-app-domain-setting.xml"/>
     <include file="db/changelog/changes/33-order-user-foreign-key.xml"/>
+    <include file="db/changelog/changes/34-issue-tracking.xml"/>
+    <include file="db/changelog/changes/35-issue-permissions.xml"/>
+    <include file="db/changelog/changes/36-issue-comment-status.xml"/>
+    <include file="db/changelog/changes/37-issue-order-products.xml"/>
+    <include file="db/changelog/changes/38-order-closed-at.xml"/>
+    <include file="db/changelog/changes/39-issue-creation-window-setting.xml"/>
 </databaseChangeLog>

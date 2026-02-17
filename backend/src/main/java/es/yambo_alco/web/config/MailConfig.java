@@ -19,13 +19,11 @@ public class MailConfig {
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 
-        // Read configuration from database
         String host = settingsService.getEmailHost();
         String portStr = settingsService.getEmailPort();
         String username = settingsService.getEmailUsername();
         String password = settingsService.getEmailPassword();
 
-        // Only configure if host is set
         if (host != null && !host.isEmpty()) {
             mailSender.setHost(host);
 
@@ -44,7 +42,6 @@ public class MailConfig {
                 mailSender.setPassword(password);
             }
 
-            // Get additional SMTP properties from database
             boolean auth = settingsService.getEmailSmtpAuth();
             boolean starttlsEnable = settingsService.getEmailSmtpStartTlsEnable();
             boolean starttlsRequired = settingsService.getEmailSmtpStartTlsRequired();
@@ -60,7 +57,7 @@ public class MailConfig {
             props.put("mail.smtp.connectiontimeout", connectionTimeout);
             props.put("mail.smtp.timeout", timeout);
             props.put("mail.smtp.writetimeout", writeTimeout);
-            props.put("mail.debug", "false"); // Set to true for debugging
+            props.put("mail.debug", "false");
         }
 
         return mailSender;

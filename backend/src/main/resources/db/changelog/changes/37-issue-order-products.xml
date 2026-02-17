@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="37-issue-order-products" author="yambo">
+        <comment>Create relation table so an issue can be linked to one or more ordered products</comment>
+
+        <createTable tableName="issue_order_product">
+            <column name="issue_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_product_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+            tableName="issue_order_product"
+            columnNames="issue_id, order_product_id"
+            constraintName="pk_issue_order_product"/>
+
+        <addForeignKeyConstraint
+            baseTableName="issue_order_product"
+            baseColumnNames="issue_id"
+            referencedTableName="issue"
+            referencedColumnNames="id"
+            constraintName="fk_issue_order_product_issue"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="issue_order_product"
+            baseColumnNames="order_product_id"
+            referencedTableName="order_product"
+            referencedColumnNames="id"
+            constraintName="fk_issue_order_product_order_product"
+            onDelete="CASCADE"/>
+
+        <createIndex tableName="issue_order_product" indexName="idx_issue_order_product_order_product_id">
+            <column name="order_product_id"/>
+        </createIndex>
+
+        <sql>
+            INSERT INTO issue_order_product (issue_id, order_product_id)
+            SELECT i.id, i.ordered_product_id
+            FROM issue i
+            WHERE i.ordered_product_id IS NOT NULL
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

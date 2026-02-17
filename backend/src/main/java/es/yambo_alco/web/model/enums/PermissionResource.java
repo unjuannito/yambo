@@ -12,7 +12,8 @@ public enum PermissionResource {
     PROJECT("project"),
     FAMILY_PRODUCT("family_product"),
     ORDER("order"),
-    SETTINGS("settings");
+    SETTINGS("settings"),
+    ISSUE("issue");
 
     private final String value;
 

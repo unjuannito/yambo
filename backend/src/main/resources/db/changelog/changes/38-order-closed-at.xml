@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="38-order-closed-at" author="yambo">
+        <comment>Add closed_at to orders to track closure timestamp</comment>
+
+        <addColumn tableName="order">
+            <column name="closed_at" type="timestamp"/>
+        </addColumn>
+
+        <sql>
+            UPDATE "order"
+            SET closed_at = created_at
+            WHERE closed_at IS NULL
+              AND status IN (3, 4);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

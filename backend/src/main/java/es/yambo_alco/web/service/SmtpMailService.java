@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -126,5 +127,118 @@ public class SmtpMailService implements MailService {
             case CANCELLED -> "CANCELADO";
         };
     }
-}
 
+    @Override
+    public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
+                                 String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Nueva Incidencia Reportada - Yambo");
+            
+            StringBuilder body = new StringBuilder();
+            body.append("Hola ").append(userName).append(",\n\n");
+            body.append("Se ha reportado una nueva incidencia con uno de tus productos.\n\n");
+            body.append("Detalles de la incidencia:\n");
+            body.append("ID: ").append(issueId).append("\n");
+            body.append("Título: ").append(issueTitle).append("\n");
+            body.append("Producto: ").append(productName).append("\n");
+            body.append("Pedido: ").append(orderId).append("\n");
+            body.append("Reportado por: ").append(createdBy).append("\n");
+            body.append("Fecha: ").append(createdAt).append("\n");
+            body.append("Estado: ABIERTO\n\n");
+            body.append("Puedes ver todos los detalles desde tu panel de control.\n\n");
+            body.append("¡Gracias!\n");
+            
+            helper.setText(body.toString(), false);
+            mailSender.send(message);
+            log.info("Issue created email sent successfully to: {} for issue: {}", to, issueId);
+        } catch (MessagingException e) {
+            log.error("Failed to send issue created email to: {} for issue: {}", to, issueId, e);
+            throw new RuntimeException("Failed to send issue created email", e);
+        }
+    }
+
+    @Override
+    public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
+                                      String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
+                                      IssueStatus oldStatus, IssueStatus newStatus) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Nuevo Comentario en Incidencia - Yambo");
+            
+            StringBuilder body = new StringBuilder();
+            body.append("Hola ").append(userName).append(",\n\n");
+            body.append("Se ha añadido un nuevo comentario a una incidencia de tu pedido.\n\n");
+            body.append("Incidencia:\n");
+            body.append("ID: ").append(issueId).append("\n");
+            body.append("Título: ").append(issueTitle).append("\n\n");
+            body.append("Comentario de ").append(commentAuthor).append(":\n");
+            body.append(commentText).append("\n\n");
+            if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
+                body.append("Cambio de estado: ")
+                        .append(getIssueStatusText(oldStatus))
+                        .append(" → ")
+                        .append(getIssueStatusText(newStatus))
+                        .append("\n\n");
+            }
+            body.append("Fecha: ").append(commentDate).append("\n\n");
+            body.append("Puedes responder desde tu panel de control.\n\n");
+            body.append("¡Gracias!\n");
+            
+            helper.setText(body.toString(), false);
+            mailSender.send(message);
+            log.info("Issue comment added email sent successfully to: {} for issue: {}", to, issueId);
+        } catch (MessagingException e) {
+            log.error("Failed to send issue comment added email to: {} for issue: {}", to, issueId, e);
+            throw new RuntimeException("Failed to send issue comment added email", e);
+        }
+    }
+
+    @Override
+    public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
+                                       String productName, IssueStatus oldStatus, IssueStatus newStatus,
+                                       String changedBy, LocalDateTime changedAt) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Estado de Incidencia Actualizado - Yambo");
+            
+            StringBuilder body = new StringBuilder();
+            body.append("Hola ").append(userName).append(",\n\n");
+            body.append("El estado de una incidencia ha sido actualizado.\n\n");
+            body.append("Detalles de la incidencia:\n");
+            body.append("ID: ").append(issueId).append("\n");
+            body.append("Título: ").append(issueTitle).append("\n\n");
+            body.append("Cambio de estado por ").append(changedBy).append(":\n");
+            body.append(getIssueStatusText(oldStatus)).append(" → ").append(getIssueStatusText(newStatus)).append("\n");
+            body.append("Fecha: ").append(changedAt).append("\n\n");
+            body.append("Puedes ver todos los detalles desde tu panel de control.\n\n");
+            body.append("¡Gracias!\n");
+            
+            helper.setText(body.toString(), false);
+            mailSender.send(message);
+            log.info("Issue status changed email sent successfully to: {} for issue: {}", to, issueId);
+        } catch (MessagingException e) {
+            log.error("Failed to send issue status changed email to: {} for issue: {}", to, issueId, e);
+            throw new RuntimeException("Failed to send issue status changed email", e);
+        }
+    }
+
+    private String getIssueStatusText(IssueStatus status) {
+        return switch (status) {
+            case OPEN -> "ABIERTO";
+            case IN_PROGRESS -> "EN PROGRESO";
+            case RESOLVED -> "RESUELTO";
+            case CLOSED -> "CERRADO";
+            case REOPENED -> "REABIERTO";
+        };
+    }
+}

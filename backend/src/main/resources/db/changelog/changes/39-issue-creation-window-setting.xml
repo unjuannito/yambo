@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="39-01-add-issue-creation-window-setting" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'issues.creation_window_days'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0021"/>
+            <column name="key" value="issues.creation_window_days"/>
+            <column name="value" value="30"/>
+            <column name="description" value="Días máximos para crear incidencias tras el cierre de un pedido"/>
+            <column name="category" value="issues"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

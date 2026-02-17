@@ -46,14 +46,15 @@ public class OrderController {
                         .quantity(p.getQuantity())
                         .price(BigDecimal.ZERO) // Price will be calculated by service
                         .configuration(p.getConfiguration() != null && !p.getConfiguration().trim().isEmpty()
-                            ? p.getConfiguration()
-                            : null)
+                                ? p.getConfiguration()
+                                : null)
                         .build())
                 .collect(Collectors.toList());
 
         Order order = orderService.createOrder(currentUser.getId(), orderProducts);
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new OrderResponse(order, products, userRepository, productRepository));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new OrderResponse(order, products, userRepository, productRepository));
     }
 
     @GetMapping
@@ -143,17 +144,16 @@ public class OrderController {
         private LocalDateTime createdAt;
         private List<OrderProductResponse> products;
 
-        public OrderResponse(Order order, List<OrderProduct> products, UserRepository userRepository, ProductRepository productRepository) {
+        public OrderResponse(Order order, List<OrderProduct> products, UserRepository userRepository,
+                ProductRepository productRepository) {
             this.id = order.getId();
             this.status = order.getStatus();
             this.createdAt = order.getCreatedAt();
-            
-            // Get customer details
+
             userRepository.findById(order.getCustomerId()).ifPresent(user -> {
                 this.user = new UserInfo(user.getId(), user.getName(), user.getEmail());
             });
-            
-            // Map products with details
+
             this.products = products.stream()
                     .map(p -> new OrderProductResponse(p, productRepository))
                     .collect(Collectors.toList());
@@ -175,6 +175,7 @@ public class OrderController {
 
     @Data
     public static class OrderProductResponse {
+        private String id;
         private String productId;
         private String productName;
         private Integer quantity;
@@ -182,12 +183,12 @@ public class OrderController {
         private String configuration;
 
         public OrderProductResponse(OrderProduct orderProduct, ProductRepository productRepository) {
+            this.id = orderProduct.getId() != null ? orderProduct.getId().toString() : null;
             this.productId = orderProduct.getProductId();
             this.quantity = orderProduct.getQuantity();
             this.price = orderProduct.getPrice();
             this.configuration = orderProduct.getConfiguration();
-            
-            // Get product name
+
             productRepository.findById(orderProduct.getProductId()).ifPresent(product -> {
                 this.productName = product.getName();
             });

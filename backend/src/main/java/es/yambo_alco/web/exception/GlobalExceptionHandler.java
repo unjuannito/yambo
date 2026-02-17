@@ -140,6 +140,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+        @ExceptionHandler(ForbiddenException.class)
+        public ResponseEntity<ErrorResponse> handleForbidden(
+                        ForbiddenException ex,
+                        HttpServletRequest request) {
+
+                log.warn("Forbidden: {} at path: {}", ex.getMessage(), request.getRequestURI());
+
+                ErrorResponse error = ErrorResponse.builder()
+                                .type("FORBIDDEN")
+                                .message(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .status(HttpStatus.FORBIDDEN.value())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex,

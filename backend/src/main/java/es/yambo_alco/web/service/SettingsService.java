@@ -15,6 +15,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class SettingsService {
 
+    private static final String ISSUE_CREATION_WINDOW_DAYS_KEY = "issues.creation_window_days";
+    private static final int DEFAULT_ISSUE_CREATION_WINDOW_DAYS = 30;
+
     private final SettingsRepository settingsRepository;
 
     public List<Settings> getAllSettings() {
@@ -78,7 +81,6 @@ public class SettingsService {
         settingsRepository.delete(setting);
     }
 
-    // Métodos específicos para configuraciones comunes
     public String getDomain() {
         return getSettingValue("app.domain", "http://localhost");
     }
@@ -89,6 +91,19 @@ public class SettingsService {
             updateSetting("app.domain", domain, null, null);
         } else {
             createSetting("app.domain", domain, "Dominio de la aplicación para enlaces en correos", "app");
+        }
+    }
+
+    public String getFrontendUrl() {
+        return getSettingValue("app.frontend_url", "http://localhost:5173");
+    }
+
+    public void setFrontendUrl(@NonNull String frontendUrl) {
+        Optional<Settings> existing = findSettingByKey("app.frontend_url");
+        if (existing.isPresent()) {
+            updateSetting("app.frontend_url", frontendUrl, null, null);
+        } else {
+            createSetting("app.frontend_url", frontendUrl, "URL del frontend de la aplicación", "app");
         }
     }
 
@@ -196,7 +211,6 @@ public class SettingsService {
         }
     }
 
-    // SMTP Configuration Methods
     public boolean getEmailSmtpAuth() {
         return Boolean.parseBoolean(getSettingValue("email.smtp.auth", "true"));
     }
@@ -249,7 +263,8 @@ public class SettingsService {
         if (existing.isPresent()) {
             updateSetting("email.smtp.connectiontimeout", value, null, null);
         } else {
-            createSetting("email.smtp.connectiontimeout", value, "Tiempo máximo de conexión SMTP en milisegundos", "email");
+            createSetting("email.smtp.connectiontimeout", value, "Tiempo máximo de conexión SMTP en milisegundos",
+                    "email");
         }
     }
 
@@ -278,6 +293,38 @@ public class SettingsService {
             updateSetting("email.smtp.writetimeout", value, null, null);
         } else {
             createSetting("email.smtp.writetimeout", value, "Tiempo máximo de escritura SMTP en milisegundos", "email");
+        }
+    }
+
+    public int getIssueCreationWindowDays() {
+        String value = getSettingValue(ISSUE_CREATION_WINDOW_DAYS_KEY,
+                String.valueOf(DEFAULT_ISSUE_CREATION_WINDOW_DAYS));
+        try {
+            int days = Integer.parseInt(value);
+            if (days < 0) {
+                return DEFAULT_ISSUE_CREATION_WINDOW_DAYS;
+            }
+            return days;
+        } catch (NumberFormatException e) {
+            return DEFAULT_ISSUE_CREATION_WINDOW_DAYS;
+        }
+    }
+
+    public void setIssueCreationWindowDays(int days) {
+        if (days < 0) {
+            throw new BadRequestException("Issue creation window days must be 0 or greater");
+        }
+
+        Optional<Settings> existing = findSettingByKey(ISSUE_CREATION_WINDOW_DAYS_KEY);
+        String value = String.valueOf(days);
+        if (existing.isPresent()) {
+            updateSetting(ISSUE_CREATION_WINDOW_DAYS_KEY, value, null, null);
+        } else {
+            createSetting(
+                    ISSUE_CREATION_WINDOW_DAYS_KEY,
+                    value,
+                    "Días máximos para crear incidencias tras el cierre de un pedido",
+                    "issues");
         }
     }
 }

@@ -37,15 +37,16 @@ public class UserService {
 	@Value("${user.deletion.delay.days:30}")
 	private long deletionDelayDays;
 
-	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(List.of("id", "name", "email", "username", "createdAt"));
+	private static final Set<String> ALLOWED_SORT_FIELDS = new HashSet<>(
+			List.of("id", "name", "email", "username", "createdAt"));
 
 	public User getUserById(@NonNull String userId) {
 		return userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 	}
 
-
-	public Page<User> listUsers(String name, String email, Boolean enabled, Set<String> permissions, Pageable pageable) {
+	public Page<User> listUsers(String name, String email, Boolean enabled, Set<String> permissions,
+			Pageable pageable) {
 		Specification<User> spec = Specification.where(null);
 		spec = spec.and(UserSpecifications.nameContains(name));
 		spec = spec.and(UserSpecifications.emailContains(email));
@@ -63,15 +64,18 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions, List<String> profiles, Pageable pageable) {
+	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions,
+			List<String> profiles, Pageable pageable) {
 		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
 		Set<String> profileSet = profiles == null ? null : profiles.stream().collect(Collectors.toSet());
 		Specification<User> spec = Specification.where(null);
 		spec = spec.and(UserSpecifications.nameContains(name));
 		spec = spec.and(UserSpecifications.emailContains(email));
 		spec = spec.and(UserSpecifications.enabledEquals(enabled));
-		if (perms != null && !perms.isEmpty()) spec = spec.and(UserSpecifications.hasPermissions(perms));
-		if (profileSet != null && !profileSet.isEmpty()) spec = spec.and(UserSpecifications.hasProfiles(profileSet));
+		if (perms != null && !perms.isEmpty())
+			spec = spec.and(UserSpecifications.hasPermissions(perms));
+		if (profileSet != null && !profileSet.isEmpty())
+			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -130,11 +134,11 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	public User updateUser(@NonNull String userId, @NonNull String name, @NonNull String email, Set<String> profileIds) {
+	public User updateUser(@NonNull String userId, @NonNull String name, @NonNull String email,
+			Set<String> profileIds) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-		// Check if email is already taken by another user
 		if (!user.getEmail().equals(email)) {
 			Optional<User> existingUser = userRepository.findByEmail(email);
 			if (existingUser.isPresent()) {
@@ -142,11 +146,9 @@ public class UserService {
 			}
 		}
 
-		// Update name and email
 		user.setName(name);
 		user.setEmail(email);
 
-		// Update profiles if provided
 		if (profileIds != null && !profileIds.isEmpty()) {
 			Set<Profile> profilesSet = new HashSet<>();
 			for (String profileId : profileIds) {
@@ -161,17 +163,15 @@ public class UserService {
 	}
 
 	public void deleteUser(@NonNull String userId) {
-		// Verify user exists before scheduling deletion
 		userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
-		
-		// Schedule deletion instead of immediate deletion
-		// The user will be disabled immediately and permanently deleted after the delay period
+
+		// The user will be disabled immediately and permanently deleted after the delay
+		// period
 		LocalDateTime scheduledDeletionDate = LocalDateTime.now().plusDays(deletionDelayDays);
 		pendingDeletionService.scheduleDeletion(
-			DeletionObjectType.USER, 
-			userId.toString(), 
-			scheduledDeletionDate
-		);
+				DeletionObjectType.USER,
+				userId.toString(),
+				scheduledDeletionDate);
 	}
 }

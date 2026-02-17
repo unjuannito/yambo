@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +79,77 @@ public class ConsoleMailService implements MailService {
             log.info("║ Importe: {} €", totalPrice);
         }
         log.info("╚════════════════════════════════════════════════════════════╝");
+    }
+
+    @Override
+    public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
+                                 String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+        log.info("╔════════════════════════════════════════════════════════════╗");
+        log.info("║         ISSUE CREATED EMAIL (CONSOLE MODE)                 ║");
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ To:         {}", to);
+        log.info("║ User Name:  {}", userName);
+        log.info("║ Issue ID:   {}", issueId);
+        log.info("║ Title:      {}", issueTitle);
+        log.info("║ Product:    {}", productName);
+        log.info("║ Order ID:   {}", orderId);
+        log.info("║ Created By: {}", createdBy);
+        log.info("║ Created At: {}", createdAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        log.info("║ Status:     OPEN");
+        log.info("╚════════════════════════════════════════════════════════════╝");
+    }
+
+    @Override
+    public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
+                                      String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
+                                      IssueStatus oldStatus, IssueStatus newStatus) {
+        log.info("╔════════════════════════════════════════════════════════════╗");
+        log.info("║       ISSUE COMMENT ADDED EMAIL (CONSOLE MODE)             ║");
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ To:           {}", to);
+        log.info("║ User Name:    {}", userName);
+        log.info("║ Issue ID:     {}", issueId);
+        log.info("║ Title:        {}", issueTitle);
+        log.info("║ Product:      {}", productName);
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ Comment by:   {}", commentAuthor);
+        log.info("║ Comment Date: {}", commentDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
+            log.info("║ Status Change: {} → {}", getStatusText(oldStatus), getStatusText(newStatus));
+        }
+        log.info("║ Comment:");
+        commentText.lines().forEach(line -> log.info("║   {}", line));
+        log.info("╚════════════════════════════════════════════════════════════╝");
+    }
+
+    @Override
+    public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
+                                       String productName, IssueStatus oldStatus, IssueStatus newStatus,
+                                       String changedBy, LocalDateTime changedAt) {
+        log.info("╔════════════════════════════════════════════════════════════╗");
+        log.info("║      ISSUE STATUS CHANGED EMAIL (CONSOLE MODE)             ║");
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ To:         {}", to);
+        log.info("║ User Name:  {}", userName);
+        log.info("║ Issue ID:   {}", issueId);
+        log.info("║ Title:      {}", issueTitle);
+        log.info("║ Product:    {}", productName);
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ Changed By: {}", changedBy);
+        log.info("║ Changed At: {}", changedAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        log.info("║ Old Status: {}", getStatusText(oldStatus));
+        log.info("║ New Status: {}", getStatusText(newStatus));
+        log.info("╚════════════════════════════════════════════════════════════╝");
+    }
+
+    private String getStatusText(IssueStatus status) {
+        return switch (status) {
+            case OPEN -> "OPEN";
+            case IN_PROGRESS -> "IN_PROGRESS";
+            case RESOLVED -> "RESOLVED";
+            case CLOSED -> "CLOSED";
+            case REOPENED -> "REOPENED";
+        };
     }
 }
 

@@ -631,4 +631,48 @@ class SettingsControllerTest {
                 .content(requestBody))
                 .andExpect(status().isBadRequest());
     }
+
+        @Test
+        @WithMockUser
+        void getIssueCreationWindowDays_ShouldReturnValue() throws Exception {
+                when(settingsService.getIssueCreationWindowDays()).thenReturn(30);
+
+                mockMvc.perform(get("/admin/settings/issues/creation-window-days"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.days").value(30));
+        }
+
+        @Test
+        @WithMockUser
+        void setIssueCreationWindowDays_WithValidData_ShouldUpdateValue() throws Exception {
+                doNothing().when(settingsService).setIssueCreationWindowDays(15);
+
+                String requestBody = """
+                                {
+                                        "days": 15
+                                }
+                                """;
+
+                mockMvc.perform(put("/admin/settings/issues/creation-window-days")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("Issue creation window updated successfully"));
+
+                verify(settingsService).setIssueCreationWindowDays(15);
+        }
+
+        @Test
+        @WithMockUser
+        void setIssueCreationWindowDays_WithMissingValue_ShouldReturnBadRequest() throws Exception {
+                String requestBody = """
+                                {
+                                }
+                                """;
+
+                mockMvc.perform(put("/admin/settings/issues/creation-window-days")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
+                                .andExpect(status().isBadRequest());
+        }
 }
