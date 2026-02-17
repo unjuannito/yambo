@@ -28,7 +28,7 @@ const CART_STORAGE_KEY = "yambo_cart";
 
 const loadCartFromStorage = (): CartItem[] => {
   if (typeof window === 'undefined') return [];
-  
+
   try {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -42,7 +42,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(loadCartFromStorage);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
@@ -52,7 +51,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       Object.entries(configuration)
         .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
         .reduce((acc, [key, value]) => {
-          // Extract ID from object if present, otherwise use value as-is
           acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
           return acc;
         }, {} as Record<string, any>)
@@ -61,14 +59,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = (product: Product, configuration: Record<string, any>, price: number) => {
     const configKey = generateConfigKey(configuration);
-    
+
     setItems((prevItems) => {
       const existingIndex = prevItems.findIndex(
         (item) => item.product.id === product.id && generateConfigKey(item.configuration) === configKey
       );
 
       if (existingIndex >= 0) {
-        // Item already exists, increment quantity
         const newItems = [...prevItems];
         newItems[existingIndex] = {
           ...newItems[existingIndex],
@@ -76,7 +73,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
         return newItems;
       } else {
-        // New item
         return [...prevItems, { product, configuration, quantity: 1, price }];
       }
     });

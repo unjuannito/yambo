@@ -1,0 +1,25 @@
+import React from "react";
+import type { IssueStatus } from "~/types/issueType";
+import { ISSUE_STATUS_CONFIG } from "~/types/issueType";
+
+interface IssueStatusBadgeProps {
+    status: IssueStatus;
+}
+
+export const IssueStatusBadge: React.FC<IssueStatusBadgeProps> = ({
+    status,
+}) => {
+    const config = ISSUE_STATUS_CONFIG[status];
+
+    if (!config) {
+        return <span className="text-gray-600">Estado desconocido</span>;
+    }
+
+    return (
+        <span
+            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${config.className}`}
+        >
+            {config.label}
+        </span>
+    );
+};

@@ -1,14 +1,9 @@
 import axios from "axios";
 import type { AxiosInstance, AxiosResponse } from "axios";
+import { ApiError, type ErrorResponse } from "~/types/error";
 
 export interface Filters {
     [key: string]: string | number | boolean | undefined | string[];
-}
-export interface ApiError {
-    type: string;
-    message: string;
-    path: string;
-    status: number;
 }
 
 export interface PagedParams {
@@ -46,7 +41,7 @@ export class ApiService {
             (error) => {
                 if (error.response?.status === 401) {
                     const errorData = error.response?.data as
-                        | ApiError
+                        | ErrorResponse
                         | undefined;
                     const isTokenExpired = errorData?.type === "TOKEN_EXPIRED";
                     const isInvalidToken = errorData?.type === "INVALID_TOKEN";
@@ -58,6 +53,20 @@ export class ApiService {
                         }
                     }
                 }
+
+                const data = error.response?.data;
+                if (data && typeof data === "object" && "type" in data && "message" in data) {
+                    return Promise.reject(new ApiError({
+                        id: data.id ?? "",
+                        timestamp: data.timestamp ?? new Date().toISOString(),
+                        type: data.type,
+                        message: data.message,
+                        path: data.path ?? "",
+                        status: error.response?.status ?? 0,
+                        details: data.details,
+                    }));
+                }
+
                 return Promise.reject(error);
             }
         );
@@ -127,7 +136,6 @@ export class ApiService {
         for (const [key, value] of Object.entries(params)) {
             if (value !== undefined && value !== null && typeof key === 'string') {
                 if (Array.isArray(value)) {
-                    // Validate array elements
                     const validArray = value.filter(item => typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean');
                     queryParams.append(key, validArray.join(","));
                 } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {

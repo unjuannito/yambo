@@ -1,3 +1,5 @@
+import type { JSX } from "react";
+
 export interface NavSection {
     title: string;
     items: string[]; // Link names that map to LINKS_MAP
@@ -11,7 +13,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Administración",
-        items: ["settings", "users", "profiles", "invitations", "promotionInvitations", "orders"]
+        items: ["settings", "users", "profiles", "invitations", "promotionInvitations", "orders", "adminIssues"]
     },
     {
         title: "Proyectos",
@@ -19,7 +21,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Merch",
-        items: ["merch", "merchFamilies", "myOrders", "cart"]
+        items: ["merch", "merchFamilies", "myOrders", "cart", "issues"]
     }
 ];
 
@@ -66,6 +68,11 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
     ),
+    adminIssues: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8m-8 4h6m6-2a8 8 0 11-16 0 8 8 0 0116 0z" />
+        </svg>
+    ),
     projects: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -84,6 +91,11 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     myOrders: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+    ),
+    issues: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8m-8 4h5m-9 7h16a2 2 0 002-2V5a2 2 0 00-2-2H4a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
     ),
     cart: (

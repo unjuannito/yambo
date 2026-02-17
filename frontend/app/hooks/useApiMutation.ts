@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import toast from "react-hot-toast";
-import { ApiError } from "~/types/error";
+import { ApiError, getErrorMessage } from "~/types/error";
 
 interface UseApiMutationOptions<TData, TVariables> {
     mutationFn: (variables: TVariables) => Promise<TData>;
@@ -48,7 +48,6 @@ export function useApiMutation<TData = any, TVariables = void>({
                 const result = await mutationFn(variables);
                 setData(result);
 
-                // Show success toast
                 if (successMessage) {
                     const message =
                         typeof successMessage === "function"
@@ -57,25 +56,23 @@ export function useApiMutation<TData = any, TVariables = void>({
                     toast.success(message);
                 }
 
-                // Call success callback
                 if (onSuccess) {
                     onSuccess(result, variables);
                 }
-            } catch (err: any) {
+            } catch (err) {
                 const apiError = err instanceof ApiError ? err : null;
 
-                // Set error state
-                const errorMsg = apiError
-                    ? apiError.getUserMessage()
-                    : err.message || "Error en la operación";
+                const errorMsg = getErrorMessage(err, "Error en la operación");
                 setError(errorMsg);
 
-                // Show error toast
                 let toastMessage: string;
                 if (errorMessage) {
                     toastMessage =
                         typeof errorMessage === "function"
-                            ? errorMessage(err, variables)
+                            ? errorMessage(
+                                  apiError ?? new Error(errorMsg),
+                                  variables,
+                              )
                             : errorMessage;
                 } else if (apiError?.isValidationError() && apiError.details) {
                     toastMessage = `Error de validación:\n${apiError.details}`;
@@ -87,9 +84,11 @@ export function useApiMutation<TData = any, TVariables = void>({
 
                 toast.error(toastMessage);
 
-                // Call error callback
                 if (onError) {
-                    onError(err, variables);
+                    onError(
+                        apiError ?? new Error(errorMsg),
+                        variables,
+                    );
                 }
 
                 throw err; // Re-throw to allow component-level handling if needed

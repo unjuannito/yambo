@@ -72,7 +72,6 @@ export class ProductService extends ApiService {
 
         const response = await this.get<{ content: any[]; page: { totalElements: number; totalPages: number; number: number; size: number } }>(`/products?${params}`);
 
-        // Parse options JSON string to ProductOption[]
         const products: Product[] = response.content.map(product => ({
             ...product,
             options: this.parseOptions(product.options),
@@ -132,10 +131,6 @@ export class ProductService extends ApiService {
             options: this.parseOptions(response.options),
             images: this.parseImages(response.images)
         };
-    }
-
-    public async getProductPrice(id: string): Promise<{ basePrice: number; finalPrice: number }> {
-        return await this.get<{ basePrice: number; finalPrice: number }>(`/products/${id}/price`);
     }
 
     private parseOptions(options: any): ProductOption[] {

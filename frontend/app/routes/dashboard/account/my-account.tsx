@@ -5,6 +5,7 @@ import { useAuth } from "~/hooks/useAuth";
 import { useApiMutation } from "~/hooks/useApiMutation";
 import { userService } from "~/services/userService";
 import type { UpdateProfileRequest, ChangePasswordRequest } from "~/services/userService";
+import type { CurrentUser } from "~/types/userType";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
@@ -308,8 +309,8 @@ export default function MyAccount() {
           <div className="p-6">
             <div className="bg-red-50 border border-red-100 rounded-lg p-4 mb-4">
               <p className="text-gray-700 text-sm leading-relaxed">
-                <strong className="text-red-700">Atención:</strong> Una vez que elimines tu cuenta, 
-                tendrás <strong>30 días</strong> para revertir esta acción contactando con soporte. 
+                <strong className="text-red-700">Atención:</strong> Una vez que elimines tu cuenta,
+                tendrás <strong>30 días</strong> para revertir esta acción contactando con soporte.
                 Pasado ese tiempo, tu cuenta y todos tus datos serán eliminados permanentemente.
               </p>
             </div>
@@ -341,6 +342,3 @@ export default function MyAccount() {
     </main>
   );
 }
-
-// Type import for the mutation
-import type { CurrentUser } from "~/types/userType";

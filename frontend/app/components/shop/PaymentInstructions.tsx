@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { settingsService } from "~/services/settingsService";
 
 interface PaymentInstructionsProps {
@@ -56,7 +57,7 @@ export default function PaymentInstructions({
 
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
-        alert(`${label} copiado al portapapeles`);
+        toast.success(`${label} copiado al portapapeles`);
     };
 
     if (loading) {

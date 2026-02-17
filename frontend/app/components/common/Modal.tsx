@@ -16,22 +16,22 @@ const sizeClasses = {
     xl: 'max-w-6xl',
 };
 
-export function Modal({ 
-    isOpen, 
-    onClose, 
-    title, 
-    children, 
+export function Modal({
+    isOpen,
+    onClose,
+    title,
+    children,
     footer,
-    size = 'md' 
+    size = 'md'
 }: ModalProps) {
     if (!isOpen) return null;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
             onClick={onClose}
         >
-            <div 
+            <div
                 className={`bg-white rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto`}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -48,12 +48,12 @@ export function Modal({
                         </button>
                     </div>
                 )}
-                
+
                 {/* Body */}
                 <div className="p-6">
                     {children}
                 </div>
-                
+
                 {/* Footer */}
                 {footer && (
                     <div className="flex justify-end gap-2 p-6 border-t">

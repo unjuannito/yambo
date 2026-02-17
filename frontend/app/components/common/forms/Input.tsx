@@ -4,12 +4,12 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     helperText?: string;
 }
 
-export function Input({ 
-    label, 
-    error, 
-    helperText, 
-    className = '', 
-    ...props 
+export function Input({
+    label,
+    error,
+    helperText,
+    className = '',
+    ...props
 }: InputProps) {
     return (
         <div className="w-full">

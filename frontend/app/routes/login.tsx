@@ -6,6 +6,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { AuthLayout } from "~/routes/AuthLayout";
 import type { Route } from "./+types/login";
 import InputComponent from "~/components/common/forms/InputComponent";
+import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
@@ -49,21 +50,21 @@ export default function Index() {
                     await promotionInvitationService.acceptPromotionInvitation(promotionToken);
                     toast.success("¡Promoción aplicada correctamente!");
                     await reload();
-                } catch (err: unknown) {
-                    const axiosError = err as {
-                        response?: {
-                            data?: { message?: string };
-                            status?: number;
-                        };
-                    };
-                    const errorMessage = axiosError.response?.data?.message;
-
-                    if (errorMessage === "Promotion invitation not found") {
-                        toast.error("El token de promoción no es válido.");
-                    } else if (errorMessage === "Promotion invitation expired") {
-                        toast.error("El token de promoción ha expirado.");
-                    } else if (errorMessage === "Promotion invitation not active yet") {
-                        toast.error("La promoción aún no está activa.");
+                } catch (err) {
+                    if (err instanceof ApiError) {
+                        switch (err.message) {
+                            case "Promotion invitation not found":
+                                toast.error("El token de promoción no es válido.");
+                                break;
+                            case "Promotion invitation expired":
+                                toast.error("El token de promoción ha expirado.");
+                                break;
+                            case "Promotion invitation not active yet":
+                                toast.error("La promoción aún no está activa.");
+                                break;
+                            default:
+                                toast.error("No se pudo aplicar la promoción.");
+                        }
                     } else {
                         toast.error("No se pudo aplicar la promoción.");
                     }
@@ -71,30 +72,19 @@ export default function Index() {
             }
 
             navigate("/mi-espacio", { replace: true });
-        } catch (err: unknown) {
-            const axiosError = err as {
-                response?: {
-                    data?: { type?: string; message?: string };
-                    status?: number;
-                };
-            };
-            const errorType = axiosError.response?.data?.type;
-            const statusCode = axiosError.response?.status;
-
-            if (errorType === "AUTHENTICATION_FAILED" || statusCode === 401) {
-                toast.error("Usuario o contraseña incorrectos.");
-            } else if (statusCode && statusCode >= 500) {
-                toast.error(
-                    "Error del servidor. Por favor, inténtalo más tarde.",
-                );
-            } else if (!axiosError.response) {
-                toast.error(
-                    "Error de conexión. Comprueba tu conexión a internet.",
-                );
+        } catch (err) {
+            if (err instanceof ApiError) {
+                if (err.isType("AUTHENTICATION_FAILED") || err.status === 401) {
+                    toast.error("Usuario o contraseña incorrectos.");
+                } else if (err.status >= 500) {
+                    toast.error("Error del servidor. Por favor, inténtalo más tarde.");
+                } else {
+                    toast.error("Error al iniciar sesión. Por favor, verifica tus credenciales.");
+                }
+            } else if (err instanceof Error && err.message === "Network Error") {
+                toast.error("Error de conexión. Comprueba tu conexión a internet.");
             } else {
-                toast.error(
-                    "Error al iniciar sesión. Por favor, verifica tus credenciales.",
-                );
+                toast.error("Error al iniciar sesión. Por favor, verifica tus credenciales.");
             }
         } finally {
             setLoading(false);

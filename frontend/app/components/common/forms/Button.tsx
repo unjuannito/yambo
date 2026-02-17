@@ -18,14 +18,14 @@ const sizeClasses = {
     lg: 'px-6 py-3 text-lg',
 };
 
-export function Button({ 
-    variant = 'primary', 
+export function Button({
+    variant = 'primary',
     size = 'md',
     isLoading = false,
     disabled,
-    className = '', 
+    className = '',
     children,
-    ...props 
+    ...props
 }: ButtonProps) {
     return (
         <button

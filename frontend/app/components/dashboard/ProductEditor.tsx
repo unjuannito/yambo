@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
+import toast from "react-hot-toast";
 import { useAuth } from "~/hooks/useAuth";
+import { getErrorMessage } from "~/types/error";
 import { productService, type OptionValue, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 
@@ -87,8 +89,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 const response = await productService.getAllProducts(0, 100);
                 setSavedProducts(response.content);
             } catch (err) {
-                console.error("Error loading product(s):", err);
-                alert("Error al cargar el producto");
+                toast.error(getErrorMessage(err, "Error al cargar el producto"));
                 navigate("/mi-espacio/merch");
             } finally {
                 setLoading(false);
@@ -156,12 +157,12 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         const existing = newOptions[optionIndex];
 
         const nextValues = [...(existing.values ?? [])];
-        
+
         // Auto-generate id from label in lowercase
         if (updates.label !== undefined) {
             updates.id = updates.label.toLowerCase();
         }
-        
+
         nextValues[valueIndex] = {
             ...nextValues[valueIndex],
             ...updates,
@@ -210,7 +211,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 };
 
                 await productService.updateProduct(productId, productData);
-                alert("Producto actualizado exitosamente!");
+                toast.success("Producto actualizado exitosamente");
                 navigate(`/mi-espacio/merch/${productId}`);
                 return;
             }
@@ -223,11 +224,10 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 images: product.images,
             });
 
-            alert("Producto guardado exitosamente!");
+            toast.success("Producto guardado exitosamente");
             navigate("/mi-espacio/merch");
         } catch (err) {
-            console.error("Error saving product:", err);
-            alert("Error al guardar el producto");
+            toast.error(getErrorMessage(err, "Error al guardar el producto"));
         } finally {
             setSaving(false);
         }
