@@ -5,6 +5,8 @@ import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.enums.FamilyProductStatus;
+import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -34,6 +37,9 @@ class FamilyProductServiceTest {
 
     @Mock
     private ProjectRepository projectRepository;
+
+    @Mock
+    private OrderService orderService;
 
     @InjectMocks
     private FamilyProductService familyProductService;
@@ -115,5 +121,149 @@ class FamilyProductServiceTest {
                 () -> familyProductService.assignProjectsToFamily("FAM001", Set.of("PRJ404")));
 
         assertEquals("Project not found: PRJ404", exception.getMessage());
+    }
+
+    // Status transition tests
+
+    @Test
+    void updateFamilyProductStatus_SameStatus_ShouldReturnWithoutChanges() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.OPEN).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+
+        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.OPEN);
+
+        assertEquals(FamilyProductStatus.OPEN, result.getStatus());
+        verify(familyProductRepository, never()).save(any());
+        verify(orderService, never()).updateOrderProductStatusByFamilyProduct(any(), any());
+    }
+
+    @Test
+    void updateFamilyProductStatus_OpenToOrderClosed_ShouldSucceed() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.OPEN).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+        when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.ORDER_CLOSED);
+
+        assertEquals(FamilyProductStatus.ORDER_CLOSED, result.getStatus());
+        verify(orderService).updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
+    }
+
+    @Test
+    void updateFamilyProductStatus_OpenToCanceled_ShouldSucceed() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.OPEN).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+        when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.CANCELED);
+
+        assertEquals(FamilyProductStatus.CANCELED, result.getStatus());
+        verify(orderService).updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.CANCELED);
+    }
+
+    @Test
+    void updateFamilyProductStatus_OpenToPendingFabrication_ShouldThrow() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.OPEN).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.PENDING_FABRICATION));
+
+        assertTrue(ex.getMessage().contains("Cannot transition from OPEN to PENDING_FABRICATION"));
+    }
+
+    @Test
+    void updateFamilyProductStatus_OrderClosedToPendingFabrication_ShouldSucceed() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.ORDER_CLOSED).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+        when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.PENDING_FABRICATION);
+
+        assertEquals(FamilyProductStatus.PENDING_FABRICATION, result.getStatus());
+    }
+
+    @Test
+    void updateFamilyProductStatus_DeliveredToAnything_ShouldThrow() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.DELIVERED).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+
+        assertThrows(BadRequestException.class,
+                () -> familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.OPEN));
+    }
+
+    @Test
+    void updateFamilyProductStatus_CanceledToAnything_ShouldThrow() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.CANCELED).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+
+        assertThrows(BadRequestException.class,
+                () -> familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.OPEN));
+    }
+
+    @Test
+    void updateFamilyProductStatus_PendingFabricationToToBeDelivered_ShouldSucceed() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.PENDING_FABRICATION).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+        when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.TO_BE_DELIVERED);
+
+        assertEquals(FamilyProductStatus.TO_BE_DELIVERED, result.getStatus());
+    }
+
+    @Test
+    void updateFamilyProductStatus_ToBeDeliveredToDelivered_ShouldSucceed() {
+        FamilyProduct fp = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.TO_BE_DELIVERED).build();
+        when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
+        when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.DELIVERED);
+
+        assertEquals(FamilyProductStatus.DELIVERED, result.getStatus());
+    }
+
+    // closeExpiredDrops tests
+
+    @Test
+    void closeExpiredDrops_WhenExpiredOpenDrops_ShouldCloseAndPropagate() {
+        FamilyProduct drop1 = FamilyProduct.builder()
+                .id("FAM001").status(FamilyProductStatus.OPEN)
+                .endTms(LocalDateTime.now().minusHours(1)).build();
+        FamilyProduct drop2 = FamilyProduct.builder()
+                .id("FAM002").status(FamilyProductStatus.OPEN)
+                .endTms(LocalDateTime.now().minusDays(1)).build();
+
+        when(familyProductRepository.findByStatusAndEndTmsBefore(eq(FamilyProductStatus.OPEN), any(LocalDateTime.class)))
+                .thenReturn(List.of(drop1, drop2));
+        when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        familyProductService.closeExpiredDrops();
+
+        assertEquals(FamilyProductStatus.ORDER_CLOSED, drop1.getStatus());
+        assertEquals(FamilyProductStatus.ORDER_CLOSED, drop2.getStatus());
+        verify(familyProductRepository, times(2)).save(any(FamilyProduct.class));
+        verify(orderService).updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
+        verify(orderService).updateOrderProductStatusByFamilyProduct("FAM002", OrderProductStatus.ORDER_CLOSED);
+    }
+
+    @Test
+    void closeExpiredDrops_WhenNoExpiredDrops_ShouldDoNothing() {
+        when(familyProductRepository.findByStatusAndEndTmsBefore(eq(FamilyProductStatus.OPEN), any(LocalDateTime.class)))
+                .thenReturn(List.of());
+
+        familyProductService.closeExpiredDrops();
+
+        verify(familyProductRepository, never()).save(any());
+        verify(orderService, never()).updateOrderProductStatusByFamilyProduct(any(), any());
     }
 }

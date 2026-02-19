@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add status column to order_product -->
+    <changeSet id="40-1" author="yambo">
+        <addColumn tableName="order_product">
+            <column name="status" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <comment>Add status column to order_product. Status is inherited from family_product status.
+            Values: 0=OPEN, 1=ORDER_CLOSED, 2=PENDING_FABRICATION, 3=TO_BE_DELIVERED, 4=DELIVERED, 5=CANCELED</comment>
+    </changeSet>
+
+    <!-- Migrate existing order statuses:
+         Old: PENDING_CONFIRMATION(0), CONFIRMED(1), IN_PROGRESS(2), DELIVERED(3), CANCELLED(4)
+         New: PENDING_PAYMENT(0), PAYMENT_CONFIRMED(1), CANCELED(2), PENDING_PRODUCTS(3), CLOSED(4)
+         
+         Mapping:
+         0 (PENDING_CONFIRMATION) -> 0 (PENDING_PAYMENT) - no change needed
+         1 (CONFIRMED) -> 1 (PAYMENT_CONFIRMED) - no change needed
+         2 (IN_PROGRESS) -> 3 (PENDING_PRODUCTS)
+         3 (DELIVERED) -> 4 (CLOSED)
+         4 (CANCELLED) -> 2 (CANCELED)
+         
+         Must be done in correct order to avoid conflicts:
+         First move 4->temp, then 3->4, 2->3, temp->2
+    -->
+    <changeSet id="40-2" author="yambo">
+        <!-- Step 1: Move CANCELLED(4) to temp value 99 -->
+        <sql>UPDATE "order" SET status = 99 WHERE status = 4;</sql>
+        <!-- Step 2: Move DELIVERED(3) to CLOSED(4) -->
+        <sql>UPDATE "order" SET status = 4 WHERE status = 3;</sql>
+        <!-- Step 3: Move IN_PROGRESS(2) to PENDING_PRODUCTS(3) -->
+        <sql>UPDATE "order" SET status = 3 WHERE status = 2;</sql>
+        <!-- Step 4: Move temp(99) to CANCELED(2) -->
+        <sql>UPDATE "order" SET status = 2 WHERE status = 99;</sql>
+        <comment>Migrate order status ordinal values from old enum to new enum</comment>
+    </changeSet>
+
+    <!-- Migrate existing family_product statuses:
+         Old: ACTIVE(0), COMPLETED(1), ARCHIVED(2)
+         New: OPEN(0), ORDER_CLOSED(1), PENDING_FABRICATION(2), TO_BE_DELIVERED(3), DELIVERED(4), CANCELED(5)
+         
+         Mapping:
+         0 (ACTIVE) -> 0 (OPEN) - no change needed
+         1 (COMPLETED) -> 4 (DELIVERED)
+         2 (ARCHIVED) -> 4 (DELIVERED) - treat archived as delivered
+    -->
+    <changeSet id="40-3" author="yambo">
+        <sql>UPDATE family_product SET status = 4 WHERE status = 1;</sql>
+        <sql>UPDATE family_product SET status = 4 WHERE status = 2;</sql>
+        <comment>Migrate family_product status ordinal values from old enum to new enum</comment>
+    </changeSet>
+
+</databaseChangeLog>

@@ -5,6 +5,8 @@ import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.enums.FamilyProductStatus;
+import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -29,6 +31,7 @@ public class FamilyProductService {
     private final FamilyProductRepository familyProductRepository;
     private final ProfileRepository profileRepository;
     private final ProjectRepository projectRepository;
+    private final OrderService orderService;
 
     @Transactional
     public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms,
@@ -173,5 +176,63 @@ public class FamilyProductService {
     public List<FamilyProduct> getFamilyProductsByProfile(@NonNull String profileId) {
         Specification<FamilyProduct> spec = FamilyProductSpecifications.hasProfileId(profileId);
         return familyProductRepository.findAll(spec);
+    }
+
+    /**
+     * Update family product status and propagate to all order products.
+     * Validates allowed status transitions.
+     */
+    @Transactional
+    public FamilyProduct updateFamilyProductStatus(@NonNull String id, @NonNull FamilyProductStatus status) {
+        FamilyProduct familyProduct = getFamilyProductById(id);
+
+        FamilyProductStatus currentStatus = familyProduct.getStatus();
+        if (currentStatus == status) {
+            return familyProduct;
+        }
+
+        validateStatusTransition(currentStatus, status);
+
+        familyProduct.setStatus(status);
+        FamilyProduct saved = familyProductRepository.save(familyProduct);
+
+        // Propagate status to order products
+        OrderProductStatus orderProductStatus = OrderProductStatus.fromFamilyProductStatus(status);
+        orderService.updateOrderProductStatusByFamilyProduct(id, orderProductStatus);
+
+        return saved;
+    }
+
+    /**
+     * Close expired OPEN drops.
+     * Called by the scheduler when endTms has passed and the status is still OPEN.
+     */
+    @Transactional
+    public void closeExpiredDrops() {
+        List<FamilyProduct> expiredDrops = familyProductRepository
+                .findByStatusAndEndTmsBefore(FamilyProductStatus.OPEN, LocalDateTime.now());
+
+        for (FamilyProduct drop : expiredDrops) {
+            drop.setStatus(FamilyProductStatus.ORDER_CLOSED);
+            familyProductRepository.save(drop);
+
+            OrderProductStatus orderProductStatus = OrderProductStatus.fromFamilyProductStatus(FamilyProductStatus.ORDER_CLOSED);
+            orderService.updateOrderProductStatusByFamilyProduct(drop.getId(), orderProductStatus);
+        }
+    }
+
+    private void validateStatusTransition(FamilyProductStatus from, FamilyProductStatus to) {
+        boolean valid = switch (from) {
+            case OPEN -> to == FamilyProductStatus.ORDER_CLOSED || to == FamilyProductStatus.CANCELED;
+            case ORDER_CLOSED -> to == FamilyProductStatus.PENDING_FABRICATION || to == FamilyProductStatus.CANCELED;
+            case PENDING_FABRICATION -> to == FamilyProductStatus.TO_BE_DELIVERED || to == FamilyProductStatus.CANCELED;
+            case TO_BE_DELIVERED -> to == FamilyProductStatus.DELIVERED || to == FamilyProductStatus.CANCELED;
+            case DELIVERED, CANCELED -> false;
+        };
+
+        if (!valid) {
+            throw new BadRequestException(
+                    String.format("Cannot transition from %s to %s", from, to));
+        }
     }
 }

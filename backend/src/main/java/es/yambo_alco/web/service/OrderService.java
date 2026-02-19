@@ -3,7 +3,10 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
+import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
 import es.yambo_alco.web.repository.ProductRepository;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +38,7 @@ public class OrderService {
     private final OrderProductRepository orderProductRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final IssueRepository issueRepository;
     private final AuthService authService;
     private final MailService mailService;
 
@@ -58,7 +63,7 @@ public class OrderService {
 
         Order order = Order.builder()
                 .customerId(customerId)
-                .status(OrderStatus.PENDING_CONFIRMATION)
+                .status(OrderStatus.PENDING_PAYMENT)
                 .createdAt(now)
                 .build();
 
@@ -66,11 +71,12 @@ public class OrderService {
 
         for (OrderProduct op : orderProducts) {
             op.setOrderId(order.getId());
+            op.setStatus(OrderProductStatus.OPEN);
             orderProductRepository.save(op);
         }
 
         try {
-            sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_CONFIRMATION);
+            sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_PAYMENT);
         } catch (Exception e) {
             log.error("Failed to send order creation email for order: {}. Order created successfully.", order.getId(),
                     e);
@@ -184,23 +190,30 @@ public class OrderService {
     public Order updateOrderStatus(@NonNull String orderId, @NonNull OrderStatus status) {
         Order order = getOrderById(orderId);
 
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new BadRequestException("Cannot update status of cancelled order");
+        if (order.getStatus() == OrderStatus.CANCELED) {
+            throw new BadRequestException("Cannot update status of canceled order");
         }
-        if (order.getStatus() == OrderStatus.DELIVERED && status != OrderStatus.DELIVERED) {
-            throw new BadRequestException("Cannot change status of delivered order");
+        if (order.getStatus() == OrderStatus.CLOSED) {
+            throw new BadRequestException("Cannot change status of closed order");
+        }
+        if (status == OrderStatus.CANCELED && order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new BadRequestException("Order can only be canceled when pending payment");
         }
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(status);
-        if ((status == OrderStatus.DELIVERED || status == OrderStatus.CANCELLED) && order.getClosedAt() == null) {
+        if ((status == OrderStatus.CLOSED || status == OrderStatus.CANCELED) && order.getClosedAt() == null) {
             order.setClosedAt(LocalDateTime.now());
         }
         Order savedOrder = orderRepository.save(order);
 
         if (previousStatus != status) {
             try {
-                sendOrderStatusUpdateEmail(order, status);
+                if (status == OrderStatus.CANCELED) {
+                    sendOrderCancelEmail(order, true);
+                } else {
+                    sendOrderStatusUpdateEmail(order, status);
+                }
             } catch (Exception e) {
                 log.error(
                         "Failed to send order status update email for order: {}. Status update completed successfully.",
@@ -255,6 +268,53 @@ public class OrderService {
                 totalPrice);
 
         log.info("Order status update email sent for order: {} to user: {}", order.getId(), user.getEmail());
+    }
+
+    private void sendOrderCancelEmail(Order order, boolean canceledByAdmin) {
+        User user = userRepository.findById(order.getCustomerId())
+                .orElse(null);
+
+        if (user == null) {
+            log.warn("Cannot send cancellation email for order {}: user {} not found", order.getId(),
+                    order.getCustomerId());
+            return;
+        }
+
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            log.warn("Cannot send cancellation email for order {}: user {} has no email", order.getId(),
+                    order.getCustomerId());
+            return;
+        }
+
+        List<OrderProduct> orderProducts = getOrderProducts(order.getId());
+        List<MailService.OrderProductInfo> productInfos = orderProducts.stream()
+                .map(op -> {
+                    Product product = productRepository.findById(op.getProductId()).orElse(null);
+                    String productName = product != null ? product.getName() : "Unknown Product";
+                    String configuration = formatConfiguration(op.getConfiguration(), product);
+                    return new MailService.OrderProductInfo(
+                            productName,
+                            op.getQuantity(),
+                            op.getPrice(),
+                            configuration);
+                })
+                .collect(Collectors.toList());
+
+        BigDecimal totalPrice = orderProducts.stream()
+                .map(op -> op.getPrice().multiply(new BigDecimal(op.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        mailService.sendOrderCanceled(
+                user.getEmail(),
+                user.getName(),
+                order.getId(),
+                order.getCreatedAt(),
+                productInfos,
+                totalPrice,
+                canceledByAdmin);
+
+        log.info("Order cancellation email sent for order: {} to user: {} (canceledByAdmin: {})",
+                order.getId(), user.getEmail(), canceledByAdmin);
     }
 
     private String formatConfiguration(String configurationJson, Product product) {
@@ -331,18 +391,25 @@ public class OrderService {
     }
 
     @Transactional
-    public Order cancelOrder(@NonNull String orderId) {
+    public Order cancelOrder(@NonNull String orderId, boolean canceledByAdmin) {
         Order order = getOrderById(orderId);
 
-        if (order.getStatus() == OrderStatus.DELIVERED) {
-            throw new BadRequestException("Cannot cancel delivered order");
-        }
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new BadRequestException("Order is already cancelled");
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new BadRequestException("Order can only be canceled when pending payment");
         }
 
-        order.setStatus(OrderStatus.CANCELLED);
-        return orderRepository.save(order);
+        order.setStatus(OrderStatus.CANCELED);
+        order.setClosedAt(LocalDateTime.now());
+        Order savedOrder = orderRepository.save(order);
+
+        try {
+            sendOrderCancelEmail(order, canceledByAdmin);
+        } catch (Exception e) {
+            log.error("Failed to send order cancellation email for order: {}. Cancellation completed successfully.",
+                    orderId, e);
+        }
+
+        return savedOrder;
     }
 
     public List<Order> getOrdersByCustomer(@NonNull String customerId) {
@@ -356,16 +423,131 @@ public class OrderService {
                 es.yambo_alco.web.repository.spec.OrderProductSpecifications.orderIdEquals(orderId));
     }
 
+    public boolean hasOpenIssues(@NonNull String orderId) {
+        List<Issue> issues = issueRepository.findByOrderId(orderId);
+        return issues.stream().anyMatch(issue -> {
+            IssueStatus is = issue.getStatus();
+            return is == IssueStatus.OPEN || is == IssueStatus.IN_PROGRESS || is == IssueStatus.REOPENED;
+        });
+    }
+
     @Transactional
     public void deleteOrder(@NonNull String orderId) {
         Order order = getOrderById(orderId);
 
-        if (order.getStatus() == OrderStatus.DELIVERED) {
-            throw new BadRequestException("Cannot delete delivered order");
+        if (order.getStatus() == OrderStatus.CLOSED) {
+            throw new BadRequestException("Cannot delete closed order");
         }
 
         // Delete order products first (cascade should handle this, but being explicit)
         orderProductRepository.deleteByOrderId(orderId);
         orderRepository.delete(order);
+    }
+
+    /**
+     * Check if an order should be auto-closed.
+     * An order is closed when all products are delivered and no ordered product has an open issue.
+     */
+    @Transactional
+    public void checkAndCloseOrder(@NonNull String orderId) {
+        Order order = getOrderById(orderId);
+
+        if (order.getStatus() == OrderStatus.CLOSED || order.getStatus() == OrderStatus.CANCELED) {
+            return;
+        }
+
+        List<OrderProduct> orderProducts = getOrderProducts(orderId);
+        if (orderProducts.isEmpty()) {
+            return;
+        }
+
+        boolean allDelivered = orderProducts.stream()
+                .allMatch(op -> op.getStatus() == OrderProductStatus.DELIVERED);
+
+        if (!allDelivered) {
+            return;
+        }
+
+        // Check no open issues exist for any order product
+        List<Issue> issues = issueRepository.findByOrderId(orderId);
+        boolean hasOpenIssues = issues.stream()
+                .anyMatch(issue -> {
+                    IssueStatus is = issue.getStatus();
+                    return is == IssueStatus.OPEN || is == IssueStatus.IN_PROGRESS || is == IssueStatus.REOPENED;
+                });
+
+        if (hasOpenIssues) {
+            return;
+        }
+
+        order.setStatus(OrderStatus.CLOSED);
+        order.setClosedAt(LocalDateTime.now());
+        orderRepository.save(order);
+
+        try {
+            sendOrderStatusUpdateEmail(order, OrderStatus.CLOSED);
+        } catch (Exception e) {
+            log.error("Failed to send order closed email for order: {}.", orderId, e);
+        }
+    }
+
+    /**
+     * Update all order product statuses for products belonging to a given family product.
+     * Called when the family product status changes.
+     */
+    @Transactional
+    public void updateOrderProductStatusByFamilyProduct(@NonNull String familyProductId,
+            @NonNull OrderProductStatus newStatus) {
+        List<Product> products = productRepository.findAll(
+                (root, query, cb) -> cb.equal(root.get("familyProduct").get("id"), familyProductId));
+
+        Set<String> productIds = products.stream()
+                .map(Product::getId)
+                .collect(Collectors.toSet());
+
+        if (productIds.isEmpty()) {
+            return;
+        }
+
+        List<OrderProduct> orderProducts = orderProductRepository.findAll(
+                (root, query, cb) -> root.get("productId").in(productIds));
+
+        Set<String> affectedOrderIds = new java.util.HashSet<>();
+
+        for (OrderProduct op : orderProducts) {
+            // Don't update canceled order products
+            if (op.getStatus() == OrderProductStatus.CANCELED) {
+                continue;
+            }
+            op.setStatus(newStatus);
+            orderProductRepository.save(op);
+            affectedOrderIds.add(op.getOrderId());
+        }
+
+        // When drop moves to fabrication or beyond, transition orders from PAYMENT_CONFIRMED to PENDING_PRODUCTS
+        if (newStatus == OrderProductStatus.PENDING_FABRICATION
+                || newStatus == OrderProductStatus.TO_BE_DELIVERED
+                || newStatus == OrderProductStatus.DELIVERED) {
+            for (String orderId : affectedOrderIds) {
+                Order order = orderRepository.findById(orderId).orElse(null);
+                if (order != null && order.getStatus() == OrderStatus.PAYMENT_CONFIRMED) {
+                    order.setStatus(OrderStatus.PENDING_PRODUCTS);
+                    orderRepository.save(order);
+
+                    try {
+                        sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_PRODUCTS);
+                    } catch (Exception e) {
+                        log.error("Failed to send order status update email for order: {}", orderId, e);
+                    }
+                }
+            }
+        }
+
+        // Check if any affected orders should be auto-closed
+        if (newStatus == OrderProductStatus.DELIVERED) {
+            for (String orderId : affectedOrderIds) {
+                checkAndCloseOrder(orderId);
+            }
+        }
     }
 }

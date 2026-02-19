@@ -38,7 +38,7 @@ public class FamilyProduct {
     @Builder.Default
     @Column(nullable = false)
     @Enumerated(EnumType.ORDINAL)
-    private FamilyProductStatus status = FamilyProductStatus.ACTIVE;
+    private FamilyProductStatus status = FamilyProductStatus.OPEN;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", nullable = false, unique = true)

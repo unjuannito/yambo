@@ -86,7 +86,7 @@ class IssueServiceTest_Comprehensive {
         testOrder = Order.builder()
                 .id(testOrderId)
                 .customerId(testUserId)
-                .status(OrderStatus.DELIVERED)
+                .status(OrderStatus.CLOSED)
                 .closedAt(LocalDateTime.now().minusDays(10))
                 .build();
 
@@ -189,7 +189,7 @@ class IssueServiceTest_Comprehensive {
         Order closedOrder = Order.builder()
                 .id(testOrderId)
                 .customerId(testUserId)
-                .status(OrderStatus.DELIVERED)
+                .status(OrderStatus.CLOSED)
                 .closedAt(LocalDateTime.now().minusDays(40))
                 .build();
 

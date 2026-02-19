@@ -1,9 +1,12 @@
 package es.yambo_alco.web.model.enums;
 
 public enum FamilyProductStatus {
-    ACTIVE(0),
-    COMPLETED(1),
-    ARCHIVED(2);
+    OPEN(0),
+    ORDER_CLOSED(1),
+    PENDING_FABRICATION(2),
+    TO_BE_DELIVERED(3),
+    DELIVERED(4),
+    CANCELED(5);
 
     private final int value;
 

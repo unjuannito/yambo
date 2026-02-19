@@ -90,7 +90,7 @@ class OrderControllerTest {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
-                .status(OrderStatus.PENDING_CONFIRMATION)
+                .status(OrderStatus.PENDING_PAYMENT)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -135,7 +135,7 @@ class OrderControllerTest {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
-                .status(OrderStatus.CONFIRMED)
+                .status(OrderStatus.PAYMENT_CONFIRMED)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -147,7 +147,7 @@ class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("ORD001"))
                 .andExpect(jsonPath("$.content[0].user.name").value("Test User"))
-                .andExpect(jsonPath("$.content[0].status").value("CONFIRMED"));
+                .andExpect(jsonPath("$.content[0].status").value("PAYMENT_CONFIRMED"));
     }
 
     @Test
@@ -156,7 +156,7 @@ class OrderControllerTest {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
-                .status(OrderStatus.CONFIRMED)
+                .status(OrderStatus.PAYMENT_CONFIRMED)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -168,7 +168,7 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.id").value("ORD001"))
                 .andExpect(jsonPath("$.user.name").value("Test User"))
                 .andExpect(jsonPath("$.user.email").value("test@example.com"))
-                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+                .andExpect(jsonPath("$.status").value("PAYMENT_CONFIRMED"));
     }
 
     @Test
@@ -177,15 +177,15 @@ class OrderControllerTest {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
-                .status(OrderStatus.IN_PROGRESS)
+                .status(OrderStatus.PENDING_PRODUCTS)
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(orderService.updateOrderStatus("ORD001", OrderStatus.IN_PROGRESS)).thenReturn(order);
+        when(orderService.updateOrderStatus("ORD001", OrderStatus.PENDING_PRODUCTS)).thenReturn(order);
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 
         String payload = """
-                {"status": "IN_PROGRESS"}
+                {"status": "PENDING_PRODUCTS"}
                 """;
 
         mockMvc.perform(put("/orders/ORD001/status")
@@ -193,7 +193,7 @@ class OrderControllerTest {
                 .content(payload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.name").value("Test User"))
-                .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+                .andExpect(jsonPath("$.status").value("PENDING_PRODUCTS"));
     }
 
     @Test
@@ -205,12 +205,41 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser
+    void cancelMyOrder_AsOwner_ShouldReturnCanceledOrder() throws Exception {
+        User user = User.builder().id("USER001").build();
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+        Order canceledOrder = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.CANCELED)
+                .createdAt(LocalDateTime.now())
+                .closedAt(LocalDateTime.now())
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(orderService.getOrderById("ORD001")).thenReturn(order);
+        when(orderService.cancelOrder("ORD001", false)).thenReturn(canceledOrder);
+        when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
+
+        mockMvc.perform(put("/orders/my/ORD001/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ORD001"))
+                .andExpect(jsonPath("$.status").value("CANCELED"));
+    }
+
+    @Test
+    @WithMockUser
     void getMyOrders_WithAuth_ShouldReturnOrders() throws Exception {
         User user = User.builder().id("USER001").build();
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
-                .status(OrderStatus.CONFIRMED)
+                .status(OrderStatus.PAYMENT_CONFIRMED)
                 .createdAt(LocalDateTime.now())
                 .build();
 

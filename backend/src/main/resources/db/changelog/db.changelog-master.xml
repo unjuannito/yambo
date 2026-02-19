@@ -49,4 +49,5 @@
     <include file="db/changelog/changes/37-issue-order-products.xml"/>
     <include file="db/changelog/changes/38-order-closed-at.xml"/>
     <include file="db/changelog/changes/39-issue-creation-window-setting.xml"/>
+    <include file="db/changelog/changes/40-order-product-status-and-status-migration.xml"/>
 </databaseChangeLog>

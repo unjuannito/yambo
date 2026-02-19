@@ -137,21 +137,21 @@ public class HtmlMailService implements MailService {
 
     private String getSubjectForStatus(OrderStatus status) {
         return switch (status) {
-            case PENDING_CONFIRMATION -> "Pedido Pendiente de Pago - Yambo";
-            case CONFIRMED -> "Pedido Confirmado - Yambo";
-            case IN_PROGRESS -> "Pedido en Preparación - Yambo";
-            case DELIVERED -> "Pedido Entregado - Yambo";
-            case CANCELLED -> "Pedido Cancelado - Yambo";
+            case PENDING_PAYMENT -> "Pedido Pendiente de Pago - Yambo";
+            case PAYMENT_CONFIRMED -> "Pago Confirmado - Yambo";
+            case CANCELED -> "Pedido Cancelado - Yambo";
+            case PENDING_PRODUCTS -> "Pedido en Preparación - Yambo";
+            case CLOSED -> "Pedido Completado - Yambo";
         };
     }
 
     private String getTemplateForStatus(OrderStatus status) {
         return switch (status) {
-            case PENDING_CONFIRMATION -> "emails/order-pending-payment";
-            case CONFIRMED -> "emails/order-confirmed";
-            case IN_PROGRESS -> "emails/order-in-progress";
-            case DELIVERED -> "emails/order-delivered";
-            case CANCELLED -> "emails/order-cancelled";
+            case PENDING_PAYMENT -> "emails/order-pending-payment";
+            case PAYMENT_CONFIRMED -> "emails/order-confirmed";
+            case PENDING_PRODUCTS -> "emails/order-in-progress";
+            case CLOSED -> "emails/order-delivered";
+            case CANCELED -> "emails/order-cancelled";
         };
     }
 
@@ -161,10 +161,12 @@ public class HtmlMailService implements MailService {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
 
-        if (status == OrderStatus.PENDING_CONFIRMATION) {
-            sb.append("Hemos recibido tu pedido. Para completar el proceso, realiza el pago.\n\n");
-        } else {
-            sb.append("Tu pedido ha sido actualizado.\n\n");
+        switch (status) {
+            case PENDING_PAYMENT -> sb.append("Hemos recibido tu pedido. Para completar el proceso, realiza el pago.\n\n");
+            case PAYMENT_CONFIRMED -> sb.append("Tu pago ha sido confirmado y tu pedido será procesado en breve.\n\n");
+            case PENDING_PRODUCTS -> sb.append("Tu pedido está ahora en preparación. Nuestro equipo está trabajando en él.\n\n");
+            case CLOSED -> sb.append("¡Buenas noticias! Tu pedido ha sido entregado exitosamente.\n\n");
+            case CANCELED -> sb.append("Tu pedido ha sido cancelado.\n\n");
         }
 
         sb.append("Detalles del Pedido:\n");
@@ -183,7 +185,7 @@ public class HtmlMailService implements MailService {
         }
         sb.append("\nTotal: ").append(totalPrice).append(" €\n");
 
-        if (status == OrderStatus.PENDING_CONFIRMATION) {
+        if (status == OrderStatus.PENDING_PAYMENT) {
             String iban = settingsService.getIban();
             String legalName = settingsService.getOrganizationLegalName();
             String paymentReference = generatePaymentReference(orderDate, orderId);
@@ -199,13 +201,90 @@ public class HtmlMailService implements MailService {
         return sb.toString();
     }
 
+    @Override
+    public void sendOrderCanceled(String to, String userName, String orderId,
+            LocalDateTime orderDate, List<OrderProductInfo> products,
+            BigDecimal totalPrice, boolean canceledByAdmin) {
+        try {
+            String fromEmail = settingsService.getEmailFrom();
+            String fromName = settingsService.getEmailFromName();
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, fromName);
+            helper.setTo(to);
+            helper.setSubject("Pedido Cancelado - Yambo");
+
+            Context context = new Context();
+            context.setVariable("userName", userName);
+            context.setVariable("orderId", orderId);
+            context.setVariable("orderDate", orderDate);
+            context.setVariable("products", products);
+            context.setVariable("totalPrice", totalPrice);
+            context.setVariable("year", orderDate.getYear());
+            context.setVariable("canceledByAdmin", canceledByAdmin);
+
+            String htmlContent = templateEngine.process("emails/order-cancelled", context);
+
+            String plainText = createPlainTextCancelNotification(userName, orderId, orderDate, products, totalPrice, canceledByAdmin);
+
+            helper.setText(plainText, htmlContent);
+
+            mailSender.send(message);
+            log.info("Order canceled email sent successfully to: {} for order: {}", to, orderId);
+        } catch (MessagingException e) {
+            log.error("Failed to send order canceled email to: {} for order: {}", to, orderId, e);
+            throw new RuntimeException("Failed to send order canceled email", e);
+        } catch (Exception e) {
+            log.error("Unexpected error sending order canceled email to: {} for order: {}", to, orderId, e);
+            throw new RuntimeException("Failed to send order canceled email", e);
+        }
+    }
+
+    private String createPlainTextCancelNotification(String userName, String orderId,
+            LocalDateTime orderDate, List<OrderProductInfo> products,
+            BigDecimal totalPrice, boolean canceledByAdmin) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Hola ").append(userName).append(",\n\n");
+
+        if (canceledByAdmin) {
+            sb.append("Tu pedido ha sido cancelado por un administrador.\n\n");
+        } else {
+            sb.append("Has cancelado tu pedido correctamente.\n\n");
+        }
+
+        sb.append("Detalles del Pedido:\n");
+        sb.append("ID: ").append(orderId).append("\n");
+        sb.append("Estado: CANCELADO\n");
+        sb.append("Fecha: ").append(orderDate).append("\n\n");
+        sb.append("Productos:\n");
+        for (OrderProductInfo product : products) {
+            sb.append("- ").append(product.getName())
+                    .append(" x").append(product.getQuantity())
+                    .append(" - ").append(product.getPrice()).append(" €");
+            if (product.getConfiguration() != null && !product.getConfiguration().isEmpty()) {
+                sb.append(" (").append(product.getConfiguration()).append(")");
+            }
+            sb.append("\n");
+        }
+        sb.append("\nTotal: ").append(totalPrice).append(" €\n");
+
+        if (canceledByAdmin) {
+            sb.append("\nSi tienes alguna pregunta sobre la cancelación, no dudes en contactarnos.\n");
+        }
+
+        sb.append("\n¡Gracias!\n");
+        return sb.toString();
+    }
+
     private String getStatusText(OrderStatus status) {
         return switch (status) {
-            case PENDING_CONFIRMATION -> "PENDIENTE DE CONFIRMACIÓN";
-            case CONFIRMED -> "CONFIRMADO";
-            case IN_PROGRESS -> "EN PREPARACIÓN";
-            case DELIVERED -> "ENTREGADO";
-            case CANCELLED -> "CANCELADO";
+            case PENDING_PAYMENT -> "PENDIENTE DE PAGO";
+            case PAYMENT_CONFIRMED -> "PAGO CONFIRMADO";
+            case CANCELED -> "CANCELADO";
+            case PENDING_PRODUCTS -> "PENDIENTE DE PRODUCTOS";
+            case CLOSED -> "COMPLETADO";
         };
     }
 
