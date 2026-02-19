@@ -5,6 +5,7 @@ export interface FamilyProduct {
   name: string;
   startTms: string;
   endTms: string;
+  status?: string;
   active?: boolean;
   profileId?: string | null;
   projectIds?: string[];
@@ -61,6 +62,10 @@ export class FamilyProductService extends ApiService {
 
   public async deleteFamilyProduct(id: string): Promise<void> {
     return await this.delete(`/family-products/${id}`);
+  }
+
+  public async updateFamilyProductStatus(id: string, status: string): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}/status`, { status });
   }
 }
 

@@ -13,6 +13,7 @@ export interface OrderProduct {
     quantity: number;
     price: number;
     configuration: string;
+    status: string;
 }
 
 export interface UserInfo {
@@ -26,6 +27,8 @@ export interface Order {
     user: UserInfo;
     status: string;
     createdAt: string;
+    closedAt?: string;
+    hasOpenIssues: boolean;
     products: OrderProduct[];
 }
 
@@ -76,6 +79,10 @@ export class OrderService extends ApiService {
 
     public async getMyOrders(): Promise<Order[]> {
         return await this.get<Order[]>('/orders/my');
+    }
+
+    public async cancelMyOrder(id: string): Promise<Order> {
+        return await this.put<Order, Record<string, never>>(`/orders/my/${id}/cancel`, {});
     }
 }
 
