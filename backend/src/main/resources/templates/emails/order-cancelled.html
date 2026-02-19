@@ -16,15 +16,19 @@
                             <h1 style="margin: 0; color: #ffffff; font-size: 28px;">✕ Pedido Cancelado</h1>
                         </td>
                     </tr>
-                    
+
                     <!-- Body -->
                     <tr>
                         <td style="padding: 40px 30px;">
                             <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
-                            <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
-                                Tu pedido ha sido <strong>cancelado</strong>.
+                            <p th:if="${canceledByAdmin}" style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                                Tu pedido ha sido <strong>cancelado por un administrador</strong>.
+                                Si tienes alguna pregunta sobre la cancelación, no dudes en contactarnos.
                             </p>
-                            
+                            <p th:unless="${canceledByAdmin}" style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                                Has cancelado tu pedido correctamente.
+                            </p>
+
                             <!-- Order Details -->
                             <div style="background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0;">
                                 <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Detalles del Pedido</h3>
@@ -38,7 +42,7 @@
                                     <strong>Estado:</strong> <span style="color: #e74c3c; font-weight: bold;">CANCELADO</span>
                                 </p>
                             </div>
-                            
+
                             <!-- Products List -->
                             <div style="margin: 20px 0;">
                                 <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Productos</h3>
@@ -68,13 +72,13 @@
                                     </tbody>
                                 </table>
                             </div>
-                            
+
                             <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
                                 Si tienes alguna pregunta, no dudes en contactarnos.
                             </p>
                         </td>
                     </tr>
-                    
+
                     <!-- Footer -->
                     <tr>
                         <td style="background-color: #ecf0f1; padding: 20px 30px; text-align: center;">

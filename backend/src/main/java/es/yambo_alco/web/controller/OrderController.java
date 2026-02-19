@@ -1,13 +1,16 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.OrderService;
+import es.yambo_alco.web.util.PermissionCheckService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -35,6 +38,7 @@ public class OrderController {
     private final AuthService authService;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final PermissionCheckService permissionCheck;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -54,7 +58,7 @@ public class OrderController {
         Order order = orderService.createOrder(currentUser.getId(), orderProducts);
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new OrderResponse(order, products, userRepository, productRepository));
+                .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
     @GetMapping
@@ -68,7 +72,7 @@ public class OrderController {
         Page<Order> orders = orderService.listOrders(customerId, status, startDate, endDate, pageable);
         Page<OrderResponse> response = orders.map(order -> {
             List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-            return new OrderResponse(order, products, userRepository, productRepository);
+            return new OrderResponse(order, products, userRepository, productRepository, orderService);
         });
         return ResponseEntity.ok(response);
     }
@@ -78,7 +82,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> getOrder(@PathVariable String id) {
         Order order = orderService.getOrderById(id);
         List<OrderProduct> products = orderService.getOrderProducts(id);
-        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository));
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
     @PutMapping("/{id}/status")
@@ -88,13 +92,13 @@ public class OrderController {
             @Valid @RequestBody UpdateOrderStatusRequest request) {
         Order order = orderService.updateOrderStatus(id, request.getStatus());
         List<OrderProduct> products = orderService.getOrderProducts(id);
-        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository));
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("@permissionCheck.hasPermission('order', 'delete')")
     public ResponseEntity<Void> cancelOrder(@PathVariable String id) {
-        orderService.cancelOrder(id);
+        orderService.cancelOrder(id, true);
         return ResponseEntity.noContent().build();
     }
 
@@ -107,10 +111,27 @@ public class OrderController {
         List<OrderResponse> response = orders.stream()
                 .map(order -> {
                     List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-                    return new OrderResponse(order, products, userRepository, productRepository);
+                    return new OrderResponse(order, products, userRepository, productRepository, orderService);
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/my/{id}/cancel")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<OrderResponse> cancelMyOrder(@PathVariable String id) {
+        User user = authService.getCurrentUser(true);
+        Order order = orderService.getOrderById(id);
+
+        boolean isOwner = order.getCustomerId().equals(user.getId());
+
+        if (!isOwner) {
+            throw new ForbiddenException("You do not have permission to cancel this order");
+        }
+
+        Order canceledOrder = orderService.cancelOrder(id, false);
+        List<OrderProduct> products = orderService.getOrderProducts(id);
+        return ResponseEntity.ok(new OrderResponse(canceledOrder, products, userRepository, productRepository, orderService));
     }
 
     @Data
@@ -142,13 +163,17 @@ public class OrderController {
         private UserInfo user;
         private OrderStatus status;
         private LocalDateTime createdAt;
+        private LocalDateTime closedAt;
+        private boolean hasOpenIssues;
         private List<OrderProductResponse> products;
 
         public OrderResponse(Order order, List<OrderProduct> products, UserRepository userRepository,
-                ProductRepository productRepository) {
+                ProductRepository productRepository, OrderService orderService) {
             this.id = order.getId();
             this.status = order.getStatus();
             this.createdAt = order.getCreatedAt();
+            this.closedAt = order.getClosedAt();
+            this.hasOpenIssues = orderService.hasOpenIssues(order.getId());
 
             userRepository.findById(order.getCustomerId()).ifPresent(user -> {
                 this.user = new UserInfo(user.getId(), user.getName(), user.getEmail());
@@ -181,6 +206,7 @@ public class OrderController {
         private Integer quantity;
         private BigDecimal price;
         private String configuration;
+        private OrderProductStatus status;
 
         public OrderProductResponse(OrderProduct orderProduct, ProductRepository productRepository) {
             this.id = orderProduct.getId() != null ? orderProduct.getId().toString() : null;
@@ -188,6 +214,7 @@ public class OrderController {
             this.quantity = orderProduct.getQuantity();
             this.price = orderProduct.getPrice();
             this.configuration = orderProduct.getConfiguration();
+            this.status = orderProduct.getStatus();
 
             productRepository.findById(orderProduct.getProductId()).ifPresent(product -> {
                 this.productName = product.getName();

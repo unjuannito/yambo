@@ -66,7 +66,7 @@ public class ConsoleMailService implements MailService {
             log.info("║   - {} x{} - {} €{}", product.getName(), product.getQuantity(), product.getPrice(), configInfo);
         }
         log.info("║ Total: {} €", totalPrice);
-        if (newStatus == OrderStatus.PENDING_CONFIRMATION) {
+        if (newStatus == OrderStatus.PENDING_PAYMENT) {
             String iban = settingsService.getIban();
             String legalName = settingsService.getOrganizationLegalName();
             String paymentReference = generatePaymentReference(orderDate, orderId);
@@ -78,6 +78,29 @@ public class ConsoleMailService implements MailService {
             log.info("║ Concepto: {}", paymentReference);
             log.info("║ Importe: {} €", totalPrice);
         }
+        log.info("╚════════════════════════════════════════════════════════════╝");
+    }
+
+    @Override
+    public void sendOrderCanceled(String to, String userName, String orderId,
+                                   LocalDateTime orderDate, List<OrderProductInfo> products,
+                                   BigDecimal totalPrice, boolean canceledByAdmin) {
+        log.info("╔════════════════════════════════════════════════════════════╗");
+        log.info("║         ORDER CANCELED EMAIL (CONSOLE MODE)                ║");
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ To:            {}", to);
+        log.info("║ User Name:     {}", userName);
+        log.info("║ Order ID:      {}", orderId);
+        log.info("║ Order Date:    {}", orderDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        log.info("║ Canceled By:   {}", canceledByAdmin ? "ADMINISTRADOR" : "USUARIO");
+        log.info("╠════════════════════════════════════════════════════════════╣");
+        log.info("║ Products:");
+        for (OrderProductInfo product : products) {
+            String configInfo = (product.getConfiguration() != null && !product.getConfiguration().isEmpty())
+                ? " (" + product.getConfiguration() + ")" : "";
+            log.info("║   - {} x{} - {} €{}", product.getName(), product.getQuantity(), product.getPrice(), configInfo);
+        }
+        log.info("║ Total: {} €", totalPrice);
         log.info("╚════════════════════════════════════════════════════════════╝");
     }
 

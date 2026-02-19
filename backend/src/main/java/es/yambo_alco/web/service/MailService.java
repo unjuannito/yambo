@@ -13,6 +13,10 @@ public interface MailService {
             LocalDateTime orderDate, OrderStatus newStatus,
             List<OrderProductInfo> products, BigDecimal totalPrice);
 
+    void sendOrderCanceled(String to, String userName, String orderId,
+            LocalDateTime orderDate, List<OrderProductInfo> products,
+            BigDecimal totalPrice, boolean canceledByAdmin);
+
     void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
             String productName, String orderId, String createdBy, LocalDateTime createdAt);
 

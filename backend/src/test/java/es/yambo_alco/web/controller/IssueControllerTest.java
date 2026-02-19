@@ -192,7 +192,7 @@ class IssueControllerTest {
         Order order = Order.builder()
                 .id("ORD00001")
                 .customerId("USR001")
-                .status(OrderStatus.DELIVERED)
+                .status(OrderStatus.CLOSED)
                 .build();
 
         OrderProduct related = OrderProduct.builder()

@@ -1,11 +1,11 @@
 package es.yambo_alco.web.model.enums;
 
 public enum OrderStatus {
-    PENDING_CONFIRMATION(0),
-    CONFIRMED(1),
-    IN_PROGRESS(2),
-    DELIVERED(3),
-    CANCELLED(4);
+    PENDING_PAYMENT(0),
+    PAYMENT_CONFIRMED(1),
+    CANCELED(2),
+    PENDING_PRODUCTS(3),
+    CLOSED(4);
 
     private final int value;
 

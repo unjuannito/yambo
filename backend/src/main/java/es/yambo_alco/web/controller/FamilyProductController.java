@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.service.FamilyProductService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -97,6 +98,15 @@ public class FamilyProductController {
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
 
+    @PutMapping("/{id}/status")
+    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
+    public ResponseEntity<FamilyProductResponse> updateStatus(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateFamilyProductStatusRequest request) {
+        FamilyProduct familyProduct = familyProductService.updateFamilyProductStatus(id, request.getStatus());
+        return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
+    }
+
     @Data
     public static class CreateFamilyProductRequest {
         @NotBlank(message = "Name is required")
@@ -132,11 +142,18 @@ public class FamilyProductController {
     }
 
     @Data
+    public static class UpdateFamilyProductStatusRequest {
+        @NotNull(message = "Status is required")
+        private FamilyProductStatus status;
+    }
+
+    @Data
     public static class FamilyProductResponse {
         private String id;
         private String name;
         private LocalDateTime startTms;
         private LocalDateTime endTms;
+        private FamilyProductStatus status;
         private String profileId;
         private Set<String> projectIds;
         private boolean active;
@@ -146,6 +163,7 @@ public class FamilyProductController {
             this.name = familyProduct.getName();
                 this.startTms = familyProduct.getStartTms();
             this.endTms = familyProduct.getEndTms();
+            this.status = familyProduct.getStatus();
             this.profileId = familyProduct.getProfile() != null
                     ? familyProduct.getProfile().getId()
                     : null;
@@ -155,7 +173,8 @@ public class FamilyProductController {
                     .collect(Collectors.toSet())
                     : Set.of();
                 LocalDateTime now = LocalDateTime.now();
-                this.active = (familyProduct.getStartTms() == null || !familyProduct.getStartTms().isAfter(now))
+                this.active = familyProduct.getStatus() == FamilyProductStatus.OPEN
+                    && (familyProduct.getStartTms() == null || !familyProduct.getStartTms().isAfter(now))
                     && familyProduct.getEndTms().isAfter(now);
         }
     }

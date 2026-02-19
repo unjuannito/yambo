@@ -45,16 +45,18 @@ public class SmtpMailService implements MailService {
     }
 
     @Override
-    public void sendOrderStatusUpdate(String to, String userName, String orderId, 
-                                       LocalDateTime orderDate, OrderStatus newStatus, 
-                                       List<OrderProductInfo> products, BigDecimal totalPrice) {
+    public void sendOrderStatusUpdate(String to, String userName, String orderId,
+            LocalDateTime orderDate, OrderStatus newStatus,
+            List<OrderProductInfo> products, BigDecimal totalPrice) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(to);
             helper.setSubject(getSubjectForStatus(newStatus));
-            helper.setText(createPlainTextOrderNotification(userName, orderId, orderDate, newStatus, products, totalPrice), false);
+            helper.setText(
+                    createPlainTextOrderNotification(userName, orderId, orderDate, newStatus, products, totalPrice),
+                    false);
 
             mailSender.send(message);
             log.info("Order status update email sent successfully to: {} for order: {}", to, orderId);
@@ -63,29 +65,31 @@ public class SmtpMailService implements MailService {
             throw new RuntimeException("Failed to send order status update email", e);
         }
     }
-    
+
     private String getSubjectForStatus(OrderStatus status) {
         return switch (status) {
-            case PENDING_CONFIRMATION -> "Pedido Pendiente de Pago - Yambo";
-            case CONFIRMED -> "Pedido Confirmado - Yambo";
-            case IN_PROGRESS -> "Pedido en Preparación - Yambo";
-            case DELIVERED -> "Pedido Entregado - Yambo";
-            case CANCELLED -> "Pedido Cancelado - Yambo";
+            case PENDING_PAYMENT -> "Pedido Pendiente de Pago - Yambo";
+            case PAYMENT_CONFIRMED -> "Pago Confirmado - Yambo";
+            case CANCELED -> "Pedido Cancelado - Yambo";
+            case PENDING_PRODUCTS -> "Pedido en Preparación - Yambo";
+            case CLOSED -> "Pedido Completado - Yambo";
         };
     }
-    
-    private String createPlainTextOrderNotification(String userName, String orderId, 
-                                                     LocalDateTime orderDate, OrderStatus status, 
-                                                     List<OrderProductInfo> products, BigDecimal totalPrice) {
+
+    private String createPlainTextOrderNotification(String userName, String orderId,
+            LocalDateTime orderDate, OrderStatus status,
+            List<OrderProductInfo> products, BigDecimal totalPrice) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
-        
-        if (status == OrderStatus.PENDING_CONFIRMATION) {
-            sb.append("Hemos recibido tu pedido. Para completar el proceso, realiza el pago.\n\n");
-        } else {
-            sb.append("Tu pedido ha sido actualizado.\n\n");
+
+        switch (status) {
+            case PENDING_PAYMENT -> sb.append("Hemos recibido tu pedido. Para completar el proceso, realiza el pago.\n\n");
+            case PAYMENT_CONFIRMED -> sb.append("Tu pago ha sido confirmado y tu pedido será procesado en breve.\n\n");
+            case PENDING_PRODUCTS -> sb.append("Tu pedido está ahora en preparación. Nuestro equipo está trabajando en él.\n\n");
+            case CLOSED -> sb.append("¡Buenas noticias! Tu pedido ha sido entregado exitosamente.\n\n");
+            case CANCELED -> sb.append("Tu pedido ha sido cancelado.\n\n");
         }
-        
+
         sb.append("Detalles del Pedido:\n");
         sb.append("ID: ").append(orderId).append("\n");
         sb.append("Estado: ").append(getStatusText(status)).append("\n");
@@ -93,51 +97,109 @@ public class SmtpMailService implements MailService {
         sb.append("Productos:\n");
         for (OrderProductInfo product : products) {
             sb.append("- ").append(product.getName())
-              .append(" x").append(product.getQuantity())
-              .append(" - ").append(product.getPrice()).append(" €");
+                    .append(" x").append(product.getQuantity())
+                    .append(" - ").append(product.getPrice()).append(" €");
             if (product.getConfiguration() != null && !product.getConfiguration().isEmpty()) {
                 sb.append(" (").append(product.getConfiguration()).append(")");
             }
             sb.append("\n");
         }
         sb.append("\nTotal: ").append(totalPrice).append(" €\n");
-        
-        if (status == OrderStatus.PENDING_CONFIRMATION) {
+
+        if (status == OrderStatus.PENDING_PAYMENT) {
             String iban = settingsService.getIban();
             String legalName = settingsService.getOrganizationLegalName();
             String paymentReference = generatePaymentReference(orderDate, orderId);
-            
+
             sb.append("\nInstrucciones de Pago:\n");
             sb.append("Beneficiario: ").append(legalName).append("\n");
             sb.append("IBAN: ").append(iban).append("\n");
             sb.append("Concepto: ").append(paymentReference).append("\n");
             sb.append("Importe: ").append(totalPrice).append(" €\n");
         }
-        
+
         sb.append("\n¡Gracias por tu compra!\n");
         return sb.toString();
     }
-    
+
+    @Override
+    public void sendOrderCanceled(String to, String userName, String orderId,
+            LocalDateTime orderDate, List<OrderProductInfo> products,
+            BigDecimal totalPrice, boolean canceledByAdmin) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("Pedido Cancelado - Yambo");
+            helper.setText(createPlainTextCancelNotification(userName, orderId, orderDate, products, totalPrice,
+                    canceledByAdmin), false);
+
+            mailSender.send(message);
+            log.info("Order canceled email sent successfully to: {} for order: {}", to, orderId);
+        } catch (MessagingException e) {
+            log.error("Failed to send order canceled email to: {} for order: {}", to, orderId, e);
+            throw new RuntimeException("Failed to send order canceled email", e);
+        }
+    }
+
+    private String createPlainTextCancelNotification(String userName, String orderId,
+            LocalDateTime orderDate,
+            List<OrderProductInfo> products, BigDecimal totalPrice,
+            boolean canceledByAdmin) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Hola ").append(userName).append(",\n\n");
+
+        if (canceledByAdmin) {
+            sb.append("Tu pedido ha sido cancelado por un administrador.\n\n");
+        } else {
+            sb.append("Has cancelado tu pedido correctamente.\n\n");
+        }
+
+        sb.append("Detalles del Pedido:\n");
+        sb.append("ID: ").append(orderId).append("\n");
+        sb.append("Estado: CANCELADO\n");
+        sb.append("Fecha: ").append(orderDate).append("\n\n");
+        sb.append("Productos:\n");
+        for (OrderProductInfo product : products) {
+            sb.append("- ").append(product.getName())
+                    .append(" x").append(product.getQuantity())
+                    .append(" - ").append(product.getPrice()).append(" €");
+            if (product.getConfiguration() != null && !product.getConfiguration().isEmpty()) {
+                sb.append(" (").append(product.getConfiguration()).append(")");
+            }
+            sb.append("\n");
+        }
+        sb.append("\nTotal: ").append(totalPrice).append(" €\n");
+
+        if (canceledByAdmin) {
+            sb.append("\nSi tienes alguna pregunta sobre la cancelación, no dudes en contactarnos.\n");
+        }
+
+        sb.append("\n¡Gracias!\n");
+        return sb.toString();
+    }
+
     private String getStatusText(OrderStatus status) {
         return switch (status) {
-            case PENDING_CONFIRMATION -> "PENDIENTE DE CONFIRMACIÓN";
-            case CONFIRMED -> "CONFIRMADO";
-            case IN_PROGRESS -> "EN PREPARACIÓN";
-            case DELIVERED -> "ENTREGADO";
-            case CANCELLED -> "CANCELADO";
+            case PENDING_PAYMENT -> "PENDIENTE DE PAGO";
+            case PAYMENT_CONFIRMED -> "PAGO CONFIRMADO";
+            case CANCELED -> "CANCELADO";
+            case PENDING_PRODUCTS -> "PENDIENTE DE PRODUCTOS";
+            case CLOSED -> "COMPLETADO";
         };
     }
 
     @Override
     public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
-                                 String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(to);
             helper.setSubject("Nueva Incidencia Reportada - Yambo");
-            
+
             StringBuilder body = new StringBuilder();
             body.append("Hola ").append(userName).append(",\n\n");
             body.append("Se ha reportado una nueva incidencia con uno de tus productos.\n\n");
@@ -151,7 +213,7 @@ public class SmtpMailService implements MailService {
             body.append("Estado: ABIERTO\n\n");
             body.append("Puedes ver todos los detalles desde tu panel de control.\n\n");
             body.append("¡Gracias!\n");
-            
+
             helper.setText(body.toString(), false);
             mailSender.send(message);
             log.info("Issue created email sent successfully to: {} for issue: {}", to, issueId);
@@ -163,15 +225,15 @@ public class SmtpMailService implements MailService {
 
     @Override
     public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
-                                      String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
-                                      IssueStatus oldStatus, IssueStatus newStatus) {
+            String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
+            IssueStatus oldStatus, IssueStatus newStatus) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(to);
             helper.setSubject("Nuevo Comentario en Incidencia - Yambo");
-            
+
             StringBuilder body = new StringBuilder();
             body.append("Hola ").append(userName).append(",\n\n");
             body.append("Se ha añadido un nuevo comentario a una incidencia de tu pedido.\n\n");
@@ -190,7 +252,7 @@ public class SmtpMailService implements MailService {
             body.append("Fecha: ").append(commentDate).append("\n\n");
             body.append("Puedes responder desde tu panel de control.\n\n");
             body.append("¡Gracias!\n");
-            
+
             helper.setText(body.toString(), false);
             mailSender.send(message);
             log.info("Issue comment added email sent successfully to: {} for issue: {}", to, issueId);
@@ -202,15 +264,15 @@ public class SmtpMailService implements MailService {
 
     @Override
     public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
-                                       String productName, IssueStatus oldStatus, IssueStatus newStatus,
-                                       String changedBy, LocalDateTime changedAt) {
+            String productName, IssueStatus oldStatus, IssueStatus newStatus,
+            String changedBy, LocalDateTime changedAt) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setTo(to);
             helper.setSubject("Estado de Incidencia Actualizado - Yambo");
-            
+
             StringBuilder body = new StringBuilder();
             body.append("Hola ").append(userName).append(",\n\n");
             body.append("El estado de una incidencia ha sido actualizado.\n\n");
@@ -222,7 +284,7 @@ public class SmtpMailService implements MailService {
             body.append("Fecha: ").append(changedAt).append("\n\n");
             body.append("Puedes ver todos los detalles desde tu panel de control.\n\n");
             body.append("¡Gracias!\n");
-            
+
             helper.setText(body.toString(), false);
             mailSender.send(message);
             log.info("Issue status changed email sent successfully to: {} for issue: {}", to, issueId);
