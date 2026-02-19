@@ -16,9 +16,11 @@ import { getIssueOrderedProductIds } from "~/utils/issueUtils";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
-import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
+import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
+import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import { exportOrdersToExcel } from "~/utils/exportOrdersToExcel";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { IssueStatusBadge } from "~/components/issues";
 import { useNavigate } from "react-router";
 
@@ -42,6 +44,8 @@ export default function Orders() {
     const [drops, setDrops] = useState<FamilyProduct[]>([]);
     const [selectedDropIds, setSelectedDropIds] = useState<string[]>([]);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+    const [isCanceling, setIsCanceling] = useState(false);
 
     const [statusOptions] = useState([
         { value: "", label: "Todos" },
@@ -109,6 +113,24 @@ export default function Orders() {
             toast.error(
                 getErrorMessage(err, "Error al actualizar el estado"),
             );
+        }
+    };
+
+    const handleCancelOrder = async () => {
+        if (!orderToCancel) return;
+        setIsCanceling(true);
+        try {
+            await orderService.updateOrderStatus(orderToCancel.id, "CANCELED");
+            toast.success(`Pedido #${orderToCancel.id} cancelado`);
+            setRefreshKey((prev) => prev + 1);
+            if (selectedOrder?.id === orderToCancel.id) {
+                setSelectedOrder(null);
+            }
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al cancelar el pedido"));
+        } finally {
+            setIsCanceling(false);
+            setOrderToCancel(null);
         }
     };
 
@@ -255,13 +277,20 @@ export default function Orders() {
                         order.status as keyof typeof ORDER_STATUS_CONFIG
                     ];
                 return (
-                    <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            config?.className || "bg-gray-100 text-gray-800"
-                        }`}
-                    >
-                        {config?.shortLabel || order.status}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                        <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                config?.className || "bg-gray-100 text-gray-800"
+                            }`}
+                        >
+                            {config?.shortLabel || order.status}
+                        </span>
+                        {order.hasOpenIssues && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                Inc. Pendientes
+                            </span>
+                        )}
+                    </div>
                 );
             },
         },
@@ -313,8 +342,8 @@ export default function Orders() {
                         }
                         className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         disabled={
-                            order.status === "DELIVERED" ||
-                            order.status === "CANCELLED"
+                            order.status === "CLOSED" ||
+                            order.status === "CANCELED"
                         }
                     >
                         {Object.entries(ORDER_STATUS_CONFIG).map(
@@ -332,6 +361,15 @@ export default function Orders() {
                     >
                         Ver
                     </button>
+                    {order.status === "PENDING_PAYMENT" && (
+                        <button
+                            onClick={() => setOrderToCancel(order)}
+                            className="text-red-600 hover:text-red-800 text-xs font-medium"
+                            title="Cancelar pedido"
+                        >
+                            Cancelar
+                        </button>
+                    )}
                 </div>
             ),
         },
@@ -391,6 +429,12 @@ export default function Orders() {
                         </button>
                     </div>
                 </div>
+
+                <StatusWorkflow
+                    title="Flujo de estados del pedido"
+                    config={ORDER_STATUS_CONFIG}
+                    transitions={ORDER_WORKFLOW_TRANSITIONS}
+                />
 
                 {/* Bulk Actions Toolbar */}
                 {selectedOrders.length > 0 && (
@@ -566,18 +610,25 @@ export default function Orders() {
                                     <p className="text-sm text-gray-600">
                                         Estado
                                     </p>
-                                    <span
-                                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                                            ORDER_STATUS_CONFIG[
+                                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                                        <span
+                                            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                                                ORDER_STATUS_CONFIG[
+                                                    selectedOrder.status as keyof typeof ORDER_STATUS_CONFIG
+                                                ]?.className ||
+                                                "bg-gray-100 text-gray-800"
+                                            }`}
+                                        >
+                                            {ORDER_STATUS_CONFIG[
                                                 selectedOrder.status as keyof typeof ORDER_STATUS_CONFIG
-                                            ]?.className ||
-                                            "bg-gray-100 text-gray-800"
-                                        }`}
-                                    >
-                                        {ORDER_STATUS_CONFIG[
-                                            selectedOrder.status as keyof typeof ORDER_STATUS_CONFIG
-                                        ]?.shortLabel || selectedOrder.status}
-                                    </span>
+                                            ]?.shortLabel || selectedOrder.status}
+                                        </span>
+                                        {selectedOrder.hasOpenIssues && (
+                                            <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                                                Incidencias Pendientes
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-600">
@@ -732,16 +783,38 @@ export default function Orders() {
                                     €
                                 </span>
                             </div>
-                            <button
-                                onClick={() => setSelectedOrder(null)}
-                                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                            >
-                                Cerrar
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {selectedOrder.status === "PENDING_PAYMENT" && (
+                                    <button
+                                        onClick={() => setOrderToCancel(selectedOrder)}
+                                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                                    >
+                                        Cancelar pedido
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setSelectedOrder(null)}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
+            {/* Cancel Order Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={!!orderToCancel}
+                onClose={() => setOrderToCancel(null)}
+                onConfirm={handleCancelOrder}
+                title="¿Cancelar pedido?"
+                message={`¿Estás seguro de que quieres cancelar el pedido #${orderToCancel?.id ?? ""}? Esta acción no se puede deshacer.`}
+                confirmLabel="Sí, cancelar pedido"
+                cancelLabel="Volver"
+                variant="danger"
+                isLoading={isCanceling}
+            />
         </RequirePermission>
 
     );

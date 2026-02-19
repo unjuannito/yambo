@@ -10,8 +10,9 @@ import { StatCard } from "~/components/common/StatCard";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
-import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
+import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG, ISSUE_WORKFLOW_TRANSITIONS } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
+import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 
 interface AdminIssueListItem {
     issue: Issue;
@@ -237,20 +238,11 @@ function AdminIssuesContent() {
                 </div>
             </div>
 
-            <div className="mb-5 bg-white rounded-xl shadow-sm p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-2">Flujo de trabajo de incidencias</p>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                    <span className="px-2 py-1 rounded bg-red-100 text-red-800">Abierto</span>
-                    <span>→</span>
-                    <span className="px-2 py-1 rounded bg-orange-100 text-orange-800">En progreso</span>
-                    <span>→</span>
-                    <span className="px-2 py-1 rounded bg-green-100 text-green-800">Resuelto</span>
-                    <span>→</span>
-                    <span className="px-2 py-1 rounded bg-slate-200 text-slate-800">Cerrado</span>
-                    <span>↺</span>
-                    <span className="px-2 py-1 rounded bg-violet-100 text-violet-800">Reabierto</span>
-                </div>
-            </div>
+                <StatusWorkflow
+                    title="Flujo de trabajo de incidencias"
+                    config={ISSUE_STATUS_CONFIG}
+                    transitions={ISSUE_WORKFLOW_TRANSITIONS}
+                />
 
             {loading && (
                 <div className="bg-white rounded-lg shadow-md p-8 text-center">

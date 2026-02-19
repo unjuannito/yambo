@@ -95,7 +95,7 @@ export default function ActivitiesPreview() {
             <div key={act.id} className="border rounded-lg p-4 hover:shadow-md transition">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-500">{act.date} · {act.time}</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${act.badgeClass}`}>{act.badge}</span>
+                <span className={`text-xs px-2 py-1 rounded-full text-center ${act.badgeClass}`}>{act.badge}</span>
               </div>
               <h3 className="font-semibold text-lg mb-3">{act.title}</h3>
               <div className="flex items-center mb-4">

@@ -11,10 +11,12 @@ import { getErrorMessage } from "~/types/error";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import type { Route } from "./+types/my-orders";
-import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
+import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
+import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge, IssueForm } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -37,6 +39,8 @@ export default function MyOrdersPage() {
   const [selectedOrderTotal, setSelectedOrderTotal] = useState<number>(0);
   const [issueWindow, setIssueWindow] = useState<IssueReportWindowModel | null>(null);
   const [orderDetail, setOrderDetail] = useState<Order | null>(null);
+  const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -87,6 +91,23 @@ export default function MyOrdersPage() {
     setIssueWindow(null);
     if (orders.length > 0) {
       await loadIssuesForOrders(orders);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!orderToCancel) return;
+    setCancelingOrderId(orderToCancel.id);
+    try {
+      const updated = await orderService.cancelMyOrder(orderToCancel.id);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      if (orderDetail?.id === updated.id) {
+        setOrderDetail(updated);
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, "Error al cancelar el pedido"));
+    } finally {
+      setCancelingOrderId(null);
+      setOrderToCancel(null);
     }
   };
 
@@ -158,6 +179,12 @@ export default function MyOrdersPage() {
         <p className="text-gray-600">Resumen de tus pedidos y sus incidencias</p>
       </div>
 
+      <StatusWorkflow
+        title="Flujo de estados del pedido"
+        config={ORDER_STATUS_CONFIG}
+        transitions={ORDER_WORKFLOW_TRANSITIONS}
+      />
+
       {isLoading && (
         <div className="text-center py-12">
           <LoadingSpinner size="lg" message="Cargando pedidos..." />
@@ -205,11 +232,18 @@ export default function MyOrdersPage() {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
-                }`}>
-                  {ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.label || order.status}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {order.hasOpenIssues && (
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                      Incidencias Pendientes
+                    </span>
+                  )}
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
+                  }`}>
+                    {ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.label || order.status}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
@@ -234,12 +268,21 @@ export default function MyOrdersPage() {
                 >
                   Ver detalles
                 </button>
-                {order.status === "PENDING_CONFIRMATION" && (
+                {order.status === "PENDING_PAYMENT" && (
                   <button
                     onClick={() => handleShowPaymentInstructions(order)}
                     className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                   >
                     Instrucciones de pago
+                  </button>
+                )}
+                {order.status === "PENDING_PAYMENT" && (
+                  <button
+                    onClick={() => setOrderToCancel(order)}
+                    disabled={cancelingOrderId === order.id}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    {cancelingOrderId === order.id ? "Cancelando..." : "Cancelar pedido"}
                   </button>
                 )}
               </div>
@@ -266,6 +309,11 @@ export default function MyOrdersPage() {
                 >
                   Nueva incidencia (varios productos)
                 </button>
+                {orderDetail.hasOpenIssues && (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                    Incidencias Pendientes
+                  </span>
+                )}
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   ORDER_STATUS_CONFIG[orderDetail.status as keyof typeof ORDER_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
                 }`}>
@@ -351,13 +399,22 @@ export default function MyOrdersPage() {
               })}
             </div>
 
-            {orderDetail.status === "PENDING_CONFIRMATION" && (
-              <button
-                onClick={() => handleShowPaymentInstructions(orderDetail)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Ver instrucciones de pago
-              </button>
+            {orderDetail.status === "PENDING_PAYMENT" && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleShowPaymentInstructions(orderDetail)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Ver instrucciones de pago
+                </button>
+                <button
+                  onClick={() => setOrderToCancel(orderDetail)}
+                  disabled={cancelingOrderId === orderDetail.id}
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  {cancelingOrderId === orderDetail.id ? "Cancelando..." : "Cancelar pedido"}
+                </button>
+              </div>
             )}
 
             <div className="flex justify-between items-center border-t pt-3">
@@ -378,6 +435,19 @@ export default function MyOrdersPage() {
           onClose={handleClosePaymentInstructions}
         />
       )}
+
+      {/* Cancel Order Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!orderToCancel}
+        onClose={() => setOrderToCancel(null)}
+        onConfirm={handleCancelOrder}
+        title="¿Cancelar pedido?"
+        message={`¿Estás seguro de que quieres cancelar el pedido #${orderToCancel?.id ?? ""}? Esta acción no se puede deshacer.`}
+        confirmLabel="Sí, cancelar pedido"
+        cancelLabel="Volver"
+        variant="danger"
+        isLoading={!!cancelingOrderId}
+      />
 
       {/* Issue Report Modal */}
       <Modal
