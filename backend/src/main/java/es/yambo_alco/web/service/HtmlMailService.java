@@ -1,14 +1,13 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.config.MailConfig;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -19,26 +18,37 @@ import org.thymeleaf.context.Context;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Primary
-@ConditionalOnBean(JavaMailSender.class)
 @RequiredArgsConstructor
 public class HtmlMailService implements MailService {
 
     private static final Logger log = LoggerFactory.getLogger(HtmlMailService.class);
 
-    private final JavaMailSender mailSender;
+    private final MailConfig mailConfig;
     private final TemplateEngine templateEngine;
     private final SettingsService settingsService;
 
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
 
-    @Override
-    public void sendInvitation(String to, String subject, String body) {
+    // ── Core send helper ─────────────────────────────────────────────────
+
+    /**
+     * Sends an email with both HTML (from a Thymeleaf template) and plain-text
+     * fallback. All public methods delegate here to eliminate boilerplate.
+     */
+    private void send(String to, String subject, String templateName,
+            Map<String, Object> variables, String plainText) {
+        if (!mailConfig.isConfigured()) {
+            log.info("[CONSOLE MODE] Email [{}] to {}: {}", subject, to, plainText);
+            return;
+        }
+
         try {
-            // Get from email and name from database settings
+            JavaMailSender mailSender = mailConfig.getMailSender();
             String fromEmail = settingsService.getEmailFrom();
             String fromName = settingsService.getEmailFromName();
 
@@ -49,151 +59,202 @@ public class HtmlMailService implements MailService {
             helper.setTo(to);
             helper.setSubject(subject);
 
-            String invitationLink = extractInvitationLink(body);
-
-            // Create context with variables for the template
             Context context = new Context();
-            context.setVariable("invitationLink", invitationLink);
-            context.setVariable("expirationHours", expirationHours);
+            context.setVariable("currentYear", java.time.Year.now().getValue());
+            context.setVariable("organizationName", settingsService.getOrganizationName());
+            variables.forEach(context::setVariable);
 
-            String htmlContent = templateEngine.process("emails/invitation", context);
-
-            helper.setText(body, htmlContent);
+            String htmlContent = templateEngine.process(templateName, context);
+            helper.setText(plainText, htmlContent);
 
             mailSender.send(message);
-            log.info("Invitation email sent successfully to: {}", to);
-        } catch (MessagingException e) {
-            log.error("Failed to send invitation email to: {}", to, e);
-            throw new RuntimeException("Failed to send invitation email", e);
+            log.info("Email sent [{}] to: {}", subject, to);
         } catch (Exception e) {
-            log.error("Unexpected error sending email to: {}", to, e);
-            throw new RuntimeException("Failed to send invitation email", e);
+            log.error("Failed to send email [{}] to: {}", subject, to, e);
+            throw new RuntimeException("Failed to send email: " + subject, e);
         }
+    }
+
+    // ── Invitation ───────────────────────────────────────────────────────
+
+    @Override
+    public void sendInvitation(String to, String subject, String body) {
+        send(to, subject, "emails/invitation",
+                Map.of(
+                        "invitationLink", extractInvitationLink(body),
+                        "expirationHours", expirationHours),
+                body);
     }
 
     private String extractInvitationLink(String body) {
-        if (body == null) {
-            return "";
+        if (body == null) return "";
+        for (String word : body.split("\\s+")) {
+            if (word.startsWith("http://") || word.startsWith("https://")) return word;
         }
-
-        String[] words = body.split("\\s+");
-        for (String word : words) {
-            if (word.startsWith("http://") || word.startsWith("https://")) {
-                return word;
-            }
-        }
-
         return "";
     }
+
+    // ── Order status updates ─────────────────────────────────────────────
 
     @Override
     public void sendOrderStatusUpdate(String to, String userName, String orderId,
             LocalDateTime orderDate, OrderStatus newStatus,
             List<OrderProductInfo> products, BigDecimal totalPrice) {
-        try {
-            String fromEmail = settingsService.getEmailFrom();
-            String fromName = settingsService.getEmailFromName();
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        String subject = newStatus.getEmailSubject() + " #" + orderId + " - " + settingsService.getOrganizationName();
 
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
+        send(to, subject, newStatus.getEmailTemplate(),
+                Map.ofEntries(
+                        Map.entry("userName", userName),
+                        Map.entry("orderId", orderId),
+                        Map.entry("orderDate", orderDate),
+                        Map.entry("products", products),
+                        Map.entry("totalPrice", totalPrice),
+                        Map.entry("statusLabel", newStatus.getLabel()),
+                        Map.entry("statusColor", newStatus.getColor()),
+                        Map.entry("headerColor", newStatus.getColor()),
+                        Map.entry("headerIcon", newStatus.getIcon()),
+                        Map.entry("iban", settingsService.getIban()),
+                        Map.entry("legalName", settingsService.getOrganizationLegalName()),
+                        Map.entry("paymentReference", generatePaymentReference(orderDate, orderId))),
+                buildOrderPlainText(userName, orderId, orderDate, newStatus, products, totalPrice));
+    }
 
-            String subject = getSubjectForStatus(newStatus);
-            String template = getTemplateForStatus(newStatus);
+    @Override
+    public void sendOrderCanceled(String to, String userName, String orderId,
+            LocalDateTime orderDate, List<OrderProductInfo> products,
+            BigDecimal totalPrice, boolean canceledByAdmin) {
 
-            helper.setSubject(subject);
+        String subject = OrderStatus.CANCELED.getEmailSubject() + " #" + orderId + " - " + settingsService.getOrganizationName();
 
-            Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("orderId", orderId);
-            context.setVariable("orderDate", orderDate);
-            context.setVariable("products", products);
-            context.setVariable("totalPrice", totalPrice);
-            context.setVariable("year", orderDate.getYear());
+        send(to, subject, "emails/order-cancelled",
+                Map.ofEntries(
+                        Map.entry("userName", userName),
+                        Map.entry("orderId", orderId),
+                        Map.entry("orderDate", orderDate),
+                        Map.entry("products", products),
+                        Map.entry("totalPrice", totalPrice),
+                        Map.entry("statusLabel", OrderStatus.CANCELED.getLabel()),
+                        Map.entry("statusColor", OrderStatus.CANCELED.getColor()),
+                        Map.entry("headerColor", OrderStatus.CANCELED.getColor()),
+                        Map.entry("headerIcon", OrderStatus.CANCELED.getIcon()),
+                        Map.entry("canceledByAdmin", canceledByAdmin)),
+                buildCancelPlainText(userName, orderId, orderDate, products, totalPrice, canceledByAdmin));
+    }
 
-            context.setVariable("iban", settingsService.getIban());
-            context.setVariable("legalName", settingsService.getOrganizationLegalName());
-            context.setVariable("paymentReference", generatePaymentReference(orderDate, orderId));
+    // ── Issues ───────────────────────────────────────────────────────────
 
-            String htmlContent = templateEngine.process(template, context);
+    @Override
+    public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
+            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
 
-            String plainText = createPlainTextOrderNotification(userName, orderId, orderDate, newStatus, products,
-                    totalPrice);
+        String subject = "Nueva Incidencia #" + issueId + " - " + settingsService.getOrganizationName();
 
-            helper.setText(plainText, htmlContent);
+        send(to, subject, "emails/issue-created",
+                Map.of(
+                        "userName", userName,
+                        "issueId", issueId,
+                        "issueTitle", issueTitle,
+                        "productName", productName,
+                        "orderId", orderId,
+                        "createdBy", createdBy,
+                        "createdAt", createdAt,
+                        "issueLink", buildIssueLink(issueId)),
+                buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt));
+    }
 
-            mailSender.send(message);
-            log.info("Order status update email sent successfully to: {} for order: {}", to, orderId);
-        } catch (MessagingException e) {
-            log.error("Failed to send order status update email to: {} for order: {}", to, orderId, e);
-            throw new RuntimeException("Failed to send order status update email", e);
-        } catch (Exception e) {
-            log.error("Unexpected error sending order status update email to: {} for order: {}", to, orderId, e);
-            throw new RuntimeException("Failed to send order status update email", e);
+    @Override
+    public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
+            String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
+            IssueStatus oldStatus, IssueStatus newStatus) {
+
+        boolean statusChanged = oldStatus != null && newStatus != null && oldStatus != newStatus;
+
+        String subject = "Nuevo Comentario en Incidencia #" + issueId + " - " + settingsService.getOrganizationName();
+
+        send(to, subject, "emails/issue-comment-added",
+                Map.ofEntries(
+                        Map.entry("userName", userName),
+                        Map.entry("issueId", issueId),
+                        Map.entry("issueTitle", issueTitle),
+                        Map.entry("productName", productName),
+                        Map.entry("commentAuthor", commentAuthor),
+                        Map.entry("commentText", commentText),
+                        Map.entry("commentDate", commentDate),
+                        Map.entry("statusChanged", statusChanged),
+                        Map.entry("oldStatusText", oldStatus != null ? oldStatus.getLabel() : ""),
+                        Map.entry("newStatusText", newStatus != null ? newStatus.getLabel() : ""),
+                        Map.entry("statusColor", newStatus != null ? newStatus.getColor() : "#3498db"),
+                        Map.entry("issueLink", buildIssueLink(issueId))),
+                buildCommentPlainText(userName, issueId, issueTitle, commentAuthor, commentText,
+                        commentDate, oldStatus, newStatus));
+    }
+
+    @Override
+    public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
+            String productName, IssueStatus oldStatus, IssueStatus newStatus,
+            String changedBy, LocalDateTime changedAt) {
+
+        String subject = "Incidencia #" + issueId + " Actualizada - " + settingsService.getOrganizationName();
+
+        send(to, subject, "emails/issue-status-changed",
+                Map.ofEntries(
+                        Map.entry("userName", userName),
+                        Map.entry("issueId", issueId),
+                        Map.entry("issueTitle", issueTitle),
+                        Map.entry("productName", productName),
+                        Map.entry("oldStatusText", oldStatus.getLabel()),
+                        Map.entry("newStatusText", newStatus.getLabel()),
+                        Map.entry("statusColor", newStatus.getColor()),
+                        Map.entry("headerColor", newStatus.getColor()),
+                        Map.entry("headerIcon", newStatus.getIcon()),
+                        Map.entry("changedBy", changedBy),
+                        Map.entry("changedAt", changedAt),
+                        Map.entry("issueLink", buildIssueLink(issueId))),
+                buildStatusChangedPlainText(userName, issueId, issueTitle, oldStatus, newStatus, changedBy, changedAt));
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+
+    private String buildIssueLink(String issueId) {
+        return settingsService.getFrontendUrl() + "/mi-espacio/incidencias/" + issueId;
+    }
+
+    // ── Plain-text builders ──────────────────────────────────────────────
+
+    private void appendProductList(StringBuilder sb, List<OrderProductInfo> products, BigDecimal totalPrice) {
+        sb.append("Productos:\n");
+        for (OrderProductInfo p : products) {
+            sb.append("- ").append(p.name())
+                    .append(" x").append(p.quantity())
+                    .append(" - ").append(p.price()).append(" €");
+            if (p.configuration() != null && !p.configuration().isEmpty()) {
+                sb.append(" (").append(p.configuration()).append(")");
+            }
+            sb.append("\n");
         }
+        sb.append("\nTotal: ").append(totalPrice).append(" €\n");
     }
 
-    private String getSubjectForStatus(OrderStatus status) {
-        return switch (status) {
-            case PENDING_PAYMENT -> "Pedido Pendiente de Pago - Yambo";
-            case PAYMENT_CONFIRMED -> "Pago Confirmado - Yambo";
-            case CANCELED -> "Pedido Cancelado - Yambo";
-            case PENDING_PRODUCTS -> "Pedido en Preparación - Yambo";
-            case CLOSED -> "Pedido Completado - Yambo";
-        };
-    }
-
-    private String getTemplateForStatus(OrderStatus status) {
-        return switch (status) {
-            case PENDING_PAYMENT -> "emails/order-pending-payment";
-            case PAYMENT_CONFIRMED -> "emails/order-confirmed";
-            case PENDING_PRODUCTS -> "emails/order-in-progress";
-            case CLOSED -> "emails/order-delivered";
-            case CANCELED -> "emails/order-cancelled";
-        };
-    }
-
-    private String createPlainTextOrderNotification(String userName, String orderId,
+    private String buildOrderPlainText(String userName, String orderId,
             LocalDateTime orderDate, OrderStatus status,
             List<OrderProductInfo> products, BigDecimal totalPrice) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
 
-        switch (status) {
-            case PENDING_PAYMENT -> sb.append("Hemos recibido tu pedido. Para completar el proceso, realiza el pago.\n\n");
-            case PAYMENT_CONFIRMED -> sb.append("Tu pago ha sido confirmado y tu pedido será procesado en breve.\n\n");
-            case PENDING_PRODUCTS -> sb.append("Tu pedido está ahora en preparación. Nuestro equipo está trabajando en él.\n\n");
-            case CLOSED -> sb.append("¡Buenas noticias! Tu pedido ha sido entregado exitosamente.\n\n");
-            case CANCELED -> sb.append("Tu pedido ha sido cancelado.\n\n");
-        }
+        sb.append(status.getEmailIntro()).append("\n\n");
 
         sb.append("Detalles del Pedido:\n");
         sb.append("ID: ").append(orderId).append("\n");
-        sb.append("Estado: ").append(getStatusText(status)).append("\n");
+        sb.append("Estado: ").append(status.getLabel()).append("\n");
         sb.append("Fecha: ").append(orderDate).append("\n\n");
-        sb.append("Productos:\n");
-        for (OrderProductInfo product : products) {
-            sb.append("- ").append(product.getName())
-                    .append(" x").append(product.getQuantity())
-                    .append(" - ").append(product.getPrice()).append(" €");
-            if (product.getConfiguration() != null && !product.getConfiguration().isEmpty()) {
-                sb.append(" (").append(product.getConfiguration()).append(")");
-            }
-            sb.append("\n");
-        }
-        sb.append("\nTotal: ").append(totalPrice).append(" €\n");
+        appendProductList(sb, products, totalPrice);
 
         if (status == OrderStatus.PENDING_PAYMENT) {
-            String iban = settingsService.getIban();
-            String legalName = settingsService.getOrganizationLegalName();
-            String paymentReference = generatePaymentReference(orderDate, orderId);
-
             sb.append("\nInstrucciones de Pago:\n");
-            sb.append("Beneficiario: ").append(legalName).append("\n");
-            sb.append("IBAN: ").append(iban).append("\n");
-            sb.append("Concepto: ").append(paymentReference).append("\n");
+            sb.append("Beneficiario: ").append(settingsService.getOrganizationLegalName()).append("\n");
+            sb.append("IBAN: ").append(settingsService.getIban()).append("\n");
+            sb.append("Concepto: ").append(generatePaymentReference(orderDate, orderId)).append("\n");
             sb.append("Importe: ").append(totalPrice).append(" €\n");
         }
 
@@ -201,278 +262,45 @@ public class HtmlMailService implements MailService {
         return sb.toString();
     }
 
-    @Override
-    public void sendOrderCanceled(String to, String userName, String orderId,
-            LocalDateTime orderDate, List<OrderProductInfo> products,
-            BigDecimal totalPrice, boolean canceledByAdmin) {
-        try {
-            String fromEmail = settingsService.getEmailFrom();
-            String fromName = settingsService.getEmailFromName();
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
-            helper.setSubject("Pedido Cancelado - Yambo");
-
-            Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("orderId", orderId);
-            context.setVariable("orderDate", orderDate);
-            context.setVariable("products", products);
-            context.setVariable("totalPrice", totalPrice);
-            context.setVariable("year", orderDate.getYear());
-            context.setVariable("canceledByAdmin", canceledByAdmin);
-
-            String htmlContent = templateEngine.process("emails/order-cancelled", context);
-
-            String plainText = createPlainTextCancelNotification(userName, orderId, orderDate, products, totalPrice, canceledByAdmin);
-
-            helper.setText(plainText, htmlContent);
-
-            mailSender.send(message);
-            log.info("Order canceled email sent successfully to: {} for order: {}", to, orderId);
-        } catch (MessagingException e) {
-            log.error("Failed to send order canceled email to: {} for order: {}", to, orderId, e);
-            throw new RuntimeException("Failed to send order canceled email", e);
-        } catch (Exception e) {
-            log.error("Unexpected error sending order canceled email to: {} for order: {}", to, orderId, e);
-            throw new RuntimeException("Failed to send order canceled email", e);
-        }
-    }
-
-    private String createPlainTextCancelNotification(String userName, String orderId,
+    private String buildCancelPlainText(String userName, String orderId,
             LocalDateTime orderDate, List<OrderProductInfo> products,
             BigDecimal totalPrice, boolean canceledByAdmin) {
         StringBuilder sb = new StringBuilder();
         sb.append("Hola ").append(userName).append(",\n\n");
-
-        if (canceledByAdmin) {
-            sb.append("Tu pedido ha sido cancelado por un administrador.\n\n");
-        } else {
-            sb.append("Has cancelado tu pedido correctamente.\n\n");
-        }
+        sb.append(canceledByAdmin
+                ? "Tu pedido ha sido cancelado por un administrador.\n\n"
+                : "Has cancelado tu pedido correctamente.\n\n");
 
         sb.append("Detalles del Pedido:\n");
         sb.append("ID: ").append(orderId).append("\n");
         sb.append("Estado: CANCELADO\n");
         sb.append("Fecha: ").append(orderDate).append("\n\n");
-        sb.append("Productos:\n");
-        for (OrderProductInfo product : products) {
-            sb.append("- ").append(product.getName())
-                    .append(" x").append(product.getQuantity())
-                    .append(" - ").append(product.getPrice()).append(" €");
-            if (product.getConfiguration() != null && !product.getConfiguration().isEmpty()) {
-                sb.append(" (").append(product.getConfiguration()).append(")");
-            }
-            sb.append("\n");
-        }
-        sb.append("\nTotal: ").append(totalPrice).append(" €\n");
+        appendProductList(sb, products, totalPrice);
 
         if (canceledByAdmin) {
             sb.append("\nSi tienes alguna pregunta sobre la cancelación, no dudes en contactarnos.\n");
         }
-
         sb.append("\n¡Gracias!\n");
         return sb.toString();
     }
 
-    private String getStatusText(OrderStatus status) {
-        return switch (status) {
-            case PENDING_PAYMENT -> "PENDIENTE DE PAGO";
-            case PAYMENT_CONFIRMED -> "PAGO CONFIRMADO";
-            case CANCELED -> "CANCELADO";
-            case PENDING_PRODUCTS -> "PENDIENTE DE PRODUCTOS";
-            case CLOSED -> "COMPLETADO";
-        };
-    }
-
-    @Override
-    public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
+    private String buildIssueCreatedPlainText(String userName, String issueId, String issueTitle,
             String productName, String orderId, String createdBy, LocalDateTime createdAt) {
-        try {
-            String fromEmail = settingsService.getEmailFrom();
-            String fromName = settingsService.getEmailFromName();
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
-            helper.setSubject("Nueva Incidencia Reportada - Yambo");
-
-            Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("issueId", issueId);
-            context.setVariable("issueTitle", issueTitle);
-            context.setVariable("productName", productName);
-            context.setVariable("orderId", orderId);
-            context.setVariable("createdBy", createdBy);
-            context.setVariable("createdAt", createdAt);
-            context.setVariable("issueLink", buildIssueLink(issueId));
-
-            String htmlContent = templateEngine.process("emails/issue-created", context);
-            String plainText = createPlainTextIssueCreated(userName, issueId, issueTitle, productName, orderId,
-                    createdBy, createdAt);
-
-            helper.setText(plainText, htmlContent);
-            mailSender.send(message);
-            log.info("Issue created email sent successfully to: {} for issue: {}", to, issueId);
-        } catch (Exception e) {
-            log.error("Failed to send issue created email to: {} for issue: {}", to, issueId, e);
-            throw new RuntimeException("Failed to send issue created email", e);
-        }
+        return "Hola " + userName + ",\n\n"
+                + "Se ha reportado una nueva incidencia con uno de tus productos.\n\n"
+                + "Detalles de la incidencia:\n"
+                + "ID: " + issueId + "\n"
+                + "Título: " + issueTitle + "\n"
+                + "Producto: " + productName + "\n"
+                + "Pedido: " + orderId + "\n"
+                + "Reportado por: " + createdBy + "\n"
+                + "Fecha: " + createdAt + "\n"
+                + "Estado: ABIERTO\n\n"
+                + "Puedes ver todos los detalles desde tu panel de control.\n\n"
+                + "¡Gracias!\n";
     }
 
-    @Override
-    public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
-            String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
-            IssueStatus oldStatus, IssueStatus newStatus) {
-        try {
-            String fromEmail = settingsService.getEmailFrom();
-            String fromName = settingsService.getEmailFromName();
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
-            helper.setSubject("Nuevo Comentario en Incidencia - Yambo");
-
-            Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("issueId", issueId);
-            context.setVariable("issueTitle", issueTitle);
-            context.setVariable("productName", productName);
-            context.setVariable("commentAuthor", commentAuthor);
-            context.setVariable("commentText", commentText);
-            context.setVariable("commentDate", commentDate);
-            context.setVariable("statusChanged", oldStatus != null && newStatus != null && oldStatus != newStatus);
-            context.setVariable("oldStatusText", oldStatus != null ? getIssueStatusText(oldStatus) : null);
-            context.setVariable("newStatusText", newStatus != null ? getIssueStatusText(newStatus) : null);
-            context.setVariable("statusColor", newStatus != null ? getIssueStatusColor(newStatus) : "#3498db");
-            context.setVariable("issueLink", buildIssueLink(issueId));
-
-            String htmlContent = templateEngine.process("emails/issue-comment-added", context);
-            String plainText = createPlainTextCommentAdded(userName, issueId, issueTitle, commentAuthor, commentText,
-                    commentDate, oldStatus, newStatus);
-
-            helper.setText(plainText, htmlContent);
-            mailSender.send(message);
-            log.info("Issue comment added email sent successfully to: {} for issue: {}", to, issueId);
-        } catch (Exception e) {
-            log.error("Failed to send issue comment added email to: {} for issue: {}", to, issueId, e);
-            throw new RuntimeException("Failed to send issue comment added email", e);
-        }
-    }
-
-    @Override
-    public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
-            String productName, IssueStatus oldStatus, IssueStatus newStatus,
-            String changedBy, LocalDateTime changedAt) {
-        try {
-            String fromEmail = settingsService.getEmailFrom();
-            String fromName = settingsService.getEmailFromName();
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
-            helper.setSubject("Estado de Incidencia Actualizado - Yambo");
-
-            Context context = new Context();
-            context.setVariable("userName", userName);
-            context.setVariable("issueId", issueId);
-            context.setVariable("issueTitle", issueTitle);
-            context.setVariable("productName", productName);
-            context.setVariable("oldStatusText", getIssueStatusText(oldStatus));
-            context.setVariable("newStatusText", getIssueStatusText(newStatus));
-            context.setVariable("statusColor", getIssueStatusColor(newStatus));
-            context.setVariable("headerColor", getIssueStatusHeaderColor(newStatus));
-            context.setVariable("headerIcon", getIssueStatusIcon(newStatus));
-            context.setVariable("changedBy", changedBy);
-            context.setVariable("changedAt", changedAt);
-            context.setVariable("issueLink", buildIssueLink(issueId));
-
-            String htmlContent = templateEngine.process("emails/issue-status-changed", context);
-            String plainText = createPlainTextStatusChanged(userName, issueId, issueTitle, oldStatus, newStatus,
-                    changedBy, changedAt);
-
-            helper.setText(plainText, htmlContent);
-            mailSender.send(message);
-            log.info("Issue status changed email sent successfully to: {} for issue: {}", to, issueId);
-        } catch (Exception e) {
-            log.error("Failed to send issue status changed email to: {} for issue: {}", to, issueId, e);
-            throw new RuntimeException("Failed to send issue status changed email", e);
-        }
-    }
-
-    private String buildIssueLink(String issueId) {
-        String baseUrl = settingsService.getFrontendUrl();
-        return baseUrl + "/mi-espacio/incidencias/" + issueId;
-    }
-
-    private String getIssueStatusText(IssueStatus status) {
-        return switch (status) {
-            case OPEN -> "ABIERTO";
-            case IN_PROGRESS -> "EN PROGRESO";
-            case RESOLVED -> "RESUELTO";
-            case CLOSED -> "CERRADO";
-            case REOPENED -> "REABIERTO";
-        };
-    }
-
-    private String getIssueStatusColor(IssueStatus status) {
-        return switch (status) {
-            case OPEN -> "#e67e22";
-            case IN_PROGRESS -> "#3498db";
-            case RESOLVED -> "#27ae60";
-            case CLOSED -> "#6b7280";
-            case REOPENED -> "#7c3aed";
-        };
-    }
-
-    private String getIssueStatusHeaderColor(IssueStatus status) {
-        return switch (status) {
-            case OPEN -> "#e67e22";
-            case IN_PROGRESS -> "#3498db";
-            case RESOLVED -> "#27ae60";
-            case CLOSED -> "#6b7280";
-            case REOPENED -> "#7c3aed";
-        };
-    }
-
-    private String getIssueStatusIcon(IssueStatus status) {
-        return switch (status) {
-            case OPEN -> "⚠️";
-            case IN_PROGRESS -> "🔄";
-            case RESOLVED -> "✓";
-            case CLOSED -> "🗂️";
-            case REOPENED -> "♻️";
-        };
-    }
-
-    private String createPlainTextIssueCreated(String userName, String issueId, String issueTitle,
-            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Hola ").append(userName).append(",\n\n");
-        sb.append("Se ha reportado una nueva incidencia con uno de tus productos.\n\n");
-        sb.append("Detalles de la incidencia:\n");
-        sb.append("ID: ").append(issueId).append("\n");
-        sb.append("Título: ").append(issueTitle).append("\n");
-        sb.append("Producto: ").append(productName).append("\n");
-        sb.append("Pedido: ").append(orderId).append("\n");
-        sb.append("Reportado por: ").append(createdBy).append("\n");
-        sb.append("Fecha: ").append(createdAt).append("\n");
-        sb.append("Estado: ABIERTO\n\n");
-        sb.append("Puedes ver todos los detalles desde tu panel de control.\n\n");
-        sb.append("¡Gracias!\n");
-        return sb.toString();
-    }
-
-    private String createPlainTextCommentAdded(String userName, String issueId, String issueTitle,
+    private String buildCommentPlainText(String userName, String issueId, String issueTitle,
             String commentAuthor, String commentText, LocalDateTime commentDate,
             IssueStatus oldStatus, IssueStatus newStatus) {
         StringBuilder sb = new StringBuilder();
@@ -485,9 +313,9 @@ public class HtmlMailService implements MailService {
         sb.append(commentText).append("\n\n");
         if (oldStatus != null && newStatus != null && oldStatus != newStatus) {
             sb.append("Cambio de estado: ")
-                    .append(getIssueStatusText(oldStatus))
+                    .append(oldStatus.getLabel())
                     .append(" → ")
-                    .append(getIssueStatusText(newStatus))
+                    .append(newStatus.getLabel())
                     .append("\n\n");
         }
         sb.append("Fecha: ").append(commentDate).append("\n\n");
@@ -496,20 +324,18 @@ public class HtmlMailService implements MailService {
         return sb.toString();
     }
 
-    private String createPlainTextStatusChanged(String userName, String issueId, String issueTitle,
+    private String buildStatusChangedPlainText(String userName, String issueId, String issueTitle,
             IssueStatus oldStatus, IssueStatus newStatus,
             String changedBy, LocalDateTime changedAt) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Hola ").append(userName).append(",\n\n");
-        sb.append("El estado de una incidencia ha sido actualizado.\n\n");
-        sb.append("Detalles de la incidencia:\n");
-        sb.append("ID: ").append(issueId).append("\n");
-        sb.append("Título: ").append(issueTitle).append("\n\n");
-        sb.append("Cambio de estado por ").append(changedBy).append(":\n");
-        sb.append(getIssueStatusText(oldStatus)).append(" → ").append(getIssueStatusText(newStatus)).append("\n");
-        sb.append("Fecha: ").append(changedAt).append("\n\n");
-        sb.append("Puedes ver todos los detalles desde tu panel de control.\n\n");
-        sb.append("¡Gracias!\n");
-        return sb.toString();
+        return "Hola " + userName + ",\n\n"
+                + "El estado de una incidencia ha sido actualizado.\n\n"
+                + "Detalles de la incidencia:\n"
+                + "ID: " + issueId + "\n"
+                + "Título: " + issueTitle + "\n\n"
+                + "Cambio de estado por " + changedBy + ":\n"
+                + oldStatus.getLabel() + " → " + newStatus.getLabel() + "\n"
+                + "Fecha: " + changedAt + "\n\n"
+                + "Puedes ver todos los detalles desde tu panel de control.\n\n"
+                + "¡Gracias!\n";
     }
 }

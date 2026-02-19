@@ -63,8 +63,9 @@ public class InvitationService {
                 .build();
 
         String link = buildInvitationLink(token);
-        String subject = "Invitación a Yambo";
-        String body = "Has sido invitado a registrarte en Yambo. Usa este enlace: " + link + "\nEl enlace expira en "
+        String orgName = settingsService.getOrganizationName();
+        String subject = "Invitación a " + orgName;
+        String body = "Has sido invitado a registrarte en " + orgName + ". Usa este enlace: " + link + "\nEl enlace expira en "
                 + expirationHours + " horas.";
         mailService.sendInvitation(email, subject, body);
 

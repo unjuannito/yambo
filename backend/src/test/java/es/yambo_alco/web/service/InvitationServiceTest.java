@@ -57,6 +57,7 @@ class InvitationServiceTest {
                 mailService, settingsService);
         ReflectionTestUtils.setField(invitationService, "expirationHours", 72L);
         lenient().when(settingsService.getDomain()).thenReturn("http://localhost:5173");
+        lenient().when(settingsService.getOrganizationName()).thenReturn("Yambo");
     }
 
     @Test

@@ -1,5 +1,6 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.config.MailConfig;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.service.SettingsService;
 import jakarta.validation.Valid;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class SettingsController {
 
     private final SettingsService settingsService;
+    private final MailConfig mailConfig;
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
@@ -150,6 +152,7 @@ public class SettingsController {
         if (request.getFromName() != null && !request.getFromName().isBlank()) {
             settingsService.setEmailFromName(request.getFromName());
         }
+        mailConfig.refresh();
         return ResponseEntity.ok("Email configuration updated successfully");
     }
 
@@ -187,6 +190,7 @@ public class SettingsController {
         if (request.getWriteTimeout() != null) {
             settingsService.setEmailSmtpWriteTimeout(request.getWriteTimeout());
         }
+        mailConfig.refresh();
         return ResponseEntity.ok("SMTP advanced configuration updated successfully");
     }
 

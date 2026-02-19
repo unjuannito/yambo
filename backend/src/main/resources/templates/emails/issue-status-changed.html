@@ -6,83 +6,46 @@
     <title>Estado de Incidencia Actualizado</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
-        <tr>
-            <td align="center">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <!-- Header (color changes based on new status) -->
-                    <tr>
-                        <td th:style="'background-color: ' + ${headerColor} + '; padding: 30px; text-align: center;'">
-                            <h1 style="margin: 0; color: #ffffff; font-size: 28px;" th:text="${headerIcon} + ' Estado Actualizado'">✓ Estado Actualizado</h1>
-                        </td>
-                    </tr>
-                    
-                    <!-- Body -->
-                    <tr>
-                        <td style="padding: 40px 30px;">
-                            <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
-                            <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
-                                El estado de una incidencia ha sido actualizado.
-                            </p>
-                            
-                            <!-- Issue Details -->
-                            <div style="background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                                <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Detalles de la incidencia</h3>
-                                <p style="margin: 5px 0; color: #555555; font-size: 14px;">
-                                    <strong>ID de incidencia:</strong> <span th:text="${issueId}"></span>
-                                </p>
-                                <p style="margin: 5px 0; color: #555555; font-size: 14px;">
-                                    <strong>Título:</strong> <span th:text="${issueTitle}"></span>
-                                </p>
-                                <p style="margin: 5px 0; color: #555555; font-size: 14px;">
-                                    <strong>Producto:</strong> <span th:text="${productName}"></span>
-                                </p>
-                            </div>
-                            
-                            <!-- Status Change -->
-                            <div style="background-color: #fff8e1; border-left: 4px solid #f39c12; padding: 15px 20px; margin: 20px 0;">
-                                <p style="margin: 0 0 10px 0; color: #555555; font-size: 14px;">
-                                    <strong>Cambio de estado por <span th:text="${changedBy}"></span></strong>
-                                </p>
-                                <p style="margin: 0 0 10px 0; color: #555555; font-size: 13px;">
-                                    <em th:text="${#temporals.format(changedAt, 'dd/MM/yyyy HH:mm')}"></em>
-                                </p>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <p style="margin: 0; color: #555555; font-size: 15px;">
-                                        <span th:text="${oldStatusText}" style="text-decoration: line-through;">ABIERTO</span>
-                                        <span style="margin: 0 10px;">➜</span>
-                                        <span th:text="${newStatusText}" th:style="'color: ' + ${statusColor} + '; font-weight: bold;'">EN PROGRESO</span>
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <p style="margin: 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
-                                Puedes ver todos los detalles de la incidencia desde tu panel de control.
-                            </p>
-                            
-                            <div style="text-align: center; margin: 30px 0;">
-                                <a th:href="${issueLink}" 
-                                   style="display: inline-block; padding: 15px 30px; background-color: #3498db; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
-                                    Ver incidencia
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    
-                    <!-- Footer -->
-                    <tr>
-                        <td style="background-color: #ecf0f1; padding: 20px 30px; text-align: center;">
-                            <p style="margin: 0; color: #7f8c8d; font-size: 14px;">
-                                Este es un correo automático, por favor no responda a este mensaje.
-                            </p>
-                            <p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 12px;">
-                                &copy; 2025 Yambo. Todos los derechos reservados.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header(${headerColor}, ${headerIcon}, 'Estado Actualizado')}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    El estado de una incidencia ha sido actualizado.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: issueDetails(${issueId}, ${issueTitle}, ${productName})}"/>
+
+                <!-- Status Change -->
+                <div style="background-color: #fff8e1; border-left: 4px solid #f39c12; padding: 15px 20px; margin: 20px 0;">
+                    <p style="margin: 0 0 10px 0; color: #555555; font-size: 14px;">
+                        <strong>Cambio de estado por <span th:text="${changedBy}"></span></strong>
+                    </p>
+                    <p style="margin: 0 0 10px 0; color: #555555; font-size: 13px;">
+                        <em th:text="${#temporals.format(changedAt, 'dd/MM/yyyy HH:mm')}"></em>
+                    </p>
+                    <p style="margin: 0; color: #555555; font-size: 15px;">
+                        <span th:text="${oldStatusText}" style="text-decoration: line-through;">ABIERTO</span>
+                        <span style="margin: 0 10px;">➜</span>
+                        <span th:text="${newStatusText}" th:style="'color: ' + ${statusColor} + '; font-weight: bold;'">EN PROGRESO</span>
+                    </p>
+                </div>
+
+                <p style="margin: 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    Puedes ver todos los detalles de la incidencia desde tu panel de control.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${issueLink}, 'Ver Incidencia', '#3498db')}"/>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
 </body>
 </html>

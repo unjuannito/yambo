@@ -25,6 +25,7 @@ export default function Settings() {
     const [savingTab, setSavingTab] = useState<SettingsTab | null>(null);
 
     // Organization settings
+    const [organizationName, setOrganizationName] = useState("");
     const [organizationLegalName, setOrganizationLegalName] = useState("");
 
     // Application settings
@@ -75,10 +76,11 @@ export default function Settings() {
             ]);
 
             // Load organization settings
+            const nameSetting = allSettings.find(s => s.key === "organization.name");
+            if (nameSetting) setOrganizationName(nameSetting.value);
+
             const legalNameSetting = allSettings.find(s => s.key === "organization.legal_name");
-            if (legalNameSetting) {
-                setOrganizationLegalName(legalNameSetting.value);
-            }
+            if (legalNameSetting) setOrganizationLegalName(legalNameSetting.value);
 
             setDomain(domainValue);
             setIban(ibanValue);
@@ -96,6 +98,7 @@ export default function Settings() {
         try {
             setSavingTab("organization");
             await settingsService.updateSettingsBulk({
+                "organization.name": organizationName,
                 "organization.legal_name": organizationLegalName,
             });
             toast.success("Configuración de la organización guardada correctamente");
@@ -217,6 +220,17 @@ export default function Settings() {
                 {activeTab === "organization" && (
                     <section className="bg-white rounded-lg shadow p-6 space-y-4">
                         <h2 className="text-xl font-semibold">Configuración de la Organización</h2>
+                        <InputComponent
+                            label="Nombre de la Organización"
+                            type="text"
+                            value={organizationName}
+                            onChange={(e) => setOrganizationName(e.target.value)}
+                            placeholder="Yambo"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Nombre corto que se usará en los asuntos de los correos electrónicos.
+                        </p>
                         <InputComponent
                             label="Nombre Legal de la Organización"
                             type="text"

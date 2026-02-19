@@ -1058,7 +1058,7 @@ class OrderServiceTest {
         // Verify that configuration only contains valid option (Size) and shows label (XL) not ID (xl)
         List<MailService.OrderProductInfo> productInfos = captor.getValue();
         assertEquals(1, productInfos.size());
-        String config = productInfos.get(0).getConfiguration();
+        String config = productInfos.get(0).configuration();
         assertNotNull(config);
         assertTrue(config.contains("Size: XL"));
         assertFalse(config.contains("Color"));
@@ -1131,7 +1131,7 @@ class OrderServiceTest {
         // Configuration should be null or empty since the only option value is invalid
         List<MailService.OrderProductInfo> productInfos = captor.getValue();
         assertEquals(1, productInfos.size());
-        String config = productInfos.get(0).getConfiguration();
+        String config = productInfos.get(0).configuration();
         assertNull(config); // Should be null since all values were filtered out
     }
 
@@ -1207,7 +1207,7 @@ class OrderServiceTest {
         // Configuration should only contain Color, not Notes (blank)
         List<MailService.OrderProductInfo> productInfos = captor.getValue();
         assertEquals(1, productInfos.size());
-        String config = productInfos.get(0).getConfiguration();
+        String config = productInfos.get(0).configuration();
         assertNotNull(config);
         assertTrue(config.contains("Color: Red"));
         assertFalse(config.contains("Notes"));
@@ -1297,7 +1297,7 @@ class OrderServiceTest {
         // Configuration should show labels for select options, not IDs
         List<MailService.OrderProductInfo> productInfos = captor.getValue();
         assertEquals(1, productInfos.size());
-        String config = productInfos.get(0).getConfiguration();
+        String config = productInfos.get(0).configuration();
         assertNotNull(config);
         assertTrue(config.contains("Size: Extra Large"));
         assertTrue(config.contains("Color: Ocean Blue"));

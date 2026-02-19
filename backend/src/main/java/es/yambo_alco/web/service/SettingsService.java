@@ -133,6 +133,19 @@ public class SettingsService {
         }
     }
 
+    public String getOrganizationName() {
+        return getSettingValue("organization.name", "Yambo");
+    }
+
+    public void setOrganizationName(@NonNull String name) {
+        Optional<Settings> existing = findSettingByKey("organization.name");
+        if (existing.isPresent()) {
+            updateSetting("organization.name", name, null, null);
+        } else {
+            createSetting("organization.name", name, "Nombre corto de la organización (usado en correos)", "organization");
+        }
+    }
+
     public String getEmailHost() {
         return getSettingValue("email.host", "");
     }

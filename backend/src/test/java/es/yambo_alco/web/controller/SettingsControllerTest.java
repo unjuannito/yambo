@@ -1,5 +1,6 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.config.MailConfig;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
@@ -32,6 +33,9 @@ class SettingsControllerTest {
 
     @MockitoBean
     private SettingsService settingsService;
+
+    @MockitoBean
+    private MailConfig mailConfig;
 
     @MockitoBean
     private PermissionCheckService permissionCheckService;

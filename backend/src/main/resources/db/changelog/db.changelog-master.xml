@@ -50,4 +50,5 @@
     <include file="db/changelog/changes/38-order-closed-at.xml"/>
     <include file="db/changelog/changes/39-issue-creation-window-setting.xml"/>
     <include file="db/changelog/changes/40-order-product-status-and-status-migration.xml"/>
+    <include file="db/changelog/changes/41-organization-name-setting.xml"/>
 </databaseChangeLog>

@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.config.MailConfig;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,9 @@ import static org.mockito.Mockito.*;
 class HtmlMailServiceTest {
 
     @Mock
+    private MailConfig mailConfig;
+
+    @Mock
     private JavaMailSender mailSender;
 
     @Mock
@@ -37,9 +41,13 @@ class HtmlMailServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(htmlMailService, "expirationHours", 72L);
+        // Mock MailConfig as configured
+        lenient().when(mailConfig.isConfigured()).thenReturn(true);
+        lenient().when(mailConfig.getMailSender()).thenReturn(mailSender);
         // Mock SettingsService responses
-        when(settingsService.getEmailFrom()).thenReturn("noreply@yambo-alco.es");
-        when(settingsService.getEmailFromName()).thenReturn("Yambo");
+        lenient().when(settingsService.getEmailFrom()).thenReturn("noreply@yambo-alco.es");
+        lenient().when(settingsService.getEmailFromName()).thenReturn("Yambo");
+        lenient().when(settingsService.getOrganizationName()).thenReturn("Yambo");
     }
 
     @Test
@@ -73,7 +81,7 @@ class HtmlMailServiceTest {
         // When & Then
         assertThatThrownBy(() -> htmlMailService.sendInvitation(to, subject, body))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Failed to send invitation email");
+                .hasMessageContaining("Failed to send email");
 
         verify(mailSender).createMimeMessage();
         verify(mailSender, never()).send(any(MimeMessage.class));
