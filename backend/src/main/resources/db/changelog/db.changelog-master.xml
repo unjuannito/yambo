@@ -51,4 +51,9 @@
     <include file="db/changelog/changes/39-issue-creation-window-setting.xml"/>
     <include file="db/changelog/changes/40-order-product-status-and-status-migration.xml"/>
     <include file="db/changelog/changes/41-organization-name-setting.xml"/>
+    <include file="db/changelog/changes/42-public-page-fields.xml"/>
+    <include file="db/changelog/changes/43-seed-monitor-profile.xml"/>
+    <include file="db/changelog/changes/44-project-groups.xml"/>
+    <include file="db/changelog/changes/45-drop-user-project.xml"/>
+    <include file="db/changelog/changes/46-contact-settings.xml"/>
 </databaseChangeLog>

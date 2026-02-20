@@ -8,7 +8,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { Modal } from "~/components/common/Modal";
-import { projectService, type Project } from "~/services/projectService";
+import { projectService, type Project, type ProjectGroup } from "~/services/projectService";
 import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
@@ -24,9 +24,12 @@ type ProjectForm = {
     name: string;
     season: string;
     active: boolean;
+    description: string;
+    image: string;
+    featured: boolean;
 };
 
-const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true };
+const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false };
 
 export default function Projects() {
     const { hasPermission } = useAuth();
@@ -37,6 +40,13 @@ export default function Projects() {
     const [form, setForm] = useState<ProjectForm>({ ...EMPTY_FORM });
     const [editing, setEditing] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Groups state
+    const [groups, setGroups] = useState<ProjectGroup[]>([]);
+    const [newGroupName, setNewGroupName] = useState("");
+    const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+    const [editingGroupName, setEditingGroupName] = useState("");
+    const [savingGroup, setSavingGroup] = useState(false);
 
     const canCreate = hasPermission({ obj: "project", action: "create" });
     const canUpdate = hasPermission({ obj: "project", action: "update" });
@@ -64,6 +74,10 @@ export default function Projects() {
         setEditing(null);
         setIsModalOpen(false);
         setSaving(false);
+        setGroups([]);
+        setNewGroupName("");
+        setEditingGroupId(null);
+        setEditingGroupName("");
     };
 
     const openCreateModal = () => {
@@ -84,6 +98,9 @@ export default function Projects() {
                     name: form.name,
                     season: form.season || null,
                     active: form.active,
+                    description: form.description || null,
+                    image: form.image || null,
+                    featured: form.featured,
                 });
                 toast.success("Proyecto actualizado correctamente");
             } else {
@@ -91,6 +108,9 @@ export default function Projects() {
                     name: form.name,
                     season: form.season || null,
                     active: form.active,
+                    description: form.description || null,
+                    image: form.image || null,
+                    featured: form.featured,
                 });
                 toast.success("Proyecto creado correctamente");
             }
@@ -109,8 +129,64 @@ export default function Projects() {
             name: project.name,
             season: project.season || "",
             active: project.active,
+            description: project.description || "",
+            image: project.image || "",
+            featured: project.featured,
         });
         setIsModalOpen(true);
+        loadGroups(project.id);
+    };
+
+    const loadGroups = async (projectId: string) => {
+        try {
+            const data = await projectService.listGroups(projectId);
+            setGroups(data);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al cargar los grupos"));
+        }
+    };
+
+    const handleAddGroup = async () => {
+        if (!editing || !newGroupName.trim()) return;
+        try {
+            setSavingGroup(true);
+            const created = await projectService.createGroup(editing, newGroupName.trim());
+            setGroups((prev) => [...prev, created]);
+            setNewGroupName("");
+            toast.success("Grupo creado");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al crear el grupo"));
+        } finally {
+            setSavingGroup(false);
+        }
+    };
+
+    const handleUpdateGroup = async (groupId: string) => {
+        if (!editing || !editingGroupName.trim()) return;
+        try {
+            setSavingGroup(true);
+            const updated = await projectService.updateGroup(editing, groupId, editingGroupName.trim());
+            setGroups((prev) => prev.map((g) => (g.id === groupId ? updated : g)));
+            setEditingGroupId(null);
+            setEditingGroupName("");
+            toast.success("Grupo actualizado");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al actualizar el grupo"));
+        } finally {
+            setSavingGroup(false);
+        }
+    };
+
+    const handleDeleteGroup = async (groupId: string, groupName: string) => {
+        if (!editing) return;
+        if (!confirm(`¿Eliminar el grupo "${groupName}"?`)) return;
+        try {
+            await projectService.deleteGroup(editing, groupId);
+            setGroups((prev) => prev.filter((g) => g.id !== groupId));
+            toast.success("Grupo eliminado");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al eliminar el grupo"));
+        }
     };
 
     const handleDelete = async (project: Project) => {
@@ -159,6 +235,21 @@ export default function Projects() {
                     project.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                 }`}>
                     {project.active ? "Activo" : "Inactivo"}
+                </span>
+            ),
+        },
+        {
+            key: "featured" as keyof Project,
+            header: "Destacado",
+            filter: {
+                enabled: true,
+                type: "checkbox",
+            },
+            render: (project) => (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    project.featured ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-600"
+                }`}>
+                    {project.featured ? "Sí" : "No"}
                 </span>
             ),
         },
@@ -259,12 +350,132 @@ export default function Projects() {
                             value={form.season}
                             onChange={(e) => setForm((prev) => ({ ...prev, season: e.target.value }))}
                         />
-                        <CheckboxComponent
-                            label="Activo"
-                            variant="left"
-                            checked={form.active}
-                            onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+                        <InputComponent
+                            label="URL de imagen"
+                            value={form.image}
+                            placeholder="https://..."
+                            onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.value }))}
                         />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <textarea
+                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                rows={3}
+                                maxLength={1000}
+                                value={form.description}
+                                placeholder="Descripción del proyecto..."
+                                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                            />
+                            <p className="text-xs text-gray-400 text-right mt-1">{form.description.length}/1000</p>
+                        </div>
+                        <div className="flex gap-6">
+                            <CheckboxComponent
+                                label="Activo"
+                                variant="left"
+                                checked={form.active}
+                                onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
+                            />
+                            <CheckboxComponent
+                                label="Destacado en la página principal"
+                                variant="left"
+                                checked={form.featured}
+                                onChange={(e) => setForm((prev) => ({ ...prev, featured: e.target.checked }))}
+                            />
+                        </div>
+
+                        {editing && (
+                            <div className="border-t pt-4 mt-2">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-3">Grupos del proyecto</h3>
+
+                                {/* Existing named groups */}
+                                {groups.filter(g => g.name).length > 0 ? (
+                                    <ul className="space-y-2 mb-3">
+                                        {groups.filter(g => g.name).map((group) => (
+                                            <li key={group.id} className="flex items-center gap-2">
+                                                {editingGroupId === group.id ? (
+                                                    <>
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            value={editingGroupName}
+                                                            onChange={(e) => setEditingGroupName(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") handleUpdateGroup(group.id);
+                                                                if (e.key === "Escape") { setEditingGroupId(null); setEditingGroupName(""); }
+                                                            }}
+                                                            autoFocus
+                                                        />
+                                                        <ButtonComponent
+                                                            variant="primary"
+                                                            size="sm"
+                                                            onClick={() => handleUpdateGroup(group.id)}
+                                                            disabled={savingGroup}
+                                                        >
+                                                            ✓
+                                                        </ButtonComponent>
+                                                        <ButtonComponent
+                                                            variant="neutral"
+                                                            size="sm"
+                                                            onClick={() => { setEditingGroupId(null); setEditingGroupName(""); }}
+                                                        >
+                                                            ✗
+                                                        </ButtonComponent>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="flex-1 px-2 py-1 bg-green-50 text-green-800 rounded text-sm">
+                                                            {group.name}
+                                                        </span>
+                                                        {canUpdate && (
+                                                            <ButtonComponent
+                                                                variant="neutral"
+                                                                size="sm"
+                                                                onClick={() => { setEditingGroupId(group.id); setEditingGroupName(group.name ?? ''); }}
+                                                            >
+                                                                Editar
+                                                            </ButtonComponent>
+                                                        )}
+                                                        {canDelete && (
+                                                            <ButtonComponent
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteGroup(group.id, group.name ?? '')}
+                                                            >
+                                                                Eliminar
+                                                            </ButtonComponent>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic mb-3">Sin grupos</p>
+                                )}
+
+                                {/* Add new group */}
+                                {canUpdate && (
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Nombre del nuevo grupo..."
+                                            value={newGroupName}
+                                            onChange={(e) => setNewGroupName(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === "Enter") handleAddGroup(); }}
+                                        />
+                                        <ButtonComponent
+                                            variant="primary"
+                                            size="sm"
+                                            onClick={handleAddGroup}
+                                            disabled={savingGroup || !newGroupName.trim()}
+                                        >
+                                            + Añadir
+                                        </ButtonComponent>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </Modal>
             </main>

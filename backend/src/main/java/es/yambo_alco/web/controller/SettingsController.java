@@ -76,11 +76,7 @@ public class SettingsController {
     @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
     public ResponseEntity<String> updateSettingsBulk(@Valid @RequestBody Map<String, String> settings) {
         for (Map.Entry<String, String> entry : settings.entrySet()) {
-            try {
-                settingsService.updateSetting(entry.getKey(), entry.getValue(), null, null);
-            } catch (Exception e) {
-                return ResponseEntity.badRequest().body("Error updating setting: " + entry.getKey());
-            }
+            settingsService.upsertSetting(entry.getKey(), entry.getValue());
         }
         return ResponseEntity.ok("Settings updated successfully");
     }

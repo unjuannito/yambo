@@ -35,6 +35,12 @@ const LINKS_MAP: Link[] = [
         need: { obj: "settings", action: "read" },
     },
     {
+        name: "mainPage",
+        href: "/mi-espacio/admin/pagina-principal",
+        label: "Página Principal",
+        need: { obj: "settings", action: "update" },
+    },
+    {
         name: "users",
         href: "/mi-espacio/admin/usuarios",
         label: "Usuarios",

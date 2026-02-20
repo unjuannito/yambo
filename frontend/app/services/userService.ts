@@ -4,6 +4,8 @@ import type { CurrentUser } from '~/types/userType';
 export interface UpdateProfileRequest {
   name: string;
   email: string;
+  photo?: string;
+  bio?: string;
 }
 
 export interface ChangePasswordRequest {

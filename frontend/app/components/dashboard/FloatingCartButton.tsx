@@ -1,4 +1,6 @@
 import { useCart } from "~/context/CartContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBagShopping } from "@fortawesome/free-solid-svg-icons";
 
 export default function FloatingCartButton() {
   const { getTotalItems, toggleCart } = useCart();
@@ -12,20 +14,7 @@ export default function FloatingCartButton() {
       className="fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110"
       aria-label="Abrir carrito"
     >
-      {/* Cart Icon */}
-      <svg
-        className="w-7 h-7"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-        />
-      </svg>
+      <FontAwesomeIcon icon={faBagShopping} className="w-7 h-7" />
 
       {/* Badge */}
       {itemCount > 0 && (

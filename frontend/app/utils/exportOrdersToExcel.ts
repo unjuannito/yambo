@@ -66,20 +66,20 @@ export async function exportOrdersToExcel({
  */
 function createGeneralSummarySheet(wb: XLSX.WorkBook, orders: Order[]): void {
     const summaryData = [
-        { A: "📊 RESUMEN GENERAL DE PEDIDOS", B: "" },
+        { A: "RESUMEN GENERAL DE PEDIDOS", B: "" },
         { A: "", B: "" },
         { A: "Métrica", B: "Valor" },
         { A: "Total de Pedidos", B: orders.length },
         {
             A: "Total de Productos Vendidos",
-            B: { f: `SUM('📋 Todos los Pedidos'!I:I)` },
+            B: { f: `SUM('Todos los Pedidos'!I:I)` },
         },
         {
             A: "Ingresos Totales (€)",
-            B: { f: `SUM('📋 Todos los Pedidos'!L:L)` },
+            B: { f: `SUM('Todos los Pedidos'!L:L)` },
         },
         { A: "", B: "" },
-        { A: "📈 PEDIDOS POR ESTADO", B: "" },
+        { A: "PEDIDOS POR ESTADO", B: "" },
     ];
 
     const statusCounts: Record<string, number> = {};
@@ -105,7 +105,7 @@ function createGeneralSummarySheet(wb: XLSX.WorkBook, orders: Order[]): void {
     // Merge title cell
     wsSummary["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
 
-    XLSX.utils.book_append_sheet(wb, wsSummary, "📊 Resumen General");
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen General");
 }
 
 /**
@@ -128,14 +128,14 @@ function createDropSummarySheet(
             const dropId = productData?.familyProductId || "sin-drop";
             const dropName =
                 dropId === "sin-drop"
-                    ? "🚫 Sin Drop"
+                    ? "Sin Drop"
                     : drops.find((d) => d.id === dropId)?.name || "Desconocido";
             uniqueDrops.set(dropId, dropName);
         });
     });
 
     const dropSummaryData: any[] = [
-        { A: "🎯 RESUMEN POR DROP", B: "", C: "", D: "" },
+        { A: "RESUMEN POR DROP", B: "", C: "", D: "" },
     ];
 
     // Add header row
@@ -154,12 +154,12 @@ function createDropSummarySheet(
         .forEach((drop) => {
             dropSummaryData.push({
                 A: drop.name,
-                B: { f: `COUNTIF('📋 Todos los Pedidos'!G:G, "${drop.name}")` },
+                B: { f: `COUNTIF('Todos los Pedidos'!G:G, "${drop.name}")` },
                 C: {
-                    f: `SUMIF('📋 Todos los Pedidos'!G:G, "${drop.name}", '📋 Todos los Pedidos'!I:I)`,
+                    f: `SUMIF('Todos los Pedidos'!G:G, "${drop.name}", 'Todos los Pedidos'!I:I)`,
                 },
                 D: {
-                    f: `SUMIF('📋 Todos los Pedidos'!G:G, "${drop.name}", '📋 Todos los Pedidos'!L:L)`,
+                    f: `SUMIF('Todos los Pedidos'!G:G, "${drop.name}", 'Todos los Pedidos'!L:L)`,
                 },
             });
             currentRow++;
@@ -190,7 +190,7 @@ function createDropSummarySheet(
     // Merge title
     wsDropSummary["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
 
-    XLSX.utils.book_append_sheet(wb, wsDropSummary, "🎯 Resumen por Drop");
+    XLSX.utils.book_append_sheet(wb, wsDropSummary, "Resumen por Drop");
 }
 
 /**
@@ -273,9 +273,8 @@ function createProductSheets(
         const wsProduct = createProductSheet(stats);
 
         // Sanitize sheet name (max 31 chars, no special chars)
-        let sheetName = stats.name.substring(0, 25); // Leave room for emoji prefix
+        let sheetName = stats.name.substring(0, 31);
         sheetName = sheetName.replace(/[\\/:*?\[\]]/g, "-");
-        sheetName = `📦 ${sheetName}`;
         XLSX.utils.book_append_sheet(wb, wsProduct, sheetName);
     });
 }
@@ -305,7 +304,7 @@ function createProductSheet(stats: {
 
     // Header rows with summary
     const headerData = [
-        { A: "📦 DETALLE DE PRODUCTO", B: "" },
+        { A: "DETALLE DE PRODUCTO", B: "" },
         { A: "Producto:", B: stats.name },
         { A: "Drop:", B: stats.drop },
         {
@@ -376,7 +375,7 @@ function createProductSheet(stats: {
     for (let i = 0; i < qtyColIndex - 1; i++) {
         totalsRow[getColLetter(i)] = "";
     }
-    totalsRow[getColLetter(qtyColIndex - 1)] = "💰 TOTALES:";
+    totalsRow[getColLetter(qtyColIndex - 1)] = "TOTALES:";
     totalsRow[qtyCol] = { f: `SUM(${qtyCol}7:${qtyCol}${6 + dataRowCount})` };
     totalsRow[priceCol] = {
         f: `AVERAGE(${priceCol}7:${priceCol}${6 + dataRowCount})`,
@@ -525,7 +524,7 @@ function createAllOrdersSheet(
         E: "",
         F: "",
         G: "",
-        H: "💰 TOTALES:",
+        H: "TOTALES:",
         I: { f: `SUM(I2:I${totalRow - 1})` },
         J: { f: `AVERAGE(J2:J${totalRow - 1})` },
         K: "",
@@ -557,7 +556,7 @@ function createAllOrdersSheet(
     // Auto-filter on headers
     wsAllOrders["!autofilter"] = { ref: `A1:L${totalRow - 1}` };
 
-    XLSX.utils.book_append_sheet(wb, wsAllOrders, "📋 Todos los Pedidos");
+    XLSX.utils.book_append_sheet(wb, wsAllOrders, "Todos los Pedidos");
 }
 
 /**

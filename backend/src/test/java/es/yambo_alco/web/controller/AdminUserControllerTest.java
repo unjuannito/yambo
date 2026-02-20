@@ -454,7 +454,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 when(userService.getUserById("U0000001")).thenReturn(userToUpdate);
-                when(userService.updateProfile("U0000001", "New Name", "new@example.com")).thenReturn(updatedUser);
+                when(userService.updateProfile("U0000001", "New Name", "new@example.com", null, null)).thenReturn(updatedUser);
 
                 String requestBody = """
                                 {

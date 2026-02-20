@@ -1,3 +1,6 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+
 interface LoadingSpinnerProps {
     size?: "sm" | "md" | "lg" | "xl";
     message?: string;
@@ -6,23 +9,23 @@ interface LoadingSpinnerProps {
 const sizeClasses = {
     sm: {
         text: "text-sm",
-        spinner: "h-4 w-4 border-2",
+        spinner: "h-4 w-4",
         gap: "gap-1"
     }
     ,
     md: {
         text: "text-md",
-        spinner: "h-8 w-8 border-3",
+        spinner: "h-8 w-8",
         gap: "gap-2"
     },
     lg: {
         text: "text-lg",
-        spinner: "h-16 w-16 border-4",
+        spinner: "h-16 w-16",
         gap: "gap-4"
     },
     xl:  {
         text: "text-xl",
-        spinner: "h-32 w-32 border-6",
+        spinner: "h-32 w-32",
         gap: "gap-8"
     }
 };
@@ -32,8 +35,10 @@ export function LoadingSpinner({
 }: LoadingSpinnerProps) {
 
     return (<div className={`flex flex-col items-center justify-center ${sizeClasses[size].gap}`}>
-            <svg
-                className={`${sizeClasses[size].spinner} border-blue-600 border-t-transparent rounded-full animate-spin`}
+            <FontAwesomeIcon
+                icon={faSpinner}
+                spin
+                className={`${sizeClasses[size].spinner} text-blue-600`}
                 role="status"
                 aria-label="Cargando"
             />

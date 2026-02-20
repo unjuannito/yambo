@@ -31,7 +31,8 @@ public class ProjectService {
         return projectRepository.findAll(spec, pageable);
     }
 
-    public Project createProject(@NonNull String name, Boolean active, String season) {
+    public Project createProject(@NonNull String name, Boolean active, String season,
+                                   String description, String image, Boolean featured) {
         if (projectRepository.existsByName(name)) {
             throw new BadRequestException("Project name already exists");
         }
@@ -40,12 +41,16 @@ public class ProjectService {
                 .name(name)
                 .active(active != null ? active : true)
                 .season(season)
+                .description(description)
+                .image(image)
+                .featured(featured != null ? featured : false)
                 .build();
 
         return projectRepository.save(project);
     }
 
-    public Project updateProject(@NonNull String projectId, String name, Boolean active, String season) {
+    public Project updateProject(@NonNull String projectId, String name, Boolean active, String season,
+                                  String description, String image, Boolean featured) {
         Project project = getProjectById(projectId);
 
         if (name != null && !name.trim().isEmpty()) {
@@ -61,6 +66,18 @@ public class ProjectService {
 
         if (season != null) {
             project.setSeason(season);
+        }
+
+        if (description != null) {
+            project.setDescription(description);
+        }
+
+        if (image != null) {
+            project.setImage(image);
+        }
+
+        if (featured != null) {
+            project.setFeatured(featured);
         }
 
         return projectRepository.save(project);

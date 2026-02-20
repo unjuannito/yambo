@@ -12,6 +12,7 @@ export default [
         route("contacto", "routes/public/contacto.tsx"),
         route("monitores", "routes/public/monitores.tsx"),
         route("proyectos", "routes/public/proyectos.tsx"),
+        route("proyectos/:projectId", "routes/public/proyecto.tsx"),
     ]),
     layout("routes/dashboard/_layout.tsx", [
         // Inicio
@@ -31,6 +32,7 @@ export default [
         ),
         route("mi-espacio/admin/pedidos", "routes/dashboard/orders/index.tsx"),
         route("mi-espacio/admin/configuracion", "routes/dashboard/settings/index.tsx"),
+        route("mi-espacio/admin/pagina-principal", "routes/dashboard/settings/main-page.tsx"),
 
         // Proyectos
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),

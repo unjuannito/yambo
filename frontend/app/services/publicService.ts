@@ -1,0 +1,82 @@
+import { ApiService } from './apiService';
+
+export interface HomeSettings {
+    [key: string]: string;
+}
+
+export interface FeaturedProject {
+    id: string;
+    name: string;
+    description: string;
+    image: string;
+}
+
+export interface MonitorGroup {
+    id: string;
+    name: string | null;
+    projectName: string;
+}
+
+export interface Monitor {
+    id: string;
+    name: string;
+    photo: string;
+    bio: string;
+    groups: MonitorGroup[];
+}
+
+export interface ActiveProject {
+    id: string;
+    name: string;
+    season: string | null;
+    description: string | null;
+    image: string | null;
+    featured: boolean;
+}
+
+export interface ProjectGroupDetail {
+    id: string;
+    name: string | null;
+}
+
+export interface ProjectDetail {
+    id: string;
+    name: string;
+    season: string | null;
+    description: string | null;
+    image: string | null;
+    groups: ProjectGroupDetail[];
+    monitors: Monitor[];
+}
+
+export interface ContactSettings {
+    [key: string]: string;
+}
+
+export class PublicService extends ApiService {
+    public async getHomeSettings(): Promise<HomeSettings> {
+        return await this.get('/public/settings/home');
+    }
+
+    public async getContactSettings(): Promise<ContactSettings> {
+        return await this.get('/public/settings/contact');
+    }
+
+    public async getFeaturedProjects(): Promise<FeaturedProject[]> {
+        return await this.get('/public/projects/featured');
+    }
+
+    public async getMonitors(): Promise<Monitor[]> {
+        return await this.get('/public/monitors');
+    }
+
+    public async getActiveProjects(): Promise<ActiveProject[]> {
+        return await this.get('/public/projects/active');
+    }
+
+    public async getProjectDetail(id: string): Promise<ProjectDetail> {
+        return await this.get(`/public/projects/${id}`);
+    }
+}
+
+export const publicService = new PublicService();

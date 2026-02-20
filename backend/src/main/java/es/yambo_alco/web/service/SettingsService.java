@@ -75,6 +75,21 @@ public class SettingsService {
         return settingsRepository.save(setting);
     }
 
+    public Settings upsertSetting(@NonNull String key, String value) {
+        return settingsRepository.findByKey(key)
+                .map(setting -> {
+                    setting.setValue(value);
+                    return settingsRepository.save(setting);
+                })
+                .orElseGet(() -> {
+                    Settings setting = Settings.builder()
+                            .key(key)
+                            .value(value)
+                            .build();
+                    return settingsRepository.save(setting);
+                });
+    }
+
     public void deleteSetting(@NonNull String key) {
         Settings setting = settingsRepository.findByKey(key)
                 .orElseThrow(() -> new ResourceNotFoundException("Setting not found with key: " + key));

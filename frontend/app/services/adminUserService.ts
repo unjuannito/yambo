@@ -18,6 +18,18 @@ export interface UpdateProfilesRequest {
     profileIds: string[];
 }
 
+export interface UpdateUserDetailsRequest {
+    id: string;
+    name: string;
+    email: string;
+    photo?: string;
+    bio?: string;
+}
+
+export interface UpdateUserGroupsRequest {
+    groupIds: string[];
+}
+
 export class AdminUserService extends ApiService {
     public async listUsers(
         params: UserFilters & PagedParams
@@ -35,8 +47,27 @@ export class AdminUserService extends ApiService {
         );
     }
 
+    public async updateUserDetails(
+        request: UpdateUserDetailsRequest
+    ): Promise<User> {
+        return await this.put<User, UpdateUserDetailsRequest>(
+            `/admin/users/profile`,
+            request
+        );
+    }
+
     public async deleteUser(userId: string): Promise<string> {
         return await this.delete<string>(`/admin/users/${userId}`);
+    }
+
+    public async updateUserGroups(
+        userId: string,
+        groupIds: string[]
+    ): Promise<User> {
+        return await this.put<User, UpdateUserGroupsRequest>(
+            `/admin/users/${userId}/groups`,
+            { groupIds }
+        );
     }
 }
 

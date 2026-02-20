@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.Permission;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
@@ -43,7 +44,8 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User currentUser = authService.getCurrentUser(true);
-        User updatedUser = userService.updateProfile(currentUser.getId(), request.getName(), request.getEmail());
+        User updatedUser = userService.updateProfile(currentUser.getId(), request.getName(), request.getEmail(),
+                request.getPhoto(), request.getBio());
         UserResponse response = new UserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -74,6 +76,10 @@ public class UserController {
         @NotBlank(message = "Email cannot be blank")
         @Email(message = "Email should be valid")
         private String email;
+
+        private String photo;
+
+        private String bio;
     }
 
     @Data
@@ -90,11 +96,19 @@ public class UserController {
     public static class UserResponse {
         private String email;
         private String name;
+        private String photo;
+        private String bio;
+        private GroupResponse[] groups;
         private PermissionResponse[] permissions;
 
         public UserResponse(User user) {
             this.email = user.getEmail();
             this.name = user.getName();
+            this.photo = user.getPhoto();
+            this.bio = user.getBio();
+            this.groups = user.getGroups().stream()
+                    .map(GroupResponse::new)
+                    .toArray(GroupResponse[]::new);
             Map<String, Set<String>> resourceActions = user.getProfiles().stream()
                     .flatMap(profile -> profile.getPermissions().stream())
                     .collect(Collectors.groupingBy(
@@ -103,6 +117,21 @@ public class UserController {
             this.permissions = resourceActions.entrySet().stream()
                     .map(entry -> new PermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
                     .toArray(PermissionResponse[]::new);
+        }
+    }
+
+    @Data
+    public static class GroupResponse {
+        private String id;
+        private String name;
+        private String projectId;
+        private String projectName;
+
+        public GroupResponse(ProjectGroup group) {
+            this.id = group.getId();
+            this.name = group.getName();
+            this.projectId = group.getProject().getId();
+            this.projectName = group.getProject().getName();
         }
     }
 

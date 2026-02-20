@@ -8,6 +8,8 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { settingsService, type EmailConfig } from "~/services/settingsService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -16,7 +18,7 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-type SettingsTab = "organization" | "application" | "bank" | "email";
+type SettingsTab = "organization" | "application" | "bank" | "email" | "contact";
 
 export default function Settings() {
     const [loading, setLoading] = useState(true);
@@ -44,6 +46,11 @@ export default function Settings() {
         from: "",
         fromName: "",
     });
+
+    // Contact settings
+    const [contactEmail, setContactEmail] = useState("");
+    const [contactInstagram, setContactInstagram] = useState("");
+    const [contactTiktok, setContactTiktok] = useState("");
 
     // Advanced SMTP settings
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -81,6 +88,14 @@ export default function Settings() {
 
             const legalNameSetting = allSettings.find(s => s.key === "organization.legal_name");
             if (legalNameSetting) setOrganizationLegalName(legalNameSetting.value);
+
+            // Contact settings
+            const contactEmailSetting = allSettings.find(s => s.key === "contact.email");
+            if (contactEmailSetting) setContactEmail(contactEmailSetting.value);
+            const contactInstagramSetting = allSettings.find(s => s.key === "contact.instagram");
+            if (contactInstagramSetting) setContactInstagram(contactInstagramSetting.value);
+            const contactTiktokSetting = allSettings.find(s => s.key === "contact.tiktok");
+            if (contactTiktokSetting) setContactTiktok(contactTiktokSetting.value);
 
             setDomain(domainValue);
             setIban(ibanValue);
@@ -157,6 +172,22 @@ export default function Settings() {
         }
     };
 
+    const handleSaveContactSettings = async () => {
+        try {
+            setSavingTab("contact");
+            await settingsService.updateSettingsBulk({
+                "contact.email": contactEmail,
+                "contact.instagram": contactInstagram,
+                "contact.tiktok": contactTiktok,
+            });
+            toast.success("Configuración de contacto guardada correctamente");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración de contacto"));
+        } finally {
+            setSavingTab(null);
+        }
+    };
+
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
@@ -213,6 +244,13 @@ export default function Settings() {
                             onClick={() => setActiveTab("email")}
                         >
                             Email
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant={activeTab === "contact" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("contact")}
+                        >
+                            Contacto
                         </ButtonComponent>
                     </div>
                 </section>
@@ -396,14 +434,10 @@ export default function Settings() {
                                 onClick={() => setShowAdvanced(!showAdvanced)}
                                 className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
                             >
-                                <svg
+                                <FontAwesomeIcon
+                                    icon={faChevronRight}
                                     className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
+                                />
                                 Configuración Avanzada SMTP
                             </button>
 
@@ -473,6 +507,47 @@ export default function Settings() {
                                     disabled={savingTab !== null}
                                 >
                                     {savingTab === "email" ? "Guardando..." : "Guardar Configuración de Email"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
+
+                {activeTab === "contact" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración de Contacto</h2>
+                        <p className="text-sm text-gray-600">
+                            Estos datos se mostrarán en la página pública de contacto.
+                        </p>
+                        <InputComponent
+                            label="Correo electrónico de contacto"
+                            type="email"
+                            value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            placeholder="info@yambo.es"
+                        />
+                        <InputComponent
+                            label="Instagram"
+                            type="text"
+                            value={contactInstagram}
+                            onChange={(e) => setContactInstagram(e.target.value)}
+                            placeholder="@yambo o https://instagram.com/yambo"
+                        />
+                        <InputComponent
+                            label="TikTok"
+                            type="text"
+                            value={contactTiktok}
+                            onChange={(e) => setContactTiktok(e.target.value)}
+                            placeholder="@yambo o https://tiktok.com/@yambo"
+                        />
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveContactSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
+                                >
+                                    {savingTab === "contact" ? "Guardando..." : "Guardar Configuración de Contacto"}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>

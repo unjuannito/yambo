@@ -319,6 +319,41 @@ public class SettingsServiceTest {
     }
 
     @Test
+    public void upsertSetting_WithExistingKey_ShouldUpdateValue() {
+        // Given
+        Settings existing = Settings.builder()
+                .id("SET00001")
+                .key("test.key")
+                .value("old.value")
+                .build();
+
+        when(settingsRepository.findByKey("test.key")).thenReturn(Optional.of(existing));
+        when(settingsRepository.save(any(Settings.class))).thenAnswer(i -> i.getArgument(0));
+
+        // When
+        Settings result = settingsService.upsertSetting("test.key", "new.value");
+
+        // Then
+        assertThat(result.getValue()).isEqualTo("new.value");
+        verify(settingsRepository).save(existing);
+    }
+
+    @Test
+    public void upsertSetting_WithNewKey_ShouldCreateSetting() {
+        // Given
+        when(settingsRepository.findByKey("new.key")).thenReturn(Optional.empty());
+        when(settingsRepository.save(any(Settings.class))).thenAnswer(i -> i.getArgument(0));
+
+        // When
+        Settings result = settingsService.upsertSetting("new.key", "some.value");
+
+        // Then
+        assertThat(result.getKey()).isEqualTo("new.key");
+        assertThat(result.getValue()).isEqualTo("some.value");
+        verify(settingsRepository).save(any(Settings.class));
+    }
+
+    @Test
     public void getIban_ShouldReturnIbanValue() {
         // Given
         Settings setting = Settings.builder()

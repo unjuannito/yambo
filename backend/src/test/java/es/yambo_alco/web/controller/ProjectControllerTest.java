@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.service.ProductService;
 import es.yambo_alco.web.service.ProjectService;
 import es.yambo_alco.web.util.PermissionCheckService;
@@ -46,6 +47,9 @@ class ProjectControllerTest {
     private ProductService productService;
 
     @MockitoBean
+    private ProjectGroupRepository projectGroupRepository;
+
+    @MockitoBean
     private PermissionCheckService permissionCheckService;
 
     @BeforeEach
@@ -83,7 +87,7 @@ class ProjectControllerTest {
     @WithMockUser
     void createProject_WithPermission_ShouldCreateProject() throws Exception {
         Project project = Project.builder().id("PRJ001").name("Project 1").active(true).build();
-        when(projectService.createProject(eq("Project 1"), eq(true), eq("2026"))).thenReturn(project);
+        when(projectService.createProject(eq("Project 1"), eq(true), eq("2026"), eq(null), eq(null), eq(null))).thenReturn(project);
 
         String payload = """
                 {

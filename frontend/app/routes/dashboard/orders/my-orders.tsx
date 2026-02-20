@@ -17,6 +17,8 @@ import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge, IssueForm } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClipboard, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -197,19 +199,10 @@ export default function MyOrdersPage() {
 
       {!isLoading && !error && orders.length === 0 && (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <svg
+          <FontAwesomeIcon
+            icon={faClipboard}
             className="w-24 h-24 mx-auto mb-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
+          />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No tienes pedidos aún</h2>
           <p className="text-gray-600 mb-6">Explora nuestro merch y realiza tu primer pedido</p>
           <button
@@ -380,9 +373,7 @@ export default function MyOrdersPage() {
                             disabled={!!issueWindow}
                             className="mt-3 text-sm text-orange-600 hover:text-orange-800 disabled:text-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-1"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4" />
                             Reportar incidencia
                           </button>
                         )}

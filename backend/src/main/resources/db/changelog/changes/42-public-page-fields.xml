@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add description, image, and featured flag to project table -->
+    <changeSet id="42-1" author="yambo">
+        <addColumn tableName="project">
+            <column name="description" type="TEXT"/>
+            <column name="image" type="VARCHAR(500)"/>
+            <column name="featured" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Add photo, bio, and group_name to user table -->
+    <changeSet id="42-2" author="yambo">
+        <addColumn tableName="user">
+            <column name="photo" type="VARCHAR(500)"/>
+            <column name="bio" type="TEXT"/>
+            <column name="group_name" type="VARCHAR(100)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Seed home page settings -->
+    <changeSet id="42-3" author="yambo">
+        <insert tableName="settings">
+            <column name="id" value="hset0001"/>
+            <column name="key" value="home.hero.title"/>
+            <column name="value" value="Vive, Aprende y Crece con Yambo"/>
+            <column name="description" value="Main hero section title on the public landing page"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hset0002"/>
+            <column name="key" value="home.hero.subtitle"/>
+            <column name="value" value="La asociación juvenil de Alcobendas para impulsar tu talento y pasiones."/>
+            <column name="description" value="Hero section subtitle / tagline"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hset0003"/>
+            <column name="key" value="home.hero.image"/>
+            <column name="value" value="/heroImage.jpg"/>
+            <column name="description" value="Hero background image path"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hset0004"/>
+            <column name="key" value="home.about.intro"/>
+            <column name="value" value="Somos una asociación juvenil con sede en Alcobendas. Nuestro objetivo es acompañar a jóvenes como tú a crecer, aprender y vivir experiencias únicas."/>
+            <column name="description" value="About section intro paragraph"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hset0005"/>
+            <column name="key" value="home.about.bullets"/>
+            <column name="value" value='[{"icon":"🎓","title":"Formación y talleres","description":"Accede a experiencias educativas únicas para potenciar tus habilidades.","link":"/formacion"},{"icon":"🤝","title":"Voluntariado y comunidad","description":"Contribuye a un impacto social positivo junto a otros jóvenes comprometidos.","link":"/voluntariado"},{"icon":"🎉","title":"Eventos y excursiones","description":"Participa en salidas, campamentos y actividades culturales inolvidables.","link":"/eventos"},{"icon":"📚","title":"Apoyo académico y mentoría","description":"Recibe ayuda con tus estudios y orientación personalizada.","link":"/apoyo"}]'/>
+            <column name="description" value="About section bullet items as JSON array"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hset0006"/>
+            <column name="key" value="home.about.image"/>
+            <column name="value" value="/gallery-preview.jpg"/>
+            <column name="description" value="About section image path"/>
+            <column name="category" value="home"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

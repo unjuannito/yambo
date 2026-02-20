@@ -80,7 +80,7 @@ class ProjectServiceTest {
         when(projectRepository.existsByName("New Project")).thenReturn(false);
         when(projectRepository.save(any(Project.class))).thenReturn(saved);
 
-        Project result = projectService.createProject("New Project", null, "2025");
+        Project result = projectService.createProject("New Project", null, "2025", null, null, null);
 
         assertEquals(saved, result);
         verify(projectRepository).existsByName("New Project");
@@ -93,7 +93,7 @@ class ProjectServiceTest {
                 .thenReturn(true);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> projectService.createProject("Existing", true, null));
+                () -> projectService.createProject("Existing", true, null, null, null, null));
         assertEquals("Project name already exists", exception.getMessage());
         verify(projectRepository).existsByName("Existing");
         verify(projectRepository, never()).save(any());
@@ -108,7 +108,7 @@ class ProjectServiceTest {
         when(projectRepository.existsByName("New")).thenReturn(false);
         when(projectRepository.save(any(Project.class))).thenReturn(saved);
 
-        Project result = projectService.updateProject("PRJ001", "New", false, "2026");
+        Project result = projectService.updateProject("PRJ001", "New", false, "2026", null, null, null);
 
         assertEquals(saved, result);
         verify(projectRepository).findById("PRJ001");

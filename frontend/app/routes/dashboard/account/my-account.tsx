@@ -9,6 +9,8 @@ import type { CurrentUser } from "~/types/userType";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faLock, faTrash, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -17,30 +19,9 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-// Iconos SVG inline para evitar dependencias
-const UserIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-  </svg>
-);
-
-const ShieldIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-  </svg>
-);
+const UserIcon = () => <FontAwesomeIcon icon={faUser} className="w-5 h-5" />;
+const LockIcon = () => <FontAwesomeIcon icon={faLock} className="w-5 h-5" />;
+const TrashIcon = () => <FontAwesomeIcon icon={faTrash} className="w-5 h-5" />;
 
 function getInitials(name: string): string {
   return name
@@ -59,6 +40,8 @@ export default function MyAccount() {
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
     email: user?.email || "",
+    photo: user?.photo || "",
+    bio: user?.bio || "",
   });
 
   // Estados para el formulario de contraseña
@@ -80,6 +63,8 @@ export default function MyAccount() {
       setProfileData({
         name: user.name,
         email: user.email,
+        photo: user.photo || "",
+        bio: user.bio || "",
       });
     }
   }, [user]);
@@ -152,9 +137,17 @@ export default function MyAccount() {
       {/* Header con avatar */}
       <div className="mb-8 w-full max-w-5xl">
         <div className="flex items-center justify-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-            {user ? getInitials(user.name) : "?"}
-          </div>
+          {user?.photo ? (
+            <img
+              src={user.photo}
+              alt={user.name}
+              className="w-20 h-20 rounded-full object-cover shadow-lg"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+              {user ? getInitials(user.name) : "?"}
+            </div>
+          )}
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{user?.name || "Cargando..."}</h1>
             <p className="text-gray-500 mt-1">{user?.email}</p>
@@ -201,6 +194,39 @@ export default function MyAccount() {
               required
               placeholder="tu@email.com"
             />
+            <InputComponent
+              label="Foto (URL)"
+              name="photo"
+              type="url"
+              value={profileData.photo}
+              onChange={(e) =>
+                setProfileData((prev) => ({ ...prev, photo: e.target.value }))
+              }
+              placeholder="https://ejemplo.com/mi-foto.jpg"
+            />
+            {user?.groups && user.groups.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Grupos</label>
+                <p className="text-sm text-gray-600">
+                  {user.groups.map(g => g.name ? `${g.name} (${g.projectName})` : g.projectName).join(", ")}
+                </p>
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+              <textarea
+                name="bio"
+                value={profileData.bio}
+                onChange={(e) =>
+                  setProfileData((prev) => ({ ...prev, bio: e.target.value }))
+                }
+                placeholder="Cuéntanos algo sobre ti..."
+                rows={3}
+                maxLength={500}
+                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+              <p className="text-xs text-gray-400 mt-1 text-right">{profileData.bio.length}/500</p>
+            </div>
             <div className="flex justify-end pt-2">
               <ButtonComponent
                 type="submit"
@@ -275,9 +301,7 @@ export default function MyAccount() {
             />
             {passwordError && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
+                <FontAwesomeIcon icon={faCircleExclamation} className="w-5 h-5 text-red-500 flex-shrink-0" />
                 <p className="text-red-700 text-sm">{passwordError}</p>
               </div>
             )}

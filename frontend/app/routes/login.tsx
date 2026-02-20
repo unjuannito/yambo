@@ -8,6 +8,8 @@ import type { Route } from "./+types/login";
 import InputComponent from "~/components/common/forms/InputComponent";
 import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGift } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -93,7 +95,7 @@ export default function Index() {
     const promotionBanner = promotionToken ? (
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-700 font-medium">
-                🎉 Tienes una promoción pendiente
+                <FontAwesomeIcon icon={faGift} className="w-4 h-4 inline mr-1 align-text-bottom" /> Tienes una promoción pendiente
             </p>
             <p className="text-xs text-green-600 mt-1">
                 Se aplicará automáticamente tras iniciar sesión

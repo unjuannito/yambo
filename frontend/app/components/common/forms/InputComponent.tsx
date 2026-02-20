@@ -1,6 +1,8 @@
 import React, { useState, forwardRef } from "react";
 import LabelComponent from "./LabelComponent";
 import { twMerge } from "tailwind-merge";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
@@ -52,11 +54,8 @@ const InputComponent = forwardRef<HTMLInputElement, InputProps>(({
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 cursor-pointer"
                 onClick={() => setShowPassword(!showPassword)}
             >
-                <img
-                    src={
-                        showPassword ? "/icons/eye-slash.svg" : "/icons/eye.svg"
-                    }
-                    alt={showPassword ? "Ocultar" : "Mostrar"}
+                <FontAwesomeIcon
+                    icon={showPassword ? faEyeSlash : faEye}
                     className="w-5 h-5"
                 />
             </button>

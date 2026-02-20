@@ -5,6 +5,8 @@ import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import { productService, type OptionValue, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 type ProductEditorMode = "create" | "edit";
 
@@ -353,7 +355,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                         onClick={() => removeImage(index)}
                                         className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"
                                     >
-                                        🗑️
+                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                                     </button>
                                 </div>
                             ))}
@@ -470,7 +472,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                         onClick={() => removeValue(optionIndex, valueIndex)}
                                                         className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                                     >
-                                                        🗑️
+                                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             ))}

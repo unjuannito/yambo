@@ -6,18 +6,34 @@ export interface Project {
   name: string;
   active: boolean;
   season?: string | null;
+  description?: string | null;
+  image?: string | null;
+  featured: boolean;
 }
 
 export interface CreateProjectRequest {
   name: string;
   active?: boolean;
   season?: string | null;
+  description?: string | null;
+  image?: string | null;
+  featured?: boolean;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   active?: boolean;
   season?: string | null;
+  description?: string | null;
+  image?: string | null;
+  featured?: boolean;
+}
+
+export interface ProjectGroup {
+  id: string;
+  name: string | null;
+  projectId: string;
+  projectName: string;
 }
 
 export class ProjectService extends ApiService {
@@ -70,6 +86,23 @@ export class ProjectService extends ApiService {
     if (active !== undefined) params.append('active', active.toString());
 
     return await this.get(`/projects/${id}/products?${params.toString()}`);
+  }
+
+  // Group CRUD
+  public async listGroups(projectId: string): Promise<ProjectGroup[]> {
+    return await this.get(`/projects/${projectId}/groups`);
+  }
+
+  public async createGroup(projectId: string, name?: string | null): Promise<ProjectGroup> {
+    return await this.post(`/projects/${projectId}/groups`, { name: name || null });
+  }
+
+  public async updateGroup(projectId: string, groupId: string, name: string): Promise<ProjectGroup> {
+    return await this.put(`/projects/${projectId}/groups/${groupId}`, { name });
+  }
+
+  public async deleteGroup(projectId: string, groupId: string): Promise<void> {
+    return await this.delete(`/projects/${projectId}/groups/${groupId}`);
   }
 }
 

@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.config.MailConfig;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.util.EmailIcons;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -113,7 +114,8 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusLabel", newStatus.getLabel()),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
-                        Map.entry("headerIcon", newStatus.getIcon()),
+                        Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
+                        Map.entry("clipboardIcon", EmailIcons.get("clipboard")),
                         Map.entry("iban", settingsService.getIban()),
                         Map.entry("legalName", settingsService.getOrganizationLegalName()),
                         Map.entry("paymentReference", generatePaymentReference(orderDate, orderId))),
@@ -137,7 +139,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusLabel", OrderStatus.CANCELED.getLabel()),
                         Map.entry("statusColor", OrderStatus.CANCELED.getColor()),
                         Map.entry("headerColor", OrderStatus.CANCELED.getColor()),
-                        Map.entry("headerIcon", OrderStatus.CANCELED.getIcon()),
+                        Map.entry("headerIcon", EmailIcons.get(OrderStatus.CANCELED.getIcon())),
                         Map.entry("canceledByAdmin", canceledByAdmin)),
                 buildCancelPlainText(userName, orderId, orderDate, products, totalPrice, canceledByAdmin));
     }
@@ -159,6 +161,8 @@ public class HtmlMailService implements MailService {
                         "orderId", orderId,
                         "createdBy", createdBy,
                         "createdAt", createdAt,
+                        "headerColor", IssueStatus.OPEN.getColor(),
+                        "headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon()),
                         "issueLink", buildIssueLink(issueId)),
                 buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt));
     }
@@ -185,6 +189,8 @@ public class HtmlMailService implements MailService {
                         Map.entry("oldStatusText", oldStatus != null ? oldStatus.getLabel() : ""),
                         Map.entry("newStatusText", newStatus != null ? newStatus.getLabel() : ""),
                         Map.entry("statusColor", newStatus != null ? newStatus.getColor() : "#3498db"),
+                        Map.entry("headerColor", "#3498db"),
+                        Map.entry("headerIcon", EmailIcons.get("comments")),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildCommentPlainText(userName, issueId, issueTitle, commentAuthor, commentText,
                         commentDate, oldStatus, newStatus));
@@ -207,7 +213,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("newStatusText", newStatus.getLabel()),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
-                        Map.entry("headerIcon", newStatus.getIcon()),
+                        Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
                         Map.entry("changedBy", changedBy),
                         Map.entry("changedAt", changedAt),
                         Map.entry("issueLink", buildIssueLink(issueId))),

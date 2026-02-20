@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/promotion-invitations/*/accept").permitAll()
                         .requestMatchers("/user/**").authenticated()
                         .anyRequest().authenticated())

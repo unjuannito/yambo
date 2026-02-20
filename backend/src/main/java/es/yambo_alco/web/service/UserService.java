@@ -4,8 +4,10 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.ProfileRepository;
+import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final ProfileRepository profileRepository;
+	private final ProjectGroupRepository projectGroupRepository;
 	private final PendingDeletionService pendingDeletionService;
 
 	@Value("${user.deletion.delay.days:30}")
@@ -86,7 +89,8 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email) {
+	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email,
+			String photo, String bio) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -99,6 +103,23 @@ public class UserService {
 			}
 			user.setEmail(email.trim());
 		}
+
+		if (photo != null) {
+			user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
+		}
+		if (bio != null) {
+			user.setBio(bio.trim().isEmpty() ? null : bio.trim());
+		}
+
+		return userRepository.save(user);
+	}
+
+	public User updateUserGroups(@NonNull String userId, @NonNull Set<String> groupIds) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		Set<ProjectGroup> groups = new HashSet<>(projectGroupRepository.findAllById(groupIds));
+		user.setGroups(groups);
 
 		return userRepository.save(user);
 	}

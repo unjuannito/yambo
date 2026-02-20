@@ -275,8 +275,8 @@ class SettingsControllerTest {
         Settings setting1 = Settings.builder().key("key1").value("value1").build();
         Settings setting2 = Settings.builder().key("key2").value("value2").build();
 
-        when(settingsService.updateSetting(eq("key1"), eq("value1"), isNull(), isNull())).thenReturn(setting1);
-        when(settingsService.updateSetting(eq("key2"), eq("value2"), isNull(), isNull())).thenReturn(setting2);
+        when(settingsService.upsertSetting(eq("key1"), eq("value1"))).thenReturn(setting1);
+        when(settingsService.upsertSetting(eq("key2"), eq("value2"))).thenReturn(setting2);
 
         String requestBody = """
                 {
@@ -292,20 +292,20 @@ class SettingsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Settings updated successfully"));
 
-        verify(settingsService).updateSetting("key1", "value1", null, null);
-        verify(settingsService).updateSetting("key2", "value2", null, null);
+        verify(settingsService).upsertSetting("key1", "value1");
+        verify(settingsService).upsertSetting("key2", "value2");
     }
 
     @Test
     @WithMockUser
-    void updateSettingsBulk_WithError_ShouldReturnBadRequest() throws Exception {
+    void updateSettingsBulk_WithNewKey_ShouldCreateSetting() throws Exception {
         // Given
-        when(settingsService.updateSetting(eq("key1"), anyString(), isNull(), isNull()))
-                .thenThrow(new ResourceNotFoundException("Setting not found"));
+        Settings setting = Settings.builder().key("new.key").value("new.value").build();
+        when(settingsService.upsertSetting(eq("new.key"), eq("new.value"))).thenReturn(setting);
 
         String requestBody = """
                 {
-                    "key1": "value1"
+                    "new.key": "new.value"
                 }
                 """;
 
@@ -313,8 +313,10 @@ class SettingsControllerTest {
         mockMvc.perform(put("/admin/settings/bulk")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Error updating setting: key1"));
+                .andExpect(status().isOk())
+                .andExpect(content().string("Settings updated successfully"));
+
+        verify(settingsService).upsertSetting("new.key", "new.value");
     }
 
     @Test

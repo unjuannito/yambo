@@ -8,6 +8,8 @@ import { useState, useEffect } from "react";
 import type { Route } from "./+types/cart";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBagShopping } from "@fortawesome/free-solid-svg-icons";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 
 export function meta({}: Route.MetaArgs) {
@@ -147,19 +149,10 @@ export default function CartPage() {
     return (
       <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <svg
+          <FontAwesomeIcon
+            icon={faBagShopping}
             className="w-24 h-24 mx-auto mb-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-            />
-          </svg>
+          />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Tu cesta está vacía</h2>
           <p className="text-gray-600 mb-6">Añade artículos desde el merch</p>
           <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio/merch")}>

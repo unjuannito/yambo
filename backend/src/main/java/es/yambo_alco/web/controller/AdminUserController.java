@@ -1,4 +1,5 @@
 package es.yambo_alco.web.controller;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
@@ -92,9 +93,19 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User userToUpdate = userService.getUserById(request.getId());
 
-        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail());
+        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail(),
+                request.getPhoto(), request.getBio());
         AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{userId}/groups")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateUserGroups(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody UpdateGroupsRequest request) {
+        User updatedUser = userService.updateUserGroups(userId, request.getGroupIds());
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
     }
 
     @DeleteMapping("/{userId}")
@@ -124,6 +135,16 @@ public class AdminUserController {
         @NotBlank(message = "Email cannot be blank")
         @Email(message = "Email should be valid")
         private String email;
+
+        private String photo;
+
+        private String bio;
+    }
+
+    @Data
+    public static class UpdateGroupsRequest {
+        @jakarta.validation.constraints.NotNull(message = "Group IDs cannot be null")
+        private Set<String> groupIds;
     }
 
     @Data
@@ -131,6 +152,9 @@ public class AdminUserController {
         private String id;
         private String email;
         private String name;
+        private String photo;
+        private String bio;
+        private AdminGroupResponse[] groups;
         private AdminUserProfileResponse[] profiles;
         private AdminUserPermissionResponse[] permissions;
         private String createdAt;
@@ -140,6 +164,11 @@ public class AdminUserController {
             this.id = user.getId();
             this.email = user.getEmail();
             this.name = user.getName();
+            this.photo = user.getPhoto();
+            this.bio = user.getBio();
+            this.groups = user.getGroups().stream()
+                    .map(AdminGroupResponse::new)
+                    .toArray(AdminGroupResponse[]::new);
 
             this.profiles = user.getProfiles().stream()
                     .map(profile -> new AdminUserProfileResponse(profile.getId(), profile.getName()))
@@ -167,6 +196,21 @@ public class AdminUserController {
         public AdminUserProfileResponse(String id, String name) {
             this.id = id;
             this.name = name;
+        }
+    }
+
+    @Data
+    public static class AdminGroupResponse {
+        private String id;
+        private String name;
+        private String projectId;
+        private String projectName;
+
+        public AdminGroupResponse(ProjectGroup group) {
+            this.id = group.getId();
+            this.name = group.getName();
+            this.projectId = group.getProject().getId();
+            this.projectName = group.getProject().getName();
         }
     }
 

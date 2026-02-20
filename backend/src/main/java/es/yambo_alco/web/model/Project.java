@@ -28,4 +28,14 @@ public class Project {
 
     @Column(nullable = true)
     private String season;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(length = 500)
+    private String image;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean featured = false;
 }
