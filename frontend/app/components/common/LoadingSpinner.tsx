@@ -9,23 +9,22 @@ interface LoadingSpinnerProps {
 const sizeClasses = {
     sm: {
         text: "text-sm",
-        spinner: "h-4 w-4",
+        fontSize: "1rem",
         gap: "gap-1"
-    }
-    ,
+    },
     md: {
         text: "text-md",
-        spinner: "h-8 w-8",
+        fontSize: "2rem",
         gap: "gap-2"
     },
     lg: {
         text: "text-lg",
-        spinner: "h-16 w-16",
+        fontSize: "4rem",
         gap: "gap-4"
     },
-    xl:  {
+    xl: {
         text: "text-xl",
-        spinner: "h-32 w-32",
+        fontSize: "8rem",
         gap: "gap-8"
     }
 };
@@ -38,7 +37,8 @@ export function LoadingSpinner({
             <FontAwesomeIcon
                 icon={faSpinner}
                 spin
-                className={`${sizeClasses[size].spinner} text-blue-600`}
+                className="text-blue-600"
+                style={{ fontSize: sizeClasses[size].fontSize }}
                 role="status"
                 aria-label="Cargando"
             />
