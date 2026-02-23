@@ -64,6 +64,11 @@ spec:
                 secretKeyRef:
                   name: yambo-secrets
                   key: MAIL_FROM
+            - name: UPLOAD_DIR
+              value: "/data/uploads"
+          volumeMounts:
+            - name: uploads-storage
+              mountPath: /data/uploads
           resources:
             requests:
               memory: "256Mi"
@@ -83,6 +88,22 @@ spec:
               port: 8080
             initialDelaySeconds: 120
             periodSeconds: 15
+      volumes:
+        - name: uploads-storage
+          persistentVolumeClaim:
+            claimName: uploads-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: yambo
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: v1
 kind: Service

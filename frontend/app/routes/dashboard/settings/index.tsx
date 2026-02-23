@@ -5,7 +5,7 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { settingsService, type EmailConfig } from "~/services/settingsService";
+import { settingsService, type EmailConfig, type UploadConfig } from "~/services/settingsService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,7 +18,7 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-type SettingsTab = "organization" | "application" | "bank" | "email" | "contact";
+type SettingsTab = "organization" | "application" | "bank" | "email" | "contact" | "upload";
 
 export default function Settings() {
     const [loading, setLoading] = useState(true);
@@ -52,6 +52,12 @@ export default function Settings() {
     const [contactInstagram, setContactInstagram] = useState("");
     const [contactTiktok, setContactTiktok] = useState("");
 
+    // Upload settings
+    const [uploadConfig, setUploadConfig] = useState<UploadConfig>({
+        maxFileSizeMb: 5,
+        allowedTypes: "image/jpeg,image/png,image/gif,image/webp,image/svg+xml",
+    });
+
     // Advanced SMTP settings
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [smtpConfig, setSmtpConfig] = useState({
@@ -73,13 +79,14 @@ export default function Settings() {
         try {
             setLoading(true);
             setError(null);
-            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue, issueCreationWindowDaysValue] = await Promise.all([
+            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue, issueCreationWindowDaysValue, uploadConfigValue] = await Promise.all([
                 settingsService.getAllSettings(),
                 settingsService.getDomain(),
                 settingsService.getIban(),
                 settingsService.getEmailConfig(),
                 settingsService.getSmtpAdvancedConfig(),
                 settingsService.getIssueCreationWindowDays(),
+                settingsService.getUploadConfig(),
             ]);
 
             // Load organization settings
@@ -102,6 +109,7 @@ export default function Settings() {
             setEmailConfig(emailConfigValue);
             setSmtpConfig(smtpConfigValue);
             setIssueCreationWindowDays(String(issueCreationWindowDaysValue));
+            setUploadConfig(uploadConfigValue);
         } catch (err) {
             setError(getErrorMessage(err, "Error al cargar la configuración"));
         } finally {
@@ -188,6 +196,22 @@ export default function Settings() {
         }
     };
 
+    const handleSaveUploadSettings = async () => {
+        try {
+            setSavingTab("upload");
+            if (uploadConfig.maxFileSizeMb < 1) {
+                toast.error("El tamaño máximo debe ser al menos 1 MB");
+                return;
+            }
+            await settingsService.updateUploadConfig(uploadConfig);
+            toast.success("Configuración de archivos guardada correctamente");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración de archivos"));
+        } finally {
+            setSavingTab(null);
+        }
+    };
+
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
@@ -251,6 +275,13 @@ export default function Settings() {
                             onClick={() => setActiveTab("contact")}
                         >
                             Contacto
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant={activeTab === "upload" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("upload")}
+                        >
+                            Archivos
                         </ButtonComponent>
                     </div>
                 </section>
@@ -548,6 +579,50 @@ export default function Settings() {
                                     disabled={savingTab !== null}
                                 >
                                     {savingTab === "contact" ? "Guardando..." : "Guardar Configuración de Contacto"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
+
+                {activeTab === "upload" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración de Archivos</h2>
+                        <p className="text-sm text-gray-600">
+                            Configura los límites y tipos de archivo permitidos para la subida de imágenes.
+                        </p>
+                        <InputComponent
+                            label="Tamaño máximo de archivo (MB)"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={String(uploadConfig.maxFileSizeMb)}
+                            onChange={(e) => setUploadConfig({ ...uploadConfig, maxFileSizeMb: Number(e.target.value) })}
+                            placeholder="5"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Tamaño máximo permitido por archivo subido. Afecta a fotos de perfil, imágenes de productos y proyectos.
+                        </p>
+                        <InputComponent
+                            label="Tipos MIME permitidos"
+                            type="text"
+                            value={uploadConfig.allowedTypes}
+                            onChange={(e) => setUploadConfig({ ...uploadConfig, allowedTypes: e.target.value })}
+                            placeholder="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Tipos de archivo permitidos separados por coma. Ejemplo: image/jpeg,image/png,image/gif
+                        </p>
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveUploadSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
+                                >
+                                    {savingTab === "upload" ? "Guardando..." : "Guardar Configuración de Archivos"}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>

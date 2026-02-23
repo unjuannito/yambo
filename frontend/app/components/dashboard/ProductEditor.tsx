@@ -6,7 +6,9 @@ import { getErrorMessage } from "~/types/error";
 import { productService, type OptionValue, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
+import ImageUploader from "~/components/common/ImageUploader";
+import { ImageUsageContext } from "~/types/imageType";
 
 type ProductEditorMode = "create" | "edit";
 
@@ -188,6 +190,14 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         });
     };
 
+    const moveImage = (index: number, direction: "up" | "down") => {
+        const imgs = [...(product.images || [])];
+        const target = direction === "up" ? index - 1 : index + 1;
+        if (target < 0 || target >= imgs.length) return;
+        [imgs[index], imgs[target]] = [imgs[target], imgs[index]];
+        setProduct({ ...product, images: imgs });
+    };
+
     const updateImage = (index: number, url: string) => {
         const newImages = [...(product.images || [])];
         newImages[index] = url;
@@ -332,39 +342,69 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     </div>
 
                     <div className="bg-white rounded-lg shadow-md p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-semibold">Imágenes del Producto</h2>
-                            <button
-                                onClick={addImage}
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                            >
-                                + Añadir Imagen
-                            </button>
-                        </div>
-                        <div className="space-y-3">
-                            {(product.images || []).map((image, index) => (
-                                <div key={index} className="flex gap-2 items-center">
-                                    <input
-                                        type="text"
-                                        value={image}
-                                        onChange={(e) => updateImage(index, e.target.value)}
-                                        placeholder="URL de la imagen"
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                    <button
-                                        onClick={() => removeImage(index)}
-                                        className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                            {(product.images || []).length === 0 && (
-                                <p className="text-gray-500 text-sm text-center py-4">
-                                    No hay imágenes añadidas aún. Haz clic en "Añadir Imagen" para comenzar.
-                                </p>
-                            )}
-                        </div>
+                        <h2 className="text-xl font-semibold mb-4">Imágenes del Producto</h2>
+                        <ImageUploader
+                            context={ImageUsageContext.PRODUCT_IMAGE}
+                            referenceId={isEditing ? productId : undefined}
+                            multiple
+                            label="Arrastra o haz clic para subir imágenes"
+                            onUpload={(img) =>
+                                setProduct((prev) => ({
+                                    ...prev,
+                                    images: [...(prev.images || []), img.url],
+                                }))
+                            }
+                            onDelete={(imageId) =>
+                                setProduct((prev) => ({
+                                    ...prev,
+                                    images: (prev.images || []).filter((_, i) => i !== (prev.images || []).length - 1),
+                                }))
+                            }
+                        />
+                        {(product.images || []).length > 0 && (
+                            <div className="mt-4 grid grid-cols-3 gap-3">
+                                {product.images.map((url, index) => (
+                                    <div key={index} className="relative group">
+                                        <img
+                                            src={url}
+                                            alt={`Imagen ${index + 1}`}
+                                            className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3EError%3C/text%3E%3C/svg%3E";
+                                            }}
+                                        />
+                                        <div className="absolute top-1 left-1 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                type="button"
+                                                disabled={index === 0}
+                                                onClick={() => moveImage(index, "up")}
+                                                className="bg-gray-800/70 text-white rounded-full w-5 h-5 flex items-center justify-center disabled:opacity-30"
+                                            >
+                                                <FontAwesomeIcon icon={faArrowUp} className="w-2.5 h-2.5" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={index === product.images.length - 1}
+                                                onClick={() => moveImage(index, "down")}
+                                                className="bg-gray-800/70 text-white rounded-full w-5 h-5 flex items-center justify-center disabled:opacity-30"
+                                            >
+                                                <FontAwesomeIcon icon={faArrowDown} className="w-2.5 h-2.5" />
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(index)}
+                                            className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+                                        </button>
+                                        <span className="absolute bottom-1 left-1 bg-gray-800/70 text-white text-[10px] rounded px-1">
+                                            {index + 1}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-white rounded-lg shadow-md p-6">

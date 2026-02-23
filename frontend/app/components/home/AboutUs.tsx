@@ -8,6 +8,7 @@ interface AboutBullet {
 }
 
 interface AboutUsProps {
+  title?: string;
   intro?: string;
   bulletsJson?: string;
   image?: string;
@@ -52,14 +53,14 @@ function parseBullets(json?: string): AboutBullet[] {
   }
 }
 
-export default function AboutUs({ intro, bulletsJson, image, loading }: AboutUsProps) {
+export default function AboutUs({ title, intro, bulletsJson, image, loading }: AboutUsProps) {
   const bullets = parseBullets(bulletsJson);
 
   return (
     <section className="w-full py-16 bg-white text-gray-900">
       <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">¿Qué es Yambo?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{title || "¿Qué es Yambo?"}</h2>
           {loading ? (
             <>
               <div className="h-5 w-full mb-2 bg-gray-200 rounded animate-pulse" />

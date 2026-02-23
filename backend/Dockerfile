@@ -11,5 +11,7 @@ RUN ./mvnw install -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 VOLUME /tmp
+RUN mkdir -p /data/uploads
 COPY --from=build /workspace/app/target/*.jar app.jar
+ENV UPLOAD_DIR=/data/uploads
 ENTRYPOINT ["java","-jar","/app.jar"]

@@ -83,12 +83,12 @@ const activities = [
   }
 ];
 
-export default function ActivitiesPreview() {
+export default function ActivitiesPreview({ title }: { title?: string }) {
   return (
     <section id="actividades" className="w-full bg-white py-16">
       <div className="max-w-6xl mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">
-          Actividades
+          {title || "Actividades"}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {activities.map((act) => (

@@ -8,7 +8,9 @@ import { settingsService } from "~/services/settingsService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronUp, faChevronDown, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import ImageUploader from "~/components/common/ImageUploader";
+import { ImageUsageContext } from "~/types/imageType";
 
 export function meta() {
     return [
@@ -17,7 +19,7 @@ export function meta() {
     ];
 }
 
-type MainPageTab = "hero" | "about";
+type MainPageTab = "sections" | "hero" | "about";
 
 interface BulletItem {
     icon: string;
@@ -28,11 +30,36 @@ interface BulletItem {
 
 const EMPTY_BULLET: BulletItem = { icon: "\u25CE", title: "", description: "", link: "" };
 
+interface SectionConfig {
+    id: string;
+    visible: boolean;
+    title: string;
+}
+
+const SECTION_LABELS: Record<string, string> = {
+    hero: "Hero (cabecera)",
+    about: "Sobre Nosotros",
+    projects: "Proyectos Destacados",
+    activities: "Actividades",
+    monitors: "Equipo de Monitores",
+};
+
+const DEFAULT_SECTIONS: SectionConfig[] = [
+    { id: "hero", visible: true, title: "" },
+    { id: "about", visible: true, title: "¿Qué es Yambo?" },
+    { id: "projects", visible: true, title: "Proyectos Destacados" },
+    { id: "activities", visible: true, title: "Actividades" },
+    { id: "monitors", visible: true, title: "Equipo de Monitores" },
+];
+
 export default function MainPageEditor() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<MainPageTab>("hero");
+    const [activeTab, setActiveTab] = useState<MainPageTab>("sections");
     const [saving, setSaving] = useState(false);
+
+    // Sections config
+    const [sections, setSections] = useState<SectionConfig[]>([...DEFAULT_SECTIONS]);
 
     // Hero
     const [heroTitle, setHeroTitle] = useState("");
@@ -58,6 +85,17 @@ export default function MainPageEditor() {
             setAboutIntro(get("home.about.intro"));
             setAboutImage(get("home.about.image"));
 
+            // Sections config
+            const sectionsRaw = get("home.sections.config");
+            if (sectionsRaw) {
+                try {
+                    const parsed = JSON.parse(sectionsRaw) as SectionConfig[];
+                    if (parsed.length > 0) setSections(parsed);
+                } catch {
+                    // keep defaults
+                }
+            }
+
             const bulletsRaw = get("home.about.bullets");
             if (bulletsRaw) {
                 try {
@@ -77,6 +115,47 @@ export default function MainPageEditor() {
     useEffect(() => {
         void loadSettings();
     }, [loadSettings]);
+
+    // --- Section handlers ---
+    const toggleSectionVisibility = (index: number) => {
+        setSections(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], visible: !updated[index].visible };
+            return updated;
+        });
+    };
+
+    const updateSectionTitle = (index: number, title: string) => {
+        setSections(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], title };
+            return updated;
+        });
+    };
+
+    const moveSection = (index: number, direction: "up" | "down") => {
+        setSections(prev => {
+            const newArr = [...prev];
+            const target = direction === "up" ? index - 1 : index + 1;
+            if (target < 0 || target >= newArr.length) return prev;
+            [newArr[index], newArr[target]] = [newArr[target], newArr[index]];
+            return newArr;
+        });
+    };
+
+    const handleSaveSections = async () => {
+        try {
+            setSaving(true);
+            await settingsService.updateSettingsBulk({
+                "home.sections.config": JSON.stringify(sections),
+            });
+            toast.success("Configuración de secciones guardada correctamente");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar las secciones"));
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const handleSaveHero = async () => {
         try {
@@ -138,6 +217,7 @@ export default function MainPageEditor() {
     };
 
     const tabs: { key: MainPageTab; label: string }[] = [
+        { key: "sections", label: "Secciones" },
         { key: "hero", label: "Hero" },
         { key: "about", label: "Sobre Nosotros" },
     ];
@@ -184,6 +264,118 @@ export default function MainPageEditor() {
                     ))}
                 </div>
 
+                {/* Sections Tab */}
+                {activeTab === "sections" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-6">
+                        <div>
+                            <h2 className="text-xl font-semibold mb-1">Configuración de Secciones</h2>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Configura el orden, visibilidad y títulos de cada sección de la página principal.
+                            </p>
+                        </div>
+
+                        <div className="space-y-3">
+                            {sections.map((section, index) => (
+                                <div
+                                    key={section.id}
+                                    className={`border rounded-lg p-4 transition-colors ${
+                                        section.visible
+                                            ? "bg-white border-gray-200"
+                                            : "bg-gray-50 border-gray-100 opacity-60"
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {/* Reorder buttons */}
+                                        <div className="flex flex-col gap-0.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => moveSection(index, "up")}
+                                                disabled={index === 0}
+                                                className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                                                title="Mover arriba"
+                                            >
+                                                <FontAwesomeIcon icon={faChevronUp} className="w-3 h-3" />
+                                            </button>
+                                            <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 text-gray-300" />
+                                            <button
+                                                type="button"
+                                                onClick={() => moveSection(index, "down")}
+                                                disabled={index === sections.length - 1}
+                                                className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                                                title="Mover abajo"
+                                            >
+                                                <FontAwesomeIcon icon={faChevronDown} className="w-3 h-3" />
+                                            </button>
+                                        </div>
+
+                                        {/* Visibility toggle */}
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleSectionVisibility(index)}
+                                            className={`p-2 rounded-lg transition-colors ${
+                                                section.visible
+                                                    ? "text-green-600 hover:bg-green-50"
+                                                    : "text-gray-400 hover:bg-gray-100"
+                                            }`}
+                                            title={section.visible ? "Ocultar sección" : "Mostrar sección"}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={section.visible ? faEye : faEyeSlash}
+                                                className="w-5 h-5"
+                                            />
+                                        </button>
+
+                                        {/* Section info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-xs font-semibold text-gray-400 uppercase">
+                                                    {SECTION_LABELS[section.id] || section.id}
+                                                </span>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                    section.visible
+                                                        ? "bg-green-100 text-green-700"
+                                                        : "bg-gray-100 text-gray-500"
+                                                }`}>
+                                                    {section.visible ? "Visible" : "Oculto"}
+                                                </span>
+                                            </div>
+                                            {section.id !== "hero" && (
+                                                <input
+                                                    type="text"
+                                                    value={section.title}
+                                                    onChange={(e) => updateSectionTitle(index, e.target.value)}
+                                                    placeholder={SECTION_LABELS[section.id] || "Título de sección"}
+                                                    className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            )}
+                                            {section.id === "hero" && (
+                                                <span className="text-xs text-gray-400">
+                                                    El título del Hero se configura en la pestaña "Hero"
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Position indicator */}
+                                        <span className="text-xs text-gray-300 font-mono w-6 text-center">
+                                            {index + 1}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-end pt-4 border-t">
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={handleSaveSections}
+                                disabled={saving}
+                            >
+                                {saving ? "Guardando..." : "Guardar Secciones"}
+                            </ButtonComponent>
+                        </div>
+                    </section>
+                )}
+
                 {/* Hero Tab */}
                 {activeTab === "hero" && (
                     <section className="bg-white rounded-lg shadow p-6 space-y-6">
@@ -214,12 +406,16 @@ export default function MainPageEditor() {
                             <p className="text-xs text-gray-400 text-right mt-1">{heroSubtitle.length}/500</p>
                         </div>
 
-                        <InputComponent
-                            label="URL de imagen de fondo"
-                            value={heroImage}
-                            placeholder="https://..."
-                            onChange={(e) => setHeroImage(e.target.value)}
-                        />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Imagen de fondo</label>
+                            <ImageUploader
+                                context={ImageUsageContext.HOME_IMAGE}
+                                referenceId="hero"
+                                compact
+                                label="Subir imagen de fondo"
+                                onUpload={(img) => setHeroImage(img.url)}
+                            />
+                        </div>
 
                         {heroImage && (
                             <div>
@@ -278,12 +474,16 @@ export default function MainPageEditor() {
                             <p className="text-xs text-gray-400 text-right mt-1">{aboutIntro.length}/1000</p>
                         </div>
 
-                        <InputComponent
-                            label="URL de imagen"
-                            value={aboutImage}
-                            placeholder="https://..."
-                            onChange={(e) => setAboutImage(e.target.value)}
-                        />
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Imagen</label>
+                            <ImageUploader
+                                context={ImageUsageContext.HOME_IMAGE}
+                                referenceId="about"
+                                compact
+                                label="Subir imagen"
+                                onUpload={(img) => setAboutImage(img.url)}
+                            />
+                        </div>
 
                         {aboutImage && (
                             <div>

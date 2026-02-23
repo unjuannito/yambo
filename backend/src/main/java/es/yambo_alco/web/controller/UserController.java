@@ -94,6 +94,7 @@ public class UserController {
 
     @Data
     public static class UserResponse {
+        private String id;
         private String email;
         private String name;
         private String photo;
@@ -102,6 +103,7 @@ public class UserController {
         private PermissionResponse[] permissions;
 
         public UserResponse(User user) {
+            this.id = user.getId();
             this.email = user.getEmail();
             this.name = user.getName();
             this.photo = user.getPhoto();

@@ -681,4 +681,88 @@ class SettingsControllerTest {
                                 .content(requestBody))
                                 .andExpect(status().isBadRequest());
         }
+
+    // ── Upload Settings Tests ──
+
+    @Test
+    @WithMockUser
+    void getUploadConfig_ShouldReturnUploadConfiguration() throws Exception {
+        // Given
+        when(settingsService.getUploadMaxFileSizeMb()).thenReturn(5);
+        when(settingsService.getUploadAllowedTypes()).thenReturn(java.util.Set.of("image/jpeg", "image/png"));
+
+        // When & Then
+        mockMvc.perform(get("/admin/settings/upload"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.maxFileSizeMb").value(5))
+                .andExpect(jsonPath("$.allowedTypes").isString());
+    }
+
+    @Test
+    @WithMockUser
+    void updateUploadConfig_WithValidData_ShouldUpdateConfiguration() throws Exception {
+        // Given
+        doNothing().when(settingsService).setUploadMaxFileSizeMb(10);
+        doNothing().when(settingsService).setUploadAllowedTypes("image/jpeg,image/png,image/webp");
+
+        String requestBody = """
+                {
+                    "maxFileSizeMb": 10,
+                    "allowedTypes": "image/jpeg,image/png,image/webp"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/upload")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Upload configuration updated successfully"));
+
+        verify(settingsService).setUploadMaxFileSizeMb(10);
+        verify(settingsService).setUploadAllowedTypes("image/jpeg,image/png,image/webp");
+    }
+
+    @Test
+    @WithMockUser
+    void updateUploadConfig_WithPartialData_ShouldUpdateOnlyProvidedFields() throws Exception {
+        // Given
+        doNothing().when(settingsService).setUploadMaxFileSizeMb(8);
+
+        String requestBody = """
+                {
+                    "maxFileSizeMb": 8
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/upload")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Upload configuration updated successfully"));
+
+        verify(settingsService).setUploadMaxFileSizeMb(8);
+        verify(settingsService, never()).setUploadAllowedTypes(anyString());
+    }
+
+    @Test
+    @WithMockUser
+    void updateUploadConfig_WithBlankAllowedTypes_ShouldNotUpdateTypes() throws Exception {
+        // Given
+        String requestBody = """
+                {
+                    "allowedTypes": ""
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/upload")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk());
+
+        verify(settingsService, never()).setUploadAllowedTypes(anyString());
+        verify(settingsService, never()).setUploadMaxFileSizeMb(anyInt());
+    }
 }

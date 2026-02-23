@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Hero from "~/components/home/Hero";
 import AboutUs from "~/components/home/AboutUs";
 import FeaturedProjects from "~/components/home/FeaturedProjects";
@@ -14,6 +14,20 @@ export function meta({ }: Route.MetaArgs) {
     { name: "description", content: "Asociación juvenil de Alcobendas: vive, aprende y crece con Yambo." },
   ];
 }
+
+interface SectionConfig {
+  id: string;
+  visible: boolean;
+  title: string;
+}
+
+const DEFAULT_SECTIONS: SectionConfig[] = [
+  { id: "hero", visible: true, title: "" },
+  { id: "about", visible: true, title: "¿Qué es Yambo?" },
+  { id: "projects", visible: true, title: "Proyectos Destacados" },
+  { id: "activities", visible: true, title: "Actividades" },
+  { id: "monitors", visible: true, title: "Equipo de Monitores" },
+];
 
 export default function Index() {
   const [settings, setSettings] = useState<HomeSettings>({});
@@ -42,23 +56,78 @@ export default function Index() {
     void loadData();
   }, [loadData]);
 
+  const sections = useMemo<SectionConfig[]>(() => {
+    const raw = settings["home.sections.config"];
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as SectionConfig[];
+        if (parsed.length > 0) return parsed;
+      } catch { /* use defaults */ }
+    }
+    return DEFAULT_SECTIONS;
+  }, [settings]);
+
+  const sectionTitle = (id: string) =>
+    sections.find(s => s.id === id)?.title || "";
+
+  const renderSection = (section: SectionConfig) => {
+    if (!section.visible) return null;
+
+    switch (section.id) {
+      case "hero":
+        return (
+          <Hero
+            key="hero"
+            title={settings["home.hero.title"]}
+            subtitle={settings["home.hero.subtitle"]}
+            image={settings["home.hero.image"]}
+            loading={loading}
+          />
+        );
+      case "about":
+        return (
+          <AboutUs
+            key="about"
+            title={sectionTitle("about")}
+            intro={settings["home.about.intro"]}
+            bulletsJson={settings["home.about.bullets"]}
+            image={settings["home.about.image"]}
+            loading={loading}
+          />
+        );
+      case "projects":
+        return (
+          <FeaturedProjects
+            key="projects"
+            title={sectionTitle("projects")}
+            projects={projects}
+            loading={loading}
+          />
+        );
+      case "activities":
+        return (
+          <ActivitiesPreview
+            key="activities"
+            title={sectionTitle("activities")}
+          />
+        );
+      case "monitors":
+        return (
+          <MonitorsGallery
+            key="monitors"
+            title={sectionTitle("monitors")}
+            monitors={monitors}
+            loading={loading}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
-      <Hero
-        title={settings["home.hero.title"]}
-        subtitle={settings["home.hero.subtitle"]}
-        image={settings["home.hero.image"]}
-        loading={loading}
-      />
-      <AboutUs
-        intro={settings["home.about.intro"]}
-        bulletsJson={settings["home.about.bullets"]}
-        image={settings["home.about.image"]}
-        loading={loading}
-      />
-      <FeaturedProjects projects={projects} loading={loading} />
-      <ActivitiesPreview />
-      <MonitorsGallery monitors={monitors} loading={loading} />
+      {sections.map(renderSection)}
     </>
   );
 }

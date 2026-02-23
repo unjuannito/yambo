@@ -11,6 +11,8 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLock, faTrash, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
+import ImageUploader from "~/components/common/ImageUploader";
+import { ImageUsageContext } from "~/types/imageType";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -194,15 +196,14 @@ export default function MyAccount() {
               required
               placeholder="tu@email.com"
             />
-            <InputComponent
-              label="Foto (URL)"
-              name="photo"
-              type="url"
-              value={profileData.photo}
-              onChange={(e) =>
-                setProfileData((prev) => ({ ...prev, photo: e.target.value }))
+            <ImageUploader
+              context={ImageUsageContext.USER_PHOTO}
+              referenceId={user?.id}
+              compact
+              label="Foto de perfil"
+              onUpload={(img) =>
+                setProfileData((prev) => ({ ...prev, photo: img.url }))
               }
-              placeholder="https://ejemplo.com/mi-foto.jpg"
             />
             {user?.groups && user.groups.length > 0 && (
               <div>

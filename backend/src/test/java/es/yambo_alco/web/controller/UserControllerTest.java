@@ -53,6 +53,7 @@ class UserControllerTest {
         AuthController.AuthResponse authResponse = new AuthController.AuthResponse("test.jwt.token");
         when(authService.getCurrentUser(true)).thenReturn(
                 User.builder()
+                        .id("U0000001")
                         .password("password")
                         .email("testuser@example.com")
                         .name("Test User")
@@ -70,6 +71,7 @@ class UserControllerTest {
         mockMvc.perform(get("/user/me")
                 .header("Authorization", "Bearer " + authResponse.token()))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("U0000001"))
                 .andExpect(jsonPath("$.email").value("testuser@example.com"))
                 .andExpect(jsonPath("$.name").value("Test User"))
                 .andExpect(jsonPath("$.permissions").isArray())

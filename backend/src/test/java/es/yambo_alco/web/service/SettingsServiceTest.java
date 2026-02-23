@@ -752,4 +752,165 @@ public class SettingsServiceTest {
 
         verify(settingsRepository, never()).save(any(Settings.class));
     }
+
+    // ── Upload Settings Tests ──
+
+    @Test
+    public void getUploadMaxFileSizeMb_WhenSettingExists_ShouldReturnParsedValue() {
+        // Given
+        Settings setting = Settings.builder()
+                .key("upload.max_file_size_mb")
+                .value("10")
+                .build();
+
+        when(settingsRepository.findByKey("upload.max_file_size_mb")).thenReturn(Optional.of(setting));
+
+        // When
+        int result = settingsService.getUploadMaxFileSizeMb();
+
+        // Then
+        assertThat(result).isEqualTo(10);
+    }
+
+    @Test
+    public void getUploadMaxFileSizeMb_WhenSettingMissing_ShouldReturnDefault() {
+        // Given
+        when(settingsRepository.findByKey("upload.max_file_size_mb")).thenReturn(Optional.empty());
+
+        // When
+        int result = settingsService.getUploadMaxFileSizeMb();
+
+        // Then
+        assertThat(result).isEqualTo(5);
+    }
+
+    @Test
+    public void getUploadMaxFileSizeMb_WhenSettingInvalid_ShouldReturnDefault() {
+        // Given
+        Settings setting = Settings.builder()
+                .key("upload.max_file_size_mb")
+                .value("abc")
+                .build();
+
+        when(settingsRepository.findByKey("upload.max_file_size_mb")).thenReturn(Optional.of(setting));
+
+        // When
+        int result = settingsService.getUploadMaxFileSizeMb();
+
+        // Then
+        assertThat(result).isEqualTo(5);
+    }
+
+    @Test
+    public void getUploadMaxFileSizeMb_WhenSettingNegative_ShouldReturnDefault() {
+        // Given
+        Settings setting = Settings.builder()
+                .key("upload.max_file_size_mb")
+                .value("-3")
+                .build();
+
+        when(settingsRepository.findByKey("upload.max_file_size_mb")).thenReturn(Optional.of(setting));
+
+        // When
+        int result = settingsService.getUploadMaxFileSizeMb();
+
+        // Then
+        assertThat(result).isEqualTo(5);
+    }
+
+    @Test
+    public void setUploadMaxFileSizeMb_WithValidValue_ShouldUpdateSetting() {
+        // Given
+        Settings existing = Settings.builder()
+                .key("upload.max_file_size_mb")
+                .value("5")
+                .build();
+
+        when(settingsRepository.findByKey("upload.max_file_size_mb")).thenReturn(Optional.of(existing));
+        when(settingsRepository.save(any(Settings.class))).thenReturn(existing);
+
+        // When
+        settingsService.setUploadMaxFileSizeMb(10);
+
+        // Then
+        verify(settingsRepository).save(any(Settings.class));
+    }
+
+    @Test
+    public void setUploadMaxFileSizeMb_WithNegativeValue_ShouldThrowBadRequest() {
+        assertThatThrownBy(() -> settingsService.setUploadMaxFileSizeMb(-1))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Max file size must be greater than 0");
+
+        verify(settingsRepository, never()).save(any(Settings.class));
+    }
+
+    @Test
+    public void setUploadMaxFileSizeMb_WithZeroValue_ShouldThrowBadRequest() {
+        assertThatThrownBy(() -> settingsService.setUploadMaxFileSizeMb(0))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Max file size must be greater than 0");
+
+        verify(settingsRepository, never()).save(any(Settings.class));
+    }
+
+    @Test
+    public void getUploadAllowedTypes_WhenSettingExists_ShouldReturnParsedSet() {
+        // Given
+        Settings setting = Settings.builder()
+                .key("upload.allowed_types")
+                .value("image/jpeg,image/png")
+                .build();
+
+        when(settingsRepository.findByKey("upload.allowed_types")).thenReturn(Optional.of(setting));
+
+        // When
+        java.util.Set<String> result = settingsService.getUploadAllowedTypes();
+
+        // Then
+        assertThat(result).containsExactlyInAnyOrder("image/jpeg", "image/png");
+    }
+
+    @Test
+    public void getUploadAllowedTypes_WhenSettingMissing_ShouldReturnDefaults() {
+        // Given
+        when(settingsRepository.findByKey("upload.allowed_types")).thenReturn(Optional.empty());
+
+        // When
+        java.util.Set<String> result = settingsService.getUploadAllowedTypes();
+
+        // Then
+        assertThat(result).contains("image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml");
+    }
+
+    @Test
+    public void setUploadAllowedTypes_WithValidValue_ShouldUpdateSetting() {
+        // Given
+        Settings existing = Settings.builder()
+                .key("upload.allowed_types")
+                .value("image/jpeg")
+                .build();
+
+        when(settingsRepository.findByKey("upload.allowed_types")).thenReturn(Optional.of(existing));
+        when(settingsRepository.save(any(Settings.class))).thenReturn(existing);
+
+        // When
+        settingsService.setUploadAllowedTypes("image/jpeg,image/png,image/webp");
+
+        // Then
+        verify(settingsRepository).save(any(Settings.class));
+    }
+
+    @Test
+    public void setUploadAllowedTypes_WhenSettingDoesNotExist_ShouldCreateSetting() {
+        // Given
+        when(settingsRepository.findByKey("upload.allowed_types")).thenReturn(Optional.empty());
+        when(settingsRepository.save(any(Settings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        settingsService.setUploadAllowedTypes("image/jpeg,image/png");
+
+        // Then
+        verify(settingsRepository).save(any(Settings.class));
+    }
 }

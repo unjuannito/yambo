@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="47-create-image-table" author="yambo">
+        <comment>Create image table to track uploaded files, their usage context and ownership</comment>
+
+        <createTable tableName="image">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="stored_name" type="varchar(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="content_type" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="varchar(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="context" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reference_id" type="varchar(255)"/>
+            <column name="uploaded_by" type="char(8)">
+                <constraints nullable="false"
+                             foreignKeyName="fk_image_uploaded_by"
+                             references="public.user(id)"/>
+            </column>
+            <column name="uploaded_at" type="timestamp" defaultValueComputed="now()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="image" indexName="idx_image_context_reference">
+            <column name="context"/>
+            <column name="reference_id"/>
+        </createIndex>
+
+        <createIndex tableName="image" indexName="idx_image_uploaded_by">
+            <column name="uploaded_by"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

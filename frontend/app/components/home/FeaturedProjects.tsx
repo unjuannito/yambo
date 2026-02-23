@@ -2,15 +2,16 @@ import type { FeaturedProject } from "~/services/publicService";
 
 interface FeaturedProjectsProps {
   projects: FeaturedProject[];
+  title?: string;
   loading?: boolean;
 }
 
-export default function FeaturedProjects({ projects, loading }: FeaturedProjectsProps) {
+export default function FeaturedProjects({ projects, title, loading }: FeaturedProjectsProps) {
   return (
     <section className="w-full bg-gray-50 py-16">
       <div className="max-w-[1400px] mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">
-          Proyectos Destacados
+          {title || "Proyectos Destacados"}
         </h2>
         <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory px-4 scrollbar-hide">
           {loading ? (

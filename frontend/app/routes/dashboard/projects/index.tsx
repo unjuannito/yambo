@@ -12,6 +12,8 @@ import { projectService, type Project, type ProjectGroup } from "~/services/proj
 import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import ImageUploader from "~/components/common/ImageUploader";
+import { ImageUsageContext } from "~/types/imageType";
 
 export function meta() {
     return [
@@ -350,12 +352,24 @@ export default function Projects() {
                             value={form.season}
                             onChange={(e) => setForm((prev) => ({ ...prev, season: e.target.value }))}
                         />
-                        <InputComponent
-                            label="URL de imagen"
-                            value={form.image}
-                            placeholder="https://..."
-                            onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.value }))}
+                        <ImageUploader
+                            context={ImageUsageContext.PROJECT_IMAGE}
+                            referenceId={editing || undefined}
+                            compact
+                            label="Imagen del proyecto"
+                            onUpload={(img) =>
+                                setForm((prev) => ({ ...prev, image: img.url }))
+                            }
                         />
+                        {form.image && (
+                            <div className="mt-2">
+                                <img
+                                    src={form.image}
+                                    alt="Vista previa"
+                                    className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                                />
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                             <textarea

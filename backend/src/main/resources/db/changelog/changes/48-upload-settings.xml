@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="48-seed-upload-settings" author="yambo">
+        <comment>Seed file upload settings into the settings table</comment>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0030"/>
+            <column name="key" value="upload.max_file_size_mb"/>
+            <column name="value" value="5"/>
+            <column name="description" value="Tamaño máximo de archivo en MB"/>
+            <column name="category" value="upload"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SETT0031"/>
+            <column name="key" value="upload.allowed_types"/>
+            <column name="value" value="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"/>
+            <column name="description" value="Tipos MIME permitidos para subida de imágenes (separados por coma)"/>
+            <column name="category" value="upload"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

@@ -39,6 +39,11 @@ export interface SmtpAdvancedConfig {
     writeTimeout: number;
 }
 
+export interface UploadConfig {
+    maxFileSizeMb: number;
+    allowedTypes: string;
+}
+
 export class SettingsService extends ApiService {
     public async getAllSettings(): Promise<Setting[]> {
         return await this.get<Setting[]>("/admin/settings");
@@ -109,6 +114,16 @@ export class SettingsService extends ApiService {
 
     public async setIssueCreationWindowDays(days: number): Promise<string> {
         return await this.put<string, { days: number }>("/admin/settings/issues/creation-window-days", { days });
+    }
+
+    // Upload settings
+
+    public async getUploadConfig(): Promise<UploadConfig> {
+        return await this.get<UploadConfig>("/admin/settings/upload");
+    }
+
+    public async updateUploadConfig(config: Partial<UploadConfig>): Promise<string> {
+        return await this.put<string, Partial<UploadConfig>>("/admin/settings/upload", config);
     }
 }
 

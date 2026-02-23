@@ -204,6 +204,29 @@ public class SettingsController {
         return ResponseEntity.ok("Issue creation window updated successfully");
     }
 
+    // ── Upload Settings ──
+
+    @GetMapping("/upload")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
+    public ResponseEntity<UploadConfigResponse> getUploadConfig() {
+        UploadConfigResponse config = new UploadConfigResponse();
+        config.setMaxFileSizeMb(settingsService.getUploadMaxFileSizeMb());
+        config.setAllowedTypes(String.join(",", settingsService.getUploadAllowedTypes()));
+        return ResponseEntity.ok(config);
+    }
+
+    @PutMapping("/upload")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
+    public ResponseEntity<String> updateUploadConfig(@Valid @RequestBody UploadConfigRequest request) {
+        if (request.getMaxFileSizeMb() != null) {
+            settingsService.setUploadMaxFileSizeMb(request.getMaxFileSizeMb());
+        }
+        if (request.getAllowedTypes() != null && !request.getAllowedTypes().isBlank()) {
+            settingsService.setUploadAllowedTypes(request.getAllowedTypes());
+        }
+        return ResponseEntity.ok("Upload configuration updated successfully");
+    }
+
     @Data
     public static class SettingsResponse {
         private String id;
@@ -294,5 +317,17 @@ public class SettingsController {
     public static class IssueCreationWindowDaysRequest {
         @NotNull(message = "Days cannot be null")
         private Integer days;
+    }
+
+    @Data
+    public static class UploadConfigResponse {
+        private Integer maxFileSizeMb;
+        private String allowedTypes;
+    }
+
+    @Data
+    public static class UploadConfigRequest {
+        private Integer maxFileSizeMb;
+        private String allowedTypes;
     }
 }
