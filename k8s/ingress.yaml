@@ -5,6 +5,9 @@ metadata:
   namespace: yambo
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/custom-request-headers: "X-Forwarded-Proto: https"
+    # Allow large file uploads (images)
+    traefik.ingress.kubernetes.io/buffering-maxrequestbodybytes: "15728640"
 spec:
   ingressClassName: traefik
   defaultBackend:
