@@ -15,6 +15,13 @@ spec:
       labels:
         app: yambo-backend
     spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: yambo-backend
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: backend
           image: 192.168.1.11:5000/yambo-web-backend:latest
@@ -100,7 +107,7 @@ metadata:
   namespace: yambo
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
