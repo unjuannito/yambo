@@ -1,9 +1,11 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -26,6 +28,7 @@ public class PublicController {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final ProjectGroupRepository projectGroupRepository;
+    private final ActivityRepository activityRepository;
 
     @GetMapping("/settings/home")
     public ResponseEntity<Map<String, String>> getHomeSettings() {
@@ -66,6 +69,15 @@ public class PublicController {
         List<Project> projects = projectRepository.findByActiveTrue();
         List<ActiveProjectResponse> response = projects.stream()
                 .map(ActiveProjectResponse::new)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/activities")
+    public ResponseEntity<List<PublicActivityResponse>> getPublicActivities() {
+        List<Activity> activities = activityRepository.findByIsPublicTrueOrderByDateAsc();
+        List<PublicActivityResponse> response = activities.stream()
+                .map(PublicActivityResponse::new)
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -178,6 +190,57 @@ public class PublicController {
         public ProjectGroupDetail(ProjectGroup group) {
             this.id = group.getId();
             this.name = group.getName();
+        }
+    }
+
+    @Data
+    public static class PublicActivityResponse {
+        private String id;
+        private String name;
+        private String description;
+        private java.time.LocalDateTime date;
+        private ActivityController.StatusInfo status;
+        private ActivityProjectSummary project;
+        private ActivityManagerSummary manager;
+
+        public PublicActivityResponse(Activity activity) {
+            this.id = activity.getId();
+            this.name = activity.getName();
+            this.description = activity.getDescription();
+            this.date = activity.getDate();
+            this.status = activity.getStatus() != null
+                    ? new ActivityController.StatusInfo(activity.getStatus().name(), activity.getStatus().getLabel(), activity.getStatus().getColor())
+                    : null;
+            if (activity.getProject() != null) {
+                this.project = new ActivityProjectSummary(
+                        activity.getProject().getId(), activity.getProject().getName());
+            }
+            if (activity.getManager() != null) {
+                this.manager = new ActivityManagerSummary(
+                        activity.getManager().getName(), activity.getManager().getPhoto());
+            }
+        }
+    }
+
+    @Data
+    public static class ActivityProjectSummary {
+        private String id;
+        private String name;
+
+        public ActivityProjectSummary(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    @Data
+    public static class ActivityManagerSummary {
+        private String name;
+        private String photo;
+
+        public ActivityManagerSummary(String name, String photo) {
+            this.name = name;
+            this.photo = photo;
         }
     }
 }

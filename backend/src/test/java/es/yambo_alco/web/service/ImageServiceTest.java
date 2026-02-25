@@ -238,4 +238,28 @@ public class ImageServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Image not found");
     }
+
+    @Test
+    public void upload_WithMarkdownImageContext_ShouldNotDeleteExisting() {
+        // Given — MARKDOWN_IMAGE has replacePrevious=false
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "screenshot.png", "image/png", "content".getBytes());
+
+        when(fileStorageService.store(any())).thenReturn("uuid-screenshot.png");
+        when(imageRepository.save(any(Image.class))).thenAnswer(invocation -> {
+            Image img = invocation.getArgument(0);
+            img.setId("IMG00003");
+            return img;
+        });
+
+        // When
+        Image result = imageService.upload(file, ImageUsageContext.MARKDOWN_IMAGE, null);
+
+        // Then
+        assertThat(result.getContext()).isEqualTo(ImageUsageContext.MARKDOWN_IMAGE);
+        assertThat(result.getStoredName()).isEqualTo("uuid-screenshot.png");
+        verify(imageRepository, never()).findByContextAndReferenceId(any(), any());
+        verify(imageRepository, never()).delete(any(Image.class));
+        verify(imageRepository).save(any(Image.class));
+    }
 }

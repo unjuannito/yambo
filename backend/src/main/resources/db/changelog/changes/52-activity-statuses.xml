@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add status column to activity table -->
+    <changeSet id="52-01-add-status-column" author="yambo">
+        <addColumn tableName="activity">
+            <column name="status" type="varchar(32)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Drop old badge columns from activity -->
+    <changeSet id="52-02-drop-badge-columns" author="yambo">
+        <dropColumn tableName="activity" columnName="badge_text"/>
+        <dropColumn tableName="activity" columnName="badge_class"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -7,7 +7,8 @@ public enum ImageUsageContext {
     USER_PHOTO(0, "Foto de usuario", true),
     PRODUCT_IMAGE(1, "Imagen de producto", false),
     PROJECT_IMAGE(2, "Imagen de proyecto", true),
-    HOME_IMAGE(3, "Imagen de página principal", true);
+    HOME_IMAGE(3, "Imagen de página principal", true),
+    MARKDOWN_IMAGE(4, "Imagen de markdown", false);
 
     private final int value;
     private final String label;

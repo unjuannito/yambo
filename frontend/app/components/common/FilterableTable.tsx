@@ -228,14 +228,6 @@ export function FilterableTable<T>({
             }));
     }, [columns]);
 
-    const enhancedColumns = useMemo(() => {
-        if (isGridMode || !onRowClick) return columns;
-        return columns.map((col) => ({
-            ...col,
-            className: twMerge(`cursor-pointer hover:bg-gray-50 ${col.className || ""}`),
-        }));
-    }, [columns, onRowClick, isGridMode]);
-
     // Client-side filtering
     const filteredData = useMemo(() => {
         if (isServerSide) return data;
@@ -364,7 +356,7 @@ export function FilterableTable<T>({
             <>
                 <DataTable
                     data={paginatedData}
-                    columns={enhancedColumns}
+                    columns={columns}
                     keyField={keyField}
                     onRowClick={onRowClick}
                 />

@@ -1,4 +1,5 @@
 import { ApiService } from './apiService';
+import type { Activity } from '~/types/activity';
 
 export interface HomeSettings {
     [key: string]: string;
@@ -76,6 +77,10 @@ export class PublicService extends ApiService {
 
     public async getProjectDetail(id: string): Promise<ProjectDetail> {
         return await this.get(`/public/projects/${id}`);
+    }
+
+    public async getPublicActivities(): Promise<Activity[]> {
+        return await this.get('/public/activities');
     }
 }
 

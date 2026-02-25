@@ -84,6 +84,12 @@ const LINKS_MAP: Link[] = [
         label: "Proyectos",
         need: { obj: "project", action: "read" },
     },
+    {
+        name: "activities",
+        href: "/mi-espacio/actividades",
+        label: "Actividades",
+        need: { obj: "activity", action: "read" },
+    },
 
     // Merch
     {

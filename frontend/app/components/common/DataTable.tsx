@@ -21,6 +21,7 @@ export function DataTable<T>({
   columns,
   keyField,
   className = "",
+  onRowClick,
 }: DataTableProps<T>) {
   return (
     <div
@@ -44,7 +45,7 @@ export function DataTable<T>({
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {data.map((item) => (
-            <tr key={String(item[keyField])}>
+            <tr key={String(item[keyField])} className={onRowClick ? "cursor-pointer" : ""} onClick={() => onRowClick?.(item)}>
               {columns.map((column) => (
                 <td
                   key={column.key}

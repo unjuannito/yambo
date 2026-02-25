@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHouse, faUser, faGear, faPenToSquare, faUsers,
     faShieldHalved, faEnvelope, faGift, faClipboard,
-    faCommentDots, faFolder, faBagShopping, faCubes,
+    faCommentDots, faFolder, faCalendarDays, faBagShopping, faCubes,
     faClipboardList, faComments, faCartShopping,
     faRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
@@ -25,7 +25,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Proyectos",
-        items: ["projects"]
+        items: ["projects", "activities"]
     },
     {
         title: "Merch",
@@ -46,6 +46,7 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     orders: <FontAwesomeIcon icon={faClipboard} className="w-5 h-5" />,
     adminIssues: <FontAwesomeIcon icon={faCommentDots} className="w-5 h-5" />,
     projects: <FontAwesomeIcon icon={faFolder} className="w-5 h-5" />,
+    activities: <FontAwesomeIcon icon={faCalendarDays} className="w-5 h-5" />,
     merch: <FontAwesomeIcon icon={faBagShopping} className="w-5 h-5" />,
     merchFamilies: <FontAwesomeIcon icon={faCubes} className="w-5 h-5" />,
     myOrders: <FontAwesomeIcon icon={faClipboardList} className="w-5 h-5" />,

@@ -1,4 +1,87 @@
 @import "tailwindcss";
+/* Custom prose overrides for markdown (MDXEditor/Tailwind) */
+.prose h1 {
+  @apply text-3xl font-bold mt-4 mb-2 text-gray-900;
+}
+.prose h2 {
+  @apply text-2xl font-semibold mt-3 mb-2 text-gray-900;
+}
+.prose h3 {
+  @apply text-xl font-semibold mt-2 mb-1 text-gray-900;
+}
+.prose h4 {
+  @apply text-lg font-semibold mt-1 mb-1 text-gray-900;
+}
+.prose p {
+  @apply text-base leading-relaxed mb-2 text-gray-800;
+}
+.prose blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 bg-gray-50 py-1 my-2;
+}
+.prose code {
+  @apply bg-gray-100 text-pink-600 px-1 py-0.5 rounded font-mono text-sm;
+}
+.prose pre {
+  @apply bg-gray-900 text-gray-100 rounded p-3 overflow-x-auto my-2 text-sm;
+}
+.prose ul {
+  @apply list-disc pl-6 mb-2;
+}
+.prose ol {
+  @apply list-decimal pl-6 mb-2;
+}
+.prose li {
+  @apply mb-0.5;
+}
+.prose a {
+  @apply text-blue-600 underline hover:text-blue-800 transition;
+}
+.prose hr {
+  @apply border-t border-gray-300 my-4;
+}
+.prose table {
+  @apply w-full border-collapse my-3;
+}
+.prose th {
+  @apply border-b border-gray-300 px-2 py-1 text-left font-semibold bg-gray-100;
+}
+.prose td {
+  @apply border-b border-gray-200 px-2 py-1;
+}
+.prose img {
+  @apply max-w-full rounded shadow my-2;
+}
+
+/* Ensure MDXEditor Radix dialogs render above custom modals */
+[data-radix-portal] {
+  z-index: 100;
+}
+.prose strong {
+  @apply font-bold text-gray-900;
+}
+.prose em {
+  @apply italic text-gray-700;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+html,
+body {
+  color-scheme: light;
+}
+
+@media (max-width: 818px) {
+  .custom-break {
+    display: none;
+  }
+  .custom-break-button {
+    display: inline-flex;
+  }
+}
+
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,

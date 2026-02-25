@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- 1. Create coordinator_project join table -->
+    <changeSet id="51-01-create-coordinator-project-table" author="yambo">
+        <createTable tableName="coordinator_project">
+            <column name="user_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_coordinator_project"/>
+            </column>
+            <column name="project_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_coordinator_project"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="coordinator_project"
+            baseColumnNames="user_id"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_coordinator_project_user"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="coordinator_project"
+            baseColumnNames="project_id"
+            referencedTableName="project"
+            referencedColumnNames="id"
+            constraintName="fk_coordinator_project_project"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- 2. Insert Coordinador profile -->
+    <changeSet id="51-02-insert-coordinator-profile" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sqlCheck expectedResult="1">
+                    SELECT COUNT(*) FROM profile WHERE id = 'P0000005'
+                </sqlCheck>
+            </not>
+        </preConditions>
+        <insert tableName="profile">
+            <column name="id" value="P0000005"/>
+            <column name="name" value="Coordinador"/>
+        </insert>
+    </changeSet>
+
+    <!-- 3. Assign permissions to Coordinador profile -->
+    <changeSet id="51-03-assign-coordinator-permissions" author="yambo">
+        <!-- Project: read + update (scoped to coordinated projects in code) -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PPRJ_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PPRJ_UPD"/>
+        </insert>
+
+        <!-- Activity: full CRUD (scoped to coordinated projects in code) -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_DEL"/>
+        </insert>
+
+        <!-- User: read (to view monitors in their projects) -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PUSR_RD"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

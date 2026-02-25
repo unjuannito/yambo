@@ -28,8 +28,8 @@ export function Modal({
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
-            onClick={onClose}
+            className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-2"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div
                 className={`bg-white rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col`}

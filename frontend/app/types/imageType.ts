@@ -3,6 +3,7 @@ export enum ImageUsageContext {
     PRODUCT_IMAGE = 'PRODUCT_IMAGE',
     PROJECT_IMAGE = 'PROJECT_IMAGE',
     HOME_IMAGE = 'HOME_IMAGE',
+    MARKDOWN_IMAGE = 'MARKDOWN_IMAGE',
 }
 
 export interface ImageRecord {

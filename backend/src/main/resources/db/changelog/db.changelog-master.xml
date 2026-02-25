@@ -59,4 +59,6 @@
     <include file="db/changelog/changes/47-image-tracking.xml"/>
     <include file="db/changelog/changes/48-upload-settings.xml"/>
     <include file="db/changelog/changes/49-home-sections-config.xml"/>
+    <include file="db/changelog/changes/50-activity.xml"/>
+    <include file="db/changelog/changes/52-activity-statuses.xml"/>
 </databaseChangeLog>

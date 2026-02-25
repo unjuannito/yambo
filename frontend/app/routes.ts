@@ -37,6 +37,9 @@ export default [
         // Proyectos
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
 
+        // Actividades
+        route("mi-espacio/actividades", "routes/dashboard/activities/index.tsx"),
+
         // Pedidos de usuario
         route("mi-espacio/mis-pedidos", "routes/dashboard/orders/my-orders.tsx"),
 

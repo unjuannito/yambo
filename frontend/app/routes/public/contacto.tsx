@@ -64,7 +64,6 @@ const SOCIAL_LINKS: SocialLink[] = [
     },
 ];
 
-/** Format a social key's value for display (e.g. show @handle) */
 function displaySocialValue(key: string, value: string): string {
     if (value.startsWith("http")) return value;
     const handle = value.replace("@", "");
