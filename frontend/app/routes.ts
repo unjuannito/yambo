@@ -23,12 +23,12 @@ export default [
         route("mi-espacio/admin/usuarios", "routes/dashboard/users/index.tsx"),
         route("mi-espacio/admin/perfiles", "routes/dashboard/profiles/index.tsx"),
         route(
-            "mi-espacio/admin/invitaciones",
-            "routes/dashboard/invitations/index.tsx",
+            "mi-espacio/admin/invitaciones-nominativas",
+            "routes/dashboard/nominative-invitations.tsx",
         ),
         route(
-            "mi-espacio/admin/promociones",
-            "routes/dashboard/invitations/promotion-invitations.tsx",
+            "mi-espacio/admin/invitaciones",
+            "routes/dashboard/invitations.tsx",
         ),
         route("mi-espacio/admin/pedidos", "routes/dashboard/orders/index.tsx"),
         route("mi-espacio/admin/configuracion", "routes/dashboard/settings/index.tsx"),

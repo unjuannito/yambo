@@ -14,32 +14,33 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "promotion_invitation")
-public class PromotionInvitation {
+@Table(name = "nominative_invitations")
+public class NominativeInvitation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
+    private String email;
+
+    @Column(nullable = false)
     private String token;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean used = false;
+
     private LocalDateTime createdAt;
 
-    @Column(name = "start_tms", nullable = false)
-    private LocalDateTime startTms;
-
-    @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    @Column(name = "invited_by")
     private String invitedBy;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "promotion_invitation_profile",
-        joinColumns = @JoinColumn(name = "promotion_invitation_id"),
+        name = "nominative_invitation_profile",
+        joinColumns = @JoinColumn(name = "nominative_invitation_id"),
         inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
     @Builder.Default

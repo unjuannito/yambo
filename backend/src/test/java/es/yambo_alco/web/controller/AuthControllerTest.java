@@ -9,7 +9,7 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
-import es.yambo_alco.web.service.InvitationService;
+import es.yambo_alco.web.service.NominativeInvitationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -43,7 +43,7 @@ class AuthControllerTest {
         private AuthService authService;
 
         @MockitoBean
-        private InvitationService invitationService;
+        private NominativeInvitationService nominativeInvitationService;
 
         @Test
         void login_WithValidCredentials_ShouldReturnToken() throws Exception {
@@ -104,7 +104,7 @@ class AuthControllerTest {
                 // Given
                 InvitationRegisterRequest registerRequest = new InvitationRegisterRequest("password", "New User");
                 User user = User.builder().email("newuser").build();
-                when(invitationService.completeInvitation("valid-token", "password", "New User"))
+                when(nominativeInvitationService.completeInvitation("valid-token", "password", "New User"))
                                 .thenReturn(user);
                 when(authService.authenticate("newuser", "password")).thenReturn("test.jwt.token");
 
@@ -121,7 +121,7 @@ class AuthControllerTest {
         void register_WithInvalidInvitation_ShouldReturnBadRequest() throws Exception {
                 // Given
                 InvitationRegisterRequest registerRequest = new InvitationRegisterRequest("password", "New User");
-                when(invitationService.completeInvitation(any(), any(), any()))
+                when(nominativeInvitationService.completeInvitation(any(), any(), any()))
                                 .thenThrow(new ResourceNotFoundException("Invitation not found"));
 
                 // When & Then
@@ -138,7 +138,7 @@ class AuthControllerTest {
         void register_WithUsedInvitation_ShouldReturnBadRequest() throws Exception {
                 // Given
                 InvitationRegisterRequest registerRequest = new InvitationRegisterRequest("password", "New User");
-                when(invitationService.completeInvitation(any(), any(), any()))
+                when(nominativeInvitationService.completeInvitation(any(), any(), any()))
                                 .thenThrow(new BadRequestException("Invitation already used"));
 
                 // When & Then

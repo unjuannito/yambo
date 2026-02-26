@@ -21,20 +21,19 @@ public class Invitation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String email;
-
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String token;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean used = false;
-
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "start_tms", nullable = false)
+    private LocalDateTime startTms;
+
+    @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Column(name = "invited_by")
     private String invitedBy;
 
     @ManyToMany(fetch = FetchType.EAGER)

@@ -61,4 +61,5 @@
     <include file="db/changelog/changes/49-home-sections-config.xml"/>
     <include file="db/changelog/changes/50-activity.xml"/>
     <include file="db/changelog/changes/52-activity-statuses.xml"/>
+    <include file="db/changelog/changes/53-rename-invitations.xml"/>
 </databaseChangeLog>

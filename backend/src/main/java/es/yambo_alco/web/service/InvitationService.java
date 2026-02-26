@@ -2,15 +2,15 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.Invitation;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Invitation;
+import es.yambo_alco.web.model.InvitationRegistration;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.repository.InvitationRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
+import es.yambo_alco.web.repository.InvitationRegistrationRepository;
+import es.yambo_alco.web.repository.InvitationRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,6 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -27,102 +26,110 @@ import java.util.Set;
 public class InvitationService {
 
     private final InvitationRepository invitationRepository;
+    private final InvitationRegistrationRepository invitationRegistrationRepository;
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final MailService mailService;
-    private final SettingsService settingsService;
+
     private final SecureRandom secureRandom = new SecureRandom();
 
-    @Value("${invitation.expiration.hours:72}")
-    private long expirationHours;
-
-    public Invitation createInvitation(String email, String invitedBy, Set<String> profileIds) {
-        if (userRepository.existsByEmail(email)) {
-            throw new BadRequestException("Email already registered");
+    @Transactional
+    public Invitation createInvitation(String invitedBy, Set<String> profileIds, LocalDateTime startTms, LocalDateTime endTms) {
+        if (profileIds == null || profileIds.isEmpty()) {
+            throw new BadRequestException("Profile IDs are required");
         }
 
-        Set<Profile> profiles = Set.of();
-        if (profileIds != null && !profileIds.isEmpty()) {
-            profiles = Set.copyOf(profileRepository.findAllById(profileIds));
-            if (profiles.size() != profileIds.size()) {
-                throw new BadRequestException("One or more profiles not found");
-            }
+        LocalDateTime start = startTms != null ? startTms : LocalDateTime.now();
+        if (endTms != null && start.isAfter(endTms)) {
+            throw new BadRequestException("Start date must be before end date");
         }
 
-        String token = generateToken();
-        LocalDateTime now = LocalDateTime.now();
-        Invitation inv = Invitation.builder()
-                .email(email)
-                .token(token)
-                .createdAt(now)
-                .expiresAt(now.plusHours(expirationHours))
-                .used(false)
+        Set<Profile> profiles = Set.copyOf(profileRepository.findAllById(profileIds));
+        if (profiles.size() != profileIds.size()) {
+            throw new BadRequestException("One or more profiles not found");
+        }
+
+        Invitation invitation = Invitation.builder()
+                .token(generateToken())
+            .createdAt(LocalDateTime.now())
+            .startTms(start)
+                .expiresAt(endTms)
                 .invitedBy(invitedBy)
                 .profiles(profiles)
                 .build();
 
-        String link = buildInvitationLink(token);
-        String orgName = settingsService.getOrganizationName();
-        String subject = "Invitación a " + orgName;
-        String body = "Has sido invitado a registrarte en " + orgName + ". Usa este enlace: " + link + "\nEl enlace expira en "
-                + expirationHours + " horas.";
-        mailService.sendInvitation(email, subject, body);
-
-        return invitationRepository.save(inv);
+        return invitationRepository.save(invitation);
     }
 
     @Transactional
-    public User completeInvitation(String token, String password, String name) {
+    public User acceptInvitation(String token, String email, String password, String name, User currentUser) {
         Invitation invitation = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
-        if (invitation.isUsed()) {
-            throw new BadRequestException("Invitation already used");
+        LocalDateTime now = LocalDateTime.now();
+        if (invitation.getStartTms() != null && invitation.getStartTms().isAfter(now)) {
+            throw new BadRequestException("Invitation not active yet");
         }
-
-        if (invitation.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (invitation.getExpiresAt() != null && invitation.getExpiresAt().isBefore(now)) {
             throw new BadRequestException("Invitation expired");
         }
 
-        if (userRepository.existsByEmail(invitation.getEmail())) {
-            throw new BadRequestException("Email already registered");
+        Set<Profile> invitationProfiles = invitation.getProfiles();
+
+        User user;
+        if (currentUser != null) {
+            user = currentUser;
+        } else {
+            if (email == null || email.isBlank() || password == null || password.isBlank() || name == null || name.isBlank()) {
+                throw new BadRequestException("Email, password and name are required");
+            }
+            if (userRepository.existsByEmail(email)) {
+                throw new BadRequestException("Email already registered");
+            }
+            user = User.builder()
+                    .email(email)
+                    .password(passwordEncoder.encode(password))
+                    .name(name)
+                    .createdAt(LocalDateTime.now())
+                    .enabled(true)
+                    .profiles(new HashSet<>())
+                    .build();
+            user = userRepository.save(user);
         }
 
-        invitation.setUsed(true);
-        invitationRepository.save(invitation);
+        if (user.getProfiles() == null) {
+            user.setProfiles(new HashSet<>());
+        }
+        user.getProfiles().addAll(invitationProfiles);
+        userRepository.save(user);
 
-        User user = User.builder()
-                .email(invitation.getEmail())
-                .password(passwordEncoder.encode(password))
-                .name(name)
-                .createdAt(LocalDateTime.now())
-                .enabled(true)
-                .profiles(new HashSet<>(invitation.getProfiles()))
-                .build();
+        if (!invitationRegistrationRepository.existsByInvitationIdAndUserId(invitation.getId(), user.getId())) {
+            InvitationRegistration registration = InvitationRegistration.builder()
+                    .invitationId(invitation.getId())
+                    .userId(user.getId())
+                    .registeredAt(LocalDateTime.now())
+                    .build();
+            invitationRegistrationRepository.save(registration);
+        }
 
-        return userRepository.save(user);
-    }
-
-    private String buildInvitationLink(String token) {
-        String frontend = settingsService.getDomain();
-        return frontend + "/register?invitation=" + token;
-    }
-
-    public List<Invitation> getAllInvitations() {
-        return invitationRepository.findAll();
-    }
-
-    public void deleteInvitation(Long id) {
-        Invitation invitation = invitationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
-
-        invitationRepository.delete(invitation);
+        return user;
     }
 
     private String generateToken() {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    public java.util.List<Invitation> getAllInvitations() {
+        return invitationRepository.findAll();
+    }
+
+    @Transactional
+    public Invitation disableInvitation(Long id) {
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+        invitation.setExpiresAt(LocalDateTime.now());
+        return invitationRepository.save(invitation);
     }
 }

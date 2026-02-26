@@ -2,7 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
-import es.yambo_alco.web.service.InvitationService;
+import es.yambo_alco.web.service.NominativeInvitationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
-    private final InvitationService invitationService;
+    private final NominativeInvitationService nominativeInvitationService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
@@ -34,7 +34,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestParam String invitation, @RequestBody InvitationRegisterRequest request) {
-        User user = invitationService.completeInvitation(invitation, request.password(), request.name());
+        User user = nominativeInvitationService.completeInvitation(invitation, request.password(), request.name());
         String token = authService.authenticate(user.getUsername(), request.password());
         return ResponseEntity.ok(new AuthResponse(token));
     }

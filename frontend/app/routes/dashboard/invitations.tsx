@@ -10,26 +10,26 @@ import type { TableColumn } from "~/components/common/DataTable";
 import { Modal } from "~/components/common/Modal";
 import { profileService } from "~/services/profileService";
 import {
-    promotionInvitationService,
-    type PromotionInvitation,
-} from "~/services/promotionInvitationService";
+    invitationService,
+    type Invitation,
+} from "~/services/invitationService";
 import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 export function meta() {
     return [
-        { title: "Yambo - Invitaciones por perfil" },
+        { title: "Yambo - Invitaciones" },
         {
-            name: "Yambo - Invitaciones por perfil",
-            content: "Yambo - Invitaciones por perfil",
+            name: "Yambo - Invitaciones",
+            content: "Yambo - Invitaciones",
         },
     ];
 }
 
-export default function PromotionInvitations() {
+export default function Invitations() {
     const [profiles, setProfiles] = useState<Profile[]>([]);
-    const [invitations, setInvitations] = useState<PromotionInvitation[]>([]);
+    const [invitations, setInvitations] = useState<Invitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
@@ -37,7 +37,7 @@ export default function PromotionInvitations() {
     const [endTms, setEndTms] = useState("");
     const [creating, setCreating] = useState(false);
     const [lastInvitation, setLastInvitation] =
-        useState<PromotionInvitation | null>(null);
+        useState<Invitation | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const loadProfiles = useCallback(async () => {
@@ -46,7 +46,7 @@ export default function PromotionInvitations() {
             setError(null);
             const [profilesResponse, invitationsResponse] = await Promise.all([
                 profileService.getAllProfiles(),
-                promotionInvitationService.listPromotionInvitations(),
+                invitationService.listInvitations(),
             ]);
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
@@ -65,7 +65,7 @@ export default function PromotionInvitations() {
     const formatDateTime = (value?: string | null) =>
         value ? new Date(value).toLocaleString() : "Sin fin";
 
-    const isExpired = (invitation: PromotionInvitation) =>
+    const isExpired = (invitation: Invitation) =>
         invitation.expiresAt
             ? new Date(invitation.expiresAt) < new Date()
             : false;
@@ -81,7 +81,7 @@ export default function PromotionInvitations() {
 
     const invitationLink = useMemo(() => {
         if (!lastInvitation) return "";
-        return `${baseUrl}/register?promotion=${lastInvitation.token}`;
+        return `${baseUrl}/register?invite=${lastInvitation.token}`;
     }, [baseUrl, lastInvitation]);
 
     const handleCreate = async () => {
@@ -93,7 +93,7 @@ export default function PromotionInvitations() {
         try {
             setCreating(true);
             const invitation =
-                await promotionInvitationService.createPromotionInvitation({
+                await invitationService.createInvitation({
                     profileIds: selectedProfiles,
                     startTms: startTms || undefined,
                     endTms: endTms || undefined,
@@ -105,7 +105,7 @@ export default function PromotionInvitations() {
             setIsModalOpen(false);
             toast.success("Invitación creada correctamente");
             const updated =
-                await promotionInvitationService.listPromotionInvitations();
+                await invitationService.listInvitations();
             setInvitations(updated);
         } catch (err) {
             toast.error(getErrorMessage(err, "No se pudo crear la invitación"));
@@ -114,7 +114,7 @@ export default function PromotionInvitations() {
         }
     };
 
-    const columns: TableColumn<PromotionInvitation>[] = useMemo(
+    const columns: TableColumn<Invitation>[] = useMemo(
         () => [
             {
                 key: "token",
@@ -129,7 +129,7 @@ export default function PromotionInvitations() {
                 key: "invitationLink",
                 header: "Link de registro",
                 render: (invitation) => {
-                    const link = `${baseUrl}/register?promotion=${invitation.token}`;
+                    const link = `${baseUrl}/register?invite=${invitation.token}`;
                     const expired = isExpired(invitation);
                     return (
                         <ButtonComponent
@@ -229,11 +229,11 @@ export default function PromotionInvitations() {
                         onClick={async () => {
                             if (isExpired(invitation)) return;
                             try {
-                                await promotionInvitationService.disablePromotionInvitation(
+                                await invitationService.disableInvitation(
                                     invitation.id,
                                 );
                                 const updated =
-                                    await promotionInvitationService.listPromotionInvitations();
+                                    await invitationService.listInvitations();
                                 setInvitations(updated);
                                 toast.success("Invitación deshabilitada");
                             } catch (err) {
@@ -259,7 +259,7 @@ export default function PromotionInvitations() {
             <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">
-                        Invitaciones por perfil
+                        Invitaciones
                     </h1>
                     {!loading && !error && (
                         <RequirePermission

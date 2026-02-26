@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { Route } from "./+types/invitations";
+import type { Route } from "./+types/nominative-invitations";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
@@ -8,11 +8,11 @@ import type { TableColumn } from "~/components/common/DataTable";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
-import { invitationService } from "~/services/invitationService";
+import { nominativeInvitationService } from "~/services/nominativeInvitationService";
 import type {
-    Invitation,
-    CreateInvitationRequest,
-} from "~/services/invitationService";
+    NominativeInvitation,
+    CreateNominativeInvitationRequest,
+} from "~/services/nominativeInvitationService";
 import { profileService } from "~/services/profileService";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
@@ -20,13 +20,13 @@ import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
     return [
-        { title: "Yambo - Invitaciones" },
-        { name: "Yambo - Invitaciones", content: "Yambo - Invitaciones" },
+        { title: "Yambo - Invitaciones Nominativas" },
+        { name: "Yambo - Invitaciones Nominativas", content: "Yambo - Invitaciones Nominativas" },
     ];
 }
 
-export default function Invitations() {
-    const [invitations, setInvitations] = useState<Invitation[]>([]);
+export default function NominativeInvitations() {
+    const [invitations, setInvitations] = useState<NominativeInvitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -34,7 +34,7 @@ export default function Invitations() {
     const [profileOptions, setProfileOptions] = useState<
         { value: string; label: string }[]
     >([]);
-    const [form, setForm] = useState<CreateInvitationRequest>({
+    const [form, setForm] = useState<CreateNominativeInvitationRequest>({
         email: "",
         name: "",
         profileIds: [],
@@ -45,7 +45,7 @@ export default function Invitations() {
             setLoading(true);
             setError(null);
             const [invData, profiles] = await Promise.all([
-                invitationService.getAllInvitations(),
+                nominativeInvitationService.getAllInvitations(),
                 profileService.getAllProfiles(),
             ]);
             setInvitations(invData);
@@ -79,7 +79,7 @@ export default function Invitations() {
     const handleDelete = async (id: string) => {
         if (confirm("¿Estás seguro de que quieres eliminar esta invitación?")) {
             try {
-                await invitationService.deleteInvitation(id);
+                await nominativeInvitationService.deleteInvitation(id);
                 setInvitations((prev) => prev.filter((inv) => inv.id !== id));
                 toast.success("Invitación eliminada correctamente");
             } catch (err) {
@@ -96,7 +96,7 @@ export default function Invitations() {
 
         try {
             setSaving(true);
-            const newInvitation = await invitationService.createInvitation(form);
+            const newInvitation = await nominativeInvitationService.createInvitation(form);
             setInvitations((prev) => [newInvitation, ...prev]);
             toast.success("Invitación creada correctamente");
             resetForm();
@@ -107,30 +107,30 @@ export default function Invitations() {
         }
     };
 
-    const invitationColumns: TableColumn<Invitation>[] = [
+    const invitationColumns: TableColumn<NominativeInvitation>[] = [
         {
             key: "id",
             header: "ID",
-            render: (invitation: Invitation) => (
+            render: (invitation: NominativeInvitation) => (
                 <span className="font-mono text-xs">{invitation.id}</span>
             ),
         },
         {
             key: "email",
             header: "Email",
-            render: (invitation: Invitation) => <span>{invitation.email}</span>,
+            render: (invitation: NominativeInvitation) => <span>{invitation.email}</span>,
         },
         {
             key: "invitedByUser",
             header: "Invitado por",
-            render: (invitation: Invitation) => (
+            render: (invitation: NominativeInvitation) => (
                 <span>{invitation.invitedByUser?.name || "N/A"}</span>
             ),
         },
         {
             key: "createdAt",
             header: "Creado",
-            render: (invitation: Invitation) => (
+            render: (invitation: NominativeInvitation) => (
                 <span>
                     {new Date(invitation.createdAt).toLocaleDateString()}
                 </span>
@@ -139,7 +139,7 @@ export default function Invitations() {
         {
             key: "expiresAt",
             header: "Expira",
-            render: (invitation: Invitation) => (
+            render: (invitation: NominativeInvitation) => (
                 <span>
                     {new Date(invitation.expiresAt).toLocaleDateString()}
                 </span>
@@ -148,7 +148,7 @@ export default function Invitations() {
         {
             key: "used",
             header: "Usado",
-            render: (invitation: Invitation) => (
+            render: (invitation: NominativeInvitation) => (
                 <span
                     className={
                         invitation.used ? "text-green-600" : "text-red-600"
@@ -161,7 +161,7 @@ export default function Invitations() {
         {
             key: "actions",
             header: "Acciones",
-            render: (invitation: Invitation) => (
+            render: (invitation: NominativeInvitation) => (
                 <ButtonComponent
                     variant="destructive"
                     size="sm"
@@ -181,7 +181,7 @@ export default function Invitations() {
         >
             <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Invitaciones</h1>
+                    <h1 className="text-3xl font-bold">Invitaciones Nominativas</h1>
                     <RequirePermission
                         permission={{ obj: "invitation", action: "create" }}
                         redirect={false}
@@ -207,7 +207,6 @@ export default function Invitations() {
                             columns={invitationColumns}
                             data={invitations}
                             keyField="id"
-                            emptyMessage="No se encontraron invitaciones"
                         />
                     )}
                 </section>
@@ -215,7 +214,7 @@ export default function Invitations() {
                 <Modal
                     isOpen={isModalOpen}
                     onClose={resetForm}
-                    title="Nueva Invitación"
+                    title="Nueva Invitación Nominativa"
                     footer={
                         <>
                             <ButtonComponent

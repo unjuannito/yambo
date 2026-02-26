@@ -6,6 +6,7 @@ import {
     faCommentDots, faFolder, faCalendarDays, faBagShopping, faCubes,
     faClipboardList, faComments, faCartShopping,
     faRightFromBracket,
+    faEnvelopesBulk,
 } from "@fortawesome/free-solid-svg-icons";
 
 export interface NavSection {
@@ -21,7 +22,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Administración",
-        items: ["settings", "mainPage", "users", "profiles", "invitations", "promotionInvitations", "orders", "adminIssues"]
+        items: ["settings", "mainPage", "users", "profiles",  "invitations", "nominativeInvitations", "orders", "adminIssues"]
     },
     {
         title: "Proyectos",
@@ -41,8 +42,8 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     mainPage: <FontAwesomeIcon icon={faPenToSquare} className="w-5 h-5" />,
     users: <FontAwesomeIcon icon={faUsers} className="w-5 h-5" />,
     profiles: <FontAwesomeIcon icon={faShieldHalved} className="w-5 h-5" />,
-    invitations: <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" />,
-    promotionInvitations: <FontAwesomeIcon icon={faGift} className="w-5 h-5" />,
+    nominativeInvitations: <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" />,
+    invitations: <FontAwesomeIcon icon={faEnvelopesBulk} className="w-5 h-5" />,
     orders: <FontAwesomeIcon icon={faClipboard} className="w-5 h-5" />,
     adminIssues: <FontAwesomeIcon icon={faCommentDots} className="w-5 h-5" />,
     projects: <FontAwesomeIcon icon={faFolder} className="w-5 h-5" />,

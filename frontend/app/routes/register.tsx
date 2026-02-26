@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router";
+import { nominativeInvitationService } from "~/services/nominativeInvitationService";
 import { invitationService } from "~/services/invitationService";
-import { promotionInvitationService } from "~/services/promotionInvitationService";
 import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -26,9 +26,9 @@ export default function Register() {
     const navigate = useNavigate();
     const { reload, login: authLogin, isAuthenticated } = useAuth();
     const invitationToken = searchParams.get("invitation");
-    const promotionToken = searchParams.get("promotion");
+    const inviteToken = searchParams.get("invite");
     const hasRedirected = useRef(false);
-    const hasAppliedPromotion = useRef(false);
+    const hasAppliedInvitation = useRef(false);
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -36,53 +36,53 @@ export default function Register() {
         name: "",
     });
     const [loading, setLoading] = useState(false);
-    const isPromotion = !!promotionToken;
+    const isInvite = !!inviteToken;
 
     useEffect(() => {
-        if (!invitationToken && !promotionToken && !hasRedirected.current) {
+        if (!invitationToken && !inviteToken && !hasRedirected.current) {
             hasRedirected.current = true;
             toast.error("No se proporcionó un token de invitación válido.");
             navigate("/login", { replace: true });
         }
-    }, [invitationToken, promotionToken, navigate]);
+    }, [invitationToken, inviteToken, navigate]);
 
     useEffect(() => {
-        const applyPromotionIfLoggedIn = async () => {
-            if (!promotionToken || !isAuthenticated() || hasAppliedPromotion.current) {
+        const applyInvitationIfLoggedIn = async () => {
+            if (!inviteToken || !isAuthenticated() || hasAppliedInvitation.current) {
                 return;
             }
 
-            hasAppliedPromotion.current = true;
+            hasAppliedInvitation.current = true;
             setLoading(true);
             try {
-                await promotionInvitationService.acceptPromotionInvitation(
-                    promotionToken,
+                await invitationService.acceptInvitation(
+                    inviteToken,
                 );
-                toast.success("Promoción aplicada correctamente.");
+                toast.success("Invitación aplicada correctamente.");
                 await reload();
                 navigate("/mi-espacio", { replace: true });
             } catch (err) {
                 if (err instanceof ApiError) {
                     switch (err.message) {
-                        case "Promotion invitation not found":
-                            toast.error("El token de promoción no es válido.");
+                        case "Invitation not found":
+                            toast.error("El token de invitación no es válido.");
                             break;
-                        case "Promotion invitation expired":
-                            toast.error("El token de promoción ha expirado.");
+                        case "Invitation expired":
+                            toast.error("El token de invitación ha expirado.");
                             break;
                         default:
-                            toast.error("Error al aplicar la promoción.");
+                            toast.error("Error al aplicar la invitación.");
                     }
                 } else {
-                    toast.error("Error al aplicar la promoción.");
+                    toast.error("Error al aplicar la invitación.");
                 }
             } finally {
                 setLoading(false);
             }
         };
 
-        void applyPromotionIfLoggedIn();
-    }, [isAuthenticated, navigate, promotionToken, reload]);
+        void applyInvitationIfLoggedIn();
+    }, [isAuthenticated, navigate, inviteToken, reload]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -92,7 +92,7 @@ export default function Register() {
             return;
         }
 
-        if (isPromotion && !formData.email.trim()) {
+        if (isInvite && !formData.email.trim()) {
             toast.error("Por favor, ingresa tu correo electrónico.");
             return;
         }
@@ -114,10 +114,10 @@ export default function Register() {
 
         setLoading(true);
         try {
-            if (isPromotion) {
-                // Promotion invitation flow
-                await promotionInvitationService.acceptPromotionInvitation(
-                    promotionToken!,
+            if (isInvite) {
+                // Invitation flow
+                await invitationService.acceptInvitation(
+                    inviteToken!,
                     {
                         email: formData.email,
                         password: formData.password,
@@ -129,8 +129,8 @@ export default function Register() {
                 await authLogin(formData.email, formData.password);
                 navigate("/mi-espacio", { replace: true });
             } else {
-                // Regular invitation flow
-                await invitationService.register(
+                // Nominative invitation flow
+                await nominativeInvitationService.register(
                     invitationToken!,
                     {
                         password: formData.password,
@@ -153,11 +153,11 @@ export default function Register() {
                     case "Email already registered":
                         toast.error("El correo electrónico ya está registrado.");
                         break;
-                    case "Promotion invitation not found":
-                        toast.error("El token de promoción no es válido.");
+                    case "Invitation not found":
+                        toast.error("El token de invitación no es válido.");
                         break;
-                    case "Promotion invitation expired":
-                        toast.error("El token de promoción ha expirado.");
+                    case "Invitation expired":
+                        toast.error("El token de invitación ha expirado.");
                         break;
                     default:
                         toast.error("Error al registrar el usuario.");
@@ -171,19 +171,19 @@ export default function Register() {
     }
 
     // Guard: redirect if no token present
-    if (!invitationToken && !promotionToken) {
+    if (!invitationToken && !inviteToken) {
         return null;
     }
 
-    const promotionBanner = isPromotion ? (
+    const invitationBanner = isInvite ? (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-700">
-                Registro con promoción por perfil
+                Registro con invitación
             </p>
         </div>
     ) : undefined;
 
-    const footer = isPromotion ? (
+    const footer = isInvite ? (
         <>
             <p className="text-sm text-center text-gray-600 mb-3">
                 ¿Ya tienes una cuenta?
@@ -192,11 +192,11 @@ export default function Register() {
                 variant="neutral"
                 className="w-full"
                 onClick={() => {
-                    navigate(`/login?promotion=${promotionToken}`);
+                    navigate(`/login?invite=${inviteToken}`);
                 }}
                 disabled={loading}
             >
-                Iniciar sesión y aplicar promoción
+                Iniciar sesión y aplicar invitación
             </ButtonComponent>
         </>
     ) : undefined;
@@ -205,7 +205,7 @@ export default function Register() {
         <AuthLayout
             title="Registro"
             subtitle="Completa tu registro para acceder a la plataforma."
-            banner={promotionBanner}
+            banner={invitationBanner}
             footer={footer}
         >
             <form
@@ -224,7 +224,7 @@ export default function Register() {
                     required
                     disabled={loading}
                 />
-                {isPromotion && (
+                {isInvite && (
                     <InputComponent
                         type="email"
                         value={formData.email}
@@ -270,7 +270,7 @@ export default function Register() {
                     disabled={
                         loading ||
                         !formData.name.trim() ||
-                        (isPromotion && !formData.email.trim()) ||
+                        (isInvite && !formData.email.trim()) ||
                         !formData.password.trim() ||
                         !formData.passwordConfirm.trim() ||
                         formData.password !== formData.passwordConfirm

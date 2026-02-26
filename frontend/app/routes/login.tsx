@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
-import { promotionInvitationService } from "~/services/promotionInvitationService";
+import { invitationService } from "~/services/invitationService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { AuthLayout } from "~/routes/AuthLayout";
 import type { Route } from "./+types/login";
@@ -27,7 +27,7 @@ export default function Index() {
     const [searchParams] = useSearchParams();
     const { login, isAuthenticated, reload } = useAuth();
     const [loading, setLoading] = useState(false);
-    const promotionToken = searchParams.get("promotion");
+    const inviteToken = searchParams.get("invite");
 
     const emailRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
@@ -46,29 +46,29 @@ export default function Index() {
             setLoading(true);
             await login(email, password);
 
-            // If there's a promotion token, accept it after login
-            if (promotionToken) {
+            // If there's an invite token, accept it after login
+            if (inviteToken) {
                 try {
-                    await promotionInvitationService.acceptPromotionInvitation(promotionToken);
-                    toast.success("¡Promoción aplicada correctamente!");
+                    await invitationService.acceptInvitation(inviteToken);
+                    toast.success("¡Invitación aplicada correctamente!");
                     await reload();
                 } catch (err) {
                     if (err instanceof ApiError) {
                         switch (err.message) {
-                            case "Promotion invitation not found":
-                                toast.error("El token de promoción no es válido.");
+                            case "Invitation not found":
+                                toast.error("El token de invitación no es válido.");
                                 break;
-                            case "Promotion invitation expired":
-                                toast.error("El token de promoción ha expirado.");
+                            case "Invitation expired":
+                                toast.error("El token de invitación ha expirado.");
                                 break;
-                            case "Promotion invitation not active yet":
-                                toast.error("La promoción aún no está activa.");
+                            case "Invitation not active yet":
+                                toast.error("La invitación aún no está activa.");
                                 break;
                             default:
-                                toast.error("No se pudo aplicar la promoción.");
+                                toast.error("No se pudo aplicar la invitación.");
                         }
                     } else {
-                        toast.error("No se pudo aplicar la promoción.");
+                        toast.error("No se pudo aplicar la invitación.");
                     }
                 }
             }
@@ -92,10 +92,10 @@ export default function Index() {
             setLoading(false);
         }
     }
-    const promotionBanner = promotionToken ? (
+    const invitationBanner = inviteToken ? (
         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-700 font-medium">
-                <FontAwesomeIcon icon={faGift} className="w-4 h-4 inline mr-1 align-text-bottom" /> Tienes una promoción pendiente
+                <FontAwesomeIcon icon={faGift} className="w-4 h-4 inline mr-1 align-text-bottom" /> Tienes una invitación pendiente
             </p>
             <p className="text-xs text-green-600 mt-1">
                 Se aplicará automáticamente tras iniciar sesión
@@ -116,7 +116,7 @@ export default function Index() {
         <AuthLayout
             title="Área de Socios"
             subtitle="Inicia sesión para acceder"
-            banner={promotionBanner}
+            banner={invitationBanner}
             footer={footer}
         >
             <form onSubmit={handleLogin} className="space-y-4">
