@@ -9,6 +9,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import SelectComponent from "~/components/common/forms/SelectComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
+import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
@@ -292,6 +293,16 @@ export default function ProductPage() {
                                         })}
                                     </p>
                                 )}
+                            </div>
+                        )}
+                        {product.description && (
+                            <div className="mb-6">
+                                <h2 className="text-xl font-semibold mb-2">Descripción</h2>
+                                <MarkdownEditor
+                                    value={product.description}
+                                    readOnly
+                                    className="border rounded"
+                                />
                             </div>
                         )}
                         <div className="space-y-6">

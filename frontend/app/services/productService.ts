@@ -40,6 +40,7 @@ export interface Product {
     basePrice: number;
     options: ProductOption[];
     images?: string[];
+    description?: string;
 }
 
 export interface CreateProductRequest {
@@ -49,6 +50,7 @@ export interface CreateProductRequest {
     basePrice: number;
     options?: ProductOption[];
     images?: string[];
+    description?: string;
 }
 
 export interface UpdateProductRequest {
@@ -59,6 +61,7 @@ export interface UpdateProductRequest {
     basePrice?: number;
     familyProductId?: string;
     projectId?: string;
+    description?: string;
 }
 
 export class ProductService extends ApiService {

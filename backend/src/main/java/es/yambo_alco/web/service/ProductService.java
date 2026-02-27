@@ -72,7 +72,7 @@ public class ProductService {
     }
 
     public Product createProduct(@NonNull String name, String familyProductId, @NonNull BigDecimal basePrice,
-            List<ProductOption> options, List<String> images) {
+            List<ProductOption> options, List<String> images, String description) {
         authService.getCurrentUser(true);
         // TODO: check if user can create in this family
 
@@ -93,13 +93,14 @@ public class ProductService {
                 .options(options != null ? options : new ArrayList<>())
                 .images(images != null ? images : new ArrayList<>())
                 .familyProduct(familyProduct)
+                .description(description)
                 .build();
 
         return productRepository.save(product);
     }
 
     public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images,
-            List<ProductOption> options, BigDecimal basePrice, String familyProductId) {
+            List<ProductOption> options, BigDecimal basePrice, String familyProductId, String description) {
         Product product = getProductById(productId);
         // TODO: check if user can update
 
@@ -135,6 +136,10 @@ public class ProductService {
                         .orElseThrow(() -> new BadRequestException("Family product not found"));
                 product.setFamilyProduct(familyProduct);
             }
+        }
+
+        if (description != null) {
+            product.setDescription(description);
         }
 
         return productRepository.save(product);

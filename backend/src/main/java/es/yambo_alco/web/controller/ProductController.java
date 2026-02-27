@@ -34,7 +34,8 @@ public class ProductController {
                 request.getFamilyProductId(),
                 basePrice,
                 request.getOptions(),
-                request.getImages());
+                request.getImages(),
+                request.getDescription());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ProductResponse(product));
     }
 
@@ -69,7 +70,8 @@ public class ProductController {
                 request.getImages(),
                 request.getOptions(),
                 basePrice,
-            request.getFamilyProductId());
+                request.getFamilyProductId(),
+                request.getDescription());
         return ResponseEntity.ok(new ProductResponse(product));
     }
 
@@ -93,6 +95,8 @@ public class ProductController {
         private List<ProductOption> options;
 
         private List<String> images;
+
+        private String description;
     }
 
     @Data
@@ -103,6 +107,7 @@ public class ProductController {
         private List<ProductOption> options;
         private BigDecimal basePrice;
         private String familyProductId;
+        private String description;
     }
 
     @Data
@@ -114,6 +119,7 @@ public class ProductController {
         private BigDecimal basePrice;
         private List<ProductOption> options;
         private List<String> images;
+        private String description;
 
         public ProductResponse(Product product) {
             this.id = product.getId();
@@ -123,6 +129,7 @@ public class ProductController {
             this.basePrice = product.getBasePrice();
             this.options = product.getOptions();
             this.images = product.getImages();
+            this.description = product.getDescription();
         }
     }
 

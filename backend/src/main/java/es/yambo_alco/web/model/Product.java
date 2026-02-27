@@ -57,6 +57,9 @@ public class Product {
     @JdbcTypeCode(SqlTypes.JSON)
     private String imagesJson = "[]";
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "family_product_id")
     private FamilyProduct familyProduct;

@@ -6,13 +6,14 @@ import { getErrorMessage } from "~/types/error";
 import { productService, type OptionValue, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faGripVertical, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
 import InputComponent from "~/components/common/forms/InputComponent";
 import SelectComponent from "~/components/common/forms/SelectComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
+import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, rectSortingStrategy, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 type ProductEditorMode = "create" | "edit";
@@ -67,6 +68,42 @@ function SortableImageItem({ id, url, index, onRemove }: {
     );
 }
 
+function SortableOptionItem({ id, children }: {
+    id: string;
+    children: (props: { dragHandleProps: Record<string, any> }) => React.ReactNode;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style}>
+            {children({ dragHandleProps: { ...attributes, ...listeners } })}
+        </div>
+    );
+}
+
+function SortableValueItem({ id, children }: {
+    id: string;
+    children: (props: { dragHandleProps: Record<string, any> }) => React.ReactNode;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style}>
+            {children({ dragHandleProps: { ...attributes, ...listeners } })}
+        </div>
+    );
+}
+
 function emptyProduct(): Product {
     return {
         id: "",
@@ -77,6 +114,7 @@ function emptyProduct(): Product {
         basePrice: 0,
         options: [],
         images: [],
+        description: "",
     };
 }
 
@@ -123,6 +161,9 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
     const imageIdCounter = useRef(0);
     const imageIdMap = useRef(new Map<string, string>());
 
+    const optionIdCounter = useRef(0);
+    const optionIdListRef = useRef<string[]>([]);
+
     const imageIds = useMemo(() => {
         const imgs = product.images || [];
         const newMap = new Map<string, string>();
@@ -146,6 +187,19 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         imageIdMap.current = newMap;
         return ids;
     }, [product.images]);
+
+    const optionIds = useMemo(() => {
+        const opts = product.options || [];
+        const prev = optionIdListRef.current;
+        // Grow the id list if new options were added
+        while (prev.length < opts.length) {
+            prev.push(`opt-${optionIdCounter.current++}`);
+        }
+        // Shrink if options were removed (keep the first N)
+        const ids = prev.slice(0, opts.length);
+        optionIdListRef.current = ids;
+        return ids;
+    }, [product.options.length]);
 
     if (!isAuthenticated()) {
         return <Navigate to="/login" replace />;
@@ -257,6 +311,31 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         setProduct({ ...product, options: newOptions });
     };
 
+    const moveValue = (optionIndex: number, valueIndex: number, direction: "up" | "down") => {
+        const newOptions = [...product.options];
+        const existing = newOptions[optionIndex];
+        const values = [...(existing.values ?? [])];
+        const target = direction === "up" ? valueIndex - 1 : valueIndex + 1;
+        if (target < 0 || target >= values.length) return;
+        const reordered = arrayMove(values, valueIndex, target);
+        newOptions[optionIndex] = normalizeOption({ ...existing, values: reordered });
+        setProduct({ ...product, options: newOptions });
+    };
+
+    const handleValueDragEnd = (optionIndex: number) => (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const values = product.options[optionIndex].values ?? [];
+        const valueIds = values.map((_, i) => `val-${optionIndex}-${i}`);
+        const oldIndex = valueIds.indexOf(active.id as string);
+        const newIndex = valueIds.indexOf(over.id as string);
+        if (oldIndex === -1 || newIndex === -1) return;
+        const newOptions = [...product.options];
+        const existing = newOptions[optionIndex];
+        newOptions[optionIndex] = normalizeOption({ ...existing, values: arrayMove(values, oldIndex, newIndex) });
+        setProduct({ ...product, options: newOptions });
+    };
+
     const addImage = () => {
         setProduct({
             ...product,
@@ -283,6 +362,30 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         const newImages = [...(product.images || [])];
         newImages[index] = url;
         setProduct({ ...product, images: newImages });
+    };
+
+    const moveOption = (index: number, direction: "up" | "down") => {
+        const opts = [...product.options];
+        const target = direction === "up" ? index - 1 : index + 1;
+        if (target < 0 || target >= opts.length) return;
+        const newOpts = arrayMove(opts, index, target);
+        // Also reorder the stable ids
+        optionIdListRef.current = arrayMove(optionIdListRef.current, index, target);
+        setProduct({ ...product, options: newOpts });
+    };
+
+    const handleOptionDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = optionIds.indexOf(active.id as string);
+        const newIndex = optionIds.indexOf(over.id as string);
+
+        optionIdListRef.current = arrayMove(optionIdListRef.current, oldIndex, newIndex);
+        setProduct((prev) => ({
+            ...prev,
+            options: arrayMove(prev.options, oldIndex, newIndex),
+        }));
     };
 
     const handleImageDragEnd = (event: DragEndEvent) => {
@@ -314,6 +417,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     options: product.options,
                     basePrice: product.basePrice,
                     familyProductId: normalizeOptionalId(product.familyProductId),
+                    description: product.description,
                 };
 
                 await productService.updateProduct(productId, productData);
@@ -328,6 +432,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 basePrice: product.basePrice,
                 options: product.options.map(normalizeOption),
                 images: product.images,
+                description: product.description,
             });
 
             toast.success("Producto guardado exitosamente");
@@ -420,6 +525,15 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     </div>
 
                     <div className="bg-white rounded-lg shadow-md p-6">
+                        <h2 className="text-xl font-semibold mb-4">Descripción del Producto</h2>
+                        <MarkdownEditor
+                            value={product.description || ""}
+                            onChange={(value) => setProduct({ ...product, description: value })}
+                            className="min-h-[200px] border rounded"
+                        />
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-md p-6">
                         <h2 className="text-xl font-semibold mb-4">Imágenes del Producto</h2>
                         <FileUploader
                             multiple
@@ -468,17 +582,51 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                             </button>
                         </div>
 
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOptionDragEnd}>
+                            <SortableContext items={optionIds} strategy={verticalListSortingStrategy}>
                         <div className="space-y-6">
                             {product.options.map((option, optionIndex) => (
-                                <div key={optionIndex} className="border border-gray-200 rounded-lg p-4">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <h3 className="font-semibold text-lg">Opción {optionIndex + 1}</h3>
-                                        <button
-                                            onClick={() => removeOption(optionIndex)}
-                                            className="text-red-600 hover:text-red-800"
-                                        >
-                                            Eliminar
-                                        </button>
+                                <SortableOptionItem key={optionIds[optionIndex]} id={optionIds[optionIndex]}>
+                                    {({ dragHandleProps }) => (
+                                <div className="border border-gray-200 rounded-lg p-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                {...dragHandleProps}
+                                                className="cursor-grab text-gray-400 hover:text-gray-600 p-1"
+                                                title="Arrastrar para reordenar"
+                                            >
+                                                <FontAwesomeIcon icon={faGripVertical} className="w-4 h-4" />
+                                            </button>
+                                            <h3 className="font-semibold text-lg">Opción {optionIndex + 1}</h3>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => moveOption(optionIndex, "up")}
+                                                disabled={optionIndex === 0}
+                                                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title="Mover arriba"
+                                            >
+                                                <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => moveOption(optionIndex, "down")}
+                                                disabled={optionIndex === product.options.length - 1}
+                                                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title="Mover abajo"
+                                            >
+                                                <FontAwesomeIcon icon={faArrowDown} className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => removeOption(optionIndex)}
+                                                className="text-red-600 hover:text-red-800 ml-2"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -527,8 +675,40 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 </button>
                                             </div>
 
+                                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleValueDragEnd(optionIndex)}>
+                                                <SortableContext items={(option.values || []).map((_, vi) => `val-${optionIndex}-${vi}`)} strategy={verticalListSortingStrategy}>
                                             {(option.values || []).map((value, valueIndex) => (
-                                                <div key={valueIndex} className="flex gap-2 items-end">
+                                                <SortableValueItem key={`val-${optionIndex}-${valueIndex}`} id={`val-${optionIndex}-${valueIndex}`}>
+                                                    {({ dragHandleProps }) => (
+                                                <div className="flex gap-1 items-end">
+                                                    <button
+                                                        type="button"
+                                                        {...dragHandleProps}
+                                                        className="cursor-grab text-gray-400 hover:text-gray-600 p-1 self-center"
+                                                        title="Arrastrar para reordenar"
+                                                    >
+                                                        <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3" />
+                                                    </button>
+                                                    <div className="flex flex-col gap-0.5 self-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveValue(optionIndex, valueIndex, "up")}
+                                                            disabled={valueIndex === 0}
+                                                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
+                                                            title="Mover arriba"
+                                                        >
+                                                            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveValue(optionIndex, valueIndex, "down")}
+                                                            disabled={valueIndex === (option.values || []).length - 1}
+                                                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
+                                                            title="Mover abajo"
+                                                        >
+                                                            <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
                                                     <div className="flex-1">
                                                         <InputComponent
                                                             label="Etiqueta"
@@ -559,7 +739,11 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                         <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                                                     </button>
                                                 </div>
+                                                    )}
+                                                </SortableValueItem>
                                             ))}
+                                                </SortableContext>
+                                            </DndContext>
 
                                             {(option.values || []).length === 0 && (
                                                 <p className="text-gray-500 text-sm">No hay valores añadidos aún.</p>
@@ -583,6 +767,8 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                         </div>
                                     )}
                                 </div>
+                                    )}
+                                </SortableOptionItem>
                             ))}
 
                             {product.options.length === 0 && (
@@ -591,6 +777,8 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                 </p>
                             )}
                         </div>
+                            </SortableContext>
+                        </DndContext>
                     </div>
 
                     <button

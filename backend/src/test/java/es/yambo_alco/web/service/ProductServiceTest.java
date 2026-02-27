@@ -286,7 +286,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
 
         // When
-        Product result = productService.createProduct(name, familyProductId, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+        Product result = productService.createProduct(name, familyProductId, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>(), null);
 
 
         // Then
@@ -311,7 +311,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>()));
+                () -> productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>(), null));
         assertEquals("Product name already exists", exception.getMessage());
         verify(authService).getCurrentUser(true);
         verify(productRepository).existsByName(name);
@@ -341,7 +341,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(expectedProduct);
 
         // When & Then
-        Product result = productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>());
+        Product result = productService.createProduct(name, null, BigDecimal.valueOf(10.00), new ArrayList<>(), new ArrayList<>(), null);
         assertNotNull(result);
                 verify(authService).getCurrentUser(true);
                 verify(productRepository).existsByName(name);
@@ -380,7 +380,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, newName, newActive, null, null, null, null);
+        Product result = productService.updateProduct(productId, newName, newActive, null, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -415,7 +415,7 @@ class ProductServiceTest {
 
         // When & Then
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> productService.updateProduct(productId, newName, null, null, null, null, null));
+                () -> productService.updateProduct(productId, newName, null, null, null, null, null, null));
         assertEquals("Product name already exists", exception.getMessage());
         verify(productRepository).findById(productId);
         verify(authService).getCurrentUser(true);
@@ -453,7 +453,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, sameName, newActive, null, null, null, null);
+        Product result = productService.updateProduct(productId, sameName, newActive, null, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);
@@ -491,7 +491,7 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
-        Product result = productService.updateProduct(productId, null, newActive, null, null, null, null);
+        Product result = productService.updateProduct(productId, null, newActive, null, null, null, null, null);
 
         // Then
         assertEquals(updatedProduct, result);

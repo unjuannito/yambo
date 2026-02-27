@@ -69,4 +69,5 @@
     <include file="db/changelog/changes/58-remove-upload-allowed-types-setting.xml"/>
     <include file="db/changelog/changes/59-order-receipt-file.xml"/>
     <include file="db/changelog/changes/60-system-flag.xml"/>
+    <include file="db/changelog/changes/61-product-description.xml"/>
 </databaseChangeLog>
