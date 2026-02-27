@@ -20,6 +20,7 @@ export type User = {
     permissions: Permission[]
     profiles : Profile[]
     enabled: boolean;
+    system?: boolean;
 }
 
 export type UserGroup = {

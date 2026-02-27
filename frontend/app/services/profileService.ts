@@ -9,6 +9,7 @@ export interface Permission {
 export interface Profile {
     id: string;
     name: string;
+    system?: boolean;
     permissions: Permission[];
 }
 

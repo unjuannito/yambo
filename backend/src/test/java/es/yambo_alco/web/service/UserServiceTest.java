@@ -408,4 +408,45 @@ public class UserServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
+
+    @Test
+    public void deleteUser_WhenSystemUser_ShouldThrowBadRequest() {
+        // Given
+        User systemUser = User.builder()
+                .id("UADMIN01")
+                .email("admin@example.com")
+                .name("Admin")
+                .system(true)
+                .build();
+
+        when(userRepository.findById("UADMIN01")).thenReturn(Optional.of(systemUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.deleteUser("UADMIN01"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Cannot delete a system user");
+
+        verify(userRepository, never()).delete(any(User.class));
+        verify(pendingDeletionService, never()).scheduleDeletion(any(), any(), any());
+    }
+
+    @Test
+    public void updateUserProfiles_WhenSystemUserRemovesAdmin_ShouldThrowBadRequest() {
+        // Given
+        User systemUser = User.builder()
+                .id("UADMIN01")
+                .email("admin@example.com")
+                .name("Admin")
+                .system(true)
+                .build();
+
+        when(userRepository.findById("UADMIN01")).thenReturn(Optional.of(systemUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUserProfiles("UADMIN01", Set.of("USER")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Cannot remove the ADMIN profile from a system user");
+
+        verify(userRepository, never()).save(any(User.class));
+    }
 }

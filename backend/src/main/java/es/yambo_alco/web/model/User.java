@@ -48,6 +48,10 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean enabled = true;
 
+    @Builder.Default
+    @Column(name = "system", nullable = false)
+    private boolean system = false;
+
     @Column(length = 500)
     private String photo;
 

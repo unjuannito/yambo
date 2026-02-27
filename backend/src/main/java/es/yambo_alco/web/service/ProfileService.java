@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.repository.PermissionRepository;
@@ -66,6 +67,10 @@ public class ProfileService {
     public Profile updateProfilePermissions(String profileId, Set<String> permissionIds) {
         Profile profile = getProfileById(profileId);
 
+        if (profile.isSystem()) {
+            throw new BadRequestException("Cannot modify permissions of a system profile");
+        }
+
         Set<Permission> permissions = new HashSet<>();
         for (String permissionId : permissionIds) {
             Permission permission = permissionRepository.findById(permissionId)
@@ -80,6 +85,10 @@ public class ProfileService {
     @Transactional
     public Profile updateProfile(String profileId, String name, Set<String> permissionIds) {
         Profile profile = getProfileById(profileId);
+
+        if (profile.isSystem()) {
+            throw new BadRequestException("Cannot modify a system profile");
+        }
 
         if (name != null && !name.isBlank()) {
             profile.setName(name);
@@ -121,6 +130,9 @@ public class ProfileService {
     @Transactional
     public void deleteProfile(String profileId) {
         Profile profile = getProfileById(profileId);
+        if (profile.isSystem()) {
+            throw new BadRequestException("Cannot delete a system profile");
+        }
         profileRepository.delete(profile);
     }
 }

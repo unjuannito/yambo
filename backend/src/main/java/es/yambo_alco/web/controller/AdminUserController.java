@@ -159,6 +159,7 @@ public class AdminUserController {
         private AdminUserPermissionResponse[] permissions;
         private String createdAt;
         private boolean enabled;
+        private boolean system;
 
         public AdminUserResponse(User user) {
             this.id = user.getId();
@@ -185,6 +186,7 @@ public class AdminUserController {
             this.createdAt = user.getCreatedAt() != null ? user.getCreatedAt().toString() : null;
 
             this.enabled = user.isEnabled();
+            this.system = user.isSystem();
         }
     }
 

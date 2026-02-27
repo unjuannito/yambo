@@ -68,4 +68,5 @@
     <include file="db/changelog/changes/57-rename-image-to-uploaded-file.xml"/>
     <include file="db/changelog/changes/58-remove-upload-allowed-types-setting.xml"/>
     <include file="db/changelog/changes/59-order-receipt-file.xml"/>
+    <include file="db/changelog/changes/60-system-flag.xml"/>
 </databaseChangeLog>

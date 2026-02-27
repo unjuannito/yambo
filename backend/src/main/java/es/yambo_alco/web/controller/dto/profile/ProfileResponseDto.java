@@ -16,5 +16,6 @@ import es.yambo_alco.web.controller.PermissionResponseDto;
 public class ProfileResponseDto {
     private String id;
     private String name;
+    private boolean system;
     private List<PermissionResponseDto> permissions;
 }

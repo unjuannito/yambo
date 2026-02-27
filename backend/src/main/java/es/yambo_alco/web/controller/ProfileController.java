@@ -106,6 +106,7 @@ public class ProfileController {
         return ProfileResponseDto.builder()
                 .id(profile.getId())
                 .name(profile.getName())
+                .system(profile.isSystem())
                 .permissions(profile.getPermissions().stream()
                         .map(this::mapToPermissionResponseDto)
                         .collect(Collectors.toList()))

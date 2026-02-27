@@ -198,7 +198,14 @@ export default function Users() {
                 placeholder: "Buscar por nombre...",
             },
             render: (user: User) => (
-                <span className="font-medium">{user.name}</span>
+                <span className="font-medium">
+                    {user.name}
+                    {user.system && (
+                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-normal">
+                            Sistema
+                        </span>
+                    )}
+                </span>
             ),
         },
         {
@@ -307,15 +314,17 @@ export default function Users() {
                             Editar
                         </ButtonComponent>
                     </RequirePermission>
-                    <RequirePermission permission={{ obj: "user", action: "delete" }} redirect={false}>
-                        <ButtonComponent
-                            onClick={() => handleDelete(user.id, user.name)}
-                            variant="destructive"
-                            size="sm"
-                        >
-                            Eliminar
-                        </ButtonComponent>
-                    </RequirePermission>
+                    {!user.system && (
+                        <RequirePermission permission={{ obj: "user", action: "delete" }} redirect={false}>
+                            <ButtonComponent
+                                onClick={() => handleDelete(user.id, user.name)}
+                                variant="destructive"
+                                size="sm"
+                            >
+                                Eliminar
+                            </ButtonComponent>
+                        </RequirePermission>
+                    )}
                 </div>
             ),
         }

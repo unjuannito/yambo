@@ -144,6 +144,11 @@ public class UserService {
 			throw new BadRequestException("At least one profile must be specified");
 		}
 
+		// System users must always keep the ADMIN profile
+		if (user.isSystem() && !profileIds.contains("ADMIN")) {
+			throw new BadRequestException("Cannot remove the ADMIN profile from a system user");
+		}
+
 		Set<Profile> profilesSet = new HashSet<>();
 		for (String profileId : profileIds) {
 			Profile profile = profileRepository.findById(profileId)
@@ -184,8 +189,12 @@ public class UserService {
 	}
 
 	public void deleteUser(@NonNull String userId) {
-		userRepository.findById(userId)
+		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (user.isSystem()) {
+			throw new BadRequestException("Cannot delete a system user");
+		}
 
 		// The user will be disabled immediately and permanently deleted after the delay
 		// period

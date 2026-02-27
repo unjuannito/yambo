@@ -27,6 +27,10 @@ public class Profile implements GrantedAuthority {
     @Column(nullable = false)
     private String name;
 
+    @Builder.Default
+    @Column(name = "system", nullable = false)
+    private boolean system = false;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "profile_permission",

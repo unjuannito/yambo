@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import es.yambo_alco.web.exception.BadRequestException;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -360,8 +362,8 @@ class ProfileServiceTest {
     @Test
     void deleteProfile_WhenProfileExists_ShouldDeleteProfile() {
         // Given
-        String profileId = "ADMIN";
-        Profile existingProfile = Profile.builder().id(profileId).name("Administrator").build();
+        String profileId = "CUSTOM01";
+        Profile existingProfile = Profile.builder().id(profileId).name("Custom").build();
 
         when(profileRepository.findById(profileId)).thenReturn(Optional.of(existingProfile));
 
@@ -386,5 +388,53 @@ class ProfileServiceTest {
         assertEquals("Profile not found: " + profileId, exception.getMessage());
         verify(profileRepository).findById(profileId);
         verify(profileRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteProfile_WhenSystemProfile_ShouldThrowBadRequest() {
+        // Given
+        String profileId = "ADMIN";
+        Profile systemProfile = Profile.builder().id(profileId).name("Administrator").system(true).build();
+
+        when(profileRepository.findById(profileId)).thenReturn(Optional.of(systemProfile));
+
+        // When & Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> profileService.deleteProfile(profileId));
+        assertEquals("Cannot delete a system profile", exception.getMessage());
+        verify(profileRepository).findById(profileId);
+        verify(profileRepository, never()).delete(any());
+    }
+
+    @Test
+    void updateProfile_WhenSystemProfile_ShouldThrowBadRequest() {
+        // Given
+        String profileId = "ADMIN";
+        Profile systemProfile = Profile.builder().id(profileId).name("Administrator").system(true).build();
+
+        when(profileRepository.findById(profileId)).thenReturn(Optional.of(systemProfile));
+
+        // When & Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> profileService.updateProfile(profileId, "New Name", Set.of("P001")));
+        assertEquals("Cannot modify a system profile", exception.getMessage());
+        verify(profileRepository).findById(profileId);
+        verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProfilePermissions_WhenSystemProfile_ShouldThrowBadRequest() {
+        // Given
+        String profileId = "ADMIN";
+        Profile systemProfile = Profile.builder().id(profileId).name("Administrator").system(true).build();
+
+        when(profileRepository.findById(profileId)).thenReturn(Optional.of(systemProfile));
+
+        // When & Then
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> profileService.updateProfilePermissions(profileId, Set.of("P001")));
+        assertEquals("Cannot modify permissions of a system profile", exception.getMessage());
+        verify(profileRepository).findById(profileId);
+        verify(profileRepository, never()).save(any());
     }
 }

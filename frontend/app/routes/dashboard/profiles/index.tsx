@@ -164,6 +164,11 @@ export default function Profiles() {
                 render: (profile) => (
                     <span className="font-medium text-gray-900">
                         {profile.name}
+                        {profile.system && (
+                            <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-normal">
+                                Sistema
+                            </span>
+                        )}
                     </span>
                 ),
             },
@@ -207,20 +212,24 @@ export default function Profiles() {
                 header: "Acciones",
                 render: (profile) => (
                     <div className="flex gap-2">
-                        <ButtonComponent
-                            variant="primary"
-                            size="sm"
-                            onClick={() => startEdit(profile)}
-                        >
-                            Editar
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(profile.id)}
-                        >
-                            Eliminar
-                        </ButtonComponent>
+                        {!profile.system && (
+                            <>
+                                <ButtonComponent
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => startEdit(profile)}
+                                >
+                                    Editar
+                                </ButtonComponent>
+                                <ButtonComponent
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDelete(profile.id)}
+                                >
+                                    Eliminar
+                                </ButtonComponent>
+                            </>
+                        )}
                     </div>
                 ),
             },
