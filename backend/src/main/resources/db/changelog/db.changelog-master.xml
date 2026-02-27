@@ -62,4 +62,7 @@
     <include file="db/changelog/changes/50-activity.xml"/>
     <include file="db/changelog/changes/52-activity-statuses.xml"/>
     <include file="db/changelog/changes/53-rename-invitations.xml"/>
+    <include file="db/changelog/changes/54-seo-metadata.xml"/>
+    <include file="db/changelog/changes/55-seo-permissions.xml"/>
+    <include file="db/changelog/changes/56-ollama-settings.xml"/>
 </databaseChangeLog>

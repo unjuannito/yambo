@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { publicService } from "~/services/publicService";
+import { useLoaderData } from "react-router";
+import { getActiveProjects } from "~/services/publicService.server";
 import type { ActiveProject } from "~/services/publicService";
 import { hashColor } from "~/utils/hashColor";
 import type { Route } from "./+types/proyectos";
@@ -13,24 +13,13 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+export async function loader() {
+  const projects = await getActiveProjects();
+  return { projects };
+}
+
 export default function Proyectos() {
-  const [projects, setProjects] = useState<ActiveProject[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadProjects = useCallback(async () => {
-    try {
-      const data = await publicService.getActiveProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error("Failed to load projects:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
+  const { projects } = useLoaderData<typeof loader>();
 
   return (
     <section className="w-full bg-white min-h-screen pt-24 pb-16">
@@ -40,23 +29,7 @@ export default function Proyectos() {
           Conoce todos los proyectos en los que trabajamos.
         </p>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="bg-gray-50 rounded-xl shadow-md overflow-hidden"
-              >
-                <div className="w-full h-48 bg-gray-200 animate-pulse" />
-                <div className="p-5">
-                  <div className="h-6 w-2/3 mb-3 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-full mb-2 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : projects.length > 0 ? (
+        {projects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {projects.map((project) => (
               <a

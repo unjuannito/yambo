@@ -76,6 +76,12 @@ const LINKS_MAP: Link[] = [
         label: "Incidencias (Admin)",
         need: { obj: "issue", action: "read" },
     },
+    {
+        name: "seo",
+        href: "/mi-espacio/admin/seo",
+        label: "SEO",
+        need: { obj: "seo_metadata", action: "read" },
+    },
 
     // Proyectos
     {

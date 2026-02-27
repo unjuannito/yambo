@@ -3,18 +3,22 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.ProjectGroup;
+import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.SeoEntityType;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +33,7 @@ public class PublicController {
     private final UserRepository userRepository;
     private final ProjectGroupRepository projectGroupRepository;
     private final ActivityRepository activityRepository;
+    private final SeoMetadataService seoMetadataService;
 
     @GetMapping("/settings/home")
     public ResponseEntity<Map<String, String>> getHomeSettings() {
@@ -88,7 +93,17 @@ public class PublicController {
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Project not found"));
         List<ProjectGroup> groups = projectGroupRepository.findByProjectId(id);
         List<User> monitors = userRepository.findMonitorsByProjectId(id);
-        return ResponseEntity.ok(new ProjectDetailResponse(project, groups, monitors));
+        SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.PROJECT, id).orElse(null);
+        return ResponseEntity.ok(new ProjectDetailResponse(project, groups, monitors, seo));
+    }
+
+    @GetMapping("/projects/{id}/seo")
+    public ResponseEntity<SeoMetadataResponse> getProjectSeo(@PathVariable String id) {
+        projectRepository.findById(id)
+                .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Project not found"));
+        SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.PROJECT, id)
+                .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("SEO metadata not found"));
+        return ResponseEntity.ok(new SeoMetadataResponse(seo));
     }
 
     @Data
@@ -166,8 +181,9 @@ public class PublicController {
         private String image;
         private List<ProjectGroupDetail> groups;
         private List<MonitorResponse> monitors;
+        private SeoMetadataResponse seo;
 
-        public ProjectDetailResponse(Project project, List<ProjectGroup> groups, List<User> monitors) {
+        public ProjectDetailResponse(Project project, List<ProjectGroup> groups, List<User> monitors, SeoMetadata seo) {
             this.id = project.getId();
             this.name = project.getName();
             this.season = project.getSeason();
@@ -179,6 +195,7 @@ public class PublicController {
             this.monitors = monitors.stream()
                     .map(MonitorResponse::new)
                     .toList();
+            this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }
     }
 
@@ -241,6 +258,29 @@ public class PublicController {
         public ActivityManagerSummary(String name, String photo) {
             this.name = name;
             this.photo = photo;
+        }
+    }
+
+    @Data
+    public static class SeoMetadataResponse {
+        private String metaDescription;
+        private List<String> keywords;
+        private String ogDescription;
+        private String slug;
+
+        public SeoMetadataResponse(SeoMetadata seo) {
+            this.metaDescription = seo.getMetaDescription();
+            this.ogDescription = seo.getOgDescription();
+            this.slug = seo.getSlug();
+            // Parse keywords JSON array
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                this.keywords = mapper.readValue(
+                        seo.getKeywords(),
+                        mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+            } catch (Exception e) {
+                this.keywords = Collections.emptyList();
+            }
         }
     }
 }

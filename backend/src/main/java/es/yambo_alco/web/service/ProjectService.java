@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.enums.SeoEntityType;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.spec.ProjectSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final SeoMetadataService seoMetadataService;
 
     public Project getProjectById(@NonNull String projectId) {
         return projectRepository.findById(projectId)
@@ -46,16 +48,23 @@ public class ProjectService {
                 .featured(featured != null ? featured : false)
                 .build();
 
-        return projectRepository.save(project);
+        Project saved = projectRepository.save(project);
+        seoMetadataService.generateAndSaveForProject(saved);
+        return saved;
     }
 
     public Project updateProject(@NonNull String projectId, String name, Boolean active, String season,
                                   String description, String image, Boolean featured) {
         Project project = getProjectById(projectId);
 
+        boolean seoRelevantChange = false;
+
         if (name != null && !name.trim().isEmpty()) {
             if (!name.equals(project.getName()) && projectRepository.existsByName(name)) {
                 throw new BadRequestException("Project name already exists");
+            }
+            if (!name.trim().equals(project.getName())) {
+                seoRelevantChange = true;
             }
             project.setName(name.trim());
         }
@@ -65,10 +74,16 @@ public class ProjectService {
         }
 
         if (season != null) {
+            if (!season.equals(project.getSeason())) {
+                seoRelevantChange = true;
+            }
             project.setSeason(season);
         }
 
         if (description != null) {
+            if (!description.equals(project.getDescription())) {
+                seoRelevantChange = true;
+            }
             project.setDescription(description);
         }
 
@@ -80,11 +95,18 @@ public class ProjectService {
             project.setFeatured(featured);
         }
 
-        return projectRepository.save(project);
+        Project saved = projectRepository.save(project);
+
+        if (seoRelevantChange) {
+            seoMetadataService.generateAndSaveForProject(saved);
+        }
+
+        return saved;
     }
 
     public void deleteProject(@NonNull String projectId) {
         Project project = getProjectById(projectId);
+        seoMetadataService.deleteByEntity(SeoEntityType.PROJECT, projectId);
         projectRepository.delete(project);
     }
 }

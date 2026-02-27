@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useLoaderData } from "react-router";
 import Hero from "~/components/home/Hero";
 import AboutUs from "~/components/home/AboutUs";
 import FeaturedProjects from "~/components/home/FeaturedProjects";
 import ActivitiesPreview from "~/components/home/ActivitiesPreview";
 import MonitorsGallery from "~/components/home/MonitorsGallery";
-import { publicService } from "~/services/publicService";
-import type {
-    HomeSettings,
-    FeaturedProject,
-    Monitor,
-} from "~/services/publicService";
-import type { Activity } from "~/types/activity";
+import {
+    getHomeSettings,
+    getFeaturedProjects,
+    getMonitors,
+    getPublicActivities,
+} from "~/services/publicService.server";
 import type { Route } from "./+types";
 
 export function meta({}: Route.MetaArgs) {
@@ -38,36 +38,18 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     { id: "monitors", visible: true, title: "Equipo de Monitores" },
 ];
 
+export async function loader() {
+    const [settings, projects, monitors, activities] = await Promise.all([
+        getHomeSettings(),
+        getFeaturedProjects(),
+        getMonitors(),
+        getPublicActivities(),
+    ]);
+    return { settings, projects, monitors, activities };
+}
+
 export default function Index() {
-    const [settings, setSettings] = useState<HomeSettings>({});
-    const [projects, setProjects] = useState<FeaturedProject[]>([]);
-    const [monitors, setMonitors] = useState<Monitor[]>([]);
-    const [activities, setActivities] = useState<Activity[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const loadData = useCallback(async () => {
-        try {
-            const [settingsData, projectsData, monitorsData, activitiesData] =
-                await Promise.all([
-                    publicService.getHomeSettings(),
-                    publicService.getFeaturedProjects(),
-                    publicService.getMonitors(),
-                    publicService.getPublicActivities(),
-                ]);
-            setSettings(settingsData);
-            setProjects(projectsData);
-            setMonitors(monitorsData);
-            setActivities(activitiesData);
-        } catch (error) {
-            console.error("Failed to load public page data:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        void loadData();
-    }, [loadData]);
+    const { settings, projects, monitors, activities } = useLoaderData<typeof loader>();
 
     const sections = useMemo<SectionConfig[]>(() => {
         const raw = settings["home.sections.config"];
@@ -96,7 +78,7 @@ export default function Index() {
                         title={settings["home.hero.title"]}
                         subtitle={settings["home.hero.subtitle"]}
                         image={settings["home.hero.image"]}
-                        loading={loading}
+                        loading={false}
                     />
                 );
             case "about":
@@ -107,7 +89,7 @@ export default function Index() {
                         intro={settings["home.about.intro"]}
                         bulletsJson={settings["home.about.bullets"]}
                         image={settings["home.about.image"]}
-                        loading={loading}
+                        loading={false}
                     />
                 );
             case "projects":
@@ -116,7 +98,7 @@ export default function Index() {
                         key="projects"
                         title={sectionTitle("projects")}
                         projects={projects}
-                        loading={loading}
+                        loading={false}
                     />
                 );
             case "activities":
@@ -125,7 +107,7 @@ export default function Index() {
                         key="activities"
                         title={sectionTitle("activities")}
                         activities={activities}
-                        loading={loading}
+                        loading={false}
                     />
                 );
             case "monitors":
@@ -134,7 +116,7 @@ export default function Index() {
                         key="monitors"
                         title={sectionTitle("monitors")}
                         monitors={monitors}
-                        loading={loading}
+                        loading={false}
                     />
                 );
             default:

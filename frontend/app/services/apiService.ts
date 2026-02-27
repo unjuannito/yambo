@@ -89,6 +89,7 @@ export class ApiService {
 
     protected static setToken(token: string | null) {
         ApiService.token = token;
+        if (typeof window === "undefined") return;
         if (token) {
             localStorage.setItem("auth_token", token);
         } else {
@@ -97,7 +98,7 @@ export class ApiService {
     }
 
     protected static getToken(): string | null {
-        if (!ApiService.token) {
+        if (!ApiService.token && typeof window !== "undefined") {
             ApiService.token = localStorage.getItem("auth_token");
         }
         return ApiService.token;

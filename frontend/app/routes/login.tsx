@@ -11,6 +11,8 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGift } from "@fortawesome/free-solid-svg-icons";
 
+export const ssr = false;
+
 export function meta({}: Route.MetaArgs) {
     return [
         { title: "Yambo - Área Socios - Login" },

@@ -227,6 +227,29 @@ public class SettingsController {
         return ResponseEntity.ok("Upload configuration updated successfully");
     }
 
+    // ── AI / Ollama Settings ──
+
+    @GetMapping("/ai/ollama")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
+    public ResponseEntity<OllamaConfigResponse> getOllamaConfig() {
+        OllamaConfigResponse config = new OllamaConfigResponse();
+        config.setApiUrl(settingsService.getOllamaApiUrl());
+        config.setModel(settingsService.getOllamaModel());
+        return ResponseEntity.ok(config);
+    }
+
+    @PutMapping("/ai/ollama")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
+    public ResponseEntity<String> updateOllamaConfig(@Valid @RequestBody OllamaConfigRequest request) {
+        if (request.getApiUrl() != null && !request.getApiUrl().isBlank()) {
+            settingsService.setOllamaApiUrl(request.getApiUrl());
+        }
+        if (request.getModel() != null && !request.getModel().isBlank()) {
+            settingsService.setOllamaModel(request.getModel());
+        }
+        return ResponseEntity.ok("Ollama configuration updated successfully");
+    }
+
     @Data
     public static class SettingsResponse {
         private String id;
@@ -329,5 +352,17 @@ public class SettingsController {
     public static class UploadConfigRequest {
         private Integer maxFileSizeMb;
         private String allowedTypes;
+    }
+
+    @Data
+    public static class OllamaConfigRequest {
+        private String apiUrl;
+        private String model;
+    }
+
+    @Data
+    public static class OllamaConfigResponse {
+        private String apiUrl;
+        private String model;
     }
 }

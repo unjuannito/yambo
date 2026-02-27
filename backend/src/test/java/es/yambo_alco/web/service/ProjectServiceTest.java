@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.enums.SeoEntityType;
 import es.yambo_alco.web.repository.ProjectRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,9 @@ class ProjectServiceTest {
 
     @Mock
     private ProjectRepository projectRepository;
+
+    @Mock
+    private SeoMetadataService seoMetadataService;
 
     @InjectMocks
     private ProjectService projectService;
@@ -85,6 +89,7 @@ class ProjectServiceTest {
         assertEquals(saved, result);
         verify(projectRepository).existsByName("New Project");
         verify(projectRepository).save(any(Project.class));
+        verify(seoMetadataService).generateAndSaveForProject(saved);
     }
 
     @Test
@@ -114,6 +119,7 @@ class ProjectServiceTest {
         verify(projectRepository).findById("PRJ001");
         verify(projectRepository).existsByName("New");
         verify(projectRepository).save(any(Project.class));
+        verify(seoMetadataService).generateAndSaveForProject(saved);
     }
 
     @Test
@@ -124,6 +130,7 @@ class ProjectServiceTest {
         projectService.deleteProject("PRJ001");
 
         verify(projectRepository).findById("PRJ001");
+        verify(seoMetadataService).deleteByEntity(SeoEntityType.PROJECT, "PRJ001");
         verify(projectRepository).delete(project);
     }
 }

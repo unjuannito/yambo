@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { publicService } from "~/services/publicService";
+import { useState } from "react";
+import { useLoaderData } from "react-router";
+import { getMonitors, getActiveProjects } from "~/services/publicService.server";
 import type { Monitor, ActiveProject } from "~/services/publicService";
 import MonitorCard from "~/components/home/MonitorCard";
 import { hashColor } from "~/utils/hashColor";
@@ -14,31 +15,18 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+export async function loader() {
+  const [monitors, projects] = await Promise.all([
+    getMonitors(),
+    getActiveProjects(),
+  ]);
+  return { monitors, projects };
+}
+
 export default function Monitores() {
-  const [monitors, setMonitors] = useState<Monitor[]>([]);
-  const [projects, setProjects] = useState<ActiveProject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { monitors, projects } = useLoaderData<typeof loader>();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
-
-  const loadData = useCallback(async () => {
-    try {
-      const [monitorsData, projectsData] = await Promise.all([
-        publicService.getMonitors(),
-        publicService.getActiveProjects(),
-      ]);
-      setMonitors(monitorsData);
-      setProjects(projectsData);
-    } catch (error) {
-      console.error("Failed to load monitors:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
 
   // Derive unique project names from monitors' groups for filtering
   const projectsWithMonitors = projects.filter((p) =>
@@ -69,7 +57,7 @@ export default function Monitores() {
         </p>
 
         {/* Filters */}
-        {!loading && monitors.length > 0 && (
+        {monitors.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             {/* Search */}
             <div className="relative flex-1 max-w-xs">
@@ -123,7 +111,7 @@ export default function Monitores() {
         )}
 
         {/* Active filter summary */}
-        {!loading && (selectedProjectId || searchText.trim()) && (
+        {(selectedProjectId || searchText.trim()) && (
           <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
             <span>
               {filteredMonitors.length} {filteredMonitors.length === 1 ? "monitor" : "monitores"}
@@ -139,19 +127,7 @@ export default function Monitores() {
         )}
 
         {/* Monitor grid */}
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-              <div key={i} className="rounded-xl shadow-md overflow-hidden bg-gray-50">
-                <div className="w-full h-[220px] bg-gray-200 animate-pulse" />
-                <div className="p-3">
-                  <div className="h-5 w-2/3 mb-2 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredMonitors.length > 0 ? (
+        {filteredMonitors.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {filteredMonitors.map((monitor) => (
               <MonitorCard key={monitor.id} monitor={monitor} />

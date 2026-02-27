@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router";
-import { publicService } from "~/services/publicService";
+import { useState } from "react";
+import { useLoaderData } from "react-router";
+import { getProjectDetail } from "~/services/publicService.server";
 import type { ProjectDetail, Monitor, ProjectGroupDetail } from "~/services/publicService";
 import MonitorCard from "~/components/home/MonitorCard";
 import { hashColor } from "~/utils/hashColor";
@@ -8,35 +8,33 @@ import type { Route } from "./+types/proyecto";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
-export function meta({}: Route.MetaArgs) {
+export async function loader({ params }: Route.LoaderArgs) {
+  const project = await getProjectDetail(params.projectId!);
+  return { project };
+}
+
+export function meta({ data }: Route.MetaArgs) {
+  const project = data?.project;
+  const seo = project?.seo;
+
+  const title = project ? `Yambo - ${project.name}` : "Yambo - Proyecto";
+  const description = seo?.metaDescription ?? project?.description ?? "Detalle del proyecto";
+
   return [
-    { title: "Yambo - Proyecto" },
-    { name: "description", content: "Detalle del proyecto" },
+    { title },
+    { name: "description", content: description },
+    ...(seo?.keywords?.length ? [{ name: "keywords", content: seo.keywords.join(", ") }] : []),
+    { property: "og:title", content: seo?.ogTitle ?? title },
+    { property: "og:description", content: seo?.ogDescription ?? description },
+    { property: "og:type", content: "website" },
+    ...(project?.image ? [{ property: "og:image", content: project.image }] : []),
   ];
 }
 
 export default function Proyecto() {
-  const { projectId } = useParams();
-  const [project, setProject] = useState<ProjectDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { project } = useLoaderData<typeof loader>();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
-
-  const loadProject = useCallback(async () => {
-    if (!projectId) return;
-    try {
-      const data = await publicService.getProjectDetail(projectId);
-      setProject(data);
-    } catch (error) {
-      console.error("Failed to load project:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    void loadProject();
-  }, [loadProject]);
 
   // Named groups only (exclude default/unnamed groups)
   const namedGroups: ProjectGroupDetail[] = project?.groups.filter(g => g.name) ?? [];
@@ -55,35 +53,6 @@ export default function Proyecto() {
     }
     return true;
   });
-
-  if (loading) {
-    return (
-      <section className="w-full bg-white min-h-screen pt-24 pb-16">
-        <div className="max-w-6xl mx-auto px-4">
-          {/* Header skeleton */}
-          <div className="mb-10">
-            <div className="h-8 w-1/3 bg-gray-200 rounded animate-pulse mb-3" />
-            <div className="h-5 w-2/3 bg-gray-200 rounded animate-pulse" />
-          </div>
-          {/* Image skeleton */}
-          <div className="w-full h-64 bg-gray-200 rounded-xl animate-pulse mb-10" />
-          {/* Monitor skeletons */}
-          <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-6" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="rounded-xl shadow-md overflow-hidden bg-gray-50">
-                <div className="w-full h-[220px] bg-gray-200 animate-pulse" />
-                <div className="p-3">
-                  <div className="h-5 w-2/3 mb-2 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   if (!project) {
     return (

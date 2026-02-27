@@ -44,6 +44,11 @@ export interface UploadConfig {
     allowedTypes: string;
 }
 
+export interface OllamaConfig {
+    apiUrl: string;
+    model: string;
+}
+
 export class SettingsService extends ApiService {
     public async getAllSettings(): Promise<Setting[]> {
         return await this.get<Setting[]>("/admin/settings");
@@ -124,6 +129,16 @@ export class SettingsService extends ApiService {
 
     public async updateUploadConfig(config: Partial<UploadConfig>): Promise<string> {
         return await this.put<string, Partial<UploadConfig>>("/admin/settings/upload", config);
+    }
+
+    // AI / Ollama settings
+
+    public async getOllamaConfig(): Promise<OllamaConfig> {
+        return await this.get<OllamaConfig>("/admin/settings/ai/ollama");
+    }
+
+    public async updateOllamaConfig(config: Partial<OllamaConfig>): Promise<string> {
+        return await this.put<string, Partial<OllamaConfig>>("/admin/settings/ai/ollama", config);
     }
 }
 

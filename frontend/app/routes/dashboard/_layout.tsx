@@ -6,6 +6,8 @@ import { useAuth } from "~/hooks/useAuth";
 import LINKS_MAP from "~/data/links";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 
+export const ssr = false;
+
 // This is the layout for area-socios section
 export default function AreaSociosLayout() {
   const { user, isAuthenticated } = useAuth();

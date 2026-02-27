@@ -40,6 +40,13 @@ export interface ProjectGroupDetail {
     name: string | null;
 }
 
+export interface SeoMetadata {
+    metaDescription: string | null;
+    keywords: string[];
+    ogDescription: string | null;
+    slug: string | null;
+}
+
 export interface ProjectDetail {
     id: string;
     name: string;
@@ -48,6 +55,7 @@ export interface ProjectDetail {
     image: string | null;
     groups: ProjectGroupDetail[];
     monitors: Monitor[];
+    seo: SeoMetadata | null;
 }
 
 export interface ContactSettings {

@@ -5,7 +5,7 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { settingsService, type EmailConfig, type UploadConfig } from "~/services/settingsService";
+import { settingsService, type EmailConfig, type UploadConfig, type OllamaConfig } from "~/services/settingsService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,7 +18,7 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-type SettingsTab = "organization" | "application" | "bank" | "email" | "contact" | "upload";
+type SettingsTab = "organization" | "application" | "bank" | "email" | "contact" | "upload" | "ai";
 
 export default function Settings() {
     const [loading, setLoading] = useState(true);
@@ -58,6 +58,12 @@ export default function Settings() {
         allowedTypes: "image/jpeg,image/png,image/gif,image/webp,image/svg+xml",
     });
 
+    // AI / Ollama settings
+    const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>({
+        apiUrl: "http://localhost:11434",
+        model: "phi3:mini",
+    });
+
     // Advanced SMTP settings
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [smtpConfig, setSmtpConfig] = useState({
@@ -79,7 +85,7 @@ export default function Settings() {
         try {
             setLoading(true);
             setError(null);
-            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue, issueCreationWindowDaysValue, uploadConfigValue] = await Promise.all([
+            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue, issueCreationWindowDaysValue, uploadConfigValue, ollamaConfigValue] = await Promise.all([
                 settingsService.getAllSettings(),
                 settingsService.getDomain(),
                 settingsService.getIban(),
@@ -87,6 +93,7 @@ export default function Settings() {
                 settingsService.getSmtpAdvancedConfig(),
                 settingsService.getIssueCreationWindowDays(),
                 settingsService.getUploadConfig(),
+                settingsService.getOllamaConfig(),
             ]);
 
             // Load organization settings
@@ -110,6 +117,7 @@ export default function Settings() {
             setSmtpConfig(smtpConfigValue);
             setIssueCreationWindowDays(String(issueCreationWindowDaysValue));
             setUploadConfig(uploadConfigValue);
+            setOllamaConfig(ollamaConfigValue);
         } catch (err) {
             setError(getErrorMessage(err, "Error al cargar la configuración"));
         } finally {
@@ -212,6 +220,18 @@ export default function Settings() {
         }
     };
 
+    const handleSaveOllamaSettings = async () => {
+        try {
+            setSavingTab("ai");
+            await settingsService.updateOllamaConfig(ollamaConfig);
+            toast.success("Configuración de IA guardada correctamente");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar la configuración de IA"));
+        } finally {
+            setSavingTab(null);
+        }
+    };
+
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
@@ -282,6 +302,13 @@ export default function Settings() {
                             onClick={() => setActiveTab("upload")}
                         >
                             Archivos
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant={activeTab === "ai" ? "primary" : "neutral"}
+                            size="sm"
+                            onClick={() => setActiveTab("ai")}
+                        >
+                            IA
                         </ButtonComponent>
                     </div>
                 </section>
@@ -623,6 +650,48 @@ export default function Settings() {
                                     disabled={savingTab !== null}
                                 >
                                     {savingTab === "upload" ? "Guardando..." : "Guardar Configuración de Archivos"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
+
+                {activeTab === "ai" && (
+                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
+                        <h2 className="text-xl font-semibold">Configuración de IA (Ollama)</h2>
+                        <p className="text-sm text-gray-600">
+                            Configura la conexión con el servidor de IA Ollama utilizado para la generación automática de metadatos SEO.
+                        </p>
+                        <InputComponent
+                            label="URL de la API de Ollama"
+                            type="text"
+                            value={ollamaConfig.apiUrl}
+                            onChange={(e) => setOllamaConfig({ ...ollamaConfig, apiUrl: e.target.value })}
+                            placeholder="http://localhost:11434"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Dirección completa del servidor Ollama, incluyendo protocolo y puerto.
+                        </p>
+                        <InputComponent
+                            label="Modelo"
+                            type="text"
+                            value={ollamaConfig.model}
+                            onChange={(e) => setOllamaConfig({ ...ollamaConfig, model: e.target.value })}
+                            placeholder="phi3:mini"
+                            required
+                        />
+                        <p className="text-sm text-gray-600">
+                            Nombre del modelo de Ollama a utilizar. Debe estar previamente descargado en el servidor.
+                        </p>
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent
+                                    onClick={handleSaveOllamaSettings}
+                                    variant="primary"
+                                    disabled={savingTab !== null}
+                                >
+                                    {savingTab === "ai" ? "Guardando..." : "Guardar Configuración de IA"}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>

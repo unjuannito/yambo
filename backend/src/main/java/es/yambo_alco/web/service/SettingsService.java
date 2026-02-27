@@ -397,4 +397,32 @@ public class SettingsService {
                     "Tipos MIME permitidos para subida de imágenes (separados por coma)", "upload");
         }
     }
+
+    // ── AI / Ollama Settings ──
+
+    public String getOllamaApiUrl() {
+        return getSettingValue("ai.ollama_api_url", "http://localhost:11434");
+    }
+
+    public void setOllamaApiUrl(@NonNull String apiUrl) {
+        Optional<Settings> existing = findSettingByKey("ai.ollama_api_url");
+        if (existing.isPresent()) {
+            updateSetting("ai.ollama_api_url", apiUrl, null, null);
+        } else {
+            createSetting("ai.ollama_api_url", apiUrl, "URL de la API de Ollama", "ai");
+        }
+    }
+
+    public String getOllamaModel() {
+        return getSettingValue("ai.ollama_model", "phi3:mini");
+    }
+
+    public void setOllamaModel(@NonNull String model) {
+        Optional<Settings> existing = findSettingByKey("ai.ollama_model");
+        if (existing.isPresent()) {
+            updateSetting("ai.ollama_model", model, null, null);
+        } else {
+            createSetting("ai.ollama_model", model, "Modelo de Ollama a utilizar", "ai");
+        }
+    }
 }

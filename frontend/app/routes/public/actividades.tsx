@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { publicService } from "~/services/publicService";
+import { useMemo, useState } from "react";
+import { useLoaderData } from "react-router";
+import { getPublicActivities } from "~/services/publicService.server";
 import type { Activity } from "~/types/activity";
 import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -277,20 +278,16 @@ function ActivityCard({ activity, expanded, onToggle }: { activity: Activity; ex
 
 type ViewMode = "list" | "calendar";
 
+export async function loader() {
+    const activities = await getPublicActivities();
+    return { activities };
+}
+
 export default function PublicActivities() {
-    const [activities, setActivities] = useState<Activity[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { activities } = useLoaderData<typeof loader>();
     const [view, setView] = useState<ViewMode>("list");
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-
-    useEffect(() => {
-        publicService
-            .getPublicActivities()
-            .then(setActivities)
-            .catch((error) => console.error("Failed to load activities:", error))
-            .finally(() => setLoading(false));
-    }, []);
 
     // Filter activities by selected calendar date
     const filteredActivities = useMemo(() => {
@@ -319,7 +316,7 @@ export default function PublicActivities() {
                 </p>
 
                 {/* View toggle + count */}
-                {!loading && activities.length > 0 && (
+                {activities.length > 0 && (
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
                         <div className="flex bg-gray-100 rounded-full p-1">
                             <button
@@ -354,20 +351,7 @@ export default function PublicActivities() {
                     </div>
                 )}
 
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="rounded-xl shadow-md overflow-hidden bg-gray-50">
-                                <div className="h-1.5 bg-gray-200 animate-pulse" />
-                                <div className="p-5">
-                                    <div className="h-5 w-1/3 mb-3 bg-gray-200 rounded animate-pulse" />
-                                    <div className="h-6 w-2/3 mb-2 bg-gray-200 rounded animate-pulse" />
-                                    <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : activities.length === 0 ? (
+                {activities.length === 0 ? (
                     <p className="text-gray-500 text-center py-12">
                         No hay actividades públicas disponibles.
                     </p>

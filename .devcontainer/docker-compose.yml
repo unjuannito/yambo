@@ -10,6 +10,7 @@ services:
     environment:
       - FRONTEND_PORT=${FRONTEND_PORT:-3000}
       - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8080}
+      - BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL:-http://localhost:8080/api}
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
       - DATABASE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-yambo_db}
       - DB_USER=${DB_USER:-yambo_user}

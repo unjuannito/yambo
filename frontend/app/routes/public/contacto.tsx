@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { publicService } from "~/services/publicService";
+import { useLoaderData } from "react-router";
+import { getContactSettings } from "~/services/publicService.server";
 import type { ContactSettings } from "~/services/publicService";
 import { hashColor } from "~/utils/hashColor";
 import type { Route } from "./+types/contacto";
@@ -70,24 +70,13 @@ function displaySocialValue(key: string, value: string): string {
     return `@${handle}`;
 }
 
+export async function loader() {
+    const settings = await getContactSettings();
+    return { settings };
+}
+
 export default function Contacto() {
-    const [settings, setSettings] = useState<ContactSettings>({});
-    const [loading, setLoading] = useState(true);
-
-    const loadSettings = useCallback(async () => {
-        try {
-            const data = await publicService.getContactSettings();
-            setSettings(data);
-        } catch (error) {
-            console.error("Failed to load contact settings:", error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        void loadSettings();
-    }, [loadSettings]);
+    const { settings } = useLoaderData<typeof loader>();
 
     const activeCards = CONTACT_CARDS.filter((c) => settings[c.key]?.trim());
     const activeSocials = SOCIAL_LINKS.filter((s) => settings[s.key]?.trim());
@@ -112,24 +101,7 @@ export default function Contacto() {
             </div>
 
             <div className="max-w-4xl mx-auto px-4 -mt-6">
-                {loading ? (
-                    <div className="space-y-6 mt-12">
-                        {[1, 2, 3].map((i) => (
-                            <div
-                                key={i}
-                                className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse" />
-                                    <div className="flex-1">
-                                        <div className="h-5 w-1/4 bg-gray-200 rounded animate-pulse mb-2" />
-                                        <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : hasAnyContent ? (
+                {hasAnyContent ? (
                     <div className="space-y-8">
                         {/* Contact info cards */}
                         {activeCards.length > 0 && (
