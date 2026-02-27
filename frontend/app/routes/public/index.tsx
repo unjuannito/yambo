@@ -16,7 +16,7 @@ import type { Route } from "./+types";
 export function meta({}: Route.MetaArgs) {
     const title = "Yambo - Asociación Juvenil en Alcobendas (Madrid)";
     const description =
-        "Yambo es una asociación juvenil en Alcobendas (Madrid) dedicada al ocio educativo, tiempo libre y actividades para niños y adolescentes. ¡Descubre nuestros proyectos y únete!";
+        "Yambo es una asociación juvenil en Alcobendas (Madrid) dedicada al ocio educativo, tiempo libre y actividades para niños y adolescentes.";
 
     return [
         { title },
