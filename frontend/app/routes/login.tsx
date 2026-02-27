@@ -10,6 +10,19 @@ import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGift } from "@fortawesome/free-solid-svg-icons";
+import { fireRainbow } from "~/utils/confetti";
+
+// Easter egg: gag passwords
+const GAG_PASSWORDS: Record<string, { message: string; rainbow?: boolean }> = {
+    "1234": { message: "🔒 ¡Esa contraseña no la usa ni tu abuela!" },
+    "12345": { message: "🔒 ¡Esa contraseña no la usa ni tu abuela!" },
+    "123456": { message: "🔒 Venga, que puedes hacerlo mejor..." },
+    "password": { message: "🤦 En serio... ¿'password'?" },
+    "contraseña": { message: "🤦 Puntos por intentarlo en español..." },
+    "yambo": { message: "🎉 ¡Nos encantas! Pero esa no es tu contraseña 😄", rainbow: true },
+    "admin": { message: "👀 Buen intento..." },
+    "qwerty": { message: "⌨️ ¿Has mirado tu teclado, verdad?" },
+};
 
 export const ssr = false;
 
@@ -29,6 +42,7 @@ export default function Index() {
     const [searchParams] = useSearchParams();
     const { login, isAuthenticated, reload } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [rainbowMode, setRainbowMode] = useState(false);
     const inviteToken = searchParams.get("invite");
 
     const emailRef = useRef<HTMLInputElement>(null);
@@ -44,6 +58,7 @@ export default function Index() {
         e.preventDefault();
         const email = emailRef.current?.value ?? "";
         const password = passwordRef.current?.value ?? "";
+
         try {
             setLoading(true);
             await login(email, password);
@@ -77,7 +92,21 @@ export default function Index() {
 
             navigate("/mi-espacio", { replace: true });
         } catch (err) {
-            if (err instanceof ApiError) {
+            // Easter egg: show gag message instead of generic error for known passwords
+            const gag = GAG_PASSWORDS[password.toLowerCase()];
+            if (gag) {
+                toast(gag.message, {
+                    duration: 3000,
+                    style: gag.rainbow
+                        ? { background: "#8b5cf6", color: "white", fontWeight: 600 }
+                        : undefined,
+                });
+                if (gag.rainbow) {
+                    setRainbowMode(true);
+                    fireRainbow();
+                    setTimeout(() => setRainbowMode(false), 3500);
+                }
+            } else if (err instanceof ApiError) {
                 if (err.isType("AUTHENTICATION_FAILED") || err.status === 401) {
                     toast.error("Usuario o contraseña incorrectos.");
                 } else if (err.status >= 500) {
@@ -115,6 +144,7 @@ export default function Index() {
     );
 
     return (
+        <div className={rainbowMode ? "ee-login-rainbow min-h-screen" : ""}>
         <AuthLayout
             title="Área de Socios"
             subtitle="Inicia sesión para acceder"
@@ -147,5 +177,6 @@ export default function Index() {
                 </ButtonComponent>
             </form>
         </AuthLayout>
+        </div>
     );
 }

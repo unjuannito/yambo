@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BurgerButton } from "~/components/common/BurgerButton";
+import { fireConfettiAt } from "~/utils/confetti";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoSpinning, setLogoSpinning] = useState(false);
+  const [showLogoMessage, setShowLogoMessage] = useState(false);
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const links = [
     { label: "Inicio", href: "/" },
@@ -12,12 +17,51 @@ export default function Header() {
     { label: "Contacto", href: "/contacto" },
   ];
 
+  function handleLogoClick(e: React.MouseEvent) {
+    e.preventDefault();
+    clickCountRef.current++;
+
+    // Reset counter after 3 seconds of no clicks
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickCountRef.current = 0;
+    }, 3000);
+
+    if (clickCountRef.current >= 7) {
+      clickCountRef.current = 0;
+      setLogoSpinning(true);
+      setShowLogoMessage(true);
+
+      // Fire confetti from the logo position
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+      fireConfettiAt(x, y);
+
+      setTimeout(() => setLogoSpinning(false), 700);
+      setTimeout(() => setShowLogoMessage(false), 3000);
+    }
+  }
+
   return (
     <header className="w-full bg-white shadow-md fixed top-0 z-50">
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-        <a href="#" className="flex items-center space-x-2">
-          <img src="/logo.png" alt="Yambo logo" className="h-8 w-auto" />
+        <a
+          href="#"
+          className="relative flex items-center space-x-2"
+          onClick={handleLogoClick}
+        >
+          <img
+            src="/logo.png"
+            alt="Yambo logo"
+            className={`h-8 w-auto ${logoSpinning ? "ee-spin" : ""}`}
+          />
           <span className="text-2xl font-bold text-gray-800">Yambo</span>
+          {showLogoMessage && (
+            <span className="ee-message ee-slide-down text-sm bg-blue-600 text-white px-3 py-1.5 rounded-full shadow-lg mt-2">
+              ¡Yambo te quiere! ❤️
+            </span>
+          )}
         </a>
 
 

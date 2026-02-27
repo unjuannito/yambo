@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 import { getContactSettings } from "~/services/publicService.server";
 import type { ContactSettings } from "~/services/publicService";
@@ -9,6 +10,7 @@ import { faInstagram, faTiktok } from "@fortawesome/free-brands-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { getSiteUrl } from "~/utils/env.server";
 import { contactPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { fireEmojiRain } from "~/utils/confetti";
 
 export function meta({ data }: Route.MetaArgs) {
     const siteUrl = data?.siteUrl ?? "";
@@ -95,6 +97,28 @@ export async function loader() {
 
 export default function Contacto() {
     const { settings } = useLoaderData<typeof loader>();
+    const [iconWobble, setIconWobble] = useState(false);
+    const [secretMessage, setSecretMessage] = useState(false);
+    const iconClicksRef = useRef(0);
+    const iconTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    function handleIconClick() {
+        iconClicksRef.current++;
+        setIconWobble(true);
+        setTimeout(() => setIconWobble(false), 600);
+
+        if (iconTimerRef.current) clearTimeout(iconTimerRef.current);
+        iconTimerRef.current = setTimeout(() => {
+            iconClicksRef.current = 0;
+        }, 3000);
+
+        if (iconClicksRef.current >= 5) {
+            iconClicksRef.current = 0;
+            fireEmojiRain("💬");
+            setSecretMessage(true);
+            setTimeout(() => setSecretMessage(false), 4000);
+        }
+    }
 
     const activeCards = CONTACT_CARDS.filter((c) => settings[c.key]?.trim());
     const activeSocials = SOCIAL_LINKS.filter((s) => settings[s.key]?.trim());
@@ -105,7 +129,10 @@ export default function Contacto() {
             {/* Hero banner */}
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-b border-gray-200">
                 <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm mb-5">
+                    <div
+                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm mb-5 cursor-pointer select-none ${iconWobble ? "ee-wobble" : ""}`}
+                        onClick={handleIconClick}
+                    >
                         <FontAwesomeIcon icon={faComments} className="w-8 h-8" />
                     </div>
                     <h1 className="text-4xl font-bold text-gray-900 mb-3">
@@ -115,6 +142,11 @@ export default function Contacto() {
                         ¿Tienes alguna pregunta o quieres saber más sobre
                         nosotros? Estamos encantados de ayudarte.
                     </p>
+                    {secretMessage && (
+                        <p className="mt-3 text-sm text-purple-600 font-medium ee-slide-down">
+                            Psst... también puedes mandarnos una paloma mensajera 🕊️
+                        </p>
+                    )}
                 </div>
             </div>
 

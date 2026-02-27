@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 import { getPublicActivities } from "~/services/publicService.server";
 import type { Activity } from "~/types/activity";
@@ -16,6 +16,8 @@ import {
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import type { Route } from "./+types/actividades";
+import toast from "react-hot-toast";
+import { fireEmojiRain } from "~/utils/confetti";
 
 export function meta({ data }: Route.MetaArgs) {
     const siteUrl = data?.siteUrl ?? "";
@@ -79,6 +81,11 @@ function ActivityCalendar({
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
+    const [todayGlow, setTodayGlow] = useState(false);
+
+    // Easter egg: triple-click on today's date
+    const todayClicksRef = useRef(0);
+    const todayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfWeek(year, month);
@@ -148,6 +155,24 @@ function ActivityCalendar({
                         <button
                             key={key}
                             onClick={() => {
+                                // Easter egg: triple-click on today
+                                if (isToday) {
+                                    todayClicksRef.current++;
+                                    if (todayTimerRef.current) clearTimeout(todayTimerRef.current);
+                                    todayTimerRef.current = setTimeout(() => {
+                                        todayClicksRef.current = 0;
+                                    }, 600);
+                                    if (todayClicksRef.current >= 3) {
+                                        todayClicksRef.current = 0;
+                                        setTodayGlow(true);
+                                        fireEmojiRain("🎊");
+                                        toast("🎊 ¡Hoy es un gran día para hacer algo increíble!", {
+                                            duration: 3000,
+                                            style: { background: "#3b82f6", color: "white", fontWeight: 600 },
+                                        });
+                                        setTimeout(() => setTodayGlow(false), 3000);
+                                    }
+                                }
                                 if (isSelected) onSelectDate(null);
                                 else onSelectDate(cellDate);
                             }}
@@ -157,7 +182,7 @@ function ActivityCalendar({
                                 ${isSelected
                                     ? "bg-blue-600 text-white font-bold shadow-md"
                                     : isToday
-                                        ? "bg-blue-50 text-blue-700 font-semibold ring-1 ring-blue-300"
+                                        ? `bg-blue-50 text-blue-700 font-semibold ring-1 ring-blue-300 ${todayGlow ? "ee-pulse-glow" : ""}`
                                         : hasActivities
                                             ? "hover:bg-gray-100 text-gray-800 font-medium"
                                             : "text-gray-400 hover:bg-gray-50"
