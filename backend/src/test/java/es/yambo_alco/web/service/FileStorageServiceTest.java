@@ -12,7 +12,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,8 +36,6 @@ public class FileStorageServiceTest {
 
         // Default settings
         when(settingsService.getUploadMaxFileSizeMb()).thenReturn(5);
-        when(settingsService.getUploadAllowedTypes()).thenReturn(
-                Set.of("image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"));
     }
 
     @Test
@@ -104,15 +101,55 @@ public class FileStorageServiceTest {
     }
 
     @Test
-    public void store_WithDisallowedContentType_ShouldThrowBadRequest() {
-        // Given
+    public void store_WithPdfFile_ShouldStoreSuccessfully() {
+        // Given - any file type is accepted (no MIME filtering)
         MockMultipartFile file = new MockMultipartFile(
                 "file", "doc.pdf", "application/pdf", "fake-content".getBytes());
 
-        // When & Then
-        assertThatThrownBy(() -> fileStorageService.store(file))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("File type not allowed");
+        // When
+        String storedName = fileStorageService.store(file);
+
+        // Then
+        assertThat(storedName).endsWith(".pdf");
+        assertThat(storedName).contains("doc");
+        assertThat(Files.exists(tempDir.resolve(storedName))).isTrue();
+    }
+
+    @Test
+    public void store_StoredNameShouldResembleOriginalName() {
+        // Given
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "My Vacation Photo (2).jpeg", "image/jpeg", "content".getBytes());
+
+        // When
+        String storedName = fileStorageService.store(file);
+
+        // Then - should contain sanitized version of original name
+        assertThat(storedName).startsWith("my-vacation-photo-2_");
+        assertThat(storedName).endsWith(".jpeg");
+        // Should have salt after underscore
+        String nameWithoutExt = storedName.replace(".jpeg", "");
+        assertThat(nameWithoutExt).matches("my-vacation-photo-2_[a-z0-9]{8}");
+    }
+
+    @Test
+    public void sanitize_ShouldLowercaseAndReplaceSpecialChars() {
+        assertThat(fileStorageService.sanitize("My Photo")).isEqualTo("my-photo");
+        assertThat(fileStorageService.sanitize("UPPERCASE")).isEqualTo("uppercase");
+        assertThat(fileStorageService.sanitize("file (1)")).isEqualTo("file-1");
+        assertThat(fileStorageService.sanitize("hello---world")).isEqualTo("hello-world");
+        assertThat(fileStorageService.sanitize("  spaces  ")).isEqualTo("spaces");
+        assertThat(fileStorageService.sanitize("café_résumé")).isEqualTo("caf-r-sum");
+        assertThat(fileStorageService.sanitize("")).isEqualTo("file");
+        assertThat(fileStorageService.sanitize(null)).isEqualTo("file");
+        assertThat(fileStorageService.sanitize("!!@@##")).isEqualTo("file");
+    }
+
+    @Test
+    public void sanitize_ShouldTruncateLongNames() {
+        String longName = "a".repeat(100);
+        String result = fileStorageService.sanitize(longName);
+        assertThat(result.length()).isLessThanOrEqualTo(50);
     }
 
     @Test
@@ -175,6 +212,25 @@ public class FileStorageServiceTest {
 
         // Then
         assertThat(storedName).isNotBlank();
+        assertThat(storedName).startsWith("noext_");
         assertThat(Files.exists(tempDir.resolve(storedName))).isTrue();
+    }
+
+    @Test
+    public void store_ShouldGenerateUniqueSalts() {
+        // Given
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file", "same.jpg", "image/jpeg", "content1".getBytes());
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file", "same.jpg", "image/jpeg", "content2".getBytes());
+
+        // When
+        String stored1 = fileStorageService.store(file1);
+        String stored2 = fileStorageService.store(file2);
+
+        // Then - both should start with "same_" but have different salts
+        assertThat(stored1).startsWith("same_");
+        assertThat(stored2).startsWith("same_");
+        assertThat(stored1).isNotEqualTo(stored2);
     }
 }

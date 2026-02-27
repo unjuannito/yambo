@@ -211,7 +211,6 @@ public class SettingsController {
     public ResponseEntity<UploadConfigResponse> getUploadConfig() {
         UploadConfigResponse config = new UploadConfigResponse();
         config.setMaxFileSizeMb(settingsService.getUploadMaxFileSizeMb());
-        config.setAllowedTypes(String.join(",", settingsService.getUploadAllowedTypes()));
         return ResponseEntity.ok(config);
     }
 
@@ -220,9 +219,6 @@ public class SettingsController {
     public ResponseEntity<String> updateUploadConfig(@Valid @RequestBody UploadConfigRequest request) {
         if (request.getMaxFileSizeMb() != null) {
             settingsService.setUploadMaxFileSizeMb(request.getMaxFileSizeMb());
-        }
-        if (request.getAllowedTypes() != null && !request.getAllowedTypes().isBlank()) {
-            settingsService.setUploadAllowedTypes(request.getAllowedTypes());
         }
         return ResponseEntity.ok("Upload configuration updated successfully");
     }
@@ -345,13 +341,11 @@ public class SettingsController {
     @Data
     public static class UploadConfigResponse {
         private Integer maxFileSizeMb;
-        private String allowedTypes;
     }
 
     @Data
     public static class UploadConfigRequest {
         private Integer maxFileSizeMb;
-        private String allowedTypes;
     }
 
     @Data

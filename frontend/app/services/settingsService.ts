@@ -41,7 +41,6 @@ export interface SmtpAdvancedConfig {
 
 export interface UploadConfig {
     maxFileSizeMb: number;
-    allowedTypes: string;
 }
 
 export interface OllamaConfig {

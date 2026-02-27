@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -379,22 +378,6 @@ public class SettingsService {
             updateSetting("upload.max_file_size_mb", value, null, null);
         } else {
             createSetting("upload.max_file_size_mb", value, "Tamaño máximo de archivo en MB", "upload");
-        }
-    }
-
-    public Set<String> getUploadAllowedTypes() {
-        String value = getSettingValue("upload.allowed_types",
-                "image/jpeg,image/png,image/gif,image/webp,image/svg+xml");
-        return Set.of(value.split(","));
-    }
-
-    public void setUploadAllowedTypes(@NonNull String allowedTypes) {
-        Optional<Settings> existing = findSettingByKey("upload.allowed_types");
-        if (existing.isPresent()) {
-            updateSetting("upload.allowed_types", allowedTypes, null, null);
-        } else {
-            createSetting("upload.allowed_types", allowedTypes,
-                    "Tipos MIME permitidos para subida de imágenes (separados por coma)", "upload");
         }
     }
 

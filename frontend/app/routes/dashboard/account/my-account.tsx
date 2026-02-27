@@ -11,8 +11,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLock, faTrash, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
-import ImageUploader from "~/components/common/ImageUploader";
-import { ImageUsageContext } from "~/types/imageType";
+import FileUploader from "~/components/common/FileUploader";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -196,13 +195,13 @@ export default function MyAccount() {
               required
               placeholder="tu@email.com"
             />
-            <ImageUploader
-              context={ImageUsageContext.USER_PHOTO}
-              referenceId={user?.id}
+            <FileUploader
               compact
+              multiple={false}
               label="Foto de perfil"
-              onUpload={(img) =>
-                setProfileData((prev) => ({ ...prev, photo: img.url }))
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onUpload={(file) =>
+                setProfileData((prev) => ({ ...prev, photo: file.url }))
               }
             />
             {user?.groups && user.groups.length > 0 && (

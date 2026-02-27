@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="57-rename-image-to-uploaded-file" author="yambo">
+        <comment>Rename image table to uploaded_file, drop context and reference_id columns</comment>
+
+        <!-- Drop the context+reference_id index first -->
+        <dropIndex tableName="image" indexName="idx_image_context_reference"/>
+
+        <!-- Drop columns that are no longer needed -->
+        <dropColumn tableName="image" columnName="context"/>
+        <dropColumn tableName="image" columnName="reference_id"/>
+
+        <!-- Rename the table -->
+        <renameTable oldTableName="image" newTableName="uploaded_file"/>
+
+        <!-- Rename the uploaded_by index -->
+        <sql>ALTER INDEX idx_image_uploaded_by RENAME TO idx_uploaded_file_uploaded_by</sql>
+
+        <!-- Rename the FK constraint -->
+        <sql>ALTER TABLE uploaded_file RENAME CONSTRAINT fk_image_uploaded_by TO fk_uploaded_file_uploaded_by</sql>
+    </changeSet>
+</databaseChangeLog>

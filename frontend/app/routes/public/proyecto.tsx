@@ -24,7 +24,7 @@ export function meta({ data }: Route.MetaArgs) {
     { title },
     { name: "description", content: description },
     ...(seo?.keywords?.length ? [{ name: "keywords", content: seo.keywords.join(", ") }] : []),
-    { property: "og:title", content: seo?.ogTitle ?? title },
+    { property: "og:title", content: title },
     { property: "og:description", content: seo?.ogDescription ?? description },
     { property: "og:type", content: "website" },
     ...(project?.image ? [{ property: "og:image", content: project.image }] : []),

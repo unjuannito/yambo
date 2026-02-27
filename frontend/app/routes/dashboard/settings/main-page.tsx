@@ -9,8 +9,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import ImageUploader from "~/components/common/ImageUploader";
-import { ImageUsageContext } from "~/types/imageType";
+import FileUploader from "~/components/common/FileUploader";
 
 export function meta() {
     return [
@@ -408,12 +407,12 @@ export default function MainPageEditor() {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Imagen de fondo</label>
-                            <ImageUploader
-                                context={ImageUsageContext.HOME_IMAGE}
-                                referenceId="hero"
+                            <FileUploader
                                 compact
+                                multiple={false}
                                 label="Subir imagen de fondo"
-                                onUpload={(img) => setHeroImage(img.url)}
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onUpload={(file) => setHeroImage(file.url)}
                             />
                         </div>
 
@@ -476,12 +475,12 @@ export default function MainPageEditor() {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Imagen</label>
-                            <ImageUploader
-                                context={ImageUsageContext.HOME_IMAGE}
-                                referenceId="about"
+                            <FileUploader
                                 compact
+                                multiple={false}
                                 label="Subir imagen"
-                                onUpload={(img) => setAboutImage(img.url)}
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onUpload={(file) => setAboutImage(file.url)}
                             />
                         </div>
 

@@ -12,8 +12,7 @@ import { projectService, type Project, type ProjectGroup } from "~/services/proj
 import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
-import ImageUploader from "~/components/common/ImageUploader";
-import { ImageUsageContext } from "~/types/imageType";
+import FileUploader from "~/components/common/FileUploader";
 
 export function meta() {
     return [
@@ -352,13 +351,13 @@ export default function Projects() {
                             value={form.season}
                             onChange={(e) => setForm((prev) => ({ ...prev, season: e.target.value }))}
                         />
-                        <ImageUploader
-                            context={ImageUsageContext.PROJECT_IMAGE}
-                            referenceId={editing || undefined}
+                        <FileUploader
                             compact
+                            multiple={false}
                             label="Imagen del proyecto"
-                            onUpload={(img) =>
-                                setForm((prev) => ({ ...prev, image: img.url }))
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            onUpload={(file) =>
+                                setForm((prev) => ({ ...prev, image: file.url }))
                             }
                         />
                         {form.image && (

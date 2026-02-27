@@ -1,6 +1,5 @@
 package es.yambo_alco.web.model;
 
-import es.yambo_alco.web.model.enums.ImageUsageContext;
 import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -15,8 +14,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "image", schema = "public")
-public class Image {
+@Table(name = "uploaded_file", schema = "public")
+public class UploadedFile {
 
     @Id
     @CustomId
@@ -26,11 +25,11 @@ public class Image {
     @Column(name = "original_name", nullable = false)
     private String originalName;
 
-    /** Stored filename on disk (unique, generated) */
+    /** Stored filename on disk (sanitized + salted, unique) */
     @Column(name = "stored_name", nullable = false, unique = true)
     private String storedName;
 
-    /** MIME type, e.g. image/png */
+    /** MIME type, e.g. image/png, application/pdf */
     @Column(name = "content_type", nullable = false)
     private String contentType;
 
@@ -38,20 +37,11 @@ public class Image {
     @Column(nullable = false)
     private Long size;
 
-    /** Relative URL path to access the image */
+    /** Relative URL path to access the file */
     @Column(nullable = false, length = 500)
     private String url;
 
-    /** Where this image is used */
-    @Enumerated(EnumType.ORDINAL)
-    @Column(nullable = false)
-    private ImageUsageContext context;
-
-    /** ID of the entity this image is associated with (user id, product id, project id, etc.) */
-    @Column(name = "reference_id")
-    private String referenceId;
-
-    /** User who uploaded the image */
+    /** User who uploaded the file */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by", nullable = false)
     private User uploadedBy;

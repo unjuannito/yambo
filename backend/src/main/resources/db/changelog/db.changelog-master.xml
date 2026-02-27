@@ -65,4 +65,6 @@
     <include file="db/changelog/changes/54-seo-metadata.xml"/>
     <include file="db/changelog/changes/55-seo-permissions.xml"/>
     <include file="db/changelog/changes/56-ollama-settings.xml"/>
+    <include file="db/changelog/changes/57-rename-image-to-uploaded-file.xml"/>
+    <include file="db/changelog/changes/58-remove-upload-allowed-types-setting.xml"/>
 </databaseChangeLog>

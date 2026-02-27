@@ -23,14 +23,10 @@ import {
     InsertTable,
 } from "@mdxeditor/editor";
 
-import { imageService } from "~/services/imageService";
-import { ImageUsageContext } from "~/types/imageType";
+import { fileService } from "~/services/fileService";
 
 async function handleImageUpload(file: File): Promise<string> {
-    const uploaded = await imageService.upload(
-        file,
-        ImageUsageContext.MARKDOWN_IMAGE,
-    );
+    const uploaded = await fileService.upload(file);
     return uploaded.url;
 }
 

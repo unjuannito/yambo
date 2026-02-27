@@ -55,7 +55,6 @@ export default function Settings() {
     // Upload settings
     const [uploadConfig, setUploadConfig] = useState<UploadConfig>({
         maxFileSizeMb: 5,
-        allowedTypes: "image/jpeg,image/png,image/gif,image/webp,image/svg+xml",
     });
 
     // AI / Ollama settings
@@ -629,18 +628,7 @@ export default function Settings() {
                             required
                         />
                         <p className="text-sm text-gray-600">
-                            Tamaño máximo permitido por archivo subido. Afecta a fotos de perfil, imágenes de productos y proyectos.
-                        </p>
-                        <InputComponent
-                            label="Tipos MIME permitidos"
-                            type="text"
-                            value={uploadConfig.allowedTypes}
-                            onChange={(e) => setUploadConfig({ ...uploadConfig, allowedTypes: e.target.value })}
-                            placeholder="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                            required
-                        />
-                        <p className="text-sm text-gray-600">
-                            Tipos de archivo permitidos separados por coma. Ejemplo: image/jpeg,image/png,image/gif
+                            Tamaño máximo permitido por archivo subido. Afecta a todos los archivos subidos.
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">

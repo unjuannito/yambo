@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import toast from "react-hot-toast";
 import { useAuth } from "~/hooks/useAuth";
@@ -6,15 +6,65 @@ import { getErrorMessage } from "~/types/error";
 import { productService, type OptionValue, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
-import ImageUploader from "~/components/common/ImageUploader";
-import { ImageUsageContext } from "~/types/imageType";
+import { faTrash, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import FileUploader from "~/components/common/FileUploader";
+import InputComponent from "~/components/common/forms/InputComponent";
+import SelectComponent from "~/components/common/forms/SelectComponent";
+import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type ProductEditorMode = "create" | "edit";
 
 export interface ProductEditorProps {
     mode: ProductEditorMode;
     productId?: string;
+}
+
+function SortableImageItem({ id, url, index, onRemove }: {
+    id: string;
+    url: string;
+    index: number;
+    onRemove: (index: number) => void;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="relative group">
+            <img
+                src={url}
+                alt={`Imagen ${index + 1}`}
+                className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                onError={(e) => {
+                    (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3EError%3C/text%3E%3C/svg%3E";
+                }}
+            />
+            <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                className="absolute top-1 left-1 bg-gray-800/70 text-white rounded-full w-6 h-6 flex items-center justify-center cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+                <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3" />
+            </button>
+            <button
+                type="button"
+                onClick={() => onRemove(index)}
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+                <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+            </button>
+            <span className="absolute bottom-1 left-1 bg-gray-800/70 text-white text-[10px] rounded px-1">
+                {index + 1}
+            </span>
+        </div>
+    );
 }
 
 function emptyProduct(): Product {
@@ -65,6 +115,37 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
     const [saving, setSaving] = useState(false);
 
     const [product, setProduct] = useState<Product>(() => emptyProduct());
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    );
+
+    const imageIdCounter = useRef(0);
+    const imageIdMap = useRef(new Map<string, string>());
+
+    const imageIds = useMemo(() => {
+        const imgs = product.images || [];
+        const newMap = new Map<string, string>();
+        const usedIds = new Set<string>();
+
+        const ids = imgs.map((url) => {
+            // Try to reuse an existing id for this url that hasn't been used yet
+            const existingId = imageIdMap.current.get(url);
+            if (existingId && !usedIds.has(existingId)) {
+                usedIds.add(existingId);
+                newMap.set(url, existingId);
+                return existingId;
+            }
+            // Assign a new stable id
+            const id = `img-${imageIdCounter.current++}`;
+            usedIds.add(id);
+            newMap.set(url, id);
+            return id;
+        });
+
+        imageIdMap.current = newMap;
+        return ids;
+    }, [product.images]);
 
     if (!isAuthenticated()) {
         return <Navigate to="/login" replace />;
@@ -204,6 +285,19 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         setProduct({ ...product, images: newImages });
     };
 
+    const handleImageDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = imageIds.indexOf(active.id as string);
+        const newIndex = imageIds.indexOf(over.id as string);
+
+        setProduct((prev) => ({
+            ...prev,
+            images: arrayMove(prev.images || [], oldIndex, newIndex),
+        }));
+    };
+
     const saveProduct = async () => {
         try {
             setSaving(true);
@@ -280,81 +374,64 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
                         <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Nombre del Producto</label>
-                                <input
-                                    type="text"
-                                    value={product.name}
-                                    onChange={(e) => setProduct({ ...product, name: e.target.value })}
-                                    placeholder="ej. Sudadera Jamboloco 2025"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
+                            <InputComponent
+                                label="Nombre del Producto"
+                                type="text"
+                                value={product.name}
+                                onChange={(e) => setProduct({ ...product, name: e.target.value })}
+                                placeholder="ej. Sudadera Jamboloco 2025"
+                            />
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Drop (Familia de productos)</label>
-                                <select
-                                    value={product.familyProductId || ""}
-                                    onChange={(e) =>
-                                        setProduct({
-                                            ...product,
-                                            familyProductId: e.target.value.length ? e.target.value : null,
-                                        })
-                                    }
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Sin drop</option>
-                                    {familyProducts.map((family) => (
-                                        <option key={family.id} value={family.id}>
-                                            {family.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                            <SelectComponent
+                                label="Drop (Familia de productos)"
+                                value={product.familyProductId || ""}
+                                onChange={(e) =>
+                                    setProduct({
+                                        ...product,
+                                        familyProductId: e.target.value.length ? e.target.value : null,
+                                    })
+                                }
+                                options={[
+                                    { value: "", label: "Sin drop" },
+                                    ...familyProducts.map((family) => ({ value: family.id, label: family.name })),
+                                ]}
+                            />
 
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Precio Base (€)</label>
-                                <input
-                                    type="number"
-                                    value={product.basePrice}
-                                    onChange={(e) => setProduct({ ...product, basePrice: parseFloat(e.target.value) || 0 })}
-                                    placeholder="0"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
+                            <InputComponent
+                                label="Precio Base (€)"
+                                type="number"
+                                value={product.basePrice}
+                                onChange={(e) => setProduct({ ...product, basePrice: parseFloat(e.target.value) || 0 })}
+                                placeholder="0"
+                            />
 
-                            <div className="flex items-center justify-between">
-                                <label className="block text-sm font-medium text-gray-700">Activo</label>
-                                <input
-                                    type="checkbox"
-                                    checked={product.active}
-                                    disabled={!isEditing}
-                                    onChange={(e) => {
-                                        if (!isEditing) {
-                                            return;
-                                        }
-                                        setProduct({ ...product, active: e.target.checked });
-                                    }}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                />
-                            </div>
+                            <CheckboxComponent
+                                label="Activo"
+                                variantType="toggle"
+                                variant="right"
+                                checked={product.active}
+                                disabled={!isEditing}
+                                onChange={(e) => {
+                                    if (!isEditing) return;
+                                    setProduct({ ...product, active: e.target.checked });
+                                }}
+                            />
                         </div>
                     </div>
 
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <h2 className="text-xl font-semibold mb-4">Imágenes del Producto</h2>
-                        <ImageUploader
-                            context={ImageUsageContext.PRODUCT_IMAGE}
-                            referenceId={isEditing ? productId : undefined}
+                        <FileUploader
                             multiple
-                            label="Arrastra o haz clic para subir imágenes"
-                            onUpload={(img) =>
+                            label="Arrastra o haz clic para subir archivos"
+                            accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                            onUpload={(file) =>
                                 setProduct((prev) => ({
                                     ...prev,
-                                    images: [...(prev.images || []), img.url],
+                                    images: [...(prev.images || []), file.url],
                                 }))
                             }
-                            onDelete={(imageId) =>
+                            onDelete={() =>
                                 setProduct((prev) => ({
                                     ...prev,
                                     images: (prev.images || []).filter((_, i) => i !== (prev.images || []).length - 1),
@@ -362,48 +439,21 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                             }
                         />
                         {(product.images || []).length > 0 && (
-                            <div className="mt-4 grid grid-cols-3 gap-3">
-                                {product.images.map((url, index) => (
-                                    <div key={index} className="relative group">
-                                        <img
-                                            src={url}
-                                            alt={`Imagen ${index + 1}`}
-                                            className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3EError%3C/text%3E%3C/svg%3E";
-                                            }}
-                                        />
-                                        <div className="absolute top-1 left-1 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                type="button"
-                                                disabled={index === 0}
-                                                onClick={() => moveImage(index, "up")}
-                                                className="bg-gray-800/70 text-white rounded-full w-5 h-5 flex items-center justify-center disabled:opacity-30"
-                                            >
-                                                <FontAwesomeIcon icon={faArrowUp} className="w-2.5 h-2.5" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={index === product.images.length - 1}
-                                                onClick={() => moveImage(index, "down")}
-                                                className="bg-gray-800/70 text-white rounded-full w-5 h-5 flex items-center justify-center disabled:opacity-30"
-                                            >
-                                                <FontAwesomeIcon icon={faArrowDown} className="w-2.5 h-2.5" />
-                                            </button>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => removeImage(index)}
-                                            className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                                        </button>
-                                        <span className="absolute bottom-1 left-1 bg-gray-800/70 text-white text-[10px] rounded px-1">
-                                            {index + 1}
-                                        </span>
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleImageDragEnd}>
+                                <SortableContext items={imageIds} strategy={rectSortingStrategy}>
+                                    <div className="mt-4 grid grid-cols-3 gap-3">
+                                        {(product.images || []).map((url, index) => (
+                                            <SortableImageItem
+                                                key={imageIds[index]}
+                                                id={imageIds[index]}
+                                                url={url}
+                                                index={index}
+                                                onRemove={removeImage}
+                                            />
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </SortableContext>
+                            </DndContext>
                         )}
                     </div>
 
@@ -432,43 +482,37 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-4 mb-4">
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                                            <input
-                                                type="text"
-                                                value={option.name}
-                                                onChange={(e) => updateOption(optionIndex, { name: e.target.value })}
-                                                placeholder="ej. Talla"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
+                                        <InputComponent
+                                            label="Nombre"
+                                            type="text"
+                                            value={option.name}
+                                            onChange={(e) => updateOption(optionIndex, { name: e.target.value })}
+                                            placeholder="ej. Talla"
+                                        />
 
-                                        <div className="space-y-2">
-                                            <label className="block text-sm font-medium text-gray-700">Tipo</label>
-                                            <select
-                                                value={option.type}
-                                                onChange={(e) =>
-                                                    updateOption(optionIndex, {
-                                                        type: e.target.value as ProductOption["type"],
-                                                    })
-                                                }
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                <option value="select">Selección</option>
-                                                <option value="checkbox">Checkbox</option>
-                                                <option value="text_input">Entrada de Texto</option>
-                                            </select>
-                                        </div>
+                                        <SelectComponent
+                                            label="Tipo"
+                                            value={option.type}
+                                            onChange={(e) =>
+                                                updateOption(optionIndex, {
+                                                    type: e.target.value as ProductOption["type"],
+                                                })
+                                            }
+                                            options={[
+                                                { value: "select", label: "Selección" },
+                                                { value: "checkbox", label: "Checkbox" },
+                                                { value: "text_input", label: "Entrada de Texto" },
+                                            ]}
+                                        />
                                     </div>
 
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <input
-                                            type="checkbox"
+                                    <div className="mb-4">
+                                        <CheckboxComponent
+                                            label="Requerido"
+                                            variant="left"
                                             checked={!!option.required}
                                             onChange={(e) => updateOption(optionIndex, { required: e.target.checked })}
-                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                         />
-                                        <label className="text-sm font-medium text-gray-700">Requerido</label>
                                     </div>
 
                                     {option.type === "select" && (
@@ -486,18 +530,18 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                             {(option.values || []).map((value, valueIndex) => (
                                                 <div key={valueIndex} className="flex gap-2 items-end">
                                                     <div className="flex-1">
-                                                        <label className="block text-xs text-gray-600 mb-1">Etiqueta</label>
-                                                        <input
+                                                        <InputComponent
+                                                            label="Etiqueta"
                                                             type="text"
                                                             value={value.label}
                                                             onChange={(e) => updateValue(optionIndex, valueIndex, { label: e.target.value })}
                                                             placeholder="ej. XL"
-                                                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                            className="text-sm"
                                                         />
                                                     </div>
                                                     <div className="w-24">
-                                                        <label className="block text-xs text-gray-600 mb-1">Precio</label>
-                                                        <input
+                                                        <InputComponent
+                                                            label="Precio"
                                                             type="number"
                                                             value={value.price || 0}
                                                             onChange={(e) =>
@@ -505,7 +549,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                                     price: parseFloat(e.target.value) || 0,
                                                                 })
                                                             }
-                                                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                            className="text-sm"
                                                         />
                                                     </div>
                                                     <button
@@ -524,9 +568,9 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                     )}
 
                                     {option.type === "text_input" && (
-                                        <div className="mt-4 space-y-2">
-                                            <label className="block text-sm font-medium text-gray-700">Precio adicional (€)</label>
-                                            <input
+                                        <div className="mt-4">
+                                            <InputComponent
+                                                label="Precio adicional (€)"
                                                 type="number"
                                                 value={option.price || 0}
                                                 onChange={(e) =>
@@ -534,7 +578,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                         price: parseFloat(e.target.value) || 0,
                                                     })
                                                 }
-                                                className="w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                                className="w-40"
                                             />
                                         </div>
                                     )}

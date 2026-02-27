@@ -5,82 +5,103 @@ import {
     faSpinner,
     faTrash,
     faTimes,
+    faFile,
+    faFilePdf,
+    faFileWord,
+    faFileExcel,
+    faFileArchive,
+    faFileAlt,
 } from "@fortawesome/free-solid-svg-icons";
-import { imageService } from "~/services/imageService";
-import { ImageUsageContext } from "~/types/imageType";
-import type { ImageRecord } from "~/types/imageType";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { fileService } from "~/services/fileService";
+import type { FileRecord } from "~/types/fileType";
 import { getErrorMessage } from "~/types/error";
 
-interface ImageUploaderProps {
-    /** Where the image will be used */
-    context: ImageUsageContext;
-    /** The entity this image belongs to (user id, product id, etc.) */
-    referenceId?: string;
+interface FileUploaderProps {
     /** Called after a successful upload */
-    onUpload?: (image: ImageRecord) => void;
+    onUpload?: (file: FileRecord) => void;
     /** Called after a successful deletion */
-    onDelete?: (imageId: string) => void;
-    /** Existing images to display */
-    existingImages?: ImageRecord[];
-    /** Allow multiple images (default: false for USER_PHOTO, true for PRODUCT_IMAGE) */
+    onDelete?: (fileId: string) => void;
+    /** Existing files to display */
+    existingFiles?: FileRecord[];
+    /** Allow multiple files */
     multiple?: boolean;
-    /** Max file size in MB to display in the hint (reads from backend validation) */
+    /** Max file size in MB to display in the hint */
     maxSizeMb?: number;
-    /** Custom accepted file types */
+    /** Custom accepted file types (MIME string or empty for all) */
     accept?: string;
     /** Additional CSS classes */
     className?: string;
     /** Label text */
     label?: string;
-    /** Show small/compact version */
+    /** Show small/compact version (single-file mode) */
     compact?: boolean;
 }
 
-export default function ImageUploader({
-    context,
-    referenceId,
+/** Check if a MIME type represents an image */
+function isImage(contentType: string): boolean {
+    return contentType.startsWith("image/");
+}
+
+/** Get an icon for a given MIME type */
+function getFileIcon(contentType: string): IconDefinition {
+    if (contentType === "application/pdf") return faFilePdf;
+    if (
+        contentType === "application/msword" ||
+        contentType ===
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+        return faFileWord;
+    if (
+        contentType === "application/vnd.ms-excel" ||
+        contentType ===
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+        return faFileExcel;
+    if (
+        contentType === "application/zip" ||
+        contentType === "application/x-rar-compressed" ||
+        contentType === "application/gzip" ||
+        contentType === "application/x-7z-compressed"
+    )
+        return faFileArchive;
+    if (contentType.startsWith("text/")) return faFileAlt;
+    return faFile;
+}
+
+export default function FileUploader({
     onUpload,
     onDelete,
-    existingImages = [],
-    multiple,
+    existingFiles = [],
+    multiple = true,
     maxSizeMb = 5,
-    accept = "image/jpeg,image/png,image/gif,image/webp,image/svg+xml",
+    accept,
     className = "",
     label,
     compact = false,
-}: ImageUploaderProps) {
+}: FileUploaderProps) {
     const [uploading, setUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [images, setImages] = useState<ImageRecord[]>(existingImages);
+    const [files, setFiles] = useState<FileRecord[]>(existingFiles);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const isMultiple =
-        multiple !== undefined
-            ? multiple
-            : context !== ImageUsageContext.USER_PHOTO;
-
     const handleFiles = useCallback(
-        async (files: FileList | null) => {
-            if (!files || files.length === 0) return;
+        async (fileList: FileList | null) => {
+            if (!fileList || fileList.length === 0) return;
             setError(null);
             setUploading(true);
 
             try {
-                const filesToUpload = isMultiple
-                    ? Array.from(files)
-                    : [files[0]];
+                const filesToUpload = multiple
+                    ? Array.from(fileList)
+                    : [fileList[0]];
 
                 for (const file of filesToUpload) {
-                    const uploaded = await imageService.upload(
-                        file,
-                        context,
-                        referenceId
-                    );
+                    const uploaded = await fileService.upload(file);
 
-                    setImages((prev) => {
-                        // For replace-previous contexts, the backend already deleted the old one
-                        if (!isMultiple) {
+                    setFiles((prev) => {
+                        if (!multiple) {
                             return [uploaded];
                         }
                         return [...prev, uploaded];
@@ -89,7 +110,7 @@ export default function ImageUploader({
                     onUpload?.(uploaded);
                 }
             } catch (err) {
-                setError(getErrorMessage(err, "Error al subir la imagen"));
+                setError(getErrorMessage(err, "Error al subir el archivo"));
             } finally {
                 setUploading(false);
                 if (fileInputRef.current) {
@@ -97,17 +118,17 @@ export default function ImageUploader({
                 }
             }
         },
-        [context, referenceId, isMultiple, onUpload]
+        [multiple, onUpload]
     );
 
     const handleDelete = useCallback(
-        async (imageId: string) => {
+        async (fileId: string) => {
             try {
-                await imageService.deleteImage(imageId);
-                setImages((prev) => prev.filter((img) => img.id !== imageId));
-                onDelete?.(imageId);
+                await fileService.deleteFile(fileId);
+                setFiles((prev) => prev.filter((f) => f.id !== fileId));
+                onDelete?.(fileId);
             } catch (err) {
-                setError(getErrorMessage(err, "Error al eliminar la imagen"));
+                setError(getErrorMessage(err, "Error al eliminar el archivo"));
             }
         },
         [onDelete]
@@ -144,21 +165,31 @@ export default function ImageUploader({
         fileInputRef.current?.click();
     };
 
-    // Compact single-image mode (e.g., user avatar)
-    if (compact && !isMultiple) {
-        const currentImage = images[0];
+    // Compact single-file mode (e.g., user avatar, project image)
+    if (compact && !multiple) {
+        const currentFile = files[0];
+        const isCurrentImage = currentFile && isImage(currentFile.contentType);
         return (
             <div className={`flex items-center gap-4 ${className}`}>
-                {currentImage ? (
+                {currentFile ? (
                     <div className="relative group">
-                        <img
-                            src={currentImage.url}
-                            alt={currentImage.originalName}
-                            className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-                        />
+                        {isCurrentImage ? (
+                            <img
+                                src={currentFile.url}
+                                alt={currentFile.originalName}
+                                className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-lg bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                                <FontAwesomeIcon
+                                    icon={getFileIcon(currentFile.contentType)}
+                                    className="text-gray-500 text-2xl"
+                                />
+                            </div>
+                        )}
                         <button
                             type="button"
-                            onClick={() => handleDelete(currentImage.id)}
+                            onClick={() => handleDelete(currentFile.id)}
                             className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Eliminar"
                         >
@@ -194,10 +225,10 @@ export default function ImageUploader({
                                 />
                                 Subiendo...
                             </>
-                        ) : currentImage ? (
-                            "Cambiar imagen"
+                        ) : currentFile ? (
+                            "Cambiar archivo"
                         ) : (
-                            "Subir imagen"
+                            "Subir archivo"
                         )}
                     </button>
                     {error && (
@@ -224,7 +255,6 @@ export default function ImageUploader({
                 </p>
             )}
 
-            {/* Dropzone */}
             <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -253,14 +283,13 @@ export default function ImageUploader({
                             className="text-gray-400 text-3xl"
                         />
                         <p className="text-sm text-gray-600">
-                            Arrastra una imagen o{" "}
+                            Arrastra un archivo o{" "}
                             <span className="text-blue-600 font-medium">
                                 haz clic para seleccionar
                             </span>
                         </p>
                         <p className="text-xs text-gray-400">
-                            Máx. {maxSizeMb}MB &middot; JPG, PNG, GIF, WebP,
-                            SVG
+                            Máx. {maxSizeMb}MB
                         </p>
                     </div>
                 )}
@@ -270,7 +299,7 @@ export default function ImageUploader({
                 ref={fileInputRef}
                 type="file"
                 accept={accept}
-                multiple={isMultiple}
+                multiple={multiple}
                 onChange={handleInputChange}
                 className="hidden"
             />
@@ -279,25 +308,36 @@ export default function ImageUploader({
                 <p className="text-sm text-red-500 mt-2">{error}</p>
             )}
 
-            {/* Image previews */}
-            {images.length > 0 && (
+            {files.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {images.map((img) => (
+                    {files.map((f) => (
                         <div
-                            key={img.id}
+                            key={f.id}
                             className="relative group rounded-lg overflow-hidden border border-gray-200"
                         >
-                            <img
-                                src={img.url}
-                                alt={img.originalName}
-                                className="w-full h-32 object-cover"
-                            />
+                            {isImage(f.contentType) ? (
+                                <img
+                                    src={f.url}
+                                    alt={f.originalName}
+                                    className="w-full h-32 object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-32 bg-gray-50 flex flex-col items-center justify-center gap-2">
+                                    <FontAwesomeIcon
+                                        icon={getFileIcon(f.contentType)}
+                                        className="text-gray-400 text-3xl"
+                                    />
+                                    <p className="text-xs text-gray-500 px-2 text-center truncate max-w-full">
+                                        {f.originalName}
+                                    </p>
+                                </div>
+                            )}
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                                 <button
                                     type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDelete(img.id);
+                                        handleDelete(f.id);
                                     }}
                                     className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
                                     title="Eliminar"
@@ -306,7 +346,7 @@ export default function ImageUploader({
                                 </button>
                             </div>
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                                {img.originalName}
+                                {f.originalName}
                             </div>
                         </div>
                     ))}
