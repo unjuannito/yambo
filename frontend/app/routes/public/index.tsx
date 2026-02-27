@@ -14,13 +14,34 @@ import {
 import type { Route } from "./+types";
 
 export function meta({}: Route.MetaArgs) {
+    const title = "Yambo - Asociación Juvenil en Alcobendas (Madrid)";
+    const description =
+        "Yambo es una asociación juvenil en Alcobendas (Madrid) dedicada al ocio educativo, tiempo libre y actividades para niños y adolescentes. ¡Descubre nuestros proyectos y únete!";
+
     return [
-        { title: "Yambo - Inicio" },
+        { title },
+        { name: "description", content: description },
         {
-            name: "description",
+            name: "keywords",
             content:
-                "Asociación juvenil de Alcobendas: vive, aprende y crece con Yambo.",
+                "Yambo, asociación juvenil, Alcobendas, Madrid, ocio educativo, tiempo libre, actividades niños, actividades adolescentes, educación no formal, campamentos, proyectos juveniles, monitores",
         },
+
+        // Open Graph
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:site_name", content: "Yambo" },
+        { property: "og:locale", content: "es_ES" },
+
+        // Twitter Card
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+
+        // Additional SEO
+        { name: "robots", content: "index, follow" },
+        { name: "author", content: "Juan Cañas Cañate, Javier Mateos Mata" },
     ];
 }
 

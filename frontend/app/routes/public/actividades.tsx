@@ -15,12 +15,17 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 export function meta() {
+    const title = "Yambo - Actividades | Asociación Juvenil en Alcobendas";
+    const description = "Consulta las próximas actividades de Yambo en Alcobendas (Madrid). Eventos de ocio educativo y tiempo libre para niños y adolescentes.";
+
     return [
-        { title: "Actividades públicas" },
-        {
-            name: "description",
-            content: "Listado de actividades abiertas al público",
-        },
+        { title },
+        { name: "description", content: description },
+        { name: "keywords", content: "actividades juveniles, Yambo, Alcobendas, Madrid, eventos, ocio educativo, tiempo libre, niños, adolescentes" },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { name: "robots", content: "index, follow" },
     ];
 }
 

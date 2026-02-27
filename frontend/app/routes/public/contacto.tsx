@@ -9,9 +9,17 @@ import { faInstagram, faTiktok } from "@fortawesome/free-brands-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 export function meta({}: Route.MetaArgs) {
+    const title = "Yambo - Contacto | Asociación Juvenil en Alcobendas";
+    const description = "Ponte en contacto con Yambo, asociación juvenil en Alcobendas (Madrid). Escríbenos o síguenos en redes sociales.";
+
     return [
-        { title: "Yambo - Contacto" },
-        { name: "description", content: "Ponte en contacto con Yambo." },
+        { title },
+        { name: "description", content: description },
+        { name: "keywords", content: "contacto Yambo, asociación juvenil Alcobendas, Madrid, redes sociales" },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { name: "robots", content: "index, follow" },
     ];
 }
 

@@ -7,9 +7,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
+  const title = "Yambo - Proyectos | Asociación Juvenil en Alcobendas";
+  const description = "Descubre todos los proyectos de Yambo, asociación juvenil en Alcobendas (Madrid). Actividades de ocio educativo y tiempo libre para niños y adolescentes.";
+
   return [
-    { title: "Yambo - Proyectos" },
-    { name: "description", content: "Descubre todos los proyectos de Yambo." },
+    { title },
+    { name: "description", content: description },
+    { name: "keywords", content: "proyectos juveniles, Yambo, Alcobendas, Madrid, actividades juveniles, ocio educativo, tiempo libre" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+    { name: "robots", content: "index, follow" },
   ];
 }
 

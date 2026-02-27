@@ -9,9 +9,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
+  const title = "Yambo - Equipo de Monitores | Asociación Juvenil en Alcobendas";
+  const description = "Conoce al equipo de monitores de Yambo en Alcobendas (Madrid). Profesionales dedicados al ocio educativo y tiempo libre para niños y adolescentes.";
+
   return [
-    { title: "Yambo - Monitores" },
-    { name: "description", content: "Conoce al equipo de monitores de Yambo." },
+    { title },
+    { name: "description", content: description },
+    { name: "keywords", content: "monitores Yambo, equipo educativo, Alcobendas, Madrid, educadores tiempo libre, ocio educativo" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+    { name: "robots", content: "index, follow" },
   ];
 }
 
