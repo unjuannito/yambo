@@ -134,6 +134,17 @@ public class OrderController {
         return ResponseEntity.ok(new OrderResponse(canceledOrder, products, userRepository, productRepository, orderService));
     }
 
+    @PutMapping("/my/{id}/receipt")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<OrderResponse> uploadReceipt(
+            @PathVariable String id,
+            @Valid @RequestBody UploadReceiptRequest request) {
+        User user = authService.getCurrentUser(true);
+        Order order = orderService.uploadReceipt(id, user.getId(), request.getFileId());
+        List<OrderProduct> products = orderService.getOrderProducts(id);
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
     @Data
     public static class CreateOrderRequest {
         @NotEmpty(message = "Order must contain at least one product")
@@ -158,6 +169,12 @@ public class OrderController {
     }
 
     @Data
+    public static class UploadReceiptRequest {
+        @NotNull(message = "File ID is required")
+        private String fileId;
+    }
+
+    @Data
     public static class OrderResponse {
         private String id;
         private UserInfo user;
@@ -165,6 +182,7 @@ public class OrderController {
         private LocalDateTime createdAt;
         private LocalDateTime closedAt;
         private boolean hasOpenIssues;
+        private String receiptFileId;
         private List<OrderProductResponse> products;
 
         public OrderResponse(Order order, List<OrderProduct> products, UserRepository userRepository,
@@ -174,6 +192,7 @@ public class OrderController {
             this.createdAt = order.getCreatedAt();
             this.closedAt = order.getClosedAt();
             this.hasOpenIssues = orderService.hasOpenIssues(order.getId());
+            this.receiptFileId = order.getReceiptFileId();
 
             userRepository.findById(order.getCustomerId()).ifPresent(user -> {
                 this.user = new UserInfo(user.getId(), user.getName(), user.getEmail());

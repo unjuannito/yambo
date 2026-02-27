@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { settingsService } from "~/services/settingsService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faCircleInfo, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faCircleInfo, faTriangleExclamation, faUpload } from "@fortawesome/free-solid-svg-icons";
 
 interface PaymentInstructionsProps {
     orderId: string;
@@ -255,6 +255,27 @@ export default function PaymentInstructions({
                             </li>
                             <li>Si tienes dudas, contacta con nosotros</li>
                         </ul>
+                    </div>
+
+                    {/* Upload Receipt Reminder */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <FontAwesomeIcon
+                                icon={faUpload}
+                                className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1"
+                            />
+                            <div>
+                                <h3 className="font-semibold text-amber-900 mb-1">
+                                    Recuerda subir tu justificante de pago
+                                </h3>
+                                <p className="text-sm text-amber-800">
+                                    Una vez realizada la transferencia, sube el
+                                    justificante de pago desde{" "}
+                                    <strong>"Mis Pedidos"</strong> para que
+                                    podamos verificar tu pago lo antes posible.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Action Button */}

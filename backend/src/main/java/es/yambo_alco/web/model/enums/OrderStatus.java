@@ -18,7 +18,10 @@ public enum OrderStatus {
             "Tu pedido está ahora en preparación. Nuestro equipo está trabajando en él."),
     CLOSED(4, "COMPLETADO", "#16a085", "box-archive",
             "Pedido Completado", "emails/order-delivered",
-            "¡Buenas noticias! Tu pedido ha sido entregado exitosamente.");
+            "¡Buenas noticias! Tu pedido ha sido entregado exitosamente."),
+    CONFIRMING_PAYMENT(5, "CONFIRMANDO PAGO", "#e67e22", "clock",
+            "Justificante de Pago Recibido", "emails/order-confirming-payment",
+            "Hemos recibido tu justificante de pago. Estamos verificándolo.");
 
     private final int value;
     private final String label;

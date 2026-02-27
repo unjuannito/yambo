@@ -10,6 +10,7 @@ import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
 import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.UploadedFileRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +43,9 @@ class OrderServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private UploadedFileRepository uploadedFileRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -345,7 +349,18 @@ class OrderServiceTest {
 
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> orderService.cancelOrder("ORD001", false));
-        assertEquals("Order can only be canceled when pending payment", exception.getMessage());
+        assertEquals("Order can only be canceled when pending payment or confirming payment", exception.getMessage());
+    }
+
+    @Test
+    void cancelOrder_WhenConfirmingPayment_ShouldCancel() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.CONFIRMING_PAYMENT).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.cancelOrder("ORD001", true);
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        assertNotNull(result.getClosedAt());
     }
 
     @Test
@@ -2136,6 +2151,124 @@ class OrderServiceTest {
 
         assertThrows(ResourceNotFoundException.class,
                 () -> orderService.deleteOrder("ORD404"));
+    }
+
+    // ---- uploadReceipt tests ----
+
+    @Test
+    void uploadReceipt_WhenValid_ShouldTransitionToConfirmingPayment() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.uploadReceipt("ORD001", "USER001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceipt_WhenNotOwner_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.uploadReceipt("ORD001", "USER999", "FL000001"));
+        assertEquals("Order does not belong to the specified customer", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceipt_WhenNotPendingPayment_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.uploadReceipt("ORD001", "USER001", "FL000001"));
+        assertEquals("Receipt can only be uploaded when order is pending payment", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceipt_WhenFileNotFound_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL999999")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.uploadReceipt("ORD001", "USER001", "FL999999"));
+        assertEquals("Uploaded file not found: FL999999", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceipt_WhenEmailFails_ShouldStillUpload() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        Order result = orderService.uploadReceipt("ORD001", "USER001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
     }
 }
 

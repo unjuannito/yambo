@@ -29,6 +29,7 @@ export interface Order {
     createdAt: string;
     closedAt?: string;
     hasOpenIssues: boolean;
+    receiptFileId?: string;
     products: OrderProduct[];
 }
 
@@ -83,6 +84,10 @@ export class OrderService extends ApiService {
 
     public async cancelMyOrder(id: string): Promise<Order> {
         return await this.put<Order, Record<string, never>>(`/orders/my/${id}/cancel`, {});
+    }
+
+    public async uploadReceipt(id: string, fileId: string): Promise<Order> {
+        return await this.put<Order, { fileId: string }>(`/orders/my/${id}/receipt`, { fileId });
     }
 }
 

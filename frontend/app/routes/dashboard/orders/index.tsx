@@ -11,6 +11,7 @@ import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { issueService } from "~/services/issueService";
+import { fileService } from "~/services/fileService";
 import type { Issue } from "~/types/issueType";
 import { getIssueOrderedProductIds } from "~/utils/issueUtils";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
@@ -24,7 +25,7 @@ import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { IssueStatusBadge } from "~/components/issues";
 import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faXmark, faFileArrowDown } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -48,6 +49,7 @@ export default function Orders() {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
+    const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
 
     const [statusOptions] = useState([
         { value: "", label: "Todos" },
@@ -84,8 +86,21 @@ export default function Orders() {
                     toast.error(getErrorMessage(err, "Error al cargar las incidencias"));
                     setSelectedOrderIssues([]);
                 }
+
+                // Load receipt file URL if available
+                if (selectedOrder.receiptFileId) {
+                    try {
+                        const file = await fileService.getById(selectedOrder.receiptFileId);
+                        setReceiptFileUrl(file.url);
+                    } catch {
+                        setReceiptFileUrl(null);
+                    }
+                } else {
+                    setReceiptFileUrl(null);
+                }
             } else {
                 setSelectedOrderIssues([]);
+                setReceiptFileUrl(null);
             }
         };
 
@@ -363,7 +378,7 @@ export default function Orders() {
                     >
                         Ver
                     </button>
-                    {order.status === "PENDING_PAYMENT" && (
+                    {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                         <button
                             onClick={() => setOrderToCancel(order)}
                             className="text-red-600 hover:text-red-800 text-xs font-medium"
@@ -626,6 +641,22 @@ export default function Orders() {
                                 </div>
                             </div>
 
+                            {/* Receipt File */}
+                            {selectedOrder.receiptFileId && receiptFileUrl && (
+                                <div className="mb-6 pb-6 border-b border-gray-200">
+                                    <p className="text-sm text-gray-600 mb-2">Justificante de pago</p>
+                                    <a
+                                        href={receiptFileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                                    >
+                                        <FontAwesomeIcon icon={faFileArrowDown} className="w-4 h-4" />
+                                        Ver justificante
+                                    </a>
+                                </div>
+                            )}
+
                             {/* Products */}
                             <div>
                                 <h3 className="text-lg font-semibold mb-4">
@@ -762,7 +793,7 @@ export default function Orders() {
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                {selectedOrder.status === "PENDING_PAYMENT" && (
+                                {(selectedOrder.status === "PENDING_PAYMENT" || selectedOrder.status === "CONFIRMING_PAYMENT") && (
                                     <button
                                         onClick={() => setOrderToCancel(selectedOrder)}
                                         className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"

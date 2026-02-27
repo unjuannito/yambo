@@ -10,6 +10,7 @@ import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
 import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.UploadedFileRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.OrderSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
     private final ProductRepository productRepository;
+    private final UploadedFileRepository uploadedFileRepository;
     private final UserRepository userRepository;
     private final IssueRepository issueRepository;
     private final AuthService authService;
@@ -196,8 +198,10 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CLOSED) {
             throw new BadRequestException("Cannot change status of closed order");
         }
-        if (status == OrderStatus.CANCELED && order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-            throw new BadRequestException("Order can only be canceled when pending payment");
+        if (status == OrderStatus.CANCELED
+                && order.getStatus() != OrderStatus.PENDING_PAYMENT
+                && order.getStatus() != OrderStatus.CONFIRMING_PAYMENT) {
+            throw new BadRequestException("Order can only be canceled when pending payment or confirming payment");
         }
 
         OrderStatus previousStatus = order.getStatus();
@@ -394,8 +398,9 @@ public class OrderService {
     public Order cancelOrder(@NonNull String orderId, boolean canceledByAdmin) {
         Order order = getOrderById(orderId);
 
-        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-            throw new BadRequestException("Order can only be canceled when pending payment");
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT
+                && order.getStatus() != OrderStatus.CONFIRMING_PAYMENT) {
+            throw new BadRequestException("Order can only be canceled when pending payment or confirming payment");
         }
 
         order.setStatus(OrderStatus.CANCELED);
@@ -406,6 +411,35 @@ public class OrderService {
             sendOrderCancelEmail(order, canceledByAdmin);
         } catch (Exception e) {
             log.error("Failed to send order cancellation email for order: {}. Cancellation completed successfully.",
+                    orderId, e);
+        }
+
+        return savedOrder;
+    }
+
+    @Transactional
+    public Order uploadReceipt(@NonNull String orderId, @NonNull String customerId, @NonNull String fileId) {
+        Order order = getOrderById(orderId);
+
+        if (!order.getCustomerId().equals(customerId)) {
+            throw new BadRequestException("Order does not belong to the specified customer");
+        }
+
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new BadRequestException("Receipt can only be uploaded when order is pending payment");
+        }
+
+        uploadedFileRepository.findById(fileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + fileId));
+
+        order.setReceiptFileId(fileId);
+        order.setStatus(OrderStatus.CONFIRMING_PAYMENT);
+        Order savedOrder = orderRepository.save(order);
+
+        try {
+            sendOrderStatusUpdateEmail(order, OrderStatus.CONFIRMING_PAYMENT);
+        } catch (Exception e) {
+            log.error("Failed to send confirming payment email for order: {}. Receipt upload completed successfully.",
                     orderId, e);
         }
 

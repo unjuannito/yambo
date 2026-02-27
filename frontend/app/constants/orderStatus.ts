@@ -2,6 +2,7 @@
 
 export enum OrderStatus {
     PENDING_PAYMENT = 'PENDING_PAYMENT',
+    CONFIRMING_PAYMENT = 'CONFIRMING_PAYMENT',
     PAYMENT_CONFIRMED = 'PAYMENT_CONFIRMED',
     CANCELED = 'CANCELED',
     PENDING_PRODUCTS = 'PENDING_PRODUCTS',
@@ -13,6 +14,11 @@ export const ORDER_STATUS_CONFIG = {
         label: "Pendiente de Pago",
         shortLabel: "Pdte. Pago",
         className: "bg-yellow-100 text-yellow-800"
+    },
+    CONFIRMING_PAYMENT: {
+        label: "Confirmando Pago",
+        shortLabel: "Conf. Pago",
+        className: "bg-orange-100 text-orange-800"
     },
     PAYMENT_CONFIRMED: {
         label: "Pago Confirmado",
@@ -37,7 +43,8 @@ export const ORDER_STATUS_CONFIG = {
 } as const;
 
 export const ORDER_WORKFLOW_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-    [OrderStatus.PENDING_PAYMENT]: [OrderStatus.PAYMENT_CONFIRMED, OrderStatus.CANCELED],
+    [OrderStatus.PENDING_PAYMENT]: [OrderStatus.CONFIRMING_PAYMENT, OrderStatus.CANCELED],
+    [OrderStatus.CONFIRMING_PAYMENT]: [OrderStatus.PAYMENT_CONFIRMED, OrderStatus.CANCELED],
     [OrderStatus.PAYMENT_CONFIRMED]: [OrderStatus.PENDING_PRODUCTS],
     [OrderStatus.PENDING_PRODUCTS]: [OrderStatus.CLOSED],
     [OrderStatus.CLOSED]: [],

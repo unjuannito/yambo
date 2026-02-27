@@ -40,6 +40,9 @@ public class Order {
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
 
+    @Column(name = "receipt_file_id")
+    private String receiptFileId;
+
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<OrderProduct> orderProducts;
 }

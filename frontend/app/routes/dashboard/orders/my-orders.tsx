@@ -6,10 +6,12 @@ import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { issueService } from "~/services/issueService";
 import type { Issue, IssueReportWindowModel } from "~/types/issueType";
+import type { FileRecord } from "~/types/fileType";
 import { getIssueOrderedProductIds, formatConfiguration } from "~/utils/issueUtils";
 import { getErrorMessage } from "~/types/error";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
+import FileUploader from "~/components/common/FileUploader";
 import type { Route } from "./+types/my-orders";
 import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
@@ -18,7 +20,8 @@ import { IssueStatusBadge, IssueForm } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClipboard, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faClipboard, faTriangleExclamation, faUpload, faClock } from "@fortawesome/free-solid-svg-icons";
+import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -43,6 +46,8 @@ export default function MyOrdersPage() {
   const [orderDetail, setOrderDetail] = useState<Order | null>(null);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) {
@@ -110,6 +115,24 @@ export default function MyOrdersPage() {
     } finally {
       setCancelingOrderId(null);
       setOrderToCancel(null);
+    }
+  };
+
+  const handleReceiptUploaded = async (file: FileRecord) => {
+    if (!uploadReceiptOrder) return;
+    setIsUploadingReceipt(true);
+    try {
+      const updated = await orderService.uploadReceipt(uploadReceiptOrder.id, file.id);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      if (orderDetail?.id === updated.id) {
+        setOrderDetail(updated);
+      }
+      toast.success("Justificante subido correctamente. Estamos verificando tu pago.");
+      setUploadReceiptOrder(null);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Error al subir el justificante"));
+    } finally {
+      setIsUploadingReceipt(false);
     }
   };
 
@@ -261,13 +284,28 @@ export default function MyOrdersPage() {
                 >
                   Ver detalles
                 </button>
-                {order.status === "PENDING_PAYMENT" && (
+                {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                   <button
                     onClick={() => handleShowPaymentInstructions(order)}
                     className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                   >
                     Instrucciones de pago
                   </button>
+                )}
+                {order.status === "PENDING_PAYMENT" && (
+                  <button
+                    onClick={() => setUploadReceiptOrder(order)}
+                    className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                    Subir justificante
+                  </button>
+                )}
+                {order.status === "CONFIRMING_PAYMENT" && (
+                  <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
+                    Verificando justificante...
+                  </span>
                 )}
                 {order.status === "PENDING_PAYMENT" && (
                   <button
@@ -399,12 +437,33 @@ export default function MyOrdersPage() {
                   Ver instrucciones de pago
                 </button>
                 <button
+                  onClick={() => setUploadReceiptOrder(orderDetail)}
+                  className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                  Subir justificante
+                </button>
+                <button
                   onClick={() => setOrderToCancel(orderDetail)}
                   disabled={cancelingOrderId === orderDetail.id}
                   className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   {cancelingOrderId === orderDetail.id ? "Cancelando..." : "Cancelar pedido"}
                 </button>
+              </div>
+            )}
+            {orderDetail.status === "CONFIRMING_PAYMENT" && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleShowPaymentInstructions(orderDetail)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  Ver instrucciones de pago
+                </button>
+                <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                  <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
+                  Verificando justificante...
+                </span>
               </div>
             )}
 
@@ -459,6 +518,43 @@ export default function MyOrdersPage() {
               onCancel={() => setIssueWindow(null)}
             />
           </>
+        )}
+      </Modal>
+
+      {/* Upload Receipt Modal */}
+      <Modal
+        isOpen={!!uploadReceiptOrder}
+        onClose={() => !isUploadingReceipt && setUploadReceiptOrder(null)}
+        title={uploadReceiptOrder ? `Subir justificante · Pedido #${uploadReceiptOrder.id}` : "Subir justificante"}
+        size="md"
+      >
+        {uploadReceiptOrder && (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800">
+                Sube el justificante de la transferencia bancaria para el pedido{" "}
+                <strong>#{uploadReceiptOrder.id}</strong>. Una vez recibido,
+                nuestro equipo verificará el pago.
+              </p>
+            </div>
+
+            {isUploadingReceipt ? (
+              <div className="text-center py-8">
+                <LoadingSpinner size="lg" message="Subiendo justificante..." />
+              </div>
+            ) : (
+              <FileUploader
+                onUpload={handleReceiptUploaded}
+                accept="image/*,application/pdf"
+                label="Justificante de pago"
+                maxSizeMb={10}
+              />
+            )}
+
+            <div className="text-xs text-gray-500">
+              Formatos aceptados: imágenes (JPG, PNG) y PDF. Tamaño máximo: 10 MB.
+            </div>
+          </div>
         )}
       </Modal>
     </main>
