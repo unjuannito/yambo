@@ -13,8 +13,12 @@ import {
     faUserTie,
     faClock,
 } from "@fortawesome/free-solid-svg-icons";
+import { getSiteUrl } from "~/utils/env.server";
+import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import type { Route } from "./+types/actividades";
 
-export function meta() {
+export function meta({ data }: Route.MetaArgs) {
+    const siteUrl = data?.siteUrl ?? "";
     const title = "Yambo - Actividades | Asociación Juvenil en Alcobendas";
     const description = "Consulta las próximas actividades de Yambo en Alcobendas (Madrid). Eventos de ocio educativo y tiempo libre para niños y adolescentes.";
 
@@ -22,10 +26,17 @@ export function meta() {
         { title },
         { name: "description", content: description },
         { name: "keywords", content: "actividades juveniles, Yambo, Alcobendas, Madrid, eventos, ocio educativo, tiempo libre, niños, adolescentes" },
+        { tagName: "link", rel: "canonical", href: `${siteUrl}/actividades` },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
+        { property: "og:url", content: `${siteUrl}/actividades` },
         { property: "og:type", content: "website" },
         { name: "robots", content: "index, follow" },
+        { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/actividades` }) },
+        { "script:ld+json": breadcrumbJsonLd([
+            { name: "Inicio", url: siteUrl },
+            { name: "Actividades", url: `${siteUrl}/actividades` },
+        ]) },
     ];
 }
 
@@ -285,7 +296,7 @@ type ViewMode = "list" | "calendar";
 
 export async function loader() {
     const activities = await getPublicActivities();
-    return { activities };
+    return { activities, siteUrl: getSiteUrl() };
 }
 
 export default function PublicActivities() {

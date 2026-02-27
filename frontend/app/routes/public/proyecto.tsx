@@ -5,29 +5,44 @@ import type { ProjectDetail, Monitor, ProjectGroupDetail } from "~/services/publ
 import MonitorCard from "~/components/home/MonitorCard";
 import { hashColor } from "~/utils/hashColor";
 import type { Route } from "./+types/proyecto";
+import { getSiteUrl } from "~/utils/env.server";
+import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export async function loader({ params }: Route.LoaderArgs) {
   const project = await getProjectDetail(params.projectId!);
-  return { project };
+  return { project, siteUrl: getSiteUrl() };
 }
 
 export function meta({ data }: Route.MetaArgs) {
   const project = data?.project;
   const seo = project?.seo;
+  const siteUrl = data?.siteUrl ?? "";
 
   const title = project ? `Yambo - ${project.name}` : "Yambo - Proyecto";
   const description = seo?.metaDescription ?? project?.description ?? "Detalle del proyecto";
+  const pageUrl = project ? `${siteUrl}/proyectos/${project.id}` : `${siteUrl}/proyectos`;
 
   return [
     { title },
     { name: "description", content: description },
     ...(seo?.keywords?.length ? [{ name: "keywords", content: seo.keywords.join(", ") }] : []),
+    { tagName: "link", rel: "canonical", href: pageUrl },
     { property: "og:title", content: title },
     { property: "og:description", content: seo?.ogDescription ?? description },
+    { property: "og:url", content: pageUrl },
     { property: "og:type", content: "website" },
     ...(project?.image ? [{ property: "og:image", content: project.image }] : []),
+    // JSON-LD
+    ...(project ? [
+      { "script:ld+json": projectJsonLd(project, siteUrl) },
+      { "script:ld+json": breadcrumbJsonLd([
+          { name: "Inicio", url: siteUrl },
+          { name: "Proyectos", url: `${siteUrl}/proyectos` },
+          { name: project.name, url: pageUrl },
+      ]) },
+    ] : []),
   ];
 }
 

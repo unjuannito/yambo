@@ -2,11 +2,14 @@ import { useLoaderData } from "react-router";
 import { getActiveProjects } from "~/services/publicService.server";
 import type { ActiveProject } from "~/services/publicService";
 import { hashColor } from "~/utils/hashColor";
+import { getSiteUrl } from "~/utils/env.server";
+import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import type { Route } from "./+types/proyectos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ data }: Route.MetaArgs) {
+  const siteUrl = data?.siteUrl ?? "";
   const title = "Yambo - Proyectos | Asociación Juvenil en Alcobendas";
   const description = "Descubre todos los proyectos de Yambo, asociación juvenil en Alcobendas (Madrid). Actividades de ocio educativo y tiempo libre para niños y adolescentes.";
 
@@ -14,16 +17,23 @@ export function meta({}: Route.MetaArgs) {
     { title },
     { name: "description", content: description },
     { name: "keywords", content: "proyectos juveniles, Yambo, Alcobendas, Madrid, actividades juveniles, ocio educativo, tiempo libre" },
+    { tagName: "link", rel: "canonical", href: `${siteUrl}/proyectos` },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
+    { property: "og:url", content: `${siteUrl}/proyectos` },
     { property: "og:type", content: "website" },
     { name: "robots", content: "index, follow" },
+    { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/proyectos` }) },
+    { "script:ld+json": breadcrumbJsonLd([
+        { name: "Inicio", url: siteUrl },
+        { name: "Proyectos", url: `${siteUrl}/proyectos` },
+    ]) },
   ];
 }
 
 export async function loader() {
   const projects = await getActiveProjects();
-  return { projects };
+  return { projects, siteUrl: getSiteUrl() };
 }
 
 export default function Proyectos() {

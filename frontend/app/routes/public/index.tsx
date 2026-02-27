@@ -11,9 +11,12 @@ import {
     getMonitors,
     getPublicActivities,
 } from "~/services/publicService.server";
+import { getSiteUrl } from "~/utils/env.server";
+import { organizationJsonLd, webSiteJsonLd } from "~/utils/jsonld";
 import type { Route } from "./+types";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ data }: Route.MetaArgs) {
+    const siteUrl = data?.siteUrl ?? "";
     const title = "Yambo - Asociación Juvenil en Alcobendas (Madrid)";
     const description =
         "Yambo es una asociación juvenil en Alcobendas (Madrid) dedicada al ocio educativo, tiempo libre y actividades para niños y adolescentes.";
@@ -27,9 +30,13 @@ export function meta({}: Route.MetaArgs) {
                 "Yambo, asociación juvenil, Alcobendas, Madrid, ocio educativo, tiempo libre, actividades niños, actividades adolescentes, educación no formal, campamentos, proyectos juveniles, monitores",
         },
 
+        // Canonical
+        { tagName: "link", rel: "canonical", href: siteUrl },
+
         // Open Graph
         { property: "og:title", content: title },
         { property: "og:description", content: description },
+        { property: "og:url", content: siteUrl },
         { property: "og:type", content: "website" },
         { property: "og:site_name", content: "Yambo" },
         { property: "og:locale", content: "es_ES" },
@@ -42,6 +49,10 @@ export function meta({}: Route.MetaArgs) {
         // Additional SEO
         { name: "robots", content: "index, follow" },
         { name: "author", content: "Juan Cañas Cañate, Javier Mateos Mata" },
+
+        // JSON-LD structured data
+        { "script:ld+json": organizationJsonLd(siteUrl) },
+        { "script:ld+json": webSiteJsonLd(siteUrl) },
     ];
 }
 
@@ -66,7 +77,7 @@ export async function loader() {
         getMonitors(),
         getPublicActivities(),
     ]);
-    return { settings, projects, monitors, activities };
+    return { settings, projects, monitors, activities, siteUrl: getSiteUrl() };
 }
 
 export default function Index() {

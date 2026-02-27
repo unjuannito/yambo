@@ -1,0 +1,66 @@
+import { getActiveProjects } from "~/services/publicService.server";
+import { getSiteUrl } from "~/utils/env.server";
+
+/**
+ * Resource route – returns a dynamic XML sitemap.
+ * No default export (no component) → React Router treats it as a resource route.
+ */
+export async function loader() {
+    const siteUrl = getSiteUrl();
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // ── Static public pages ─────────────────────────────────────────────
+    const staticPages: { loc: string; changefreq: string; priority: string }[] = [
+        { loc: "/",            changefreq: "weekly",  priority: "1.0" },
+        { loc: "/proyectos",   changefreq: "weekly",  priority: "0.9" },
+        { loc: "/actividades", changefreq: "weekly",  priority: "0.8" },
+        { loc: "/monitores",   changefreq: "monthly", priority: "0.7" },
+        { loc: "/contacto",    changefreq: "monthly", priority: "0.5" },
+    ];
+
+    // ── Dynamic project pages ───────────────────────────────────────────
+    let projectEntries: string[] = [];
+    try {
+        const projects = await getActiveProjects();
+        projectEntries = projects.map(
+            (p) => `
+  <url>
+    <loc>${escapeXml(siteUrl)}/proyectos/${escapeXml(p.id)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`,
+        );
+    } catch {
+        // If the backend is unreachable we still serve the static pages
+    }
+
+    // ── Build XML ───────────────────────────────────────────────────────
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${staticPages
+    .map(
+        (p) => `  <url>
+    <loc>${escapeXml(siteUrl)}${p.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${p.changefreq}</changefreq>
+    <priority>${p.priority}</priority>
+  </url>`,
+    )
+    .join("\n")}
+${projectEntries.join("\n")}
+</urlset>`;
+
+    return new Response(xml.trim(), {
+        status: 200,
+        headers: {
+            "Content-Type": "application/xml; charset=utf-8",
+            "Cache-Control": "public, max-age=3600, s-maxage=3600",
+            "X-Robots-Tag": "noindex", // the sitemap itself shouldn't be indexed
+        },
+    });
+}
+
+/** Minimal XML entity escaping for URLs */
+function escapeXml(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}

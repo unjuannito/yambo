@@ -21,6 +21,8 @@ spec:
           env:
             - name: BACKEND_INTERNAL_URL
               value: "http://yambo-backend-service:8080/api"
+            - name: FRONTEND_URL
+              value: "https://yambo.cabrasky.net"
           ports:
             - containerPort: 80
           resources:

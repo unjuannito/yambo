@@ -73,4 +73,8 @@ export default [
     ]),
     route("/login", "routes/login.tsx"),
     route("/register", "routes/register.tsx"),
+
+    // SEO resource routes (no component – return raw responses)
+    route("sitemap.xml", "routes/sitemap[.]xml.tsx"),
+    route("robots.txt", "routes/robots[.]txt.tsx"),
 ] satisfies RouteConfig;

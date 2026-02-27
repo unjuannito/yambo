@@ -7,8 +7,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faComments, faShareNodes, faInbox } from "@fortawesome/free-solid-svg-icons";
 import { faInstagram, faTiktok } from "@fortawesome/free-brands-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { getSiteUrl } from "~/utils/env.server";
+import { contactPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ data }: Route.MetaArgs) {
+    const siteUrl = data?.siteUrl ?? "";
     const title = "Yambo - Contacto | Asociación Juvenil en Alcobendas";
     const description = "Ponte en contacto con Yambo, asociación juvenil en Alcobendas (Madrid). Escríbenos o síguenos en redes sociales.";
 
@@ -16,10 +19,17 @@ export function meta({}: Route.MetaArgs) {
         { title },
         { name: "description", content: description },
         { name: "keywords", content: "contacto Yambo, asociación juvenil Alcobendas, Madrid, redes sociales" },
+        { tagName: "link", rel: "canonical", href: `${siteUrl}/contacto` },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
+        { property: "og:url", content: `${siteUrl}/contacto` },
         { property: "og:type", content: "website" },
         { name: "robots", content: "index, follow" },
+        { "script:ld+json": contactPageJsonLd({ siteUrl }) },
+        { "script:ld+json": breadcrumbJsonLd([
+            { name: "Inicio", url: siteUrl },
+            { name: "Contacto", url: `${siteUrl}/contacto` },
+        ]) },
     ];
 }
 
@@ -80,7 +90,7 @@ function displaySocialValue(key: string, value: string): string {
 
 export async function loader() {
     const settings = await getContactSettings();
-    return { settings };
+    return { settings, siteUrl: getSiteUrl() };
 }
 
 export default function Contacto() {

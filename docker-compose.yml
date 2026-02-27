@@ -46,6 +46,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - BACKEND_INTERNAL_URL=http://backend:8080/api
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
     depends_on:
       - backend
     expose:
