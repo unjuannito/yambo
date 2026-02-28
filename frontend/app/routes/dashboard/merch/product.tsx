@@ -15,6 +15,16 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
+export function meta() {
+    return [
+        { title: "Yambo - Producto" },
+        {
+            name: "description",
+            content: "Detalle de producto - Yambo Merch",
+        },
+    ];
+}
+
 export default function ProductPage() {
     const { productId } = useParams<{ productId: string }>();
     const navigate = useNavigate();
@@ -41,6 +51,7 @@ export default function ProductPage() {
 
                 setProduct(prod);
                 setTotalPrice(prod.basePrice);
+                document.title = `Yambo - ${prod.name}`;
 
                 // Load drop if product has one
                 if (prod.familyProductId) {
