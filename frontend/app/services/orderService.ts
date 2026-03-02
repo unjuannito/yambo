@@ -50,13 +50,17 @@ export interface OrderResponse {
 }
 
 export class OrderService extends ApiService {
-    public async getAllOrders(page = 0, size = 20, customerId?: string, status?: string): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
+    public async getAllOrders(page = 0, size = 20, customerId?: string, status?: string[], startDate?: string, endDate?: string): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
         const params = new URLSearchParams({
             page: page.toString(),
             size: size.toString(),
         });
         if (customerId) params.append('customerId', customerId);
-        if (status) params.append('status', status);
+        if (status && status.length > 0) {
+            for (const s of status) params.append('status', s);
+        }
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
 
         const response = await this.get<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }>(`/orders?${params}`);
         return response;
@@ -78,8 +82,17 @@ export class OrderService extends ApiService {
         return await this.delete<void>(`/orders/${id}`);
     }
 
-    public async getMyOrders(): Promise<Order[]> {
-        return await this.get<Order[]>('/orders/my');
+    public async getMyOrders(page = 0, size = 50, startDate?: string, endDate?: string, status?: string[]): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            size: size.toString(),
+        });
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        if (status && status.length > 0) {
+            for (const s of status) params.append('status', s);
+        }
+        return await this.get<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }>(`/orders/my?${params}`);
     }
 
     public async cancelMyOrder(id: string): Promise<Order> {

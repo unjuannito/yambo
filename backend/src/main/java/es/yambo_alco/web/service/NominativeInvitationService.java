@@ -113,6 +113,13 @@ public class NominativeInvitationService {
         return nominativeInvitationRepository.findAll();
     }
 
+    public List<NominativeInvitation> getInvitationsSince(java.time.LocalDateTime startDate) {
+        if (startDate == null) {
+            return nominativeInvitationRepository.findAll();
+        }
+        return nominativeInvitationRepository.findByCreatedAtGreaterThanEqual(startDate);
+    }
+
     public void deleteInvitation(Long id) {
         NominativeInvitation invitation = nominativeInvitationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));

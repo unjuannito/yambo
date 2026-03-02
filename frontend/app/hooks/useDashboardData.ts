@@ -59,7 +59,8 @@ export function useDashboardData(): DashboardData {
             setError(null);
 
             // Personal data — always fetched
-            const myOrders = await orderService.getMyOrders();
+            const myOrdersResponse = await orderService.getMyOrders();
+            const myOrders = myOrdersResponse.content;
             const sorted = [...myOrders].sort(
                 (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );

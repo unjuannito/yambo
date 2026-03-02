@@ -1,22 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { FilterableTable, type FilterableColumn } from "~/components/common/FilterableTable";
+import { FilterableTable, type FilterableColumn, type FetchDataParams } from "~/components/common/FilterableTable";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
-import { issueService } from "~/services/issueService";
-import { orderService, type Order } from "~/services/orderService";
-import { getIssueOrderedProductIds, resolveProductName } from "~/utils/issueUtils";
+import { issueService, type IssueListItem } from "~/services/issueService";
 import { StatCard } from "~/components/common/StatCard";
-import { LoadingSpinner } from "~/components/common/LoadingSpinner";
-import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { getErrorMessage } from "~/types/error";
-import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
+import { IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
-
-interface UserIssueListItem {
-    issue: Issue;
-    orderId: string;
-    productName: string;
-}
+import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
 interface UserIssueRow {
     id: string;
@@ -30,76 +21,66 @@ interface UserIssueRow {
 
 export default function IssuesPage() {
     const navigate = useNavigate();
-    const [issues, setIssues] = useState<UserIssueListItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const loadIssues = async () => {
-            setLoading(true);
-            setError(null);
-
-            try {
-                const orders = await orderService.getMyOrders();
-                const issuesByOrder = await Promise.all(
-                    orders.map(async (order) => {
-                        try {
-                            const orderIssues = await issueService.getIssuesByOrder(order.id);
-                            return {
-                                order,
-                                orderIssues,
-                            };
-                        } catch {
-                            return {
-                                order,
-                                orderIssues: [] as Issue[],
-                            };
-                        }
-                    }),
-                );
-
-                const mappedIssues: UserIssueListItem[] = issuesByOrder.flatMap(({ order, orderIssues }) => {
-                    return orderIssues.map((issue) => ({
-                        issue,
-                        orderId: order.id,
-                        productName: resolveProductName(order, issue),
-                    }));
-                });
-
-                setIssues(mappedIssues);
-            } catch (err) {
-                setError(getErrorMessage(err, "Error al cargar las incidencias"));
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadIssues();
-    }, []);
-
-    const rows = useMemo<UserIssueRow[]>(() => {
-        return issues
-            .map(({ issue, orderId, productName }) => ({
-                id: issue.id,
-                title: issue.title,
-                description: issue.description,
-                status: issue.status,
-                orderId,
-                productName,
-                createdAt: issue.createdAt,
-            }))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [issues]);
+    const { activeTab, setActiveTab } = useViewTab("actual");
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [stats, setStats] = useState({
+        total: 0,
+        open: 0,
+        inProgress: 0,
+        resolved: 0,
+        closed: 0,
+        reopened: 0,
+    });
 
     const statusOptions = useMemo(
-        () => [
-            { value: "", label: "Todos" },
-            ...Object.values(IssueStatus).map((status) => ({
+        () =>
+            Object.values(IssueStatus).map((status) => ({
                 value: status,
                 label: ISSUE_STATUS_CONFIG[status].label,
             })),
-        ],
         [],
+    );
+
+    const fetchIssuesData = useCallback(
+        async ({ page, size, filters }: FetchDataParams) => {
+            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
+            const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
+                ? filters.status as string[]
+                : undefined;
+            const result = await issueService.getMyIssues(
+                page,
+                size,
+                startDate,
+                undefined,
+                statusFilter,
+            );
+
+            if (page === 0) {
+                const items = result.content;
+                setStats({
+                    total: result.page.totalElements,
+                    open: items.filter((i) => i.status === IssueStatus.OPEN).length,
+                    inProgress: items.filter((i) => i.status === IssueStatus.IN_PROGRESS).length,
+                    resolved: items.filter((i) => i.status === IssueStatus.RESOLVED).length,
+                    closed: items.filter((i) => i.status === IssueStatus.CLOSED).length,
+                    reopened: items.filter((i) => i.status === IssueStatus.REOPENED).length,
+                });
+            }
+
+            return {
+                content: result.content.map((item: IssueListItem): UserIssueRow => ({
+                    id: item.id,
+                    title: item.title,
+                    description: item.description,
+                    status: item.status as IssueStatus,
+                    orderId: item.orderId || "",
+                    productName: item.productName || "",
+                    createdAt: item.createdAt,
+                })),
+                page: result.page,
+            };
+        },
+        [refreshKey, activeTab],
     );
 
     const columns = useMemo<FilterableColumn<UserIssueRow>[]>(
@@ -107,11 +88,6 @@ export default function IssuesPage() {
             {
                 key: "title",
                 header: "Incidencia",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar por título",
-                },
                 render: (row) => (
                     <div>
                         <p className="font-medium text-gray-900">{row.title}</p>
@@ -122,28 +98,18 @@ export default function IssuesPage() {
             {
                 key: "orderId",
                 header: "Pedido",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar pedido",
-                },
                 render: (row) => <span className="font-mono text-xs">#{row.orderId}</span>,
             },
             {
                 key: "productName",
                 header: "Producto",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar producto",
-                },
             },
             {
                 key: "status",
                 header: "Estado",
                 filter: {
                     enabled: true,
-                    type: "select",
+                    type: "multi-select",
                     options: statusOptions,
                 },
                 render: (row) => <IssueStatusBadge status={row.status} />,
@@ -170,23 +136,6 @@ export default function IssuesPage() {
         [navigate, statusOptions],
     );
 
-    const stats = useMemo(() => {
-        const open = issues.filter((item) => item.issue.status === IssueStatus.OPEN).length;
-        const inProgress = issues.filter((item) => item.issue.status === IssueStatus.IN_PROGRESS).length;
-        const resolved = issues.filter((item) => item.issue.status === IssueStatus.RESOLVED).length;
-        const closed = issues.filter((item) => item.issue.status === IssueStatus.CLOSED).length;
-        const reopened = issues.filter((item) => item.issue.status === IssueStatus.REOPENED).length;
-
-        return {
-            total: issues.length,
-            open,
-            inProgress,
-            resolved,
-            closed,
-            reopened,
-        };
-    }, [issues]);
-
     return (
         <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
             <div className="mb-6 rounded-2xl bg-white shadow-md p-6">
@@ -203,37 +152,21 @@ export default function IssuesPage() {
                 </div>
             </div>
 
-            {loading && (
-                <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                    <LoadingSpinner size="lg" message="Cargando incidencias..." />
-                </div>
-            )}
+            <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 
-            {error && (
-                <ErrorMessage message={error} />
-            )}
-
-            {!loading && !error && issues.length === 0 && (
-                <div className="bg-white rounded-lg shadow-md p-10 text-center">
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">No tienes incidencias</h2>
-                    <p className="text-gray-600">Cuando reportes una incidencia en un pedido, aparecerá aquí.</p>
-                </div>
-            )}
-
-            {!loading && !error && issues.length > 0 && (
-                <FilterableTable<UserIssueRow>
-                    keyField="id"
-                    columns={columns}
-                    data={rows}
-                    display={{
-                        emptyMessage: "No hay incidencias que coincidan con los filtros",
-                    }}
-                    features={{
-                        enableFilters: true,
-                        enablePagination: true,
-                    }}
-                />
-            )}
+            <FilterableTable<UserIssueRow>
+                keyField="id"
+                columns={columns}
+                display={{
+                    emptyMessage: "No hay incidencias que coincidan con los filtros",
+                    loadingMessage: "Cargando incidencias...",
+                }}
+                features={{
+                    enableFilters: true,
+                    enablePagination: true,
+                }}
+                serverSide={{ fetchData: fetchIssuesData }}
+            />
         </main>
     );
 }

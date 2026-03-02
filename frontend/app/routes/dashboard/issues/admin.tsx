@@ -1,25 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { RequirePermission } from "~/components/common/RequirePermission";
-import { FilterableTable, type FilterableColumn } from "~/components/common/FilterableTable";
-import { issueService } from "~/services/issueService";
-import { orderService, type Order } from "~/services/orderService";
-import { getIssueOrderedProductIds, resolveProductName } from "~/utils/issueUtils";
+import { FilterableTable, type FilterableColumn, type FetchDataParams } from "~/components/common/FilterableTable";
+import { issueService, type IssueListItem } from "~/services/issueService";
 import { StatCard } from "~/components/common/StatCard";
-import { LoadingSpinner } from "~/components/common/LoadingSpinner";
-import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { getErrorMessage } from "~/types/error";
 import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG, ISSUE_WORKFLOW_TRANSITIONS } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
-
-interface AdminIssueListItem {
-    issue: Issue;
-    orderId: string;
-    customerName: string;
-    productName: string;
-}
+import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
 interface AdminIssueRow {
     id: string;
@@ -42,95 +32,68 @@ export default function AdminIssuesPage() {
 
 function AdminIssuesContent() {
     const navigate = useNavigate();
-    const [issues, setIssues] = useState<AdminIssueListItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const loadIssues = async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const allOrders = await fetchAllOrders();
-            const issuesByOrder = await Promise.all(
-                allOrders.map(async (order) => {
-                    try {
-                        const orderIssues = await issueService.getIssuesByOrder(order.id);
-                        return {
-                            order,
-                            orderIssues,
-                        };
-                    } catch {
-                        return {
-                            order,
-                            orderIssues: [] as Issue[],
-                        };
-                    }
-                }),
-            );
-
-            const mapped: AdminIssueListItem[] = issuesByOrder.flatMap(({ order, orderIssues }) =>
-                orderIssues.map((issue) => ({
-                    issue,
-                    orderId: order.id,
-                    customerName: order.user?.name || order.user?.email || order.user?.id || "Cliente",
-                    productName: resolveProductName(order, issue),
-                })),
-            );
-
-            setIssues(mapped);
-        } catch (err) {
-            setError(getErrorMessage(err, "Error al cargar incidencias de administración"));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadIssues();
-    }, []);
-
-    const rows = useMemo<AdminIssueRow[]>(() => {
-        return issues
-            .map(({ issue, orderId, customerName, productName }) => ({
-                id: issue.id,
-                title: issue.title,
-                description: issue.description,
-                status: issue.status,
-                orderId,
-                customerName,
-                productName,
-                createdAt: issue.createdAt,
-            }))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }, [issues]);
-
-    const stats = useMemo(() => {
-        const open = issues.filter((item) => item.issue.status === IssueStatus.OPEN).length;
-        const inProgress = issues.filter((item) => item.issue.status === IssueStatus.IN_PROGRESS).length;
-        const resolved = issues.filter((item) => item.issue.status === IssueStatus.RESOLVED).length;
-        const closed = issues.filter((item) => item.issue.status === IssueStatus.CLOSED).length;
-        const reopened = issues.filter((item) => item.issue.status === IssueStatus.REOPENED).length;
-
-        return {
-            total: issues.length,
-            open,
-            inProgress,
-            resolved,
-            closed,
-            reopened,
-        };
-    }, [issues]);
+    const { activeTab, setActiveTab } = useViewTab("actual");
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [stats, setStats] = useState({
+        total: 0,
+        open: 0,
+        inProgress: 0,
+        resolved: 0,
+        closed: 0,
+        reopened: 0,
+    });
 
     const statusOptions = useMemo(
-        () => [
-            { value: "", label: "Todos" },
-            ...Object.values(IssueStatus).map((status) => ({
+        () =>
+            Object.values(IssueStatus).map((status) => ({
                 value: status,
                 label: ISSUE_STATUS_CONFIG[status].label,
             })),
-        ],
         [],
+    );
+
+    const fetchIssuesData = useCallback(
+        async ({ page, size, filters }: FetchDataParams) => {
+            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
+            const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
+                ? filters.status as string[]
+                : undefined;
+            const result = await issueService.getAllIssues(
+                page,
+                size,
+                startDate,
+                undefined,
+                statusFilter,
+                undefined,
+            );
+
+            if (page === 0) {
+                const items = result.content;
+                setStats({
+                    total: result.page.totalElements,
+                    open: items.filter((i) => i.status === IssueStatus.OPEN).length,
+                    inProgress: items.filter((i) => i.status === IssueStatus.IN_PROGRESS).length,
+                    resolved: items.filter((i) => i.status === IssueStatus.RESOLVED).length,
+                    closed: items.filter((i) => i.status === IssueStatus.CLOSED).length,
+                    reopened: items.filter((i) => i.status === IssueStatus.REOPENED).length,
+                });
+            }
+
+            return {
+                content: result.content.map((item: IssueListItem): AdminIssueRow => ({
+                    id: item.id,
+                    title: item.title,
+                    description: item.description,
+                    status: item.status as IssueStatus,
+                    orderId: item.orderId || "",
+                    customerName: item.customerName || "",
+                    productName: item.productName || "",
+                    createdAt: item.createdAt,
+                })),
+                page: result.page,
+            };
+        },
+        [refreshKey, activeTab],
     );
 
     const columns = useMemo<FilterableColumn<AdminIssueRow>[]>(
@@ -138,11 +101,6 @@ function AdminIssuesContent() {
             {
                 key: "title",
                 header: "Incidencia",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar por título",
-                },
                 render: (row) => (
                     <div>
                         <p className="font-medium text-gray-900">{row.title}</p>
@@ -153,37 +111,22 @@ function AdminIssuesContent() {
             {
                 key: "customerName",
                 header: "Cliente",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar cliente",
-                },
             },
             {
                 key: "orderId",
                 header: "Pedido",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar pedido",
-                },
                 render: (row) => <span className="font-mono text-xs">#{row.orderId}</span>,
             },
             {
                 key: "productName",
                 header: "Producto",
-                filter: {
-                    enabled: true,
-                    type: "text",
-                    placeholder: "Buscar producto",
-                },
             },
             {
                 key: "status",
                 header: "Estado",
                 filter: {
                     enabled: true,
-                    type: "select",
+                    type: "multi-select",
                     options: statusOptions,
                 },
                 render: (row) => <IssueStatusBadge status={row.status} />,
@@ -221,7 +164,7 @@ function AdminIssuesContent() {
                         <p className="text-gray-600">Gestiona incidencias con workflow estilo Jira</p>
                     </div>
                     <ButtonComponent
-                        onClick={loadIssues}
+                        onClick={() => setRefreshKey((prev) => prev + 1)}
                         variant="neutral"
                     >
                         Recargar
@@ -238,60 +181,29 @@ function AdminIssuesContent() {
                 </div>
             </div>
 
-                <StatusWorkflow
-                    title="Flujo de trabajo de incidencias"
-                    config={ISSUE_STATUS_CONFIG}
-                    transitions={ISSUE_WORKFLOW_TRANSITIONS}
-                />
+            <StatusWorkflow
+                title="Flujo de trabajo de incidencias"
+                config={ISSUE_STATUS_CONFIG}
+                transitions={ISSUE_WORKFLOW_TRANSITIONS}
+            />
 
-            {loading && (
-                <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                    <LoadingSpinner size="lg" message="Cargando incidencias..." />
-                </div>
-            )}
+            <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 
-            {error && (
-                <ErrorMessage message={error} onRetry={loadIssues} className="mb-4" />
-            )}
-
-            {!loading && issues.length === 0 && (
-                <div className="bg-white rounded-lg shadow-md p-10 text-center">
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">No hay incidencias registradas</h2>
-                </div>
-            )}
-
-            {!loading && (
-                <FilterableTable<AdminIssueRow>
-                    keyField="id"
-                    columns={columns}
-                    data={rows}
-                    display={{
-                        emptyMessage: "No hay incidencias que coincidan con los filtros",
-                    }}
-                    features={{
-                        enableFilters: true,
-                        enablePagination: true,
-                    }}
-                />
-            )}
+            <FilterableTable<AdminIssueRow>
+                keyField="id"
+                columns={columns}
+                display={{
+                    emptyMessage: "No hay incidencias que coincidan con los filtros",
+                    loadingMessage: "Cargando incidencias...",
+                }}
+                features={{
+                    enableFilters: true,
+                    enablePagination: true,
+                }}
+                serverSide={{ fetchData: fetchIssuesData }}
+            />
         </main>
     );
-}
-
-async function fetchAllOrders(): Promise<Order[]> {
-    const size = 200;
-    let page = 0;
-    let totalPages = 1;
-    const orders: Order[] = [];
-
-    while (page < totalPages) {
-        const response = await orderService.getAllOrders(page, size);
-        orders.push(...response.content);
-        totalPages = response.page.totalPages;
-        page += 1;
-    }
-
-    return orders;
 }
 
 

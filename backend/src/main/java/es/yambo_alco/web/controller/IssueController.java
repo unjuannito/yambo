@@ -16,11 +16,15 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -65,6 +69,38 @@ public class IssueController {
         List<IssueComment> comments = issueService.getIssueComments(issueId);
 
         return ResponseEntity.ok(new IssueDetailResponse(issue, comments, relatedProducts));
+    }
+
+    @GetMapping
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
+    public ResponseEntity<Page<IssueListResponse>> listIssues(
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) List<IssueStatus> status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            Pageable pageable) {
+        Page<Issue> issues = issueService.listIssues(userId, status, startDate, endDate, pageable);
+        Page<IssueListResponse> response = issues.map(issue -> {
+            List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
+            return new IssueListResponse(issue, relatedProducts);
+        });
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<IssueListResponse>> getMyIssues(
+            @RequestParam(required = false) List<IssueStatus> status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            Pageable pageable) {
+        User currentUser = authService.getCurrentUser(true);
+        Page<Issue> issues = issueService.listIssues(currentUser.getId(), status, startDate, endDate, pageable);
+        Page<IssueListResponse> response = issues.map(issue -> {
+            List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
+            return new IssueListResponse(issue, relatedProducts);
+        });
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/order/{orderId}")
@@ -246,6 +282,51 @@ public class IssueController {
             this.status = comment.getStatus();
             this.text = comment.getText();
             this.createdAt = comment.getCreatedAt().toString();
+        }
+    }
+
+    @Data
+    public static class IssueListResponse {
+        private String id;
+        private UUID orderedProductId;
+        private List<UUID> orderedProductIds;
+        private String title;
+        private String description;
+        private IssueStatus status;
+        private String createdBy;
+        private String createdAt;
+        private String updatedAt;
+        private String orderId;
+        private String productName;
+        private String customerName;
+
+        public IssueListResponse(Issue issue, List<OrderProduct> relatedProducts) {
+            this.id = issue.getId();
+            this.orderedProductId = issue.getOrderedProductId();
+            this.orderedProductIds = relatedProducts.isEmpty()
+                    ? List.of(issue.getOrderedProductId())
+                    : relatedProducts.stream().map(OrderProduct::getId).toList();
+            this.title = issue.getTitle();
+            this.description = issue.getDescription();
+            this.status = issue.getStatus();
+            this.createdBy = issue.getCreatedBy();
+            this.createdAt = issue.getCreatedAt().toString();
+            this.updatedAt = issue.getUpdatedAt().toString();
+
+            if (!relatedProducts.isEmpty()) {
+                OrderProduct firstProduct = relatedProducts.get(0);
+                this.orderId = firstProduct.getOrderId();
+                this.productName = firstProduct.getProduct() != null
+                        ? firstProduct.getProduct().getName()
+                        : null;
+                if (firstProduct.getOrder() != null && firstProduct.getOrder().getCustomerId() != null) {
+                    this.customerName = firstProduct.getOrder().getCustomerId();
+                }
+            }
+
+            if (issue.getCreatedByUser() != null) {
+                this.customerName = issue.getCreatedByUser().getName();
+            }
         }
     }
 }

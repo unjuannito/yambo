@@ -377,28 +377,28 @@ class NominativeInvitationServiceTest {
                 .used(true)
                 .build();
 
-        when(nominativeInvitationRepository.findAll()).thenReturn(List.of(invitation1, invitation2));
+        when(nominativeInvitationRepository.findByCreatedAtGreaterThanEqual(any())).thenReturn(List.of(invitation1, invitation2));
 
         // When
-        List<NominativeInvitation> result = nominativeInvitationService.getAllInvitations();
+        List<NominativeInvitation> result = nominativeInvitationService.getInvitationsSince(now.minusDays(30));
 
         // Then
         assertThat(result).hasSize(2);
         assertThat(result).containsExactlyInAnyOrder(invitation1, invitation2);
-        verify(nominativeInvitationRepository).findAll();
+        verify(nominativeInvitationRepository).findByCreatedAtGreaterThanEqual(any());
     }
 
     @Test
     void getAllInvitations_WithNoInvitations_ShouldReturnEmptyList() {
         // Given
-        when(nominativeInvitationRepository.findAll()).thenReturn(List.of());
+        when(nominativeInvitationRepository.findByCreatedAtGreaterThanEqual(any())).thenReturn(List.of());
 
         // When
-        List<NominativeInvitation> result = nominativeInvitationService.getAllInvitations();
+        List<NominativeInvitation> result = nominativeInvitationService.getInvitationsSince(LocalDateTime.now().minusDays(30));
 
         // Then
         assertThat(result).isEmpty();
-        verify(nominativeInvitationRepository).findAll();
+        verify(nominativeInvitationRepository).findByCreatedAtGreaterThanEqual(any());
     }
 
     @Test

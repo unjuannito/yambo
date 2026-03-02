@@ -244,15 +244,16 @@ class OrderControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
-        when(orderService.getOrdersByCustomer("USER001")).thenReturn(List.of(order));
+        when(orderService.listOrders(eq("USER001"), eq(null), eq(null), eq(null), any()))
+                .thenReturn(new PageImpl<>(List.of(order), PageRequest.of(0, 20), 1));
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 
         mockMvc.perform(get("/orders/my"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("ORD001"))
-                .andExpect(jsonPath("$[0].user.id").value("USER001"))
-                .andExpect(jsonPath("$[0].user.name").value("Test User"))
-                .andExpect(jsonPath("$[0].user.email").value("test@example.com"));
+                .andExpect(jsonPath("$.content[0].id").value("ORD001"))
+                .andExpect(jsonPath("$.content[0].user.id").value("USER001"))
+                .andExpect(jsonPath("$.content[0].user.name").value("Test User"))
+                .andExpect(jsonPath("$.content[0].user.email").value("test@example.com"));
     }
 
     @Test

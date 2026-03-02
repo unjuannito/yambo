@@ -12,6 +12,7 @@ import { getErrorMessage } from "~/types/error";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import FileUploader from "~/components/common/FileUploader";
+import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { Route } from "./+types/my-orders";
 import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
@@ -19,6 +20,8 @@ import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge, IssueForm } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
+import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClipboard, faTriangleExclamation, faUpload, faClock } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
@@ -33,6 +36,7 @@ export function meta({}: Route.MetaArgs) {
 export default function MyOrdersPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { activeTab, setActiveTab } = useViewTab("actual");
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [drops, setDrops] = useState<FamilyProduct[]>([]);
@@ -48,27 +52,34 @@ export default function MyOrdersPage() {
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
+  const statusFilterOptions = Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
+    value: key,
+    label: config.label,
+  }));
 
   useEffect(() => {
     if (isAuthenticated()) {
       loadOrders();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeTab]);
 
   const loadOrders = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [ordersData, productsResponse, dropsResponse] = await Promise.all([
-        orderService.getMyOrders(),
+      const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
+      const [ordersResponse, productsResponse, dropsResponse] = await Promise.all([
+        orderService.getMyOrders(0, 200, startDate),
         productService.getAllProducts(0, 200),
         familyProductService.listFamilyProducts(0, 200),
       ]);
-      setOrders(ordersData);
+      setOrders(ordersResponse.content);
       setProducts(productsResponse.content);
       setDrops(dropsResponse.content);
 
-      await loadIssuesForOrders(ordersData);
+      await loadIssuesForOrders(ordersResponse.content);
     } catch (err) {
       setError(getErrorMessage(err, "Error al cargar los pedidos"));
     } finally {
@@ -210,6 +221,24 @@ export default function MyOrdersPage() {
         transitions={ORDER_WORKFLOW_TRANSITIONS}
       />
 
+      <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      <div className="mb-4">
+        <MultiSelectComponent
+          label="Filtrar por estado"
+          options={statusFilterOptions}
+          value={selectedStatuses}
+          placeholder="Todos los estados"
+          onChange={(e) => {
+            const selected = Array.from(
+              (e.target as HTMLSelectElement).selectedOptions,
+              (opt) => opt.value
+            );
+            setSelectedStatuses(selected);
+          }}
+        />
+      </div>
+
       {isLoading && (
         <div className="text-center py-12">
           <LoadingSpinner size="lg" message="Cargando pedidos..." />
@@ -239,7 +268,9 @@ export default function MyOrdersPage() {
 
       {!isLoading && !error && orders.length > 0 && (
         <div className="grid gap-4">
-          {orders.map((order) => (
+          {orders
+            .filter((order) => selectedStatuses.length === 0 || selectedStatuses.includes(order.status))
+            .map((order) => (
             <div key={order.id} className="bg-white rounded-lg shadow-md p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>

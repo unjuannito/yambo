@@ -24,9 +24,12 @@ export interface CreateNominativeInvitationRequest {
 }
 
 export class NominativeInvitationService extends ApiService {
-    public async getAllInvitations(): Promise<NominativeInvitation[]> {
+    public async getAllInvitations(startDate?: string): Promise<NominativeInvitation[]> {
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        const query = params.toString();
         return await this.get<NominativeInvitation[]>(
-            "/nominative-invitations",
+            `/nominative-invitations${query ? `?${query}` : ''}`,
         );
     }
 

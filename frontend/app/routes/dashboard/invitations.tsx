@@ -5,8 +5,8 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { DataTable } from "~/components/common/DataTable";
-import type { TableColumn } from "~/components/common/DataTable";
+import { FilterableTable } from "~/components/common/FilterableTable";
+import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import { profileService } from "~/services/profileService";
 import {
@@ -15,6 +15,8 @@ import {
 } from "~/services/invitationService";
 import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
+import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 
 export function meta() {
@@ -39,14 +41,16 @@ export default function Invitations() {
     const [lastInvitation, setLastInvitation] =
         useState<Invitation | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const { activeTab, setActiveTab } = useViewTab("actual");
 
     const loadProfiles = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
+            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const [profilesResponse, invitationsResponse] = await Promise.all([
                 profileService.getAllProfiles(),
-                invitationService.listInvitations(),
+                invitationService.listInvitations(startDate),
             ]);
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
@@ -55,7 +59,7 @@ export default function Invitations() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeTab]);
 
     useEffect(() => {
         void loadProfiles();
@@ -104,8 +108,9 @@ export default function Invitations() {
             setEndTms("");
             setIsModalOpen(false);
             toast.success("Invitación creada correctamente");
+            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const updated =
-                await invitationService.listInvitations();
+                await invitationService.listInvitations(startDate);
             setInvitations(updated);
         } catch (err) {
             toast.error(getErrorMessage(err, "No se pudo crear la invitación"));
@@ -114,7 +119,7 @@ export default function Invitations() {
         }
     };
 
-    const columns: TableColumn<Invitation>[] = useMemo(
+    const columns: FilterableColumn<Invitation & { computedStatus: string }>[] = useMemo(
         () => [
             {
                 key: "token",
@@ -126,7 +131,7 @@ export default function Invitations() {
                 ),
             },
             {
-                key: "invitationLink",
+                key: "invitationLink" as any,
                 header: "Link de registro",
                 render: (invitation) => {
                     const link = `${baseUrl}/register?invite=${invitation.token}`;
@@ -177,6 +182,12 @@ export default function Invitations() {
             {
                 key: "profileIds",
                 header: "Perfiles",
+                filter: {
+                    enabled: true,
+                    type: "multi-select",
+                    placeholder: "Filtrar perfiles...",
+                    options: profileOptions,
+                },
                 render: (invitation) => {
                     const names = invitation.profileIds
                         .map(
@@ -193,28 +204,28 @@ export default function Invitations() {
                 },
             },
             {
-                key: "createdAt",
+                key: "computedStatus",
                 header: "Estado",
+                filter: {
+                    enabled: true,
+                    type: "multi-select",
+                    placeholder: "Filtrar estado...",
+                    options: [
+                        { value: "Activa", label: "Activa" },
+                        { value: "Pendiente", label: "Pendiente" },
+                        { value: "Expirada", label: "Expirada" },
+                    ],
+                },
                 render: (invitation) => {
-                    const now = new Date();
-                    const start = new Date(invitation.startTms);
-                    const end = invitation.expiresAt
-                        ? new Date(invitation.expiresAt)
-                        : null;
-                    let label = "Activa";
+                    const status = invitation.computedStatus;
                     let cls = "bg-green-100 text-green-700";
-                    if (now < start) {
-                        label = "Pendiente";
-                        cls = "bg-yellow-100 text-yellow-700";
-                    } else if (end && now > end) {
-                        label = "Expirada";
-                        cls = "bg-gray-100 text-gray-700";
-                    }
+                    if (status === "Pendiente") cls = "bg-yellow-100 text-yellow-700";
+                    else if (status === "Expirada") cls = "bg-gray-100 text-gray-700";
                     return (
                         <span
                             className={`px-2 py-1 text-xs rounded-full ${cls}`}
                         >
-                            {label}
+                            {status}
                         </span>
                     );
                 },
@@ -232,8 +243,9 @@ export default function Invitations() {
                                 await invitationService.disableInvitation(
                                     invitation.id,
                                 );
+                                const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
                                 const updated =
-                                    await invitationService.listInvitations();
+                                    await invitationService.listInvitations(startDate);
                                 setInvitations(updated);
                                 toast.success("Invitación deshabilitada");
                             } catch (err) {
@@ -248,8 +260,20 @@ export default function Invitations() {
                 ),
             },
         ],
-        [profiles],
+        [profiles, profileOptions],
     );
+
+    const enrichedInvitations = useMemo(() => {
+        const now = new Date();
+        return invitations.map((inv) => {
+            const start = new Date(inv.startTms);
+            const end = inv.expiresAt ? new Date(inv.expiresAt) : null;
+            let computedStatus = "Activa";
+            if (now < start) computedStatus = "Pendiente";
+            else if (end && now > end) computedStatus = "Expirada";
+            return { ...inv, computedStatus };
+        });
+    }, [invitations]);
 
     return (
         <RequirePermission
@@ -276,6 +300,8 @@ export default function Invitations() {
                     )}
                 </div>
 
+                <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner
@@ -296,17 +322,18 @@ export default function Invitations() {
                         <h2 className="text-lg font-semibold mb-4">
                             Invitaciones creadas
                         </h2>
-                        {invitations.length === 0 ? (
-                            <p className="text-sm text-gray-500">
-                                No hay invitaciones todavía
-                            </p>
-                        ) : (
-                            <DataTable
-                                columns={columns}
-                                data={invitations}
-                                keyField="id"
-                            />
-                        )}
+                        <FilterableTable
+                            columns={columns}
+                            data={enrichedInvitations}
+                            keyField="id"
+                            display={{
+                                emptyMessage: "No hay invitaciones que coincidan con los filtros",
+                            }}
+                            features={{
+                                enableFilters: true,
+                                enablePagination: true,
+                            }}
+                        />
                     </section>
                 )}
 

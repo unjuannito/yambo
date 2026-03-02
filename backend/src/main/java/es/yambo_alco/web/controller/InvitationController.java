@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,8 +43,9 @@ public class InvitationController {
 
         @GetMapping
         @PreAuthorize("@permissionCheck.hasPermission('invitation', 'read')")
-        public ResponseEntity<java.util.List<InvitationResponse>> listInvitations() {
-        java.util.List<Invitation> invitations = invitationService.getAllInvitations();
+        public ResponseEntity<java.util.List<InvitationResponse>> listInvitations(
+                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate) {
+        java.util.List<Invitation> invitations = invitationService.getInvitationsSince(startDate);
         java.util.List<InvitationResponse> response = invitations.stream()
             .map(InvitationResponse::new)
             .collect(Collectors.toList());

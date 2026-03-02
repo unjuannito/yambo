@@ -9,9 +9,13 @@ import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import es.yambo_alco.web.repository.spec.IssueSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -117,6 +121,16 @@ public class IssueService {
     @Transactional(readOnly = true)
     public List<Issue> getIssuesByOrderId(String orderId) {
         return issueRepository.findByOrderId(orderId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Issue> listIssues(String userId, List<IssueStatus> statuses,
+                                   LocalDateTime startDate, LocalDateTime endDate,
+                                   Pageable pageable) {
+        Specification<Issue> spec = Specification.where(IssueSpecifications.createdByEquals(userId))
+                .and(IssueSpecifications.statusIn(statuses))
+                .and(IssueSpecifications.createdBetween(startDate, endDate));
+        return issueRepository.findAll(spec, pageable);
     }
 
     @Transactional

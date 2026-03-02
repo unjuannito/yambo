@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Route } from "./+types/nominative-invitations";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { DataTable } from "~/components/common/DataTable";
-import type { TableColumn } from "~/components/common/DataTable";
+import { FilterableTable } from "~/components/common/FilterableTable";
+import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -16,6 +16,8 @@ import type {
 import { profileService } from "~/services/profileService";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
+import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
@@ -34,6 +36,7 @@ export default function NominativeInvitations() {
     const [profileOptions, setProfileOptions] = useState<
         { value: string; label: string }[]
     >([]);
+    const { activeTab, setActiveTab } = useViewTab("actual");
     const [form, setForm] = useState<CreateNominativeInvitationRequest>({
         email: "",
         name: "",
@@ -44,8 +47,9 @@ export default function NominativeInvitations() {
         try {
             setLoading(true);
             setError(null);
+            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const [invData, profiles] = await Promise.all([
-                nominativeInvitationService.getAllInvitations(),
+                nominativeInvitationService.getAllInvitations(startDate),
                 profileService.getAllProfiles(),
             ]);
             setInvitations(invData);
@@ -59,7 +63,7 @@ export default function NominativeInvitations() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeTab]);
 
     useEffect(() => {
         void fetchData();
@@ -107,30 +111,35 @@ export default function NominativeInvitations() {
         }
     };
 
-    const invitationColumns: TableColumn<NominativeInvitation>[] = [
+    const invitationColumns: FilterableColumn<NominativeInvitation & { usedLabel: string }>[] = [
         {
             key: "id",
             header: "ID",
-            render: (invitation: NominativeInvitation) => (
+            render: (invitation) => (
                 <span className="font-mono text-xs">{invitation.id}</span>
             ),
         },
         {
             key: "email",
             header: "Email",
-            render: (invitation: NominativeInvitation) => <span>{invitation.email}</span>,
+            filter: {
+                enabled: true,
+                type: "text",
+                placeholder: "Buscar email...",
+            },
+            render: (invitation) => <span>{invitation.email}</span>,
         },
         {
-            key: "invitedByUser",
+            key: "invitedByUser" as any,
             header: "Invitado por",
-            render: (invitation: NominativeInvitation) => (
+            render: (invitation) => (
                 <span>{invitation.invitedByUser?.name || "N/A"}</span>
             ),
         },
         {
             key: "createdAt",
             header: "Creado",
-            render: (invitation: NominativeInvitation) => (
+            render: (invitation) => (
                 <span>
                     {new Date(invitation.createdAt).toLocaleDateString()}
                 </span>
@@ -139,16 +148,26 @@ export default function NominativeInvitations() {
         {
             key: "expiresAt",
             header: "Expira",
-            render: (invitation: NominativeInvitation) => (
+            render: (invitation) => (
                 <span>
                     {new Date(invitation.expiresAt).toLocaleDateString()}
                 </span>
             ),
         },
         {
-            key: "used",
+            key: "usedLabel",
             header: "Usado",
-            render: (invitation: NominativeInvitation) => (
+            filter: {
+                enabled: true,
+                type: "select",
+                placeholder: "Todos",
+                options: [
+                    { value: "", label: "Todos" },
+                    { value: "Sí", label: "Sí" },
+                    { value: "No", label: "No" },
+                ],
+            },
+            render: (invitation) => (
                 <span
                     className={
                         invitation.used ? "text-green-600" : "text-red-600"
@@ -159,9 +178,9 @@ export default function NominativeInvitations() {
             ),
         },
         {
-            key: "actions",
+            key: "actions" as any,
             header: "Acciones",
-            render: (invitation: NominativeInvitation) => (
+            render: (invitation) => (
                 <ButtonComponent
                     variant="destructive"
                     size="sm"
@@ -173,6 +192,11 @@ export default function NominativeInvitations() {
             ),
         },
     ];
+
+    const enrichedInvitations = useMemo(
+        () => invitations.map((inv) => ({ ...inv, usedLabel: inv.used ? "Sí" : "No" })),
+        [invitations],
+    );
 
     return (
         <RequirePermission
@@ -195,6 +219,8 @@ export default function NominativeInvitations() {
                     </RequirePermission>
                 </div>
 
+                <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
                 <section className="bg-white rounded-lg shadow p-6">
                     {loading ? (
                         <div className="flex justify-center py-8">
@@ -203,10 +229,17 @@ export default function NominativeInvitations() {
                     ) : error ? (
                         <ErrorMessage message={error} onRetry={fetchData} />
                     ) : (
-                        <DataTable
+                        <FilterableTable
                             columns={invitationColumns}
-                            data={invitations}
+                            data={enrichedInvitations}
                             keyField="id"
+                            display={{
+                                emptyMessage: "No hay invitaciones que coincidan con los filtros",
+                            }}
+                            features={{
+                                enableFilters: true,
+                                enablePagination: true,
+                            }}
                         />
                     )}
                 </section>

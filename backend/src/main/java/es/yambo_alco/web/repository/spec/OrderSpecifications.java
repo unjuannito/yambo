@@ -5,6 +5,7 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class OrderSpecifications {
 
@@ -16,6 +17,10 @@ public final class OrderSpecifications {
 
     public static Specification<Order> statusEquals(OrderStatus status) {
         return (root, query, cb) -> status == null ? null : cb.equal(root.get("status"), status);
+    }
+
+    public static Specification<Order> statusIn(List<OrderStatus> statuses) {
+        return (root, query, cb) -> (statuses == null || statuses.isEmpty()) ? null : root.get("status").in(statuses);
     }
 
     public static Specification<Order> createdAfter(LocalDateTime startDate) {

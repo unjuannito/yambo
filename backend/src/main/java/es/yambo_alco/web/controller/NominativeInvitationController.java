@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.UserRepository;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -68,8 +69,9 @@ public class NominativeInvitationController {
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('invitation', 'read')")
-    public ResponseEntity<List<NominativeInvitationResponse>> getAllInvitations() {
-        List<NominativeInvitation> invitations = nominativeInvitationService.getAllInvitations();
+    public ResponseEntity<List<NominativeInvitationResponse>> getAllInvitations(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate) {
+        List<NominativeInvitation> invitations = nominativeInvitationService.getInvitationsSince(startDate);
         List<NominativeInvitationResponse> response = invitations.stream()
                 .map(inv -> buildInvitationResponse(inv))
                 .collect(Collectors.toList());

@@ -120,7 +120,7 @@ class InvitationControllerTest {
             .profiles(Set.of(Profile.builder().id("BASIC").build()))
                 .build();
 
-        when(invitationService.getAllInvitations()).thenReturn(java.util.List.of(invitation));
+        when(invitationService.getInvitationsSince(any())).thenReturn(java.util.List.of(invitation));
 
         mockMvc.perform(get("/invitations"))
                 .andExpect(status().isOk())

@@ -35,8 +35,11 @@ export class InvitationService extends ApiService {
     return await this.post('/invitations', request);
   }
 
-  public async listInvitations(): Promise<Invitation[]> {
-    return await this.get('/invitations');
+  public async listInvitations(startDate?: string): Promise<Invitation[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    const query = params.toString();
+    return await this.get(`/invitations${query ? `?${query}` : ''}`);
   }
 
   public async disableInvitation(id: number): Promise<Invitation> {

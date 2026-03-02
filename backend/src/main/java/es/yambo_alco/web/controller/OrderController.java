@@ -65,7 +65,7 @@ public class OrderController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<OrderResponse>> listOrders(
             @RequestParam(required = false) String customerId,
-            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) List<OrderStatus> status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
@@ -104,16 +104,18 @@ public class OrderController {
 
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<OrderResponse>> getMyOrders() {
+    public ResponseEntity<Page<OrderResponse>> getMyOrders(
+            @RequestParam(required = false) List<OrderStatus> status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            Pageable pageable) {
         User user = authService.getCurrentUser(true);
 
-        List<Order> orders = orderService.getOrdersByCustomer(user.getId());
-        List<OrderResponse> response = orders.stream()
-                .map(order -> {
-                    List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-                    return new OrderResponse(order, products, userRepository, productRepository, orderService);
-                })
-                .collect(Collectors.toList());
+        Page<Order> orders = orderService.listOrders(user.getId(), status, startDate, endDate, pageable);
+        Page<OrderResponse> response = orders.map(order -> {
+            List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+            return new OrderResponse(order, products, userRepository, productRepository, orderService);
+        });
         return ResponseEntity.ok(response);
     }
 

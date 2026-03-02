@@ -125,6 +125,13 @@ public class InvitationService {
         return invitationRepository.findAll();
     }
 
+    public java.util.List<Invitation> getInvitationsSince(java.time.LocalDateTime startDate) {
+        if (startDate == null) {
+            return invitationRepository.findAll();
+        }
+        return invitationRepository.findByCreatedAtGreaterThanEqual(startDate);
+    }
+
     @Transactional
     public Invitation disableInvitation(Long id) {
         Invitation invitation = invitationRepository.findById(id)

@@ -136,7 +136,7 @@ class NominativeInvitationControllerTest {
                 .invitedBy("U0000002")
                 .build();
 
-        when(nominativeInvitationService.getAllInvitations()).thenReturn(List.of(invitation1, invitation2));
+        when(nominativeInvitationService.getInvitationsSince(any())).thenReturn(List.of(invitation1, invitation2));
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(inviter));
 
         // When & Then
@@ -155,14 +155,14 @@ class NominativeInvitationControllerTest {
                 .andExpect(jsonPath("$[1].email").value("user2@example.com"))
                 .andExpect(jsonPath("$[1].used").value(true));
 
-        verify(nominativeInvitationService, times(1)).getAllInvitations();
+        verify(nominativeInvitationService, times(1)).getInvitationsSince(any());
     }
 
     @Test
     @WithMockUser(authorities = "INVITE_USERS")
     void getAllInvitations_WithNoInvitations_ShouldReturnEmptyList() throws Exception {
         // Given
-        when(nominativeInvitationService.getAllInvitations()).thenReturn(List.of());
+        when(nominativeInvitationService.getInvitationsSince(any())).thenReturn(List.of());
 
         // When & Then
         mvc.perform(get("/nominative-invitations")
@@ -171,7 +171,7 @@ class NominativeInvitationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
 
-        verify(nominativeInvitationService, times(1)).getAllInvitations();
+        verify(nominativeInvitationService, times(1)).getInvitationsSince(any());
     }
 
     @Test
@@ -193,7 +193,7 @@ class NominativeInvitationControllerTest {
                 .invitedBy("U0000005")
                 .build();
 
-        when(nominativeInvitationService.getAllInvitations()).thenReturn(List.of(invitation));
+        when(nominativeInvitationService.getInvitationsSince(any())).thenReturn(List.of(invitation));
         when(userRepository.findById("U0000005")).thenReturn(Optional.of(inviter));
 
         // When & Then

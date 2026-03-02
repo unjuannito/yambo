@@ -170,7 +170,7 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
-    public Page<Order> listOrders(String customerId, OrderStatus status,
+    public Page<Order> listOrders(String customerId, List<OrderStatus> statuses,
             LocalDateTime startDate, LocalDateTime endDate,
             @NonNull Pageable pageable) {
         Specification<Order> spec = Specification.where(null);
@@ -178,8 +178,8 @@ public class OrderService {
         if (customerId != null) {
             spec = spec.and(OrderSpecifications.customerIdEquals(customerId));
         }
-        if (status != null) {
-            spec = spec.and(OrderSpecifications.statusEquals(status));
+        if (statuses != null && !statuses.isEmpty()) {
+            spec = spec.and(OrderSpecifications.statusIn(statuses));
         }
         if (startDate != null || endDate != null) {
             spec = spec.and(OrderSpecifications.createdBetween(startDate, endDate));

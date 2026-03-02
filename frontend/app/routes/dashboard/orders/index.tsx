@@ -7,6 +7,8 @@ import type {
     FilterableColumn,
     FetchDataParams,
 } from "~/components/common/FilterableTable";
+import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
@@ -36,6 +38,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Orders() {
     const navigate = useNavigate();
+    const { activeTab, setActiveTab } = useViewTab("actual");
     const [refreshKey, setRefreshKey] = useState(0);
     const [isExporting, setIsExporting] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -51,13 +54,12 @@ export default function Orders() {
     const [isCanceling, setIsCanceling] = useState(false);
     const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
 
-    const [statusOptions] = useState([
-        { value: "", label: "Todos" },
-        ...Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
+    const [statusOptions] = useState(
+        Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
             value: key,
             label: config.label,
         })),
-    ]);
+    );
 
     useEffect(() => {
         const loadData = async () => {
@@ -108,17 +110,22 @@ export default function Orders() {
     }, [selectedOrder]);
     const fetchOrdersData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
+            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
+            const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
+                ? filters.status as string[]
+                : undefined;
             const result = await orderService.getAllOrders(
                 page,
                 size,
                 filters.customerId,
-                filters.status,
+                statusFilter,
+                startDate,
             );
             setAllOrdersOnPage(result.content);
             setSelectedOrders([]); // Clear selections when data changes
             return result;
         },
-        [refreshKey],
+        [refreshKey, activeTab],
     );
 
     const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -284,8 +291,8 @@ export default function Orders() {
             header: "Estado",
             filter: {
                 enabled: true,
-                type: "select",
-                placeholder: "Seleccionar estado...",
+                type: "multi-select",
+                placeholder: "Filtrar estados...",
                 options: statusOptions,
             },
             render: (order: Order) => {
@@ -440,6 +447,8 @@ export default function Orders() {
                     config={ORDER_STATUS_CONFIG}
                     transitions={ORDER_WORKFLOW_TRANSITIONS}
                 />
+
+                <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 
                 {/* Bulk Actions Toolbar */}
                 {selectedOrders.length > 0 && (
