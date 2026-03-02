@@ -131,8 +131,8 @@ export default function CartPage() {
   if (showPaymentInstructions && completedOrderId) {
     return (
       <>
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+        <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
+          <div className="bg-white rounded-lg shadow-md p-8 sm:p-12 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Procesando pedido...</h2>
           </div>
         </main>
@@ -147,8 +147,8 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+      <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
+        <div className="bg-white rounded-lg shadow-md p-8 sm:p-12 text-center">
           <FontAwesomeIcon
             icon={faBagShopping}
             className="w-24 h-24 mx-auto mb-4 text-gray-400"
@@ -164,7 +164,7 @@ export default function CartPage() {
   }
 
   return (
-    <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+    <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
       <div className="mb-6">
         <button
           onClick={() => navigate("/mi-espacio/merch")}
@@ -176,7 +176,7 @@ export default function CartPage() {
 
       <h1 className="text-3xl font-bold mb-6">Tu Cesta</h1>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Items List */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => {
@@ -187,26 +187,34 @@ export default function CartPage() {
               : null;
 
             return (
-              <div key={`${item.product.id}-${configKey}`} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex gap-6">
+              <div key={`${item.product.id}-${configKey}`} className="bg-white rounded-lg shadow-md p-3 sm:p-6">
+                <div className="flex gap-3 sm:gap-6">
                   {/* Image */}
                   <div className="flex-shrink-0">
                     {item.product.images && item.product.images.length > 0 ? (
                       <img
                         src={item.product.images[0]}
                         alt={item.product.name}
-                        className="w-32 h-32 object-cover rounded-lg"
+                        className="w-20 h-20 sm:w-32 sm:h-32 object-cover rounded-lg"
                       />
                     ) : (
-                      <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500 text-sm">Sin imagen</span>
+                      <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-500 text-xs sm:text-sm">Sin imagen</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Details */}
+                  {/* Details + Subtotal */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.product.name}</h3>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">{item.product.name}</h3>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-xs text-gray-500">Subtotal</p>
+                        <p className="text-base sm:text-xl font-bold text-gray-900 whitespace-nowrap">
+                          {(item.price * item.quantity).toFixed(2)} €
+                        </p>
+                      </div>
+                    </div>
 
                     {itemDrop && (
                       <div className="mb-2">
@@ -226,25 +234,25 @@ export default function CartPage() {
                     )}
 
                     {configText && (
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-xs sm:text-sm text-gray-600 mb-2">
                         <span className="font-medium">Configuración:</span> {configText}
                       </p>
                     )}
 
-                    <p className="text-lg font-bold text-blue-600 mb-4">{item.price.toFixed(2)} €</p>
+                    <p className="text-sm sm:text-lg font-bold text-blue-600 mb-3 sm:mb-4">{item.price.toFixed(2)} €</p>
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <button
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity - 1)}
-                          className="w-8 h-8 rounded border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded border border-gray-300 hover:bg-gray-100 flex items-center justify-center text-sm"
                         >
                           −
                         </button>
-                        <span className="w-12 text-center font-medium">{item.quantity}</span>
+                        <span className="w-8 sm:w-12 text-center font-medium text-sm sm:text-base">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity + 1)}
-                          className="w-8 h-8 rounded border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded border border-gray-300 hover:bg-gray-100 flex items-center justify-center text-sm"
                         >
                           +
                         </button>
@@ -252,19 +260,11 @@ export default function CartPage() {
 
                       <button
                         onClick={() => removeItem(item.product.id, configKey)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium"
                       >
                         Eliminar
                       </button>
                     </div>
-                  </div>
-
-                  {/* Subtotal */}
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 mb-1">Subtotal</p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {(item.price * item.quantity).toFixed(2)} €
-                    </p>
                   </div>
                 </div>
               </div>

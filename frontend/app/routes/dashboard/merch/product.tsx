@@ -210,7 +210,7 @@ export default function ProductPage() {
 
     if (loading) {
         return (
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-center py-12">
                     <LoadingSpinner size="lg" message="Cargando producto..." />
                 </div>
@@ -220,7 +220,7 @@ export default function ProductPage() {
 
     if (error || !product) {
         return (
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <h1 className="text-3xl font-bold mb-6">Producto no encontrado</h1>
                 <ErrorMessage message={error || "Producto no disponible"} className="mb-4" />
                 <div>
@@ -236,7 +236,7 @@ export default function ProductPage() {
     }
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+        <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
             <div className="mb-6">
                 <ButtonComponent
                     onClick={() => navigate("/mi-espacio/merch")}
@@ -247,9 +247,9 @@ export default function ProductPage() {
                 </ButtonComponent>
             </div>
 
-            <div className="grid lg:grid-cols-4 gap-6">
+            <div className="grid lg:grid-cols-4 gap-4 sm:gap-6">
                 <div className="lg:col-span-1">
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
                         <h2 className="text-xl font-semibold mb-4">Imágenes del producto</h2>
                         {product.images && product.images.length > 0 ? (
                             <div className="space-y-4">
@@ -281,9 +281,9 @@ export default function ProductPage() {
                     </div>
                 </div>
 
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <div className="flex items-baseline justify-between gap-4 mb-4">
+                <div className="lg:col-span-2 min-w-0 space-y-4 sm:space-y-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 overflow-hidden">
+                        <div className="flex items-baseline justify-between gap-2 sm:gap-4 mb-4">
                             <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
                             <span className="text-2xl font-bold text-blue-600">{product.basePrice.toFixed(2)}€</span>
                         </div>
@@ -326,7 +326,7 @@ export default function ProductPage() {
                 </div>
 
                 <div className="lg:sticky lg:top-8 h-fit">
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
                         <h2 className="text-xl font-semibold mb-6">Resumen del pedido</h2>
                         <div className="space-y-3">
                             <div className="flex justify-between text-sm">
