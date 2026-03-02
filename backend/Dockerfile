@@ -14,4 +14,5 @@ VOLUME /tmp
 RUN mkdir -p /data/uploads
 COPY --from=build /workspace/app/target/*.jar app.jar
 ENV UPLOAD_DIR=/data/uploads
+ENV TZ=Europe/Madrid
 ENTRYPOINT ["java","-jar","/app.jar"]

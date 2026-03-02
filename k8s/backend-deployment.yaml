@@ -73,6 +73,8 @@ spec:
                   key: MAIL_FROM
             - name: UPLOAD_DIR
               value: "/data/uploads"
+            - name: TZ
+              value: "Europe/Madrid"
           volumeMounts:
             - name: uploads-storage
               mountPath: /data/uploads

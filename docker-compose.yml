@@ -34,6 +34,7 @@ services:
       MAIL_FROM: ${MAIL_FROM:-noreply@yambo-alco.es}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Yambo}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      TZ: Europe/Madrid
     ports:
       - "8080:8080"
     depends_on:
