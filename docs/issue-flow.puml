@@ -1,0 +1,30 @@
+@startuml issue-flow
+!theme plain
+skinparam backgroundColor transparent
+skinparam defaultFontName "Segoe UI, Arial, sans-serif"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 10
+
+skinparam state {
+  BackgroundColor #CCE5FF
+  BorderColor #0D6EFD
+  FontColor #212529
+}
+
+title Flujo de estados — Incidencias
+
+[*] --> OPEN : Incidencia creada
+
+OPEN --> IN_PROGRESS : En revisión
+IN_PROGRESS --> RESOLVED : Resuelta
+IN_PROGRESS --> REOPENED : Reabierta
+RESOLVED --> CLOSED : Cerrada
+REOPENED --> IN_PROGRESS : En revisión
+
+CLOSED --> [*]
+
+state CLOSED #D4EDDA
+state REOPENED #FFF3CD
+
+@enduml
