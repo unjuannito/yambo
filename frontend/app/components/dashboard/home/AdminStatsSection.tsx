@@ -18,12 +18,14 @@ export default function AdminStatsSection({ data }: AdminStatsSectionProps) {
 
     if (!hasAnyAdminPerm) return null;
 
+    const activities = data.recentActivities ?? [];
+
     const counts: Record<string, number> = {
-        totalUsers: data.totalUsers,
-        totalOrders: data.totalOrders,
-        totalProjects: data.totalProjects,
-        totalProducts: data.totalProducts,
-        activities: data.recentActivities.length,
+        totalUsers: data.totalUsers ?? 0,
+        totalOrders: data.totalOrders ?? 0,
+        totalProjects: data.totalProjects ?? 0,
+        totalProducts: data.totalProducts ?? 0,
+        activities: activities.length,
     };
 
     return (
@@ -40,8 +42,8 @@ export default function AdminStatsSection({ data }: AdminStatsSectionProps) {
                         title="Resumen de la plataforma"
                     />
 
-                    {data.recentActivities.length > 0 && (
-                        <RecentActivitiesList activities={data.recentActivities} />
+                    {activities.length > 0 && (
+                        <RecentActivitiesList activities={activities} />
                     )}
                 </div>
             </div>

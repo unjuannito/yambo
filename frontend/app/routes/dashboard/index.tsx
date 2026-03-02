@@ -26,7 +26,7 @@ export default function AreaSociosIndex() {
 
     const personalCounts: Record<string, number> = {
         myOrders: personal.totalOrders,
-        issues: 0,
+        issues: personal.totalIssues,
         merch: 0,
     };
 

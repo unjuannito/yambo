@@ -5,10 +5,10 @@ import {
     faCircleExclamation,
 } from "@fortawesome/free-solid-svg-icons";
 import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
-import type { Order } from "~/services/orderService";
+import type { DashboardOrder } from "~/hooks/useDashboardData";
 
 interface RecentOrdersListProps {
-    orders: Order[];
+    orders: DashboardOrder[];
 }
 
 function formatDate(dateString: string): string {
