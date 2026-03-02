@@ -108,6 +108,7 @@ export function FilterableTable<T>({
         serverSide?.initialFilters ?? EMPTY_FILTERS
     );
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const skipNextFetchRef = useRef(false);
 
@@ -164,11 +165,11 @@ export function FilterableTable<T>({
     const handleLoadMore = useCallback(async () => {
         if (isServerSide) {
             if (!serverSide?.fetchData) return;
-            if (isLoading) return;
+            if (isLoading || isLoadingMore) return;
             const nextPage = pageInfo.number + 1;
             if (nextPage >= pageInfo.totalPages) return;
 
-            setIsLoading(true);
+            setIsLoadingMore(true);
             setError(null);
             try {
                 const result = await serverSide.fetchData({
@@ -185,7 +186,7 @@ export function FilterableTable<T>({
                 const errorMessage = getErrorMessage(err, "Error al cargar los datos");
                 setError(errorMessage);
             } finally {
-                setIsLoading(false);
+                setIsLoadingMore(false);
             }
         } else {
             setClientPage((prev) => prev + 1);
@@ -193,6 +194,7 @@ export function FilterableTable<T>({
     }, [
         filters,
         isLoading,
+        isLoadingMore,
         isServerSide,
         pageInfo.number,
         pageInfo.size,
@@ -203,8 +205,9 @@ export function FilterableTable<T>({
     const handleFiltersChange = useCallback(
         (newFilters: FilterValues) => {
             if (isServerSide) {
+                setServerData([]);
                 setFilters(newFilters);
-                setPageInfo((prev) => ({ ...prev, page: 0 }));
+                setPageInfo((prev) => ({ ...prev, number: 0 }));
             } else {
                 setClientFilters(newFilters);
                 setClientPage(0);
@@ -298,13 +301,22 @@ export function FilterableTable<T>({
 
     const activeFilters = isServerSide ? filters : clientFilters;
 
+    // Load more helpers
+    const loadMoreInfo = useMemo(() => {
+        if (!enableLoadMore || !isServerSide) return null;
+        const shown = serverData.length;
+        const total = pageInfo.totalElements;
+        const canLoad = pageInfo.number + 1 < pageInfo.totalPages;
+        return { shown, total, canLoad };
+    }, [enableLoadMore, isServerSide, serverData.length, pageInfo]);
+
     // Render content based on view mode
     const renderContent = () => {
-        if (isLoading) {
+        if (isLoading && !isLoadingMore) {
             return <LoadingSpinner message={loadingMessage} size="md" />;
         }
 
-        if (paginatedData.length === 0) {
+        if (paginatedData.length === 0 && !isLoadingMore) {
             return (
                 <div className="text-center py-12">
                     <p className="text-gray-500">{emptyMessage}</p>
@@ -314,7 +326,7 @@ export function FilterableTable<T>({
 
         const canLoadMore =
             enableLoadMore &&
-            displayPageInfo.number + 1 < displayPageInfo.totalPages;
+            (loadMoreInfo?.canLoad ?? (displayPageInfo.number + 1 < displayPageInfo.totalPages));
 
         if (isGridMode && renderGridItem) {
             return (
@@ -337,14 +349,25 @@ export function FilterableTable<T>({
                             onPageChange={handlePageChange}
                         />
                     )}
-                    {canLoadMore && (
-                        <div className="flex justify-center">
+                    {(canLoadMore || isLoadingMore) && (
+                        <div className="flex flex-col items-center gap-2 py-2">
+                            {loadMoreInfo && (
+                                <span className="text-xs text-gray-500">
+                                    Mostrando {loadMoreInfo.shown} de {loadMoreInfo.total}
+                                </span>
+                            )}
                             <button
                                 onClick={handleLoadMore}
-                                disabled={isLoading}
-                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                                disabled={isLoadingMore}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60 flex items-center gap-2"
                             >
-                                {isLoading ? loadingMessage : loadMoreLabel}
+                                {isLoadingMore && (
+                                    <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                )}
+                                {isLoadingMore ? "Cargando..." : loadMoreLabel}
                             </button>
                         </div>
                     )}
@@ -367,14 +390,25 @@ export function FilterableTable<T>({
                         onPageChange={handlePageChange}
                     />
                 )}
-                {canLoadMore && (
-                    <div className="flex justify-center">
+                {(canLoadMore || isLoadingMore) && (
+                    <div className="flex flex-col items-center gap-2 py-2">
+                        {loadMoreInfo && (
+                            <span className="text-xs text-gray-500">
+                                Mostrando {loadMoreInfo.shown} de {loadMoreInfo.total}
+                            </span>
+                        )}
                         <button
                             onClick={handleLoadMore}
-                            disabled={isLoading}
-                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                            disabled={isLoadingMore}
+                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60 flex items-center gap-2"
                         >
-                            {isLoading ? loadingMessage : loadMoreLabel}
+                            {isLoadingMore && (
+                                <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                            )}
+                            {isLoadingMore ? "Cargando..." : loadMoreLabel}
                         </button>
                     </div>
                 )}
