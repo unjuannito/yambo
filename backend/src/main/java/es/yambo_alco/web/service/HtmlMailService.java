@@ -31,6 +31,7 @@ public class HtmlMailService implements MailService {
     private final MailConfig mailConfig;
     private final TemplateEngine templateEngine;
     private final SettingsService settingsService;
+    private final MarkdownService markdownService;
 
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
@@ -148,23 +149,26 @@ public class HtmlMailService implements MailService {
 
     @Override
     public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
-            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+            String productName, String orderId, String createdBy, LocalDateTime createdAt,
+            String description) {
 
         String subject = "Nueva Incidencia #" + issueId + " - " + settingsService.getOrganizationName();
+        String descriptionHtml = markdownService.toSafeHtml(description);
 
         send(to, subject, "emails/issue-created",
-                Map.of(
-                        "userName", userName,
-                        "issueId", issueId,
-                        "issueTitle", issueTitle,
-                        "productName", productName,
-                        "orderId", orderId,
-                        "createdBy", createdBy,
-                        "createdAt", createdAt,
-                        "headerColor", IssueStatus.OPEN.getColor(),
-                        "headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon()),
-                        "issueLink", buildIssueLink(issueId)),
-                buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt));
+                Map.ofEntries(
+                        Map.entry("userName", userName),
+                        Map.entry("issueId", issueId),
+                        Map.entry("issueTitle", issueTitle),
+                        Map.entry("productName", productName),
+                        Map.entry("orderId", orderId),
+                        Map.entry("createdBy", createdBy),
+                        Map.entry("createdAt", createdAt),
+                        Map.entry("descriptionHtml", descriptionHtml),
+                        Map.entry("headerColor", IssueStatus.OPEN.getColor()),
+                        Map.entry("headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon())),
+                        Map.entry("issueLink", buildIssueLink(issueId))),
+                buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt, description));
     }
 
     @Override
@@ -176,6 +180,8 @@ public class HtmlMailService implements MailService {
 
         String subject = "Nuevo Comentario en Incidencia #" + issueId + " - " + settingsService.getOrganizationName();
 
+        String commentHtml = markdownService.toSafeHtml(commentText);
+
         send(to, subject, "emails/issue-comment-added",
                 Map.ofEntries(
                         Map.entry("userName", userName),
@@ -184,6 +190,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("productName", productName),
                         Map.entry("commentAuthor", commentAuthor),
                         Map.entry("commentText", commentText),
+                        Map.entry("commentHtml", commentHtml),
                         Map.entry("commentDate", commentDate),
                         Map.entry("statusChanged", statusChanged),
                         Map.entry("oldStatusText", oldStatus != null ? oldStatus.getLabel() : ""),
@@ -311,7 +318,8 @@ public class HtmlMailService implements MailService {
     }
 
     private String buildIssueCreatedPlainText(String userName, String issueId, String issueTitle,
-            String productName, String orderId, String createdBy, LocalDateTime createdAt) {
+            String productName, String orderId, String createdBy, LocalDateTime createdAt,
+            String description) {
         return "Hola " + userName + ",\n\n"
                 + "Se ha reportado una nueva incidencia con uno de tus productos.\n\n"
                 + "Detalles de la incidencia:\n"
@@ -322,6 +330,7 @@ public class HtmlMailService implements MailService {
                 + "Reportado por: " + createdBy + "\n"
                 + "Fecha: " + createdAt + "\n"
                 + "Estado: ABIERTO\n\n"
+                + "Descripción:\n" + markdownService.toPlainText(description) + "\n\n"
                 + "Puedes ver todos los detalles desde tu panel de control.\n\n"
                 + "¡Gracias!\n";
     }

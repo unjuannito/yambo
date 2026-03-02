@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { IssueDetail } from "~/types/issueType";
+import type { IssueDetail, IssueComment } from "~/types/issueType";
 import { ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { issueService } from "~/services/issueService";
 import { IssueStatusBadge } from "./IssueStatusBadge";
@@ -7,6 +7,7 @@ import { IssueCommentForm } from "./IssueCommentForm";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import {
     getIssueOrderedProductIds,
     formatConfiguration,
@@ -100,9 +101,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                         <h2 className="text-lg font-bold text-gray-900 mb-3">
                             Descripción
                         </h2>
-                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                            {issue.description}
-                        </p>
+                        <MarkdownEditor value={issue.description} readOnly />
                     </div>
 
                     <div className="bg-white rounded-2xl shadow p-6">
@@ -162,9 +161,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                                 </span>
                                             </div>
                                         )}
-                                        <p className="text-gray-700 whitespace-pre-wrap">
-                                            {comment.text || "Sin comentario"}
-                                        </p>
+                                        <MarkdownEditor value={comment.text || ""} readOnly />
                                     </article>
                                 ))
                             ) : (

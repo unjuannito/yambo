@@ -34,9 +34,9 @@
                         <span style="margin: 0 8px;">➜</span>
                         <span th:text="${newStatusText}" th:style="'color: ' + ${statusColor} + '; font-weight: bold;'">EN PROGRESO</span>
                     </p>
-                    <p style="margin: 0; color: #2c3e50; font-size: 15px; line-height: 1.5;" th:text="${commentText}">
+                    <div style="margin: 0; color: #2c3e50; font-size: 15px; line-height: 1.5;" th:utext="${commentHtml}">
                         Texto del comentario
-                    </p>
+                    </div>
                 </div>
 
                 <p style="margin: 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">

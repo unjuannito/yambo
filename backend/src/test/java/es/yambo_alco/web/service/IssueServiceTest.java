@@ -335,7 +335,8 @@ class IssueServiceTest {
                 any(String.class),
                 eq("ORD001"),
                 eq("Creador"),
-                any(LocalDateTime.class));
+                any(LocalDateTime.class),
+                eq("Test Description"));
     }
 
     @Test
@@ -360,7 +361,7 @@ class IssueServiceTest {
             return saved;
         });
         doThrow(new RuntimeException("Email unavailable"))
-                .when(mailService).sendIssueCreated(any(), any(), any(), any(), any(), any(), any(), any());
+                .when(mailService).sendIssueCreated(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         Issue result = issueService.createIssue(List.of(orderedProductId), "Title", "Desc", "USR001");
 

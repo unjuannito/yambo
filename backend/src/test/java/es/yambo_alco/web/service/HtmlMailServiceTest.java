@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -41,6 +42,9 @@ class HtmlMailServiceTest {
 
     @Mock
     private SettingsService settingsService;
+
+    @Spy
+    private MarkdownService markdownService;
 
     @Mock
     private MimeMessage mimeMessage;
@@ -210,7 +214,8 @@ class HtmlMailServiceTest {
         // When
         htmlMailService.sendIssueCreated(
                 "admin@test.com", "Admin", "ISS001", "Producto dañado",
-                "Camiseta", "ORD001", "user01", LocalDateTime.of(2026, 2, 10, 9, 0));
+                "Camiseta", "ORD001", "user01", LocalDateTime.of(2026, 2, 10, 9, 0),
+                "Descripción del problema");
 
         // Then
         ArgumentCaptor<Context> contextCaptor = ArgumentCaptor.forClass(Context.class);
@@ -307,7 +312,8 @@ class HtmlMailServiceTest {
         // When
         htmlMailService.sendIssueCreated(
                 "admin@test.com", "Admin", "ISS010", "Test",
-                "Product", "ORD010", "user01", LocalDateTime.now());
+                "Product", "ORD010", "user01", LocalDateTime.now(),
+                "Test description");
 
         // Then – no mail sent
         verify(mailSender, never()).createMimeMessage();

@@ -20,7 +20,8 @@ public interface MailService {
             BigDecimal totalPrice, boolean canceledByAdmin);
 
     void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
-            String productName, String orderId, String createdBy, LocalDateTime createdAt);
+            String productName, String orderId, String createdBy, LocalDateTime createdAt,
+            String description);
 
     void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
             String productName, String commentAuthor, String commentText, LocalDateTime commentDate,

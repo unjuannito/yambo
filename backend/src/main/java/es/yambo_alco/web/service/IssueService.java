@@ -98,7 +98,8 @@ public class IssueService {
                     productName,
                     order.getId(),
                     user.getName(),
-                    savedIssue.getCreatedAt());
+                    savedIssue.getCreatedAt(),
+                    savedIssue.getDescription());
         } catch (Exception e) {
             log.error("Failed to send issue created email for issue: {}", savedIssue.getId(), e);
             // Don't fail the request if email fails

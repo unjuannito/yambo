@@ -3,6 +3,7 @@ import { issueService } from "~/services/issueService";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import {
     IssueStatus,
     ISSUE_STATUS_CONFIG,
@@ -23,6 +24,7 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
     onSuccess,
 }) => {
     const [text, setText] = useState("");
+    const [resetKey, setResetKey] = useState(0);
     const [nextStatus, setNextStatus] = useState<IssueStatus | "">("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -56,6 +58,7 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
             });
 
             setText("");
+            setResetKey((k) => k + 1);
             setNextStatus("");
             onSuccess();
         } catch (err) {
@@ -79,16 +82,13 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
                     >
                         Añadir comentario
                     </label>
-                    <textarea
-                        id="comment"
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        placeholder="Escribe una actualización clara sobre la incidencia"
-                        rows={4}
-                        maxLength={maxLength}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                        disabled={loading}
-                    />
+                    <div className={loading ? "pointer-events-none opacity-50" : ""}>
+                        <MarkdownEditor
+                            key={resetKey}
+                            value={text}
+                            onChange={(val) => setText(val)}
+                        />
+                    </div>
                 </div>
 
                 {canUpdateStatus && (
@@ -132,7 +132,10 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
                 <div className="flex justify-end gap-2">
                     <ButtonComponent
                         type="button"
-                        onClick={() => setText("")}
+                        onClick={() => {
+                            setText("");
+                            setResetKey((k) => k + 1);
+                        }}
                         disabled={loading || text.length === 0}
                         variant="neutral"
                     >

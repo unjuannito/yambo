@@ -208,7 +208,7 @@ class EmailRenderTest {
         ctx.setVariable("issueTitle",     ISSUE_TITLE);
         ctx.setVariable("productName",    PRODUCT);
         ctx.setVariable("commentAuthor",  "admin_juan");
-        ctx.setVariable("commentText",
+        ctx.setVariable("commentHtml",
                 "Hemos verificado el error y procederemos a enviarte la talla correcta. "
                 + "Disculpa las molestias.");
         ctx.setVariable("commentDate",    LocalDateTime.of(2026, 2, 19, 11, 45));
@@ -240,7 +240,7 @@ class EmailRenderTest {
         ctx.setVariable("issueTitle",     ISSUE_TITLE);
         ctx.setVariable("productName",    PRODUCT);
         ctx.setVariable("commentAuthor",  USER_NAME);
-        ctx.setVariable("commentText",    "Gracias por la respuesta, quedo a la espera.");
+        ctx.setVariable("commentHtml",    "Gracias por la respuesta, quedo a la espera.");
         ctx.setVariable("commentDate",    LocalDateTime.of(2026, 2, 19, 14, 20));
         ctx.setVariable("statusChanged",  false);
         ctx.setVariable("oldStatusText",  "");

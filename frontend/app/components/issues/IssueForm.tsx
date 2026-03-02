@@ -4,6 +4,7 @@ import { formatConfiguration } from "~/utils/issueUtils";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 
 interface IssueFormProps {
     orderedProducts: {
@@ -211,15 +212,12 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                     >
                         Descripción *
                     </label>
-                    <textarea
-                        id="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Describe la incidencia en detalle"
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={loading}
-                    />
+                    <div className={loading ? "pointer-events-none opacity-50" : ""}>
+                        <MarkdownEditor
+                            value={description}
+                            onChange={(val) => setDescription(val)}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex gap-2 justify-end">

@@ -44,6 +44,14 @@
                     </p>
                 </div>
 
+                <!-- Description (Markdown rendered as HTML) -->
+                <div th:if="${descriptionHtml != null and !descriptionHtml.isEmpty()}" style="margin: 20px 0;">
+                    <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 16px;">Descripción</h3>
+                    <div style="background-color: #f9f9f9; border-left: 4px solid #e67e22; padding: 15px 20px; color: #2c3e50; font-size: 14px; line-height: 1.6;" th:utext="${descriptionHtml}">
+                        Descripción de la incidencia
+                    </div>
+                </div>
+
                 <p style="margin: 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
                     Puedes ver todos los detalles y gestionar esta incidencia desde tu panel de control.
                 </p>
