@@ -250,7 +250,7 @@ public class HtmlMailService implements MailService {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private String buildIssueLink(String issueId) {
-        return settingsService.getFrontendUrl() + "/mi-espacio/incidencias/" + issueId;
+        return settingsService.getDomain() + "/mi-espacio/incidencias/" + issueId;
     }
 
     // ── Plain-text builders ──────────────────────────────────────────────

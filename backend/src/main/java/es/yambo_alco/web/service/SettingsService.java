@@ -109,19 +109,6 @@ public class SettingsService {
         }
     }
 
-    public String getFrontendUrl() {
-        return getSettingValue("app.frontend_url", "http://localhost:5173");
-    }
-
-    public void setFrontendUrl(@NonNull String frontendUrl) {
-        Optional<Settings> existing = findSettingByKey("app.frontend_url");
-        if (existing.isPresent()) {
-            updateSetting("app.frontend_url", frontendUrl, null, null);
-        } else {
-            createSetting("app.frontend_url", frontendUrl, "URL del frontend de la aplicación", "app");
-        }
-    }
-
     public String getIban() {
         return getSettingValue("bank.iban", "");
     }

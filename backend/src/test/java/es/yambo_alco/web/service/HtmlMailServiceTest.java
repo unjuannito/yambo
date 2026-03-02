@@ -64,7 +64,7 @@ class HtmlMailServiceTest {
         lenient().when(settingsService.getOrganizationName()).thenReturn("Yambo");
         lenient().when(settingsService.getOrganizationLegalName()).thenReturn("Yambo S.L.");
         lenient().when(settingsService.getIban()).thenReturn("ES12 3456 7890 1234 5678 9012");
-        lenient().when(settingsService.getFrontendUrl()).thenReturn("https://yambo-alco.es");
+        lenient().when(settingsService.getDomain()).thenReturn("https://yambo-alco.es");
     }
 
     // ── Invitation ───────────────────────────────────────────────────────
