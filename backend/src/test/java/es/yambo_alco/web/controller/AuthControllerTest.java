@@ -5,11 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.controller.AuthController.LoginRequest;
 import es.yambo_alco.web.controller.AuthController.InvitationRegisterRequest;
+import es.yambo_alco.web.controller.AuthController.ForgotPasswordRequest;
+import es.yambo_alco.web.controller.AuthController.ResetPasswordRequest;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.NominativeInvitationService;
+import es.yambo_alco.web.service.PasswordResetService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -21,6 +24,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -44,6 +51,9 @@ class AuthControllerTest {
 
         @MockitoBean
         private NominativeInvitationService nominativeInvitationService;
+
+        @MockitoBean
+        private PasswordResetService passwordResetService;
 
         @Test
         void login_WithValidCredentials_ShouldReturnToken() throws Exception {
@@ -179,5 +189,98 @@ class AuthControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.token").value(refreshedToken));
+        }
+
+        // ── Password Reset Tests ─────────────────────────────────────────────
+
+        @Test
+        void forgotPassword_ShouldAlwaysReturn200() throws Exception {
+                // Given
+                ForgotPasswordRequest request = new ForgotPasswordRequest("user@example.com");
+                doNothing().when(passwordResetService).requestPasswordReset(anyString());
+
+                // When & Then
+                mockMvc.perform(post("/auth/forgot-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").exists());
+
+                verify(passwordResetService).requestPasswordReset("user@example.com");
+        }
+
+        @Test
+        void forgotPassword_WithUnknownEmail_ShouldStillReturn200() throws Exception {
+                // Given - service silently returns for unknown emails
+                ForgotPasswordRequest request = new ForgotPasswordRequest("unknown@example.com");
+                doNothing().when(passwordResetService).requestPasswordReset(anyString());
+
+                // When & Then
+                mockMvc.perform(post("/auth/forgot-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").exists());
+        }
+
+        @Test
+        void resetPassword_WithValidToken_ShouldReturn200() throws Exception {
+                // Given
+                ResetPasswordRequest request = new ResetPasswordRequest("valid-token", "newPassword123");
+                doNothing().when(passwordResetService).resetPassword(anyString(), anyString());
+
+                // When & Then
+                mockMvc.perform(post("/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Contraseña actualizada correctamente."));
+
+                verify(passwordResetService).resetPassword("valid-token", "newPassword123");
+        }
+
+        @Test
+        void resetPassword_WithInvalidToken_ShouldReturnBadRequest() throws Exception {
+                // Given
+                ResetPasswordRequest request = new ResetPasswordRequest("invalid-token", "newPassword123");
+                doThrow(new BadRequestException("Token inválido"))
+                                .when(passwordResetService).resetPassword(anyString(), anyString());
+
+                // When & Then
+                mockMvc.perform(post("/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("Token inválido"));
+        }
+
+        @Test
+        void resetPassword_WithExpiredToken_ShouldReturnBadRequest() throws Exception {
+                // Given
+                ResetPasswordRequest request = new ResetPasswordRequest("expired-token", "newPassword123");
+                doThrow(new BadRequestException("El enlace ha expirado"))
+                                .when(passwordResetService).resetPassword(anyString(), anyString());
+
+                // When & Then
+                mockMvc.perform(post("/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("El enlace ha expirado"));
+        }
+
+        @Test
+        void resetPassword_WithUsedToken_ShouldReturnBadRequest() throws Exception {
+                // Given
+                ResetPasswordRequest request = new ResetPasswordRequest("used-token", "newPassword123");
+                doThrow(new BadRequestException("El enlace ya fue utilizado"))
+                                .when(passwordResetService).resetPassword(anyString(), anyString());
+
+                // When & Then
+                mockMvc.perform(post("/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("El enlace ya fue utilizado"));
         }
 }

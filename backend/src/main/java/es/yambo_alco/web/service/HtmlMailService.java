@@ -220,6 +220,26 @@ public class HtmlMailService implements MailService {
                 buildStatusChangedPlainText(userName, issueId, issueTitle, oldStatus, newStatus, changedBy, changedAt));
     }
 
+    // ── Password Reset ───────────────────────────────────────────────────
+
+    @Override
+    public void sendPasswordResetEmail(String to, String resetLink, long expirationHours) {
+        String orgName = settingsService.getOrganizationName();
+        String subject = "Restablecer contraseña - " + orgName;
+
+        String plainText = "Hola,\n\n"
+                + "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en " + orgName + ".\n\n"
+                + "Usa este enlace para establecer una nueva contraseña: " + resetLink + "\n\n"
+                + "El enlace expirará en " + expirationHours + " horas.\n\n"
+                + "Si no has solicitado restablecer tu contraseña, puedes ignorar este correo.\n";
+
+        send(to, subject, "emails/password-reset",
+                Map.of(
+                        "resetLink", resetLink,
+                        "expirationHours", expirationHours),
+                plainText);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private String buildIssueLink(String issueId) {

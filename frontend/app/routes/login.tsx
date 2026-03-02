@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
 import { invitationService } from "~/services/invitationService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -166,6 +166,15 @@ export default function Index() {
                     type="password"
                     required
                 />
+
+                <div className="text-right">
+                    <Link
+                        to="/forgot-password"
+                        className="text-sm text-blue-600 hover:underline"
+                    >
+                        ¿Olvidaste tu contraseña?
+                    </Link>
+                </div>
 
                 <ButtonComponent
                     type="submit"

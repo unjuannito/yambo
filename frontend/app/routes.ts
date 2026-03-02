@@ -73,6 +73,8 @@ export default [
     ]),
     route("/login", "routes/login.tsx"),
     route("/register", "routes/register.tsx"),
+    route("/forgot-password", "routes/forgot-password.tsx"),
+    route("/reset-password", "routes/reset-password.tsx"),
 
     // SEO resource routes (no component – return raw responses)
     route("sitemap.xml", "routes/sitemap[.]xml.tsx"),

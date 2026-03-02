@@ -30,6 +30,8 @@ public interface MailService {
             String productName, IssueStatus oldStatus, IssueStatus newStatus,
             String changedBy, LocalDateTime changedAt);
 
+    void sendPasswordResetEmail(String to, String resetLink, long expirationHours);
+
     default String generatePaymentReference(LocalDateTime orderDate, String orderId) {
         return "merch-" + orderDate.getYear() + "-" + orderId;
     }

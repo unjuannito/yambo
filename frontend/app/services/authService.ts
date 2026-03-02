@@ -33,4 +33,12 @@ export class AuthService extends ApiService {
     public getToken(): string | null {
         return ApiService.getToken();
     }
+
+    public async forgotPassword(email: string): Promise<{ message: string }> {
+        return this.post<{ message: string }, { email: string }>('/auth/forgot-password', { email });
+    }
+
+    public async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+        return this.post<{ message: string }, { token: string; newPassword: string }>('/auth/reset-password', { token, newPassword });
+    }
 }
