@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.OrderExportService;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import jakarta.validation.Valid;
@@ -19,12 +20,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,6 +40,7 @@ import java.util.stream.Collectors;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderExportService orderExportService;
     private final AuthService authService;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
@@ -75,6 +81,22 @@ public class OrderController {
             return new OrderResponse(order, products, userRepository, productRepository, orderService);
         });
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("@permissionCheck.hasPermission('order', 'read')")
+    public ResponseEntity<byte[]> exportOrders(
+            @RequestParam(required = false) List<String> dropIds) throws IOException {
+        byte[] excelBytes = orderExportService.exportOrders(dropIds);
+        String fileName = "fabricacion_" + LocalDate.now() + ".xlsx";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", fileName);
+        headers.setContentLength(excelBytes.length);
+
+        return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")

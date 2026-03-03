@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>es.yambo-alco</groupId>
 	<artifactId>web</artifactId>
-	<version>0.9.7_a</version>
+	<version>0.9.8</version>
 	<name>web</name>
 	<description>Web backend for Yambo&apos;s web page</description>
 
@@ -109,6 +109,13 @@
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
 			<version>1.18.3</version>
+		</dependency>
+
+		<!-- Apache POI (Excel generation) -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.5</version>
 		</dependency>
 
 		<!-- Lombok -->

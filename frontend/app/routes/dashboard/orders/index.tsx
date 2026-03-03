@@ -21,7 +21,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
-import { exportOrdersToExcel } from "~/utils/exportOrdersToExcel";
+import { exportService } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { IssueStatusBadge } from "~/components/issues";
@@ -225,18 +225,11 @@ export default function Orders() {
     const exportToExcel = async () => {
         setIsExporting(true);
         try {
-            const allOrders = await orderService.getAllOrders(0, 10000);
-
-            await exportOrdersToExcel({
-                orders: allOrders.content,
-                products,
-                drops,
-                selectedDropIds
-            });
+            await exportService.exportOrders(selectedDropIds);
 
             const dropsLabel = selectedDropIds.length > 0 ? `${selectedDropIds.length} drops seleccionados` : 'todos los drops';
             toast.success(
-                `Exportados ${allOrders.content.length} pedidos (${dropsLabel}) a Excel con múltiples hojas`,
+                `Excel de fabricación generado (${dropsLabel})`,
             );
             setIsExportModalOpen(false);
         } catch (err) {
@@ -586,7 +579,8 @@ export default function Orders() {
                         }}
                     />
                     <div className="text-xs text-gray-500">
-                        Se exportan todos los pedidos con sus hojas de resumen y detalle.
+                        Se excluyen automáticamente los pedidos pendientes de pago y cancelados.
+                        El archivo incluye una hoja resumen y una hoja por producto con configuraciones detalladas.
                     </div>
                 </div>
             </Modal>

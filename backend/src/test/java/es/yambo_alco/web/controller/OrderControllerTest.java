@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.OrderExportService;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,6 +52,9 @@ class OrderControllerTest {
 
     @MockitoBean
     private OrderService orderService;
+
+    @MockitoBean
+    private OrderExportService orderExportService;
 
     @MockitoBean
     private AuthService authService;
@@ -283,6 +289,33 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.id").value("ORD001"))
                 .andExpect(jsonPath("$.status").value("CONFIRMING_PAYMENT"))
                 .andExpect(jsonPath("$.receiptFileId").value("FL000001"));
+    }
+
+    @Test
+    @WithMockUser
+    void exportOrders_WithAuth_ShouldReturnXlsxFile() throws Exception {
+        byte[] fakeExcel = new byte[]{0x50, 0x4B, 0x03, 0x04}; // PK zip header
+        when(orderExportService.exportOrders(any())).thenReturn(fakeExcel);
+
+        mockMvc.perform(get("/orders/export"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .andExpect(header().exists("Content-Disposition"))
+                .andExpect(content().bytes(fakeExcel));
+    }
+
+    @Test
+    @WithMockUser
+    void exportOrders_WithDropIds_ShouldPassDropIds() throws Exception {
+        byte[] fakeExcel = new byte[]{0x50, 0x4B, 0x03, 0x04};
+        when(orderExportService.exportOrders(eq(List.of("DROP001", "DROP002")))).thenReturn(fakeExcel);
+
+        mockMvc.perform(get("/orders/export")
+                .param("dropIds", "DROP001", "DROP002"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
     }
 
     @Test
