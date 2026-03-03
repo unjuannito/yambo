@@ -147,6 +147,16 @@ public class OrderController {
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
+    @PutMapping("/{id}/receipt")
+    @PreAuthorize("@permissionCheck.hasPermission('order', 'update')")
+    public ResponseEntity<OrderResponse> adminUploadReceipt(
+            @PathVariable String id,
+            @Valid @RequestBody UploadReceiptRequest request) {
+        Order order = orderService.uploadReceiptAsAdmin(id, request.getFileId());
+        List<OrderProduct> products = orderService.getOrderProducts(id);
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
     @Data
     public static class CreateOrderRequest {
         @NotEmpty(message = "Order must contain at least one product")

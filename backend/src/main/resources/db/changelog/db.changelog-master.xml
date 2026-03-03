@@ -75,4 +75,5 @@
     <include file="db/changelog/changes/64-user-last-login.xml"/>
     <include file="db/changelog/changes/65-user-login-history.xml"/>
     <include file="db/changelog/changes/66-order-status-history.xml"/>
+    <include file="db/changelog/changes/67-merch-order-permissions.xml"/>
 </databaseChangeLog>

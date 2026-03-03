@@ -27,7 +27,10 @@ import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { IssueStatusBadge } from "~/components/issues";
 import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faXmark, faFileArrowDown } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faXmark, faFileArrowDown, faUpload } from "@fortawesome/free-solid-svg-icons";
+import FileUploader from "~/components/common/FileUploader";
+import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import type { FileRecord } from "~/types/fileType";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -53,6 +56,8 @@ export default function Orders() {
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
     const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
+    const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
+    const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
     const [statusOptions] = useState(
         Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
@@ -155,6 +160,24 @@ export default function Orders() {
         } finally {
             setIsCanceling(false);
             setOrderToCancel(null);
+        }
+    };
+
+    const handleReceiptUploaded = async (file: FileRecord) => {
+        if (!uploadReceiptOrder) return;
+        setIsUploadingReceipt(true);
+        try {
+            const updated = await orderService.adminUploadReceipt(uploadReceiptOrder.id, file.id);
+            if (selectedOrder?.id === updated.id) {
+                setSelectedOrder(updated);
+            }
+            toast.success("Justificante subido correctamente");
+            setUploadReceiptOrder(null);
+            setRefreshKey((prev) => prev + 1);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al subir el justificante"));
+        } finally {
+            setIsUploadingReceipt(false);
         }
     };
 
@@ -385,6 +408,16 @@ export default function Orders() {
                     >
                         Ver
                     </button>
+                    {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
+                        <button
+                            onClick={() => setUploadReceiptOrder(order)}
+                            className="text-green-600 hover:text-green-800 text-xs font-medium"
+                            title={order.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
+                        >
+                            <FontAwesomeIcon icon={faUpload} className="w-3 h-3 mr-1" />
+                            {order.receiptFileId ? "Reemplazar" : "Justificante"}
+                        </button>
+                    )}
                     {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                         <button
                             onClick={() => setOrderToCancel(order)}
@@ -651,18 +684,29 @@ export default function Orders() {
                             </div>
 
                             {/* Receipt File */}
-                            {selectedOrder.receiptFileId && receiptFileUrl && (
+                            {(selectedOrder.status === "PENDING_PAYMENT" || selectedOrder.status === "CONFIRMING_PAYMENT") && (
                                 <div className="mb-6 pb-6 border-b border-gray-200">
                                     <p className="text-sm text-gray-600 mb-2">Justificante de pago</p>
-                                    <a
-                                        href={receiptFileUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-                                    >
-                                        <FontAwesomeIcon icon={faFileArrowDown} className="w-4 h-4" />
-                                        Ver justificante
-                                    </a>
+                                    <div className="flex items-center gap-3">
+                                        {selectedOrder.receiptFileId && receiptFileUrl && (
+                                            <a
+                                                href={receiptFileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                                            >
+                                                <FontAwesomeIcon icon={faFileArrowDown} className="w-4 h-4" />
+                                                Ver justificante
+                                            </a>
+                                        )}
+                                        <button
+                                            onClick={() => setUploadReceiptOrder(selectedOrder)}
+                                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
+                                        >
+                                            <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                                            {selectedOrder.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -833,6 +877,42 @@ export default function Orders() {
                 variant="danger"
                 isLoading={isCanceling}
             />
+
+            {/* Upload Receipt Modal */}
+            <Modal
+                isOpen={!!uploadReceiptOrder}
+                onClose={() => !isUploadingReceipt && setUploadReceiptOrder(null)}
+                title={uploadReceiptOrder ? `Subir justificante · Pedido #${uploadReceiptOrder.id}` : "Subir justificante"}
+                size="md"
+            >
+                {uploadReceiptOrder && (
+                    <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p className="text-sm text-blue-800">
+                                Sube el justificante de pago para el pedido{" "}
+                                <strong>#{uploadReceiptOrder.id}</strong> del cliente{" "}
+                                <strong>{uploadReceiptOrder.user?.name}</strong>.
+                                El pedido pasará a estado &quot;Verificando pago&quot;.
+                            </p>
+                        </div>
+                        {isUploadingReceipt ? (
+                            <div className="text-center py-8">
+                                <LoadingSpinner size="lg" message="Subiendo justificante..." />
+                            </div>
+                        ) : (
+                            <FileUploader
+                                onUpload={handleReceiptUploaded}
+                                accept="image/*,application/pdf"
+                                label="Justificante de pago"
+                                maxSizeMb={10}
+                            />
+                        )}
+                        <div className="text-xs text-gray-500">
+                            Formatos aceptados: imágenes (JPG, PNG) y PDF. Tamaño máximo: 10 MB.
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </RequirePermission>
 
     );

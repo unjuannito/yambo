@@ -460,6 +460,38 @@ public class OrderService {
         return savedOrder;
     }
 
+    @Transactional
+    public Order uploadReceiptAsAdmin(@NonNull String orderId, @NonNull String fileId) {
+        Order order = getOrderById(orderId);
+
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT
+                && order.getStatus() != OrderStatus.CONFIRMING_PAYMENT) {
+            throw new BadRequestException("Receipt can only be uploaded when order is pending or confirming payment");
+        }
+
+        uploadedFileRepository.findById(fileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + fileId));
+
+        OrderStatus previousStatus = order.getStatus();
+        order.setReceiptFileId(fileId);
+        order.setStatus(OrderStatus.CONFIRMING_PAYMENT);
+        Order savedOrder = orderRepository.save(order);
+
+        User admin = authService.getCurrentUser(true);
+        recordStatusChange(orderId, previousStatus, OrderStatus.CONFIRMING_PAYMENT, admin.getId());
+
+        if (previousStatus == OrderStatus.PENDING_PAYMENT) {
+            try {
+                sendOrderStatusUpdateEmail(order, OrderStatus.CONFIRMING_PAYMENT);
+            } catch (Exception e) {
+                log.error("Failed to send confirming payment email for order: {}. Receipt upload completed successfully.",
+                        orderId, e);
+            }
+        }
+
+        return savedOrder;
+    }
+
     public List<Order> getOrdersByCustomer(@NonNull String customerId) {
         Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
         return orderRepository.findAll(spec);

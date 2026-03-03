@@ -2274,5 +2274,180 @@ class OrderServiceTest {
         assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
         assertEquals("FL000001", result.getReceiptFileId());
     }
+
+    // ---- uploadReceiptAsAdmin tests ----
+
+    @Test
+    void uploadReceiptAsAdmin_WhenValid_ShouldTransitionToConfirmingPayment() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN01").name("Admin").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenNotPendingOrConfirmingPayment_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.uploadReceiptAsAdmin("ORD001", "FL000001"));
+        assertEquals("Receipt can only be uploaded when order is pending or confirming payment", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenFileNotFound_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL999999")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.uploadReceiptAsAdmin("ORD001", "FL999999"));
+        assertEquals("Uploaded file not found: FL999999", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenEmailFails_ShouldStillUpload() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN01").name("Admin").build();
+        User customer = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(customer));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_DoesNotCheckOwnership() {
+        // Admin should be able to upload receipt for any order regardless of customer
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN99").name("Different Admin").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+
+        // Should succeed without ownership check
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenConfirmingPayment_ShouldReplaceReceipt() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.CONFIRMING_PAYMENT)
+                .receiptFileId("FL000001")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile newFile = UploadedFile.builder()
+                .id("FL000002")
+                .originalName("new-receipt.pdf")
+                .storedName("new-receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(2048L)
+                .url("/uploads/new-receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN01").name("Admin").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000002")).thenReturn(Optional.of(newFile));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000002");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000002", result.getReceiptFileId());
+    }
 }
 

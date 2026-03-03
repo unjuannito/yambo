@@ -102,6 +102,10 @@ export class OrderService extends ApiService {
     public async uploadReceipt(id: string, fileId: string): Promise<Order> {
         return await this.put<Order, { fileId: string }>(`/orders/my/${id}/receipt`, { fileId });
     }
+
+    public async adminUploadReceipt(id: string, fileId: string): Promise<Order> {
+        return await this.put<Order, { fileId: string }>(`/orders/${id}/receipt`, { fileId });
+    }
 }
 
 export const orderService = new OrderService();

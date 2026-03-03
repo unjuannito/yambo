@@ -284,4 +284,32 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.status").value("CONFIRMING_PAYMENT"))
                 .andExpect(jsonPath("$.receiptFileId").value("FL000001"));
     }
+
+    @Test
+    @WithMockUser
+    void adminUploadReceipt_WithAuth_ShouldReturnUpdatedOrder() throws Exception {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.CONFIRMING_PAYMENT)
+                .receiptFileId("FL000001")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(permissionCheckService.hasPermission("order", "update")).thenReturn(true);
+        when(orderService.uploadReceiptAsAdmin("ORD001", "FL000001")).thenReturn(order);
+        when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
+
+        String payload = """
+                {"fileId": "FL000001"}
+                """;
+
+        mockMvc.perform(put("/orders/ORD001/receipt")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ORD001"))
+                .andExpect(jsonPath("$.status").value("CONFIRMING_PAYMENT"))
+                .andExpect(jsonPath("$.receiptFileId").value("FL000001"));
+    }
 }
