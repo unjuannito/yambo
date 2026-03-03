@@ -69,6 +69,6 @@ class PermissionResourceTest {
     @Test
     void values_ShouldContainAllResources() {
         PermissionResource[] resources = PermissionResource.values();
-        assertEquals(11, resources.length);
+        assertEquals(12, resources.length);
     }
 }
