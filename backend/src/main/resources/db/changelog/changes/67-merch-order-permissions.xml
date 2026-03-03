@@ -6,13 +6,13 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="67-01" author="system">
-        <comment>Grant order read and update permissions to MERCH_MG profile</comment>
         <preConditions onFail="MARK_RAN">
             <and>
                 <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'MERCH_MG'</sqlCheck>
                 <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'MERCH_MG' AND permission_id = 'PORD_RD'</sqlCheck>
             </and>
         </preConditions>
+        <comment>Grant order read and update permissions to MERCH_MG profile</comment>
         <insert tableName="profile_permission">
             <column name="profile_id" value="MERCH_MG"/>
             <column name="permission_id" value="PORD_RD"/>
@@ -20,13 +20,13 @@
     </changeSet>
 
     <changeSet id="67-02" author="system">
-        <comment>Grant order update permission to MERCH_MG profile</comment>
         <preConditions onFail="MARK_RAN">
             <and>
                 <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'MERCH_MG'</sqlCheck>
                 <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'MERCH_MG' AND permission_id = 'PORD_UPD'</sqlCheck>
             </and>
         </preConditions>
+        <comment>Grant order update permission to MERCH_MG profile</comment>
         <insert tableName="profile_permission">
             <column name="profile_id" value="MERCH_MG"/>
             <column name="permission_id" value="PORD_UPD"/>
