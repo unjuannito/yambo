@@ -15,7 +15,8 @@ public enum PermissionResource {
     SETTINGS("settings"),
     ISSUE("issue"),
     ACTIVITY("activity"),
-    SEO_METADATA("seo_metadata");
+    SEO_METADATA("seo_metadata"),
+    REPORT("report");
 
     private final String value;
 

@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
+import es.yambo_alco.web.repository.OrderStatusHistoryRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UploadedFileRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -41,6 +42,7 @@ public class OrderService {
     private final UploadedFileRepository uploadedFileRepository;
     private final UserRepository userRepository;
     private final IssueRepository issueRepository;
+    private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final AuthService authService;
     private final MailService mailService;
 
@@ -76,6 +78,8 @@ public class OrderService {
             op.setStatus(OrderProductStatus.OPEN);
             orderProductRepository.save(op);
         }
+
+        recordStatusChange(order.getId(), null, OrderStatus.PENDING_PAYMENT, customerId);
 
         try {
             sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_PAYMENT);
@@ -212,6 +216,9 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
 
         if (previousStatus != status) {
+            User currentUser = authService.getCurrentUser(false);
+            recordStatusChange(orderId, previousStatus, status,
+                    currentUser != null ? currentUser.getId() : null);
             try {
                 if (status == OrderStatus.CANCELED) {
                     sendOrderCancelEmail(order, true);
@@ -403,9 +410,14 @@ public class OrderService {
             throw new BadRequestException("Order can only be canceled when pending payment or confirming payment");
         }
 
+        OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CANCELED);
         order.setClosedAt(LocalDateTime.now());
         Order savedOrder = orderRepository.save(order);
+
+        User currentUser = authService.getCurrentUser(false);
+        recordStatusChange(orderId, previousStatus, OrderStatus.CANCELED,
+                currentUser != null ? currentUser.getId() : null);
 
         try {
             sendOrderCancelEmail(order, canceledByAdmin);
@@ -435,6 +447,8 @@ public class OrderService {
         order.setReceiptFileId(fileId);
         order.setStatus(OrderStatus.CONFIRMING_PAYMENT);
         Order savedOrder = orderRepository.save(order);
+
+        recordStatusChange(orderId, OrderStatus.PENDING_PAYMENT, OrderStatus.CONFIRMING_PAYMENT, customerId);
 
         try {
             sendOrderStatusUpdateEmail(order, OrderStatus.CONFIRMING_PAYMENT);
@@ -518,6 +532,8 @@ public class OrderService {
         order.setClosedAt(LocalDateTime.now());
         orderRepository.save(order);
 
+        recordStatusChange(orderId, OrderStatus.PENDING_PRODUCTS, OrderStatus.CLOSED, null);
+
         try {
             sendOrderStatusUpdateEmail(order, OrderStatus.CLOSED);
         } catch (Exception e) {
@@ -568,6 +584,8 @@ public class OrderService {
                     order.setStatus(OrderStatus.PENDING_PRODUCTS);
                     orderRepository.save(order);
 
+                    recordStatusChange(orderId, OrderStatus.PAYMENT_CONFIRMED, OrderStatus.PENDING_PRODUCTS, null);
+
                     try {
                         sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_PRODUCTS);
                     } catch (Exception e) {
@@ -582,6 +600,21 @@ public class OrderService {
             for (String orderId : affectedOrderIds) {
                 checkAndCloseOrder(orderId);
             }
+        }
+    }
+
+    private void recordStatusChange(String orderId, OrderStatus fromStatus, OrderStatus toStatus, String changedBy) {
+        try {
+            OrderStatusHistory history = OrderStatusHistory.builder()
+                    .orderId(orderId)
+                    .fromStatus(fromStatus)
+                    .toStatus(toStatus)
+                    .changedAt(LocalDateTime.now())
+                    .changedBy(changedBy)
+                    .build();
+            orderStatusHistoryRepository.save(history);
+        } catch (Exception e) {
+            log.error("Failed to record status change for order: {}", orderId, e);
         }
     }
 }

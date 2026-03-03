@@ -4,6 +4,7 @@ import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.jwt.JwtService;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.repository.UserLoginHistoryRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,9 @@ class AuthServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserLoginHistoryRepository userLoginHistoryRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;

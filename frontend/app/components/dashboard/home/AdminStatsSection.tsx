@@ -1,14 +1,17 @@
 import SummaryCards from "~/components/dashboard/home/SummaryCards";
 import RecentActivitiesList from "~/components/dashboard/home/RecentActivitiesList";
+import ReportSnapshot from "~/components/dashboard/home/ReportSnapshot";
 import { ADMIN_CARDS } from "~/data/summaries";
 import { useAuth } from "~/hooks/useAuth";
 import type { AdminDashboardData } from "~/hooks/useDashboardData";
+import type { ReportSummary } from "~/types/report";
 
 interface AdminStatsSectionProps {
     data: AdminDashboardData;
+    reportSnapshot?: ReportSummary | null;
 }
 
-export default function AdminStatsSection({ data }: AdminStatsSectionProps) {
+export default function AdminStatsSection({ data, reportSnapshot }: AdminStatsSectionProps) {
     const { hasPermission } = useAuth();
 
     const hasAnyAdminPerm =
@@ -41,6 +44,8 @@ export default function AdminStatsSection({ data }: AdminStatsSectionProps) {
                         counts={counts}
                         title="Resumen de la plataforma"
                     />
+
+                    {reportSnapshot && <ReportSnapshot data={reportSnapshot} />}
 
                     {activities.length > 0 && (
                         <RecentActivitiesList activities={activities} />

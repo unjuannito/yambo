@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
+import es.yambo_alco.web.repository.OrderStatusHistoryRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UploadedFileRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -52,6 +53,9 @@ class OrderServiceTest {
 
     @Mock
     private IssueRepository issueRepository;
+
+    @Mock
+    private OrderStatusHistoryRepository orderStatusHistoryRepository;
 
     @Mock
     private AuthService authService;

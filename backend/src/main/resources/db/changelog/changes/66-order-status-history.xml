@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create order_status_history table -->
+    <changeSet id="66-01-create-order-status-history" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="order_status_history"/>
+            </not>
+        </preConditions>
+        <createTable tableName="order_status_history">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_status" type="INT"/>
+            <column name="to_status" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="order_status_history"
+            baseColumnNames="order_id"
+            constraintName="fk_order_status_history_order"
+            referencedTableName="order"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <createIndex indexName="idx_order_status_history_order_id" tableName="order_status_history">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex indexName="idx_order_status_history_changed_at" tableName="order_status_history">
+            <column name="changed_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

@@ -22,7 +22,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function AreaSociosIndex() {
     const { user } = useAuth();
-    const { personal, admin, loading, error, refetch } = useDashboardData();
+    const { personal, admin, reportSnapshot, loading, error, refetch } = useDashboardData();
 
     const personalCounts: Record<string, number> = {
         myOrders: personal.totalOrders,
@@ -61,7 +61,7 @@ export default function AreaSociosIndex() {
                     <RecentOrdersList orders={personal.recentOrders} />
 
                     {/* Admin section — only visible with admin permissions */}
-                    {admin && <AdminStatsSection data={admin} />}
+                    {admin && <AdminStatsSection data={admin} reportSnapshot={reportSnapshot} />}
                 </div>
             )}
         </main>

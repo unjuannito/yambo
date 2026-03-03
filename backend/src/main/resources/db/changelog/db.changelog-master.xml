@@ -71,4 +71,8 @@
     <include file="db/changelog/changes/60-system-flag.xml"/>
     <include file="db/changelog/changes/61-product-description.xml"/>
     <include file="db/changelog/changes/62-password-reset-token.xml"/>
+    <include file="db/changelog/changes/63-report-permissions.xml"/>
+    <include file="db/changelog/changes/64-user-last-login.xml"/>
+    <include file="db/changelog/changes/65-user-login-history.xml"/>
+    <include file="db/changelog/changes/66-order-status-history.xml"/>
 </databaseChangeLog>

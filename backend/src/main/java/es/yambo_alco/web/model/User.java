@@ -58,6 +58,9 @@ public class User implements UserDetails {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_project_group",

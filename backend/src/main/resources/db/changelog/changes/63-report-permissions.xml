@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add REPORT resource permission (read only) -->
+    <changeSet id="63-01-seed-report-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'REPORT'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="permission">
+            <column name="id" value="PREP_RD"/>
+            <column name="resource" value="REPORT"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!-- Add REPORT permissions to admin profile -->
+    <changeSet id="63-02-add-report-permissions-to-admin" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin'</sqlCheck>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM permission WHERE resource = 'REPORT'</sqlCheck>
+            </and>
+        </preConditions>
+        <sql>
+            INSERT INTO profile_permission (profile_id, permission_id)
+            SELECT (SELECT id FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin' LIMIT 1), id
+            FROM permission WHERE resource = 'REPORT'
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

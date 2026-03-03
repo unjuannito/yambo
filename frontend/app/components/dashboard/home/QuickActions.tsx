@@ -7,6 +7,7 @@ import {
     faUsers,
     faClipboard,
     faGear,
+    faChartLine,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "~/hooks/useAuth";
 
@@ -60,6 +61,13 @@ const QUICK_ACTIONS: QuickAction[] = [
         icon: faGear,
         className: "bg-gray-600 hover:bg-gray-700 text-white",
         permission: { obj: "settings", action: "read" },
+    },
+    {
+        label: "Ver informes",
+        href: "/mi-espacio/admin/informes",
+        icon: faChartLine,
+        className: "bg-indigo-600 hover:bg-indigo-700 text-white",
+        permission: { obj: "report", action: "read" },
     },
 ];
 

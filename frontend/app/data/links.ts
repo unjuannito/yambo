@@ -82,6 +82,12 @@ const LINKS_MAP: Link[] = [
         label: "SEO",
         need: { obj: "seo_metadata", action: "read" },
     },
+    {
+        name: "reports",
+        href: "/mi-espacio/admin/informes",
+        label: "Informes",
+        need: { obj: "report", action: "read" },
+    },
 
     // Proyectos
     {

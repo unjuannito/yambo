@@ -34,6 +34,7 @@ export default [
         route("mi-espacio/admin/configuracion", "routes/dashboard/settings/index.tsx"),
         route("mi-espacio/admin/pagina-principal", "routes/dashboard/settings/main-page.tsx"),
         route("mi-espacio/admin/seo", "routes/dashboard/seo/index.tsx"),
+        route("mi-espacio/admin/informes", "routes/dashboard/reports/index.tsx"),
 
         // Proyectos
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
