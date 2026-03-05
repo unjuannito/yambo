@@ -12,7 +12,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { projectService, type Project } from "~/services/projectService";
 import { getErrorMessage } from "~/types/error";
-import { FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
+import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import toast from "react-hot-toast";
 
@@ -220,15 +220,25 @@ export default function MerchFamilies() {
                         </span>
                     ) : <span className="text-sm text-gray-500">{drop.status || "-"}</span>;
                 }
+                const transitions = FAMILY_PRODUCT_WORKFLOW_TRANSITIONS[(drop.status || "OPEN") as FamilyProductStatus] || [];
+                if (transitions.length === 0) {
+                    return statusConfig ? (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.className}`}>
+                            {statusConfig.label}
+                        </span>
+                    ) : <span className="text-sm text-gray-500">{drop.status || "-"}</span>;
+                }
                 return (
                     <select
                         value={drop.status || "OPEN"}
                         onChange={(e) => handleStatusChange(drop, e.target.value)}
                         className={`text-xs font-medium rounded-full px-2.5 py-0.5 border-0 cursor-pointer ${statusConfig?.className || "bg-gray-100 text-gray-800"}`}
                     >
-                        {Object.entries(FAMILY_PRODUCT_STATUS_CONFIG).map(([key, config]) => (
-                            <option key={key} value={key}>{config.label}</option>
-                        ))}
+                        <option value={drop.status || "OPEN"}>{statusConfig?.label || drop.status}</option>
+                        {transitions.map((status) => {
+                            const cfg = FAMILY_PRODUCT_STATUS_CONFIG[status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG];
+                            return <option key={status} value={status}>{cfg?.label || status}</option>;
+                        })}
                     </select>
                 );
             },

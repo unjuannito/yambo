@@ -19,7 +19,7 @@ import { getIssueOrderedProductIds } from "~/utils/issueUtils";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
-import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
+import { OrderStatus, ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import { exportService } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
@@ -395,25 +395,35 @@ export default function Orders() {
             header: "Acciones",
             render: (order: Order) => (
                 <div className="flex items-center gap-2">
-                    <select
-                        value={order.status}
-                        onChange={(e) =>
-                            handleStatusChange(order.id, e.target.value)
-                        }
-                        className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        disabled={
-                            order.status === "CLOSED" ||
-                            order.status === "CANCELED"
-                        }
-                    >
-                        {Object.entries(ORDER_STATUS_CONFIG).map(
-                            ([key, config]) => (
-                                <option key={key} value={key}>
-                                    {config.shortLabel}
+                    {(() => {
+                        const transitions = ORDER_WORKFLOW_TRANSITIONS[order.status as OrderStatus] || [];
+                        const currentConfig = ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG];
+                        return transitions.length > 0 ? (
+                            <select
+                                value={order.status}
+                                onChange={(e) =>
+                                    handleStatusChange(order.id, e.target.value)
+                                }
+                                className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value={order.status}>
+                                    {currentConfig?.shortLabel || order.status}
                                 </option>
-                            ),
-                        )}
-                    </select>
+                                {transitions.map((status) => {
+                                    const cfg = ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG];
+                                    return (
+                                        <option key={status} value={status}>
+                                            {cfg?.shortLabel || status}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        ) : (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentConfig?.className || "bg-gray-100 text-gray-800"}`}>
+                                {currentConfig?.shortLabel || order.status}
+                            </span>
+                        );
+                    })()}
                     <button
                         onClick={() => setSelectedOrder(order)}
                         className="text-blue-600 hover:text-blue-800 text-xs font-medium"
@@ -508,20 +518,36 @@ export default function Orders() {
                             </span>
                         </div>
                         <div className="flex items-center gap-2 flex-1">
-                            <select
-                                value={bulkStatus}
-                                onChange={(e) => setBulkStatus(e.target.value)}
-                                className="text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Cambiar estado a...</option>
-                                {Object.entries(ORDER_STATUS_CONFIG).map(
-                                    ([key, config]) => (
-                                        <option key={key} value={key}>
-                                            {config.label}
+                            {(() => {
+                                // Compute intersection of valid transitions for all selected orders
+                                const selectedOrderObjects = allOrdersOnPage.filter(o => selectedOrders.includes(o.id));
+                                const transitionSets = selectedOrderObjects.map(o => ORDER_WORKFLOW_TRANSITIONS[o.status as OrderStatus] || []);
+                                const commonTransitions = transitionSets.length > 0
+                                    ? transitionSets.reduce((common, curr) => common.filter(s => curr.includes(s)))
+                                    : [];
+                                return (
+                                    <select
+                                        value={bulkStatus}
+                                        onChange={(e) => setBulkStatus(e.target.value)}
+                                        className="text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        disabled={commonTransitions.length === 0}
+                                    >
+                                        <option value="">
+                                            {commonTransitions.length === 0
+                                                ? "Sin transiciones comunes"
+                                                : "Cambiar estado a..."}
                                         </option>
-                                    ),
-                                )}
-                            </select>
+                                        {commonTransitions.map((status) => {
+                                            const cfg = ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG];
+                                            return (
+                                                <option key={status} value={status}>
+                                                    {cfg?.label || status}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                );
+                            })()}
                             <button
                                 onClick={handleBulkStatusUpdate}
                                 disabled={!bulkStatus}
@@ -660,18 +686,38 @@ export default function Orders() {
                                         Estado
                                     </p>
                                     <div className="flex flex-wrap items-center gap-2 mt-1">
-                                        <span
-                                            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                                                ORDER_STATUS_CONFIG[
-                                                    selectedOrder.status as keyof typeof ORDER_STATUS_CONFIG
-                                                ]?.className ||
-                                                "bg-gray-100 text-gray-800"
-                                            }`}
-                                        >
-                                            {ORDER_STATUS_CONFIG[
-                                                selectedOrder.status as keyof typeof ORDER_STATUS_CONFIG
-                                            ]?.shortLabel || selectedOrder.status}
-                                        </span>
+                                        {(() => {
+                                            const transitions = ORDER_WORKFLOW_TRANSITIONS[selectedOrder.status as OrderStatus] || [];
+                                            const currentConfig = ORDER_STATUS_CONFIG[selectedOrder.status as keyof typeof ORDER_STATUS_CONFIG];
+                                            return transitions.length > 0 ? (
+                                                <select
+                                                    value={selectedOrder.status}
+                                                    onChange={async (e) => {
+                                                        await handleStatusChange(selectedOrder.id, e.target.value);
+                                                        setSelectedOrder({ ...selectedOrder, status: e.target.value });
+                                                    }}
+                                                    className={`text-sm font-medium rounded-full px-3 py-1 border-0 cursor-pointer ${currentConfig?.className || "bg-gray-100 text-gray-800"}`}
+                                                >
+                                                    <option value={selectedOrder.status}>
+                                                        {currentConfig?.shortLabel || selectedOrder.status}
+                                                    </option>
+                                                    {transitions.map((status) => {
+                                                        const cfg = ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG];
+                                                        return (
+                                                            <option key={status} value={status}>
+                                                                {cfg?.shortLabel || status}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                            ) : (
+                                                <span
+                                                    className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${currentConfig?.className || "bg-gray-100 text-gray-800"}`}
+                                                >
+                                                    {currentConfig?.shortLabel || selectedOrder.status}
+                                                </span>
+                                            );
+                                        })()}
                                         {selectedOrder.hasOpenIssues && (
                                             <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
                                                 Incidencias Pendientes
