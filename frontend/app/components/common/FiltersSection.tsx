@@ -1,6 +1,7 @@
 import InputComponent from "~/components/common/forms/InputComponent";
 import SelectComponent from "~/components/common/forms/SelectComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
+import LabelComponent from "~/components/common/forms/LabelComponent";
 import type { FilterField, FilterValues } from "./types/tableTypes";
 import CheckboxComponent from "./forms/CheckboxComponent";
 import { DateRangePicker } from "./DateRangePicker";
@@ -49,10 +50,7 @@ export function FiltersSection({
         switch (field.type) {
             case "search":
                 return (
-                    <div key={field.key} className="col-span-1 flex flex-col font-medium text-gray-700 gap-1">
-                        <span className="text-md py-1 px-2 font-semibold truncate">
-                            {field.label}
-                        </span>
+                    <LabelComponent key={field.key} label={field.label} className="col-span-1">
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -65,11 +63,11 @@ export function FiltersSection({
                                 value={value || ""}
                                 onChange={(e) => updateFilter(field.key, e.target.value)}
                                 placeholder={field.placeholder || `Buscar ${field.label.toLowerCase()}...`}
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="block w-full pl-10 pr-2 text-sm py-1.5 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 aria-label={field.label}
                             />
                         </div>
-                    </div>
+                    </LabelComponent>
                 );
             case "text":
                 return (

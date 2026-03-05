@@ -38,7 +38,7 @@ const InputComponent = forwardRef<HTMLInputElement, InputProps>(({
         <div className="relative">
             <input
                 ref={ref}
-                className={twMerge(`w-full border rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`)}
+                className={twMerge(`w-full border border-gray-300 rounded-lg text-sm px-2 py-1.5 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${className}`)}
                 pattern={inputPattern}
                 title={inputTitle}
                 name={label || undefined}
@@ -68,7 +68,7 @@ const InputComponent = forwardRef<HTMLInputElement, InputProps>(({
         ) : (
             <input
                 ref={ref}
-                className={twMerge(`w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`)}
+                className={twMerge(`w-full border border-gray-300 rounded-lg text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 ${className}`)}
                 pattern={inputPattern}
                 title={inputTitle}
                 name={label || undefined}

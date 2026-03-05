@@ -23,7 +23,7 @@ function Checkbox({ className = "", ...props }) {
     return (
         <input
             type="checkbox"
-            className={twMerge(`w-6 h-6 scale-80 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${className}`)}
+            className={twMerge(`w-6 h-6 scale-80 text-blue-600 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`)}
             {...props}
         />
     );
@@ -69,8 +69,8 @@ export default function CheckboxComponent({
     };
 
     const inputClass = {
-        right: `order-last ${variantType === "checkbox" ? "w-4 h-4" : "w-10 h-6"} text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0`,
-        left: `order-first ${variantType === "checkbox" ? "w-4 h-4" : "w-10 h-6"} w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0`,
+        right: `order-last ${variantType === "checkbox" ? "w-4 h-4" : "w-10 h-6"} text-blue-600 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0`,
+        left: `order-first ${variantType === "checkbox" ? "w-4 h-4" : "w-10 h-6"} text-blue-600 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0`,
         top: "",
         bottom: "",
         "right-with-description": "self-center mx-2 order-last",

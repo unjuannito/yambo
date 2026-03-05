@@ -205,7 +205,7 @@ export default function MultiSelectComponent({
             <div className="relative" ref={multiSelectRef}>
                 <span
                     ref={triggerRef}
-                    className={twMerge(`w-full border rounded pl-3 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`)}
+                    className={twMerge(`w-full border rounded-lg border-gray-300 text-sm pl-2 pr-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center cursor-pointer gap-1 font-normal ${className}`)}
                     onClick={() => {
                         setIsOpen(!isOpen);
                     }}
@@ -256,7 +256,7 @@ export default function MultiSelectComponent({
                     <div
                         ref={dropdownRef}
                         style={dropdownStyle}
-                        className="bg-white border border-gray-300 rounded-md shadow-lg p-2 flex flex-col gap-2"
+                        className="bg-white border border-gray-300 rounded-lg shadow-lg p-2 flex flex-col gap-2"
                         onClick={(e) => {
                             if (e.target === e.currentTarget)
                                 e.preventDefault();
@@ -268,7 +268,7 @@ export default function MultiSelectComponent({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         autoFocus={isOpen}
-                        className="box-border w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shrink-0"
+                        className="box-border w-full text-sm px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 shrink-0"
                     />
 
                     <ul className="overflow-y-auto" style={{ maxHeight: (dropdownStyle.maxHeight as number ?? 320) - 56 }}>

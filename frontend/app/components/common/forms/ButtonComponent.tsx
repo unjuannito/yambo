@@ -50,7 +50,7 @@ export default function ButtonComponent({
             className={twMerge(`
             inline-flex items-center justify-center
             text-center font-medium
-            border border-solid rounded
+            border border-solid rounded-lg
             transition-[border] duration-150 ease-linear
             select-none whitespace-normal
             cursor-pointer disabled:cursor-not-allowed disabled:opacity-50

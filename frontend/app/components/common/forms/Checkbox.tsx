@@ -13,7 +13,7 @@ export function Checkbox({
         <label className="flex items-start cursor-pointer">
             <input
                 type="checkbox"
-                className={`mr-2 mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${className}`}
+                className={`mr-2 mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
                 {...props}
             />
             <div>

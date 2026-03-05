@@ -16,9 +16,9 @@ export function DateRangePicker({
     return (
         <div className={`flex flex-col gap-1 ${className}`}>
             {label && (
-                <label className="block text-sm font-medium text-gray-700">
+                <span className="text-md py-1 px-2 font-semibold text-gray-700 truncate">
                     {label}
-                </label>
+                </span>
             )}
             <div className="flex items-center gap-2">
                 <input
@@ -27,7 +27,7 @@ export function DateRangePicker({
                     onChange={(e) =>
                         onChange({ startDate: e.target.value, endDate })
                     }
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5 px-2 border"
+                    className="block w-full rounded-lg border border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                     placeholder="Desde"
                 />
                 <span className="text-gray-400 text-sm">—</span>
@@ -37,7 +37,7 @@ export function DateRangePicker({
                     onChange={(e) =>
                         onChange({ startDate, endDate: e.target.value })
                     }
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-1.5 px-2 border"
+                    className="block w-full rounded-lg border border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                     placeholder="Hasta"
                 />
                 {(startDate || endDate) && (
