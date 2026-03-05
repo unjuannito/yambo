@@ -79,8 +79,9 @@ export default function Merch() {
             ? [{
                 key: "familyProductId",
                 label: "Drop",
-                type: "select" as const,
+                type: "multi-select" as const,
                 options: dropFilterOptions,
+                placeholder: "Seleccionar drops...",
             }]
             : [],
         [drops, dropFilterOptions]
@@ -97,10 +98,10 @@ export default function Merch() {
             if (!matchesName && !matchesDesc) return false;
         }
 
-        // Drop filter
-        const dropFilter = filters.familyProductId as string | undefined;
-        if (dropFilter) {
-            if (product.familyProductId !== dropFilter) return false;
+        // Drop filter (multi-select: array of IDs)
+        const dropFilter = filters.familyProductId as string[] | undefined;
+        if (dropFilter && dropFilter.length > 0) {
+            if (!product.familyProductId || !dropFilter.includes(product.familyProductId)) return false;
         }
 
         return true;
@@ -137,9 +138,9 @@ export default function Merch() {
     // ── Render slots ────────────────────────────────────────────────
     const renderAboveContent = useCallback((info: ContentInfo<Product>) => {
         const { allData, filteredData, filters, updateFilter, clearFilters } = info;
-        const selectedDrop = filters.familyProductId as string | undefined;
+        const selectedDrops = (filters.familyProductId as string[] | undefined) ?? [];
         const searchQuery = filters.name as string | undefined;
-        const hasActiveFilters = !!(searchQuery?.trim()) || !!selectedDrop;
+        const hasActiveFilters = !!(searchQuery?.trim()) || selectedDrops.length > 0;
 
         return (
             <>
@@ -159,18 +160,22 @@ export default function Merch() {
                                 </button>
                             </span>
                         )}
-                        {selectedDrop && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
-                                Drop: {drops.find(d => d.id === selectedDrop)?.name}
-                                <button
-                                    onClick={() => updateFilter("familyProductId", undefined)}
-                                    className="hover:text-blue-900 font-bold"
-                                    aria-label="Quitar filtro de drop"
-                                >
-                                    ×
-                                </button>
-                            </span>
-                        )}
+                        {selectedDrops.map(dropId => {
+                            const drop = drops.find(d => d.id === dropId);
+                            if (!drop) return null;
+                            return (
+                                <span key={dropId} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                                    Drop: {drop.name}
+                                    <button
+                                        onClick={() => updateFilter("familyProductId", selectedDrops.filter(id => id !== dropId))}
+                                        className="hover:text-blue-900 font-bold"
+                                        aria-label={`Quitar filtro de drop ${drop.name}`}
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            );
+                        })}
                         <button
                             onClick={clearFilters}
                             className="text-xs text-gray-500 hover:text-gray-700 underline ml-auto"
@@ -181,20 +186,30 @@ export default function Merch() {
                 )}
 
                 {/* Drop Quick-Select Pills */}
-                {drops.length > 1 && !selectedDrop && (
+                {drops.length > 1 && (
                     <div className="mb-2">
                         <h2 className="text-lg font-semibold text-gray-700 mb-3">Drops disponibles</h2>
                         <div className="flex flex-wrap gap-2">
                             {drops.map((drop) => {
                                 const productCount = allData.filter(p => p.familyProductId === drop.id).length;
+                                const isSelected = selectedDrops.includes(drop.id);
                                 return (
                                     <button
                                         key={drop.id}
-                                        onClick={() => updateFilter("familyProductId", drop.id)}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors shadow-sm"
+                                        onClick={() => {
+                                            const newDrops = isSelected
+                                                ? selectedDrops.filter(id => id !== drop.id)
+                                                : [...selectedDrops, drop.id];
+                                            updateFilter("familyProductId", newDrops.length > 0 ? newDrops : undefined);
+                                        }}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 border rounded-full text-sm font-medium transition-colors shadow-sm ${
+                                            isSelected
+                                                ? "bg-blue-100 border-blue-400 text-blue-800 hover:bg-blue-200"
+                                                : "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                                        }`}
                                     >
                                         <span>{drop.name}</span>
-                                        <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full text-xs">
+                                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${isSelected ? "bg-blue-200 text-blue-900" : "bg-gray-100 text-gray-600"}`}>
                                             {productCount}
                                         </span>
                                     </button>
@@ -211,9 +226,9 @@ export default function Merch() {
                             ? `${allData.length} artículo${allData.length !== 1 ? "s" : ""}`
                             : `${filteredData.length} de ${allData.length} artículo${allData.length !== 1 ? "s" : ""}`
                         }
-                        {selectedDrop && (
+                        {selectedDrops.length > 0 && (
                             <span className="font-medium text-blue-600 ml-1">
-                                en {drops.find(d => d.id === selectedDrop)?.name}
+                                en {selectedDrops.map(id => drops.find(d => d.id === id)?.name).filter(Boolean).join(", ")}
                             </span>
                         )}
                     </p>
