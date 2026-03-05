@@ -3,7 +3,7 @@ import { DataTable } from "./DataTable";
 import type { TableColumn } from "./DataTable";
 import { FiltersSection } from "./FiltersSection";
 import { Pagination } from "./Pagination";
-import type { ColumnFilter, FilterValues } from "./types/tableTypes";
+import type { ColumnFilter, FilterField, FilterValues } from "./types/tableTypes";
 import type { PagedInfo, PagedResponse } from "~/types/apiType";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { ErrorMessage } from "./ErrorMessage";
@@ -12,6 +12,14 @@ import { twMerge } from "tailwind-merge";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
     filter?: ColumnFilter;
+}
+
+export interface ContentInfo<T> {
+    allData: T[];
+    filteredData: T[];
+    filters: FilterValues;
+    updateFilter: (key: string, value: any) => void;
+    clearFilters: () => void;
 }
 
 export interface FetchDataParams {
@@ -53,6 +61,14 @@ export interface FilterableTableProps<T> {
     features?: FeaturesConfig;
     serverSide?: ServerSideProps<T>;
     data?: T[];
+    /** Extra filter fields not tied to a column (e.g. a "drop" select in grid mode). */
+    extraFilters?: FilterField[];
+    /** Custom content rendered between filters and grid/table (e.g. quick-select pills, results count). */
+    renderAboveContent?: (info: ContentInfo<T>) => React.ReactNode;
+    /** Custom empty-state renderer. Receives a clearFilters callback. */
+    renderEmptyState?: (clearFilters: () => void) => React.ReactNode;
+    /** Custom client-side filter function. When provided, replaces the default column-based matching. */
+    filterFn?: (item: T, filters: FilterValues) => boolean;
 }
 
 export type {
@@ -60,6 +76,7 @@ export type {
     FilterOption,
     FilterValues,
 } from "./types/tableTypes";
+export type { FilterField } from "./types/tableTypes";
 
 const EMPTY_FILTERS: FilterValues = {};
 
@@ -71,6 +88,10 @@ export function FilterableTable<T>({
     features = {},
     serverSide,
     data: clientData,
+    extraFilters,
+    renderAboveContent,
+    renderEmptyState,
+    filterFn,
 }: FilterableTableProps<T>) {
     const {
         type: viewMode = 'table',
@@ -220,7 +241,7 @@ export function FilterableTable<T>({
     const data = isServerSide ? serverData : (clientData ?? []);
 
     const filterFields = useMemo(() => {
-        return columns
+        const columnFilters = columns
             .filter((col) => col.filter?.enabled)
             .map((col) => ({
                 key: col.key,
@@ -229,7 +250,11 @@ export function FilterableTable<T>({
                 placeholder: col.filter?.placeholder,
                 options: col.filter?.options,
             }));
-    }, [columns]);
+        if (extraFilters && extraFilters.length > 0) {
+            return [...columnFilters, ...extraFilters];
+        }
+        return columnFilters;
+    }, [columns, extraFilters]);
 
     // Client-side filtering
     const filteredData = useMemo(() => {
@@ -237,7 +262,19 @@ export function FilterableTable<T>({
 
         let result = [...data];
 
-        // Column filters
+        // When a custom filterFn is provided, use it instead of default column matching
+        if (filterFn) {
+            const activeFilterValues = enableFilters ? clientFilters : EMPTY_FILTERS;
+            const hasActiveValues = Object.values(activeFilterValues).some(
+                (v) => v !== undefined && v !== "" && v !== null && !(Array.isArray(v) && v.length === 0)
+            );
+            if (hasActiveValues) {
+                result = result.filter((item) => filterFn(item, activeFilterValues));
+            }
+            return result;
+        }
+
+        // Default column-based filtering
         if (enableFilters) {
             Object.entries(clientFilters).forEach(([key, value]) => {
                 if (value === undefined || value === "" || value === null)
@@ -268,7 +305,7 @@ export function FilterableTable<T>({
         }
 
         return result;
-    }, [data, clientFilters, columns, enableFilters, isServerSide]);
+    }, [data, clientFilters, columns, enableFilters, isServerSide, filterFn]);
 
     // Client-side pagination
     const paginatedData = useMemo(() => {
@@ -301,6 +338,29 @@ export function FilterableTable<T>({
 
     const activeFilters = isServerSide ? filters : clientFilters;
 
+    // Utility: clear all filters
+    const clearAllFilters = useCallback(() => {
+        handleFiltersChange(EMPTY_FILTERS);
+    }, [handleFiltersChange]);
+
+    // Utility: update a single filter key
+    const updateSingleFilter = useCallback(
+        (key: string, value: any) => {
+            const newFilters = { ...activeFilters, [key]: value };
+            handleFiltersChange(newFilters);
+        },
+        [activeFilters, handleFiltersChange]
+    );
+
+    // ContentInfo passed to renderAboveContent
+    const contentInfo: ContentInfo<T> = useMemo(() => ({
+        allData: data,
+        filteredData,
+        filters: activeFilters,
+        updateFilter: updateSingleFilter,
+        clearFilters: clearAllFilters,
+    }), [data, filteredData, activeFilters, updateSingleFilter, clearAllFilters]);
+
     // Load more helpers
     const loadMoreInfo = useMemo(() => {
         if (!enableLoadMore || !isServerSide) return null;
@@ -317,6 +377,9 @@ export function FilterableTable<T>({
         }
 
         if (paginatedData.length === 0 && !isLoadingMore) {
+            if (renderEmptyState) {
+                return renderEmptyState(clearAllFilters);
+            }
             return (
                 <div className="text-center py-12">
                     <p className="text-gray-500">{emptyMessage}</p>
@@ -431,6 +494,9 @@ export function FilterableTable<T>({
             {error && (
                 <ErrorMessage message={error} onRetry={isServerSide ? executeFetch : undefined} />
             )}
+
+            {/* Custom content above grid/table (e.g. drop pills, results count) */}
+            {renderAboveContent && renderAboveContent(contentInfo)}
 
             {/* Content */}
             {renderContent()}

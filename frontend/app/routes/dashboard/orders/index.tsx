@@ -119,12 +119,23 @@ export default function Orders() {
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
+            // Date range filter from UI overrides the tab-based startDate
+            const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
+            const effectiveStartDate = dateRange?.startDate
+                ? new Date(dateRange.startDate).toISOString()
+                : startDate;
+            const effectiveEndDate = dateRange?.endDate
+                ? new Date(dateRange.endDate + "T23:59:59").toISOString()
+                : undefined;
             const result = await orderService.getAllOrders(
                 page,
                 size,
-                filters.customerId,
+                filters.id,
+                filters.customerName,
+                undefined,
                 statusFilter,
-                startDate,
+                effectiveStartDate,
+                effectiveEndDate,
             );
             setAllOrdersOnPage(result.content);
             setSelectedOrders([]); // Clear selections when data changes
@@ -281,17 +292,22 @@ export default function Orders() {
         {
             key: "id",
             header: "ID",
+            filter: {
+                enabled: true,
+                type: "search",
+                placeholder: "Buscar por ID...",
+            },
             render: (order: Order) => (
                 <span className="font-mono text-xs">{order.id}</span>
             ),
         },
         {
-            key: "customerId",
+            key: "customerName",
             header: "Cliente",
             filter: {
                 enabled: true,
-                type: "text",
-                placeholder: "Buscar por cliente...",
+                type: "search",
+                placeholder: "Buscar por nombre...",
             },
             render: (order: Order) => (
                 <div className="text-xs">
@@ -335,8 +351,12 @@ export default function Orders() {
             },
         },
         {
-            key: "createdAt",
+            key: "dateRange",
             header: "Fecha",
+            filter: {
+                enabled: true,
+                type: "date-range",
+            },
             render: (order: Order) => (
                 <span className="text-sm text-gray-600">
                     {new Date(order.createdAt).toLocaleDateString()}

@@ -67,11 +67,12 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public Page<User> listUsers(String name, String email, Boolean enabled, List<String> permissions,
+public Page<User> listUsers(String id, String name, String email, Boolean enabled, List<String> permissions,
 			List<String> profiles, Pageable pageable) {
 		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
 		Set<String> profileSet = profiles == null ? null : profiles.stream().collect(Collectors.toSet());
 		Specification<User> spec = Specification.where(null);
+		spec = spec.and(UserSpecifications.idContains(id));
 		spec = spec.and(UserSpecifications.nameContains(name));
 		spec = spec.and(UserSpecifications.emailContains(email));
 		spec = spec.and(UserSpecifications.enabledEquals(enabled));

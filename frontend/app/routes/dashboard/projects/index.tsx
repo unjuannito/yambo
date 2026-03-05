@@ -207,7 +207,7 @@ export default function Projects() {
             header: "Nombre",
             filter: {
                 enabled: true,
-                type: "text",
+                type: "search",
                 placeholder: "Buscar por nombre...",
             },
             render: (project) => <span className="font-medium">{project.name}</span>,
@@ -217,7 +217,7 @@ export default function Projects() {
             header: "Temporada",
             filter: {
                 enabled: true,
-                type: "text",
+                type: "search",
                 placeholder: "Temporada...",
             },
             render: (project) => (

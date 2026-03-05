@@ -13,6 +13,10 @@ public final class UserSpecifications {
 
     private UserSpecifications() {}
 
+    public static Specification<User> idContains(String id) {
+        return (root, query, cb) -> id == null ? null : cb.like(cb.lower(root.get("id")), "%" + id.toLowerCase() + "%");
+    }
+
     public static Specification<User> nameContains(String name) {
         return (root, query, cb) -> name == null ? null : cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%");
     }

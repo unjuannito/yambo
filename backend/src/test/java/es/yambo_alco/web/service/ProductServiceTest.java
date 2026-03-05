@@ -223,7 +223,7 @@ class ProductServiceTest {
         doReturn(expectedPage).when(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
 
         // When
-        Page<Product> result = productService.listProducts(name, active, pageable);
+        Page<Product> result = productService.listProducts(name, active, null, null, null, null, pageable);
 
         // Then
         assertEquals(expectedPage, result);
@@ -254,7 +254,7 @@ class ProductServiceTest {
         doReturn(expectedPage).when(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
 
         // When
-        Page<Product> result = productService.listProducts(name, active, pageable);
+        Page<Product> result = productService.listProducts(name, active, null, null, null, null, pageable);
 
         // Then
         assertEquals(expectedPage, result);

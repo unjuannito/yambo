@@ -1,4 +1,4 @@
-export type FilterType = 'text' | 'select' | 'multi-select' | 'checkbox' | 'toggle';
+export type FilterType = 'text' | 'search' | 'select' | 'multi-select' | 'checkbox' | 'toggle' | 'date-range';
 
 export interface FilterOption {
     value: string;

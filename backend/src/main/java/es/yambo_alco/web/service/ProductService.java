@@ -49,7 +49,9 @@ public class ProductService {
         return product;
     }
 
-    public Page<Product> listProducts(String name, Boolean active, @NonNull Pageable pageable) {
+    public Page<Product> listProducts(String name, Boolean active, String familyName,
+                                       String projectName, BigDecimal minPrice, BigDecimal maxPrice,
+                                       @NonNull Pageable pageable) {
         User user = authService.getCurrentUser(true);
 
         boolean isProductAdmin = permissionCheck.hasPermission(PermissionResource.PRODUCT, PermissionAction.UPDATE) ||
@@ -57,6 +59,10 @@ public class ProductService {
 
         Specification<Product> spec = Specification.where(null);
         spec = spec.and(ProductSpecifications.nameContains(name));
+        spec = spec.and(ProductSpecifications.familyProductNameContains(familyName));
+        spec = spec.and(ProductSpecifications.projectNameContains(projectName));
+        spec = spec.and(ProductSpecifications.basePriceGreaterThanOrEqual(minPrice));
+        spec = spec.and(ProductSpecifications.basePriceLessThanOrEqual(maxPrice));
 
         if (isProductAdmin) {
             spec = spec.and(ProductSpecifications.activeEquals(active));

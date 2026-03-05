@@ -145,7 +145,7 @@ class OrderControllerTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(orderService.listOrders(eq(null), eq(null), eq(null), eq(null), any()))
+        when(orderService.listOrders(eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any()))
                 .thenReturn(new PageImpl<>(List.of(order), PageRequest.of(0, 20), 1));
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 
@@ -250,7 +250,7 @@ class OrderControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
-        when(orderService.listOrders(eq("USER001"), eq(null), eq(null), eq(null), any()))
+        when(orderService.listOrders(eq(null), eq(null), eq("USER001"), eq(null), eq(null), eq(null), any()))
                 .thenReturn(new PageImpl<>(List.of(order), PageRequest.of(0, 20), 1));
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 

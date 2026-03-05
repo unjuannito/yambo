@@ -94,7 +94,7 @@ class ProductControllerTest {
                 .options(List.of(new ProductOption()))
                 .build();
 
-        when(productService.listProducts(eq(null), eq(null), any()))
+        when(productService.listProducts(eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any()))
                 .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/products"))

@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,8 +39,16 @@ public class ActivityController {
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'read')")
-    public ResponseEntity<Page<ActivityResponse>> listActivities(Pageable pageable) {
-        Page<Activity> activities = activityService.listActivities(pageable);
+    public ResponseEntity<Page<ActivityResponse>> listActivities(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) ActivityStatus status,
+            @RequestParam(required = false) Boolean isPublic,
+            @RequestParam(required = false) String projectId,
+            @RequestParam(required = false) String managerId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            Pageable pageable) {
+        Page<Activity> activities = activityService.listActivities(name, status, isPublic, projectId, managerId, startDate, endDate, pageable);
         return ResponseEntity.ok(activities.map(ActivityResponse::new));
     }
 

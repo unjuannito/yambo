@@ -9,9 +9,11 @@ import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import es.yambo_alco.web.repository.spec.ActivitySpecifications;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -35,8 +37,20 @@ public class ActivityService {
         return activityRepository.findByIsPublicTrueOrderByDateAsc();
     }
 
-    public Page<Activity> listActivities(@NonNull Pageable pageable) {
-        return activityRepository.findAll(pageable);
+    public Page<Activity> listActivities(String name, ActivityStatus status, Boolean isPublic,
+                                           String projectId, String managerId,
+                                           LocalDateTime startDate, LocalDateTime endDate,
+                                           @NonNull Pageable pageable) {
+        Specification<Activity> spec = Specification.where(null);
+        spec = spec.and(ActivitySpecifications.nameContains(name));
+        spec = spec.and(ActivitySpecifications.statusEquals(status));
+        spec = spec.and(ActivitySpecifications.isPublicEquals(isPublic));
+        spec = spec.and(ActivitySpecifications.projectIdEquals(projectId));
+        spec = spec.and(ActivitySpecifications.managerIdEquals(managerId));
+        if (startDate != null || endDate != null) {
+            spec = spec.and(ActivitySpecifications.dateBetween(startDate, endDate));
+        }
+        return activityRepository.findAll(spec, pageable);
     }
 
     public Activity createActivity(@NonNull String name, String description, LocalDateTime date,

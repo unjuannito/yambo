@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.FamilyProductService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +17,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import es.yambo_alco.web.model.enums.PermissionAction;
+import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.util.PermissionCheckService;
+
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,6 +31,8 @@ import java.util.stream.Collectors;
 public class FamilyProductController {
 
     private final FamilyProductService familyProductService;
+    private final AuthService authService;
+    private final PermissionCheckService permissionCheck;
 
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('family_product', 'create')")
@@ -46,7 +53,15 @@ public class FamilyProductController {
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) String profileId,
             Pageable pageable) {
-        Page<FamilyProduct> familyProducts = familyProductService.listFamilyProducts(name, active, profileId, pageable);
+        boolean isFamilyAdmin = permissionCheck.hasPermission(PermissionResource.FAMILY_PRODUCT, PermissionAction.UPDATE);
+        Set<String> userProfileIds = null;
+        if (!isFamilyAdmin) {
+            var user = authService.getCurrentUser(true);
+            userProfileIds = user.getProfiles().stream()
+                    .map(p -> p.getId())
+                    .collect(Collectors.toSet());
+        }
+        Page<FamilyProduct> familyProducts = familyProductService.listFamilyProducts(name, active, profileId, userProfileIds, pageable);
         Page<FamilyProductResponse> response = familyProducts.map(FamilyProductResponse::new);
         return ResponseEntity.ok(response);
     }

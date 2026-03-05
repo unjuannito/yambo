@@ -58,13 +58,23 @@ function AdminIssuesContent() {
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
+            // Date range filter from UI overrides the tab-based startDate
+            const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
+            const effectiveStartDate = dateRange?.startDate
+                ? new Date(dateRange.startDate).toISOString()
+                : startDate;
+            const effectiveEndDate = dateRange?.endDate
+                ? new Date(dateRange.endDate + "T23:59:59").toISOString()
+                : undefined;
             const result = await issueService.getAllIssues(
                 page,
                 size,
-                startDate,
-                undefined,
+                effectiveStartDate,
+                effectiveEndDate,
                 statusFilter,
                 undefined,
+                undefined,
+                filters.title,
             );
 
             if (page === 0) {
@@ -101,6 +111,11 @@ function AdminIssuesContent() {
             {
                 key: "title",
                 header: "Incidencia",
+                filter: {
+                    enabled: true,
+                    type: "search",
+                    placeholder: "Buscar por título...",
+                },
                 render: (row) => (
                     <div>
                         <p className="font-medium text-gray-900">{row.title}</p>
@@ -132,8 +147,12 @@ function AdminIssuesContent() {
                 render: (row) => <IssueStatusBadge status={row.status} />,
             },
             {
-                key: "createdAt",
+                key: "dateRange",
                 header: "Creada",
+                filter: {
+                    enabled: true,
+                    type: "date-range",
+                },
                 render: (row) => new Date(row.createdAt).toLocaleString("es-ES"),
             },
             {

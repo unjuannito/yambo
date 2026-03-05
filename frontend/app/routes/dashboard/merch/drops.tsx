@@ -170,7 +170,7 @@ export default function MerchFamilies() {
             header: "Nombre",
             filter: {
                 enabled: true,
-                type: "text",
+                type: "search",
                 placeholder: "Buscar por nombre...",
             },
             render: (drop) => <span className="font-medium">{drop.name}</span>,

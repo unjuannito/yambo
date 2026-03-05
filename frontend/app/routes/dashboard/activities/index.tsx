@@ -5,6 +5,7 @@ import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import LabelComponent from "~/components/common/forms/LabelComponent";
 import { activityService } from "~/services/activityService";
 import type { Activity } from "~/types/activity";
+import { ACTIVITY_STATUS_OPTIONS } from "~/types/activity";
 import {
     FilterableTable,
     type FetchDataParams,
@@ -70,7 +71,7 @@ export default function ActivitiesAdminPage() {
             header: "Nombre",
             filter: {
                 enabled: true,
-                type: "text" as const,
+                type: "search" as const,
                 placeholder: "Buscar nombre",
             },
             render: (a: Activity) => (
@@ -78,12 +79,11 @@ export default function ActivitiesAdminPage() {
             ),
         },
         {
-            key: "date",
+            key: "dateRange",
             header: "Fecha",
             filter: {
                 enabled: true,
-                type: "text" as const,
-                placeholder: "Buscar fecha",
+                type: "date-range" as const,
             },
             render: (a: Activity) => (
                 <span>
@@ -96,8 +96,8 @@ export default function ActivitiesAdminPage() {
             header: "Responsable",
             filter: {
                 enabled: true,
-                type: "text" as const,
-                placeholder: "Buscar responsable",
+                type: "select" as const,
+                options: managerOptions,
             },
             render: (a: Activity) => (
                 <span>{a.manager ? a.manager.name : "-"}</span>
@@ -107,9 +107,9 @@ export default function ActivitiesAdminPage() {
             key: "status",
             header: "Estado",
             filter: {
-                enabled: false,
-                type: "text" as const,
-                placeholder: "Buscar estado",
+                enabled: true,
+                type: "select" as const,
+                options: ACTIVITY_STATUS_OPTIONS,
             },
             render: (a: Activity) =>
                 a.status ? (
@@ -124,15 +124,23 @@ export default function ActivitiesAdminPage() {
                 ),
         },
         {
+            key: "project",
+            header: "Proyecto",
+            filter: {
+                enabled: true,
+                type: "select" as const,
+                options: projectOptions,
+            },
+            render: (a: Activity) => (
+                <span>{a.project ? a.project.name : "-"}</span>
+            ),
+        },
+        {
             key: "public",
             header: "Pública",
             filter: {
-                enabled: false,
-                type: "select" as const,
-                options: [
-                    { value: "true", label: "Sí" },
-                    { value: "false", label: "No" },
-                ],
+                enabled: true,
+                type: "toggle" as const,
             },
             render: (a: Activity) => <span>{a.public ? "Sí" : "No"}</span>,
         },
@@ -179,7 +187,26 @@ export default function ActivitiesAdminPage() {
             totalPages: number;
         };
     }> => {
-        const result = await activityService.getActivities(page, size);
+        // Date range filter
+        const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
+        const startDate = dateRange?.startDate
+            ? new Date(dateRange.startDate).toISOString()
+            : undefined;
+        const endDate = dateRange?.endDate
+            ? new Date(dateRange.endDate + "T23:59:59").toISOString()
+            : undefined;
+
+        const result = await activityService.getActivities(
+            page,
+            size,
+            filters.name || undefined,
+            filters.status || undefined,
+            filters.public === true ? true : undefined,
+            filters.project || undefined,
+            filters.manager || undefined,
+            startDate,
+            endDate,
+        );
         return {
             content: result.content,
             page: {

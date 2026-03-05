@@ -185,7 +185,7 @@ class ActivityControllerTest {
         // Given
         Activity activity = createTestActivity();
         PageImpl<Activity> page = new PageImpl<>(List.of(activity), PageRequest.of(0, 20), 1);
-        when(activityService.listActivities(any())).thenReturn(page);
+        when(activityService.listActivities(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any())).thenReturn(page);
 
         // When & Then
         mockMvc.perform(get("/activities"))

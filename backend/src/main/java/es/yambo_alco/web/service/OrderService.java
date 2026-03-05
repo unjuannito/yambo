@@ -174,11 +174,17 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
-    public Page<Order> listOrders(String customerId, List<OrderStatus> statuses,
+    public Page<Order> listOrders(String orderId, String customerName, String customerId, List<OrderStatus> statuses,
             LocalDateTime startDate, LocalDateTime endDate,
             @NonNull Pageable pageable) {
         Specification<Order> spec = Specification.where(null);
 
+        if (orderId != null) {
+            spec = spec.and(OrderSpecifications.idContains(orderId));
+        }
+        if (customerName != null) {
+            spec = spec.and(OrderSpecifications.customerNameContains(customerName));
+        }
         if (customerId != null) {
             spec = spec.and(OrderSpecifications.customerIdEquals(customerId));
         }

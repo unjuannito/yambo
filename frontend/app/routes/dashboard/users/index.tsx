@@ -97,6 +97,7 @@ export default function Users() {
 
     const fetchUsersData = useCallback(async ({ page, size, filters }: FetchDataParams) => {
         return await adminUserService.listUsers({
+            id: filters.id,
             name: filters.name,
             email: filters.email,
             profiles: filters.profiles,
@@ -185,6 +186,11 @@ export default function Users() {
         {
             key: "id",
             header: "ID",
+            filter: {
+                enabled: true,
+                type: "search",
+                placeholder: "Buscar por ID...",
+            },
             render: (user: User) => (
                 <span className="font-mono text-xs">{user.id}</span>
             ),
@@ -194,7 +200,7 @@ export default function Users() {
             header: "Nombre",
             filter: {
                 enabled: true,
-                type: "text",
+                type: "search",
                 placeholder: "Buscar por nombre...",
             },
             render: (user: User) => (
@@ -213,7 +219,7 @@ export default function Users() {
             header: "Correo Electrónico",
             filter: {
                 enabled: true,
-                type: "text",
+                type: "search",
                 placeholder: "Buscar por email...",
             },
         },

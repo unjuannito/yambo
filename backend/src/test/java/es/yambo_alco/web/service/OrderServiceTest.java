@@ -547,7 +547,7 @@ class OrderServiceTest {
         when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
             .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
 
-        orderService.listOrders("USER001", List.of(OrderStatus.PAYMENT_CONFIRMED), LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
+        orderService.listOrders(null, null, "USER001", List.of(OrderStatus.PAYMENT_CONFIRMED), LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
 
         verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
     }

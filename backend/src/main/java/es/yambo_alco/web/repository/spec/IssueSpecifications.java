@@ -11,6 +11,14 @@ public final class IssueSpecifications {
 
     private IssueSpecifications() {}
 
+    public static Specification<Issue> idContains(String id) {
+        return (root, query, cb) -> id == null ? null : cb.like(cb.lower(root.get("id")), "%" + id.toLowerCase() + "%");
+    }
+
+    public static Specification<Issue> titleContains(String title) {
+        return (root, query, cb) -> title == null ? null : cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase() + "%");
+    }
+
     public static Specification<Issue> createdAfter(LocalDateTime startDate) {
         return (root, query, cb) -> startDate == null ? null : cb.greaterThanOrEqualTo(root.get("createdAt"), startDate);
     }

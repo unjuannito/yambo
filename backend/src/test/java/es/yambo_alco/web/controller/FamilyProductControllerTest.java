@@ -4,6 +4,7 @@ import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.FamilyProductService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,9 +42,14 @@ class FamilyProductControllerTest {
     @MockitoBean
     private PermissionCheckService permissionCheckService;
 
+    @MockitoBean
+    private AuthService authService;
+
     @BeforeEach
     void setUp() {
         when(permissionCheckService.hasPermission(anyString(), anyString())).thenReturn(true);
+        when(permissionCheckService.hasPermission(any(es.yambo_alco.web.model.enums.PermissionResource.class),
+                any(es.yambo_alco.web.model.enums.PermissionAction.class))).thenReturn(true);
     }
 
     @Test

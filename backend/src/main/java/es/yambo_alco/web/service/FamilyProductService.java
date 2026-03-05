@@ -65,7 +65,7 @@ public class FamilyProductService {
     }
 
     public Page<FamilyProduct> listFamilyProducts(String name, Boolean active, String profileId,
-            @NonNull Pageable pageable) {
+            Set<String> userProfileIds, @NonNull Pageable pageable) {
         Specification<FamilyProduct> spec = Specification.where(null);
 
         if (name != null) {
@@ -80,6 +80,9 @@ public class FamilyProductService {
         }
         if (profileId != null) {
             spec = spec.and(FamilyProductSpecifications.hasProfileId(profileId));
+        }
+        if (userProfileIds != null) {
+            spec = spec.and(FamilyProductSpecifications.hasAnyProfile(userProfileIds));
         }
 
         return familyProductRepository.findAll(spec, pageable);

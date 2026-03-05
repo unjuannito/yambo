@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -223,10 +224,10 @@ public class ActivityServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Activity a = Activity.builder().id("ACT00001").name("A").project(testProject).build();
         Page<Activity> page = new PageImpl<>(List.of(a), pageable, 1);
-        when(activityRepository.findAll(pageable)).thenReturn(page);
+        when(activityRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Activity>>any(), eq(pageable))).thenReturn(page);
 
         // When
-        Page<Activity> result = activityService.listActivities(pageable);
+        Page<Activity> result = activityService.listActivities(null, null, null, null, null, null, null, pageable);
 
         // Then
         assertThat(result.getContent()).hasSize(1);

@@ -8,14 +8,44 @@ import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import java.math.BigDecimal;
 import java.util.Set;
 
 public final class ProductSpecifications {
 
     private ProductSpecifications() {}
 
+    public static Specification<Product> idContains(String id) {
+        return (root, query, cb) -> id == null ? null : cb.like(cb.lower(root.get("id")), "%" + id.toLowerCase() + "%");
+    }
+
     public static Specification<Product> nameContains(String name) {
         return (root, query, cb) -> name == null ? null : cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%");
+    }
+
+    public static Specification<Product> familyProductNameContains(String familyName) {
+        return (root, query, cb) -> {
+            if (familyName == null) return null;
+            Join<Product, FamilyProduct> familyJoin = root.join("familyProduct", JoinType.LEFT);
+            return cb.like(cb.lower(familyJoin.get("name")), "%" + familyName.toLowerCase() + "%");
+        };
+    }
+
+    public static Specification<Product> projectNameContains(String projectName) {
+        return (root, query, cb) -> {
+            if (projectName == null) return null;
+            Join<Product, FamilyProduct> familyJoin = root.join("familyProduct", JoinType.LEFT);
+            Join<FamilyProduct, Project> projectJoin = familyJoin.join("projects", JoinType.LEFT);
+            return cb.like(cb.lower(projectJoin.get("name")), "%" + projectName.toLowerCase() + "%");
+        };
+    }
+
+    public static Specification<Product> basePriceGreaterThanOrEqual(BigDecimal minPrice) {
+        return (root, query, cb) -> minPrice == null ? null : cb.greaterThanOrEqualTo(root.get("basePrice"), minPrice);
+    }
+
+    public static Specification<Product> basePriceLessThanOrEqual(BigDecimal maxPrice) {
+        return (root, query, cb) -> maxPrice == null ? null : cb.lessThanOrEqualTo(root.get("basePrice"), maxPrice);
     }
 
     public static Specification<Product> activeEquals(Boolean active) {

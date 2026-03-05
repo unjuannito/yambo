@@ -124,7 +124,7 @@ export default function NominativeInvitations() {
             header: "Email",
             filter: {
                 enabled: true,
-                type: "text",
+                type: "search",
                 placeholder: "Buscar email...",
             },
             render: (invitation) => <span>{invitation.email}</span>,

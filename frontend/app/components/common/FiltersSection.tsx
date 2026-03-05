@@ -3,6 +3,7 @@ import SelectComponent from "~/components/common/forms/SelectComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { FilterField, FilterValues } from "./types/tableTypes";
 import CheckboxComponent from "./forms/CheckboxComponent";
+import { DateRangePicker } from "./DateRangePicker";
 
 export interface FiltersSectionProps {
     filters: FilterValues;
@@ -37,7 +38,7 @@ export function FiltersSection({
 
     const updateFilter = (
         key: string,
-        value: string | boolean | undefined | string[]
+        value: string | boolean | undefined | string[] | { startDate: string; endDate: string }
     ) => {
         onFiltersChange({ ...filters, [key]: value });
     };
@@ -46,6 +47,30 @@ export function FiltersSection({
         const value = filters[field.key];
 
         switch (field.type) {
+            case "search":
+                return (
+                    <div key={field.key} className="col-span-1 flex flex-col font-medium text-gray-700 gap-1">
+                        <span className="text-md py-1 px-2 font-semibold truncate">
+                            {field.label}
+                        </span>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <input
+                                id={`filter-${field.key}`}
+                                type="search"
+                                value={value || ""}
+                                onChange={(e) => updateFilter(field.key, e.target.value)}
+                                placeholder={field.placeholder || `Buscar ${field.label.toLowerCase()}...`}
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                aria-label={field.label}
+                            />
+                        </div>
+                    </div>
+                );
             case "text":
                 return (
                     <InputComponent
@@ -127,6 +152,20 @@ export function FiltersSection({
                         onChange={(e) =>
                             updateFilter(field.key, e.target.checked)
                         }
+                        className="col-span-1"
+                    />
+                );
+            case "date-range":
+                return (
+                    <DateRangePicker
+                        key={field.key}
+                        label={field.label}
+                        startDate={value?.startDate || ""}
+                        endDate={value?.endDate || ""}
+                        onChange={(range) => {
+                            const hasValue = range.startDate || range.endDate;
+                            updateFilter(field.key, hasValue ? range : undefined);
+                        }}
                         className="col-span-1"
                     />
                 );

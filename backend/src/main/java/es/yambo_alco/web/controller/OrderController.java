@@ -70,12 +70,14 @@ public class OrderController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<OrderResponse>> listOrders(
+            @RequestParam(required = false) String orderId,
+            @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String customerId,
             @RequestParam(required = false) List<OrderStatus> status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
-        Page<Order> orders = orderService.listOrders(customerId, status, startDate, endDate, pageable);
+        Page<Order> orders = orderService.listOrders(orderId, customerName, customerId, status, startDate, endDate, pageable);
         Page<OrderResponse> response = orders.map(order -> {
             List<OrderProduct> products = orderService.getOrderProducts(order.getId());
             return new OrderResponse(order, products, userRepository, productRepository, orderService);
@@ -133,7 +135,7 @@ public class OrderController {
             Pageable pageable) {
         User user = authService.getCurrentUser(true);
 
-        Page<Order> orders = orderService.listOrders(user.getId(), status, startDate, endDate, pageable);
+        Page<Order> orders = orderService.listOrders(null, null, user.getId(), status, startDate, endDate, pageable);
         Page<OrderResponse> response = orders.map(order -> {
             List<OrderProduct> products = orderService.getOrderProducts(order.getId());
             return new OrderResponse(order, products, userRepository, productRepository, orderService);

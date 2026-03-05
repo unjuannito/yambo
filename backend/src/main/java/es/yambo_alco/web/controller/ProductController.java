@@ -44,8 +44,12 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponse>> listProducts(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String familyName,
+            @RequestParam(required = false) String projectName,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
             Pageable pageable) {
-        Page<Product> products = productService.listProducts(name, active, pageable);
+        Page<Product> products = productService.listProducts(name, active, familyName, projectName, minPrice, maxPrice, pageable);
         Page<ProductResponse> response = products.map(ProductResponse::new);
         return ResponseEntity.ok(response);
     }

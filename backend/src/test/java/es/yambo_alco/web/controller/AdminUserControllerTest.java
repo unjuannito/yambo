@@ -69,7 +69,7 @@ public class AdminUserControllerTest {
         public void listUsers_ok() throws Exception {
                 User u = User.builder().id("U0000001").email("a@b.com").name("User")
                                 .profiles(Set.of()).enabled(true).build();
-                Mockito.when(userService.listUsers(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+Mockito.when(userService.listUsers(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
                                 Mockito.any(), Mockito.any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(u)));
 
                 mockMvc.perform(get("/admin/users").accept(MediaType.APPLICATION_JSON))
@@ -97,7 +97,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(user1, user2), PageRequest.of(0, 20), 2);
-                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -112,7 +112,7 @@ public class AdminUserControllerTest {
                                 .andExpect(jsonPath("$.page.size").value(20))
                                 .andExpect(jsonPath("$.page.number").value(0));
 
-                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), isNull(), isNull(),
+                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                                 any(PageRequest.class));
         }
 
@@ -129,7 +129,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 20), 1);
-                when(userService.listUsers(eq("John"), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), eq("John"), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -141,7 +141,7 @@ public class AdminUserControllerTest {
                                 .andExpect(jsonPath("$.content", hasSize(1)))
                                 .andExpect(jsonPath("$.content[0].name").value("John Doe"));
 
-                verify(userService, times(1)).listUsers(eq("John"), isNull(), isNull(), isNull(), isNull(),
+                verify(userService, times(1)).listUsers(isNull(), eq("John"), isNull(), isNull(), isNull(), isNull(),
                                 any(PageRequest.class));
         }
 
@@ -158,7 +158,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 20), 1);
-                when(userService.listUsers(isNull(), eq("test@example.com"), isNull(), isNull(), isNull(),
+                when(userService.listUsers(isNull(), isNull(), eq("test@example.com"), isNull(), isNull(), isNull(),
                                 any(PageRequest.class)))
                                 .thenReturn(userPage);
 
@@ -170,7 +170,7 @@ public class AdminUserControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.content[0].email").value("test@example.com"));
 
-                verify(userService, times(1)).listUsers(isNull(), eq("test@example.com"), isNull(), isNull(), isNull(),
+                verify(userService, times(1)).listUsers(isNull(), isNull(), eq("test@example.com"), isNull(), isNull(), isNull(),
                                 any(PageRequest.class));
         }
 
@@ -187,7 +187,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(enabledUser), PageRequest.of(0, 20), 1);
-                when(userService.listUsers(isNull(), isNull(), eq(true), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), eq(true), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -198,7 +198,7 @@ public class AdminUserControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.content[0].enabled").value(true));
 
-                verify(userService, times(1)).listUsers(isNull(), isNull(), eq(true), isNull(), isNull(),
+                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), eq(true), isNull(), isNull(),
                                 any(PageRequest.class));
         }
 
@@ -215,7 +215,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 20), 1);
-                when(userService.listUsers(isNull(), isNull(), isNull(), anyList(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), anyList(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -225,7 +225,7 @@ public class AdminUserControllerTest {
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk());
 
-                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), anyList(), isNull(),
+                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), isNull(), anyList(), isNull(),
                                 any(PageRequest.class));
         }
 
@@ -242,7 +242,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 20), 1);
-                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), anyList(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), anyList(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -252,7 +252,7 @@ public class AdminUserControllerTest {
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk());
 
-                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), isNull(), anyList(),
+                verify(userService, times(1)).listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), anyList(),
                                 any(PageRequest.class));
         }
 
@@ -272,7 +272,7 @@ public class AdminUserControllerTest {
                 }
 
                 Page<User> userPage = new PageImpl<>(users, PageRequest.of(1, 10), 25);
-                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -310,7 +310,7 @@ public class AdminUserControllerTest {
 
                 PageRequest expectedPageRequest = PageRequest.of(0, 20, Sort.Direction.ASC, "name");
                 Page<User> userPage = new PageImpl<>(List.of(user1, user2), expectedPageRequest, 2);
-                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -329,7 +329,7 @@ public class AdminUserControllerTest {
         void listUsers_WithSortDescending_ShouldSortDescending() throws Exception {
                 // Given
                 Page<User> userPage = new PageImpl<>(List.of(), PageRequest.of(0, 20, Sort.Direction.DESC, "email"), 0);
-                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(userPage);
 
                 // When & Then
@@ -354,7 +354,7 @@ public class AdminUserControllerTest {
                                 .build();
 
                 Page<User> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 20), 1);
-                when(userService.listUsers(eq("Admin"), eq("admin@example.com"), eq(true), anyList(), anyList(),
+                when(userService.listUsers(isNull(), eq("Admin"), eq("admin@example.com"), eq(true), anyList(), anyList(),
                                 any(PageRequest.class)))
                                 .thenReturn(userPage);
 
@@ -376,7 +376,7 @@ public class AdminUserControllerTest {
         void listUsers_WithEmptyResults_ShouldReturnEmptyPage() throws Exception {
                 // Given
                 Page<User> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
-                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
+                when(userService.listUsers(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), any(PageRequest.class)))
                                 .thenReturn(emptyPage);
 
                 // When & Then

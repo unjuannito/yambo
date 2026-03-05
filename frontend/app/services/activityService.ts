@@ -6,8 +6,29 @@ export class ActivityService extends ApiService {
         return await this.get('/public/activities');
     }
 
-    public async getActivities(page = 0, size = 20): Promise<{ content: Activity[]; totalElements: number; totalPages: number }> {
-        return await this.get(`/activities?page=${page}&size=${size}`);
+    public async getActivities(
+        page = 0,
+        size = 20,
+        name?: string,
+        status?: string,
+        isPublic?: boolean,
+        projectId?: string,
+        managerId?: string,
+        startDate?: string,
+        endDate?: string
+    ): Promise<{ content: Activity[]; totalElements: number; totalPages: number }> {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            size: size.toString(),
+        });
+        if (name) params.append('name', name);
+        if (status) params.append('status', status);
+        if (isPublic !== undefined) params.append('isPublic', isPublic.toString());
+        if (projectId) params.append('projectId', projectId);
+        if (managerId) params.append('managerId', managerId);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        return await this.get(`/activities?${params}`);
     }
 
     public async getActivity(id: string): Promise<Activity> {

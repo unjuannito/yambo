@@ -74,12 +74,14 @@ public class IssueController {
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
     public ResponseEntity<Page<IssueListResponse>> listIssues(
+            @RequestParam(required = false) String issueId,
+            @RequestParam(required = false) String title,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) List<IssueStatus> status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
-        Page<Issue> issues = issueService.listIssues(userId, status, startDate, endDate, pageable);
+        Page<Issue> issues = issueService.listIssues(issueId, title, userId, status, startDate, endDate, pageable);
         Page<IssueListResponse> response = issues.map(issue -> {
             List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
             return new IssueListResponse(issue, relatedProducts);
@@ -90,12 +92,13 @@ public class IssueController {
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<IssueListResponse>> getMyIssues(
+            @RequestParam(required = false) String title,
             @RequestParam(required = false) List<IssueStatus> status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
         User currentUser = authService.getCurrentUser(true);
-        Page<Issue> issues = issueService.listIssues(currentUser.getId(), status, startDate, endDate, pageable);
+        Page<Issue> issues = issueService.listIssues(null, title, currentUser.getId(), status, startDate, endDate, pageable);
         Page<IssueListResponse> response = issues.map(issue -> {
             List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
             return new IssueListResponse(issue, relatedProducts);

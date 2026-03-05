@@ -8,6 +8,7 @@ export interface PagedUsers {
 }
 
 export interface UserFilters {
+    id?: string;
     name?: string;
     email?: string;
     enabled?: boolean;

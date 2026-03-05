@@ -46,7 +46,9 @@ export class IssueService extends ApiService {
         startDate?: string,
         endDate?: string,
         status?: string[],
-        userId?: string
+        userId?: string,
+        issueId?: string,
+        title?: string
     ): Promise<PagedResponse<IssueListItem>> {
         const params = new URLSearchParams({
             page: page.toString(),
@@ -58,6 +60,8 @@ export class IssueService extends ApiService {
             for (const s of status) params.append('status', s);
         }
         if (userId) params.append('userId', userId);
+        if (issueId) params.append('issueId', issueId);
+        if (title) params.append('title', title);
         return this.get<PagedResponse<IssueListItem>>(`/issues?${params}`);
     }
 
@@ -66,7 +70,8 @@ export class IssueService extends ApiService {
         size = 20,
         startDate?: string,
         endDate?: string,
-        status?: string[]
+        status?: string[],
+        title?: string
     ): Promise<PagedResponse<IssueListItem>> {
         const params = new URLSearchParams({
             page: page.toString(),
@@ -77,6 +82,7 @@ export class IssueService extends ApiService {
         if (status && status.length > 0) {
             for (const s of status) params.append('status', s);
         }
+        if (title) params.append('title', title);
         return this.get<PagedResponse<IssueListItem>>(`/issues/my?${params}`);
     }
 }

@@ -65,13 +65,17 @@ export interface UpdateProductRequest {
 }
 
 export class ProductService extends ApiService {
-    public async getAllProducts(page = 0, size = 20, name?: string, active?: boolean): Promise<{ content: Product[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
+    public async getAllProducts(page = 0, size = 20, name?: string, active?: boolean, familyName?: string, projectName?: string, minPrice?: number, maxPrice?: number): Promise<{ content: Product[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
         const params = new URLSearchParams({
             page: page.toString(),
             size: size.toString(),
         });
         if (name) params.append('name', name);
         if (active !== undefined) params.append('active', active.toString());
+        if (familyName) params.append('familyName', familyName);
+        if (projectName) params.append('projectName', projectName);
+        if (minPrice !== undefined) params.append('minPrice', minPrice.toString());
+        if (maxPrice !== undefined) params.append('maxPrice', maxPrice.toString());
 
         const response = await this.get<{ content: any[]; page: { totalElements: number; totalPages: number; number: number; size: number } }>(`/products?${params}`);
 

@@ -124,10 +124,12 @@ public class IssueService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Issue> listIssues(String userId, List<IssueStatus> statuses,
+    public Page<Issue> listIssues(String issueId, String title, String userId, List<IssueStatus> statuses,
                                    LocalDateTime startDate, LocalDateTime endDate,
                                    Pageable pageable) {
-        Specification<Issue> spec = Specification.where(IssueSpecifications.createdByEquals(userId))
+        Specification<Issue> spec = Specification.where(IssueSpecifications.idContains(issueId))
+                .and(IssueSpecifications.titleContains(title))
+                .and(IssueSpecifications.createdByEquals(userId))
                 .and(IssueSpecifications.statusIn(statuses))
                 .and(IssueSpecifications.createdBetween(startDate, endDate));
         return issueRepository.findAll(spec, pageable);

@@ -158,7 +158,7 @@ export default function Profiles() {
                 header: "Nombre",
                 filter: {
                     enabled: true,
-                    type: "text",
+                    type: "search",
                     placeholder: "Buscar por nombre...",
                 },
                 render: (profile) => (

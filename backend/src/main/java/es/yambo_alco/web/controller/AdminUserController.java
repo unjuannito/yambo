@@ -44,6 +44,7 @@ public class AdminUserController {
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
     public ResponseEntity<Page<AdminUserResponse>> listUsers(
+            @RequestParam(required = false) String id,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) Boolean enabled,
@@ -68,7 +69,7 @@ public class AdminUserController {
         PageRequest pr = (sortBy == null || sortBy.isBlank()) ? PageRequest.of(page, size)
                 : PageRequest.of(page, size, dir, sortBy);
 
-        Page<User> users = userService.listUsers(name, email, enabled, perms == null ? null : List.copyOf(perms),
+        Page<User> users = userService.listUsers(id, name, email, enabled, perms == null ? null : List.copyOf(perms),
                 profilesList, pr);
         return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
