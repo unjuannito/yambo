@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
 import { orderService, type Order } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
@@ -36,6 +36,7 @@ export function meta({}: Route.MetaArgs) {
 export default function MyOrdersPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeTab, setActiveTab } = useViewTab("actual");
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -64,6 +65,18 @@ export default function MyOrdersPage() {
       loadOrders();
     }
   }, [isAuthenticated, activeTab]);
+
+  useEffect(() => {
+    const orderId = searchParams.get("orderId");
+    if (orderId && orders.length > 0 && !orderDetail) {
+      const order = orders.find((o) => o.id === orderId);
+      if (order) {
+        setOrderDetail(order);
+        searchParams.delete("orderId");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [orders, searchParams]);
 
   const loadOrders = async () => {
     setIsLoading(true);

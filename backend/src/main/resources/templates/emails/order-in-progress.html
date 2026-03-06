@@ -24,6 +24,8 @@
                 <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
                     Te notificaremos cuando tu pedido esté listo para entrega.
                 </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${orderUrl}, 'Ver mi pedido', '#8B5CF6')}"/>
             </td></tr>
 
             <th:block th:replace="~{emails/fragments/layout :: footer}"/>

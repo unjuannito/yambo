@@ -119,7 +119,8 @@ public class HtmlMailService implements MailService {
                         Map.entry("clipboardIcon", EmailIcons.get("clipboard")),
                         Map.entry("iban", settingsService.getIban()),
                         Map.entry("legalName", settingsService.getOrganizationLegalName()),
-                        Map.entry("paymentReference", generatePaymentReference(orderDate, orderId))),
+                        Map.entry("paymentReference", generatePaymentReference(orderDate, orderId)),
+                        Map.entry("orderUrl", buildOrderLink(orderId))),
                 buildOrderPlainText(userName, orderId, orderDate, newStatus, products, totalPrice));
     }
 
@@ -141,7 +142,8 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusColor", OrderStatus.CANCELED.getColor()),
                         Map.entry("headerColor", OrderStatus.CANCELED.getColor()),
                         Map.entry("headerIcon", EmailIcons.get(OrderStatus.CANCELED.getIcon())),
-                        Map.entry("canceledByAdmin", canceledByAdmin)),
+                        Map.entry("canceledByAdmin", canceledByAdmin),
+                        Map.entry("orderUrl", buildOrderLink(orderId))),
                 buildCancelPlainText(userName, orderId, orderDate, products, totalPrice, canceledByAdmin));
     }
 
@@ -253,6 +255,14 @@ public class HtmlMailService implements MailService {
         return settingsService.getDomain() + "/mi-espacio/incidencias/" + issueId;
     }
 
+    private String buildOrderLink() {
+        return settingsService.getDomain() + "/mi-espacio/mis-pedidos";
+    }
+
+    private String buildOrderLink(String orderId) {
+        return buildOrderLink() + "?orderId=" + orderId;
+    }
+
     // ── Plain-text builders ──────────────────────────────────────────────
 
     private void appendProductList(StringBuilder sb, List<OrderProductInfo> products, BigDecimal totalPrice) {
@@ -291,6 +301,7 @@ public class HtmlMailService implements MailService {
             sb.append("Importe: ").append(totalPrice).append(" €\n");
         }
 
+        sb.append("\nVer tu pedido: ").append(buildOrderLink(orderId)).append("\n");
         sb.append("\n¡Gracias por tu compra!\n");
         return sb.toString();
     }
@@ -313,6 +324,7 @@ public class HtmlMailService implements MailService {
         if (canceledByAdmin) {
             sb.append("\nSi tienes alguna pregunta sobre la cancelación, no dudes en contactarnos.\n");
         }
+        sb.append("\nVer tu pedido: ").append(buildOrderLink(orderId)).append("\n");
         sb.append("\n¡Gracias!\n");
         return sb.toString();
     }
