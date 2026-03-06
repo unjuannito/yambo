@@ -4,11 +4,13 @@ import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 public final class ProductSpecifications {
@@ -80,6 +82,21 @@ public final class ProductSpecifications {
             return cb.or(
                 cb.isNull(familyJoin),
                 profileJoin.get("id").in(profileIds)
+            );
+        };
+    }
+
+    public static Specification<Product> familyProductActive() {
+        return (root, query, cb) -> {
+            LocalDateTime now = LocalDateTime.now();
+            Join<Product, FamilyProduct> familyJoin = root.join("familyProduct", JoinType.LEFT);
+            return cb.or(
+                cb.isNull(familyJoin),
+                cb.and(
+                    cb.equal(familyJoin.get("status"), FamilyProductStatus.OPEN),
+                    cb.lessThanOrEqualTo(familyJoin.get("startTms"), now),
+                    cb.greaterThan(familyJoin.get("endTms"), now)
+                )
             );
         };
     }

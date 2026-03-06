@@ -72,6 +72,7 @@ public class ProductService {
                     .collect(Collectors.toSet());
             spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
             spec = spec.and(ProductSpecifications.userHasAccess(profileIds));
+            spec = spec.and(ProductSpecifications.familyProductActive());
         }
 
         return productRepository.findAll(spec, pageable);
