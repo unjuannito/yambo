@@ -32,13 +32,17 @@ export default function Merch() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
+    const isProductAdmin = hasPermission({ obj: "product", action: "update" }) ||
+        hasPermission({ obj: "product", action: "create" });
+
     useEffect(() => {
         const loadData = async () => {
             try {
                 setLoading(true);
+                const activeFilter = isProductAdmin ? undefined : true;
                 const [productsResponse, dropsResponse] = await Promise.all([
-                    productService.getAllProducts(0, 200, undefined, true),
-                    familyProductService.listFamilyProducts(0, 200, undefined, true),
+                    productService.getAllProducts(0, 200, undefined, activeFilter),
+                    familyProductService.listFamilyProducts(0, 200, undefined, activeFilter),
                 ]);
                 setProducts(productsResponse.content);
                 setDrops(dropsResponse.content);
