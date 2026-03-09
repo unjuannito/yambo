@@ -8,6 +8,7 @@ import {
     faExclamationTriangle,
     faMoneyBillWave,
     faClock,
+    faCubes,
 } from "@fortawesome/free-solid-svg-icons";
 import {
     Chart as ChartJS,
@@ -16,10 +17,11 @@ import {
     PointElement,
     LineElement,
     ArcElement,
+    BarElement,
     Tooltip,
     Filler,
 } from "chart.js";
-import { Line, Doughnut } from "react-chartjs-2";
+import { Line, Doughnut, Bar } from "react-chartjs-2";
 import type { ReportSummary, TimeSeriesPoint, TimeSeriesDecimalPoint } from "~/types/report";
 
 ChartJS.register(
@@ -28,6 +30,7 @@ ChartJS.register(
     PointElement,
     LineElement,
     ArcElement,
+    BarElement,
     Tooltip,
     Filler
 );
@@ -187,7 +190,7 @@ interface ReportSnapshotProps {
 }
 
 export default function ReportSnapshot({ data }: ReportSnapshotProps) {
-    const { orders, users, issues } = data;
+    const { orders, users, issues, products } = data;
 
     return (
         <div className="space-y-5">
@@ -206,7 +209,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
             </div>
 
             {/* Key metrics row */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
                 <StatTile
                     label="Pedidos"
                     value={orders.totalOrders}
@@ -251,10 +254,26 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     icon={faClock}
                     color="red"
                 />
+                <StatTile
+                    label="Prod. Vendidos"
+                    value={products.totalProductsSold}
+                    icon={faCubes}
+                    color="indigo"
+                    sparklineData={products.productSalesOverTime}
+                    sparklineColor="#6366f1"
+                />
+                <StatTile
+                    label="Ingresos Prod."
+                    value={`${products.totalProductRevenue.toFixed(0)} €`}
+                    icon={faMoneyBillWave}
+                    color="green"
+                    sparklineData={products.productRevenueOverTime}
+                    sparklineColor="#10b981"
+                />
             </div>
 
             {/* Charts row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Orders over time */}
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">
@@ -286,7 +305,68 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                         </p>
                     )}
                 </div>
+
+                {/* Top products */}
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                        Top productos vendidos
+                    </h4>
+                    {products.topProductsByQuantity.length > 0 ? (
+                        <MiniBarChart
+                            labels={products.topProductsByQuantity.slice(0, 5).map((p) => p.productName)}
+                            values={products.topProductsByQuantity.slice(0, 5).map((p) => p.quantity)}
+                        />
+                    ) : (
+                        <p className="text-gray-400 text-xs text-center py-8">
+                            Sin datos
+                        </p>
+                    )}
+                </div>
             </div>
+        </div>
+    );
+}
+
+// ─── Mini Bar Chart ────────────────────────────────────────────────────
+
+const MINI_BAR_COLORS = [
+    "#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd", "#ddd6fe",
+];
+
+function MiniBarChart({ labels, values }: { labels: string[]; values: number[] }) {
+    if (labels.length === 0) return null;
+
+    const chartData = {
+        labels,
+        datasets: [
+            {
+                data: values,
+                backgroundColor: labels.map((_, i) => MINI_BAR_COLORS[i % MINI_BAR_COLORS.length]),
+                borderRadius: 4,
+            },
+        ],
+    };
+
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: "y" as const,
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true },
+        },
+        scales: {
+            x: { display: false, beginAtZero: true },
+            y: {
+                ticks: { font: { size: 10 }, autoSkip: false },
+                grid: { display: false },
+            },
+        },
+    };
+
+    return (
+        <div className="h-40">
+            <Bar data={chartData} options={options} />
         </div>
     );
 }

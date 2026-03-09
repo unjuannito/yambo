@@ -47,4 +47,12 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(reportService.getIssueMetrics(startDate, endDate));
     }
+
+    @GetMapping("/products")
+    @PreAuthorize("hasAuthority('PREP_RD')")
+    public ResponseEntity<ReportService.ProductAnalytics> getProductAnalytics(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(reportService.getProductAnalytics(startDate, endDate));
+    }
 }

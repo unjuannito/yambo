@@ -4,6 +4,7 @@ import type {
     OrderAnalytics,
     UserEngagement,
     IssueMetrics,
+    ProductAnalytics,
 } from "~/types/report";
 
 class ReportServiceClass extends ApiService {
@@ -44,6 +45,16 @@ class ReportServiceClass extends ApiService {
         const params = this.buildQueryParams({ startDate, endDate });
         return await this.get<IssueMetrics>(
             `/reports/issues?${params.toString()}`
+        );
+    }
+
+    public async getProductAnalytics(
+        startDate: string,
+        endDate: string
+    ): Promise<ProductAnalytics> {
+        const params = this.buildQueryParams({ startDate, endDate });
+        return await this.get<ProductAnalytics>(
+            `/reports/products?${params.toString()}`
         );
     }
 }

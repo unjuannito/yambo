@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create product_view table for analytics tracking -->
+    <changeSet id="68-01-create-product-view" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="product_view"/>
+            </not>
+        </preConditions>
+        <createTable tableName="product_view">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="product_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)"/>
+            <column name="viewed_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="session_id" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="product_view"
+            baseColumnNames="product_id"
+            constraintName="fk_product_view_product"
+            referencedTableName="product"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <createIndex tableName="product_view" indexName="idx_product_view_product_viewed">
+            <column name="product_id"/>
+            <column name="viewed_at"/>
+        </createIndex>
+        <createIndex tableName="product_view" indexName="idx_product_view_viewed_at">
+            <column name="viewed_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

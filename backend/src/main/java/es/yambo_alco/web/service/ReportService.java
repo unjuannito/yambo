@@ -1,10 +1,6 @@
 package es.yambo_alco.web.service;
 
-import es.yambo_alco.web.model.Issue;
-import es.yambo_alco.web.model.IssueComment;
-import es.yambo_alco.web.model.Order;
-import es.yambo_alco.web.model.OrderProduct;
-import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.*;
@@ -13,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -31,6 +28,8 @@ public class ReportService {
     private final IssueCommentRepository issueCommentRepository;
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
+    private final ProductRepository productRepository;
+    private final ProductViewRepository productViewRepository;
 
     // ========================
     // ORDER ANALYTICS
@@ -240,6 +239,192 @@ public class ReportService {
     }
 
     // ========================
+    // PRODUCT ANALYTICS
+    // ========================
+
+    public ProductAnalytics getProductAnalytics(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(LocalTime.MAX);
+
+        // Get all orders in range (non-canceled)
+        Specification<Order> orderSpec = (root, query, cb) ->
+                cb.and(
+                        cb.between(root.get("createdAt"), start, end),
+                        cb.notEqual(root.get("status"), OrderStatus.CANCELED)
+                );
+        List<Order> orders = orderRepository.findAll(orderSpec);
+        Set<String> orderIds = orders.stream().map(Order::getId).collect(Collectors.toSet());
+
+        if (orderIds.isEmpty()) {
+            return emptyProductAnalytics(start, end);
+        }
+
+        // Get all order products for those orders
+        Specification<OrderProduct> opSpec = (root, query, cb) ->
+                root.get("orderId").in(orderIds);
+        List<OrderProduct> orderProducts = orderProductRepository.findAll(opSpec);
+
+        // Total products sold (sum of quantities)
+        long totalProductsSold = orderProducts.stream()
+                .mapToLong(OrderProduct::getQuantity)
+                .sum();
+
+        // Unique products sold
+        Set<String> uniqueProductIds = orderProducts.stream()
+                .map(OrderProduct::getProductId)
+                .collect(Collectors.toSet());
+        long uniqueProductsSold = uniqueProductIds.size();
+
+        // Load product details for names and family info
+        Map<String, Product> productMap = productRepository.findAllById(uniqueProductIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        // Total revenue from product sales
+        BigDecimal totalProductRevenue = orderProducts.stream()
+                .map(op -> op.getPrice().multiply(new BigDecimal(op.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Group by product: quantity and revenue
+        Map<String, long[]> productStats = new HashMap<>(); // [quantity, revenueX100]
+        Map<String, BigDecimal> productRevenues = new HashMap<>();
+        for (OrderProduct op : orderProducts) {
+            String pid = op.getProductId();
+            productStats.computeIfAbsent(pid, k -> new long[1]);
+            productStats.get(pid)[0] += op.getQuantity();
+            BigDecimal rev = op.getPrice().multiply(new BigDecimal(op.getQuantity()));
+            productRevenues.merge(pid, rev, BigDecimal::add);
+        }
+
+        // Top 10 by quantity
+        List<ProductRanking> topByQuantity = productStats.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
+                .limit(10)
+                .map(e -> {
+                    Product p = productMap.get(e.getKey());
+                    String name = p != null ? p.getName() : e.getKey();
+                    return new ProductRanking(e.getKey(), name, e.getValue()[0],
+                            productRevenues.getOrDefault(e.getKey(), BigDecimal.ZERO));
+                })
+                .toList();
+
+        // Top 10 by revenue
+        List<ProductRanking> topByRevenue = productRevenues.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .limit(10)
+                .map(e -> {
+                    Product p = productMap.get(e.getKey());
+                    String name = p != null ? p.getName() : e.getKey();
+                    long qty = productStats.containsKey(e.getKey()) ? productStats.get(e.getKey())[0] : 0;
+                    return new ProductRanking(e.getKey(), name, qty, e.getValue());
+                })
+                .toList();
+
+        // Sales by family
+        Map<String, long[]> familyQuantities = new HashMap<>();
+        Map<String, BigDecimal> familyRevenues = new HashMap<>();
+        Map<String, String> familyNames = new HashMap<>();
+        for (OrderProduct op : orderProducts) {
+            Product p = productMap.get(op.getProductId());
+            String famId = "uncategorized";
+            String famName = "Sin categoría";
+            if (p != null && p.getFamilyProduct() != null) {
+                famId = p.getFamilyProduct().getId();
+                famName = p.getFamilyProduct().getName();
+            }
+            familyNames.putIfAbsent(famId, famName);
+            familyQuantities.computeIfAbsent(famId, k -> new long[1]);
+            familyQuantities.get(famId)[0] += op.getQuantity();
+            BigDecimal rev = op.getPrice().multiply(new BigDecimal(op.getQuantity()));
+            familyRevenues.merge(famId, rev, BigDecimal::add);
+        }
+
+        List<FamilyProductSales> salesByFamily = familyQuantities.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]))
+                .map(e -> new FamilyProductSales(
+                        e.getKey(),
+                        familyNames.getOrDefault(e.getKey(), e.getKey()),
+                        e.getValue()[0],
+                        familyRevenues.getOrDefault(e.getKey(), BigDecimal.ZERO)
+                ))
+                .toList();
+
+        // Product sales over time (by order's createdAt date)
+        Map<String, Order> orderMap = orders.stream()
+                .collect(Collectors.toMap(Order::getId, o -> o));
+
+        Map<String, Long> salesOverTime = new TreeMap<>();
+        Map<String, BigDecimal> revenueOverTime = new TreeMap<>();
+        for (OrderProduct op : orderProducts) {
+            Order order = orderMap.get(op.getOrderId());
+            if (order == null) continue;
+            String dateKey = order.getCreatedAt().toLocalDate().toString();
+            salesOverTime.merge(dateKey, (long) op.getQuantity(), Long::sum);
+            BigDecimal rev = op.getPrice().multiply(new BigDecimal(op.getQuantity()));
+            revenueOverTime.merge(dateKey, rev, BigDecimal::add);
+        }
+
+        // Products by OrderProduct status
+        Map<String, Long> productsByStatus = orderProducts.stream()
+                .collect(Collectors.groupingBy(
+                        op -> op.getStatus().name(),
+                        Collectors.counting()));
+
+        // Conversion funnel using product views
+        long totalViews = productViewRepository.countByViewedAtBetween(start, end);
+        long uniqueViewedProducts = productViewRepository.countDistinctProductsBetween(start, end);
+
+        List<ProductFunnel> conversionFunnel = null;
+        if (totalViews > 0) {
+            List<Object[]> viewCounts = productViewRepository.countViewsByProduct(start, end);
+            Map<String, Long> viewsByProduct = viewCounts.stream()
+                    .collect(Collectors.toMap(
+                            row -> (String) row[0],
+                            row -> ((Number) row[1]).longValue()));
+
+            conversionFunnel = uniqueProductIds.stream()
+                    .map(pid -> {
+                        Product p = productMap.get(pid);
+                        String name = p != null ? p.getName() : pid;
+                        long views = viewsByProduct.getOrDefault(pid, 0L);
+                        long purchases = productStats.containsKey(pid) ? productStats.get(pid)[0] : 0;
+                        double rate = views > 0 ? Math.round((double) purchases / views * 1000.0) / 10.0 : 0.0;
+                        return new ProductFunnel(pid, name, views, purchases, rate);
+                    })
+                    .filter(f -> f.views() > 0 || f.purchases() > 0)
+                    .sorted((a, b) -> Long.compare(b.purchases(), a.purchases()))
+                    .limit(20)
+                    .toList();
+        }
+
+        return new ProductAnalytics(
+                totalProductsSold,
+                uniqueProductsSold,
+                totalProductRevenue,
+                topByQuantity,
+                topByRevenue,
+                salesByFamily,
+                toTimeSeriesList(salesOverTime),
+                toTimeSeriesDecimalList(revenueOverTime),
+                productsByStatus,
+                totalViews,
+                uniqueViewedProducts,
+                conversionFunnel
+        );
+    }
+
+    private ProductAnalytics emptyProductAnalytics(LocalDateTime start, LocalDateTime end) {
+        long totalViews = productViewRepository.countByViewedAtBetween(start, end);
+        long uniqueViewedProducts = productViewRepository.countDistinctProductsBetween(start, end);
+        return new ProductAnalytics(
+                0, 0, BigDecimal.ZERO,
+                List.of(), List.of(), List.of(),
+                List.of(), List.of(),
+                Map.of(),
+                totalViews, uniqueViewedProducts, null
+        );
+    }
+
+    // ========================
     // SUMMARY OVERVIEW
     // ========================
 
@@ -247,8 +432,9 @@ public class ReportService {
         OrderAnalytics orders = getOrderAnalytics(startDate, endDate);
         UserEngagement users = getUserEngagement(startDate, endDate);
         IssueMetrics issues = getIssueMetrics(startDate, endDate);
+        ProductAnalytics products = getProductAnalytics(startDate, endDate);
 
-        return new ReportSummary(orders, users, issues);
+        return new ReportSummary(orders, users, issues, products);
     }
 
     // ========================
@@ -303,9 +489,47 @@ public class ReportService {
             List<TimeSeriesPoint> issuesOverTime
     ) {}
 
+    public record ProductRanking(
+            String productId,
+            String productName,
+            long quantity,
+            BigDecimal revenue
+    ) {}
+
+    public record FamilyProductSales(
+            String familyId,
+            String familyName,
+            long quantity,
+            BigDecimal revenue
+    ) {}
+
+    public record ProductFunnel(
+            String productId,
+            String productName,
+            long views,
+            long purchases,
+            double conversionRate
+    ) {}
+
+    public record ProductAnalytics(
+            long totalProductsSold,
+            long uniqueProductsSold,
+            BigDecimal totalProductRevenue,
+            List<ProductRanking> topProductsByQuantity,
+            List<ProductRanking> topProductsByRevenue,
+            List<FamilyProductSales> salesByFamily,
+            List<TimeSeriesPoint> productSalesOverTime,
+            List<TimeSeriesDecimalPoint> productRevenueOverTime,
+            Map<String, Long> productsByStatus,
+            Long totalViews,
+            Long uniqueViewedProducts,
+            List<ProductFunnel> conversionFunnel
+    ) {}
+
     public record ReportSummary(
             OrderAnalytics orders,
             UserEngagement users,
-            IssueMetrics issues
+            IssueMetrics issues,
+            ProductAnalytics products
     ) {}
 }

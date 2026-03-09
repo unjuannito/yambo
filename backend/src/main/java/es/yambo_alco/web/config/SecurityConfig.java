@@ -63,6 +63,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/invitations/*/accept").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/products/*/views").permitAll()
                         .requestMatchers("/user/**").authenticated()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())

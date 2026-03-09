@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { productService, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
+import { productViewService } from "~/services/productViewService";
 import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
 import { Navigate } from "react-router";
@@ -70,6 +71,13 @@ export default function ProductPage() {
         };
 
         loadProduct();
+    }, [productId]);
+
+    // Track product view (fire-and-forget)
+    useEffect(() => {
+        if (productId) {
+            productViewService.trackView(productId);
+        }
     }, [productId]);
 
     useEffect(() => {
