@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="69-1" author="yambo">
+        <comment>Index on order.status for status-filtered queries and reports</comment>
+        <createIndex tableName="order" indexName="idx_order_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="69-2" author="yambo">
+        <comment>Index on order.created_at for date-range report queries</comment>
+        <createIndex tableName="order" indexName="idx_order_created_at">
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="69-3" author="yambo">
+        <comment>Index on issue_comment.created_at for time-sorted comment listings</comment>
+        <createIndex tableName="issue_comment" indexName="idx_issue_comment_created_at">
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="69-4" author="yambo">
+        <comment>Index on activity.status for active activity filtering</comment>
+        <createIndex tableName="activity" indexName="idx_activity_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="69-5" author="yambo">
+        <comment>Index on product.active for catalog queries</comment>
+        <createIndex tableName="product" indexName="idx_product_active">
+            <column name="active"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

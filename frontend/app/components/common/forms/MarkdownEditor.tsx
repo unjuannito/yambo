@@ -1,36 +1,6 @@
-import {
-    MDXEditor,
-    headingsPlugin,
-    listsPlugin,
-    quotePlugin,
-    thematicBreakPlugin,
-    markdownShortcutPlugin,
-    toolbarPlugin,
-    BoldItalicUnderlineToggles,
-    BlockTypeSelect,
-    ListsToggle,
-    CreateLink,
-    InsertImage,
-    codeBlockPlugin,
-    codeMirrorPlugin,
-    frontmatterPlugin,
-    tablePlugin,
-    linkDialogPlugin,
-    imagePlugin,
-    sandpackPlugin,
-    directivesPlugin,
-    linkPlugin,
-    InsertTable,
-} from "@mdxeditor/editor";
+import React, { Suspense } from "react";
 
-import { fileService } from "~/services/fileService";
-
-async function handleImageUpload(file: File): Promise<string> {
-    const uploaded = await fileService.upload(file);
-    return uploaded.url;
-}
-
-import "@mdxeditor/editor/style.css";
+const LazyMDXEditor = React.lazy(() => import("./MarkdownEditorImpl"));
 
 type MarkdownEditorProps = {
     value: string;
@@ -39,59 +9,14 @@ type MarkdownEditorProps = {
     className?: string;
 };
 
-export default function MarkdownEditor({
-    value,
-    onChange,
-    readOnly = false,
-    className = "",
-}: MarkdownEditorProps) {
-    const plugins = [
-        headingsPlugin(),
-        listsPlugin(),
-        quotePlugin(),
-        thematicBreakPlugin(),
-        markdownShortcutPlugin(),
-        codeBlockPlugin(),
-        codeMirrorPlugin(),
-        frontmatterPlugin(),
-        tablePlugin(),
-        linkDialogPlugin(),
-        imagePlugin({
-            imageUploadHandler: handleImageUpload,
-            allowSetImageDimensions: true,
-        }),
-        sandpackPlugin(),
-        directivesPlugin(),
-        linkPlugin(),
-        ...(readOnly
-            ? []
-            : [
-                  toolbarPlugin({
-                      toolbarContents: () => (
-                          <>
-                              <BoldItalicUnderlineToggles />
-                              <BlockTypeSelect />
-                              <ListsToggle />
-                              <CreateLink />
-                              <InsertImage />
-                              <InsertTable />
-                          </>
-                      ),
-                  }),
-              ]),
-    ];
-
+export default function MarkdownEditor(props: MarkdownEditorProps) {
     return (
-        <div className={`prose`}>
-            <MDXEditor
-                markdown={value}
-                onChange={onChange}
-                readOnly={readOnly}
-                plugins={plugins}
-                className={
-                    readOnly ? `prose mdxeditor-viewer ${className}` : className
-                }
-            />
-        </div>
+        <Suspense
+            fallback={
+                <div className="prose animate-pulse rounded-lg bg-gray-100 h-48" />
+            }
+        >
+            <LazyMDXEditor {...props} />
+        </Suspense>
     );
 }

@@ -35,7 +35,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_profile",
         joinColumns = @JoinColumn(name = "user_id"),
@@ -61,7 +61,7 @@ public class User implements UserDetails {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_project_group",
         joinColumns = @JoinColumn(name = "user_id"),

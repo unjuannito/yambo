@@ -36,7 +36,7 @@ public class Invitation {
     @Column(name = "invited_by")
     private String invitedBy;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "invitation_profile",
         joinColumns = @JoinColumn(name = "invitation_id"),

@@ -6,6 +6,8 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.repository.PermissionRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class ProfileService {
     private final ProfileRepository profileRepository;
     private final PermissionRepository permissionRepository;
 
+    @Cacheable(value = "profiles", key = "'all'")
     public List<Profile> getAllProfiles() {
         return profileRepository.findAll();
     }
@@ -63,6 +66,7 @@ public class ProfileService {
         return permissionRepository.findAll();
     }
 
+    @CacheEvict(value = "profiles", allEntries = true)
     @Transactional
     public Profile updateProfilePermissions(String profileId, Set<String> permissionIds) {
         Profile profile = getProfileById(profileId);
@@ -82,6 +86,7 @@ public class ProfileService {
         return profileRepository.save(profile);
     }
 
+    @CacheEvict(value = "profiles", allEntries = true)
     @Transactional
     public Profile updateProfile(String profileId, String name, Set<String> permissionIds) {
         Profile profile = getProfileById(profileId);
@@ -107,6 +112,7 @@ public class ProfileService {
         return profileRepository.save(profile);
     }
 
+    @CacheEvict(value = "profiles", allEntries = true)
     @Transactional
     public Profile createProfile(String name, Set<String> permissionIds) {
         Set<Permission> permissions = new HashSet<>();
@@ -127,6 +133,7 @@ public class ProfileService {
         return profileRepository.save(profile);
     }
 
+    @CacheEvict(value = "profiles", allEntries = true)
     @Transactional
     public void deleteProfile(String profileId) {
         Profile profile = getProfileById(profileId);

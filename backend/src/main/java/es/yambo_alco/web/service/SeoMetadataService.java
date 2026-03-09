@@ -11,6 +11,8 @@ import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.SeoMetadataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -63,10 +65,12 @@ public class SeoMetadataService {
         }
     }
 
+    @Cacheable(value = "seoMetadata", key = "#entityType.name() + '_' + #entityId")
     public Optional<SeoMetadata> getByEntity(SeoEntityType entityType, String entityId) {
         return seoMetadataRepository.findByEntityTypeAndEntityId(entityType, entityId);
     }
 
+    @CacheEvict(value = "seoMetadata", allEntries = true)
     @Transactional
     public void deleteByEntity(SeoEntityType entityType, String entityId) {
         seoMetadataRepository.deleteByEntityTypeAndEntityId(entityType, entityId);
@@ -87,6 +91,7 @@ public class SeoMetadataService {
                 .orElseThrow(() -> new ResourceNotFoundException("SEO metadata not found"));
     }
 
+    @CacheEvict(value = "seoMetadata", allEntries = true)
     @Transactional
     public void deleteById(String id) {
         SeoMetadata metadata = getById(id);
@@ -95,6 +100,7 @@ public class SeoMetadataService {
 
     // ── Manual update ──────────────────────────────────────────
 
+    @CacheEvict(value = "seoMetadata", allEntries = true)
     @Transactional
     public SeoMetadata updateManually(String id, String metaDescription, String keywords,
                                       String ogDescription, String slug) {

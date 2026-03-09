@@ -31,7 +31,7 @@ public class Profile implements GrantedAuthority {
     @Column(name = "system", nullable = false)
     private boolean system = false;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "profile_permission",
         joinColumns = @JoinColumn(name = "profile_id"),

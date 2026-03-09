@@ -1,8 +1,30 @@
+import React from "react";
 import { NavLink, useNavigate, useLocation } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
 import { NAV_SECTIONS, NAV_ICONS } from "~/data/navConfig";
 import LINKS_MAP, { type Link } from "~/data/links";
+
+const NavItem = React.memo(function NavItem({ link }: { link: Link }) {
+    return (
+        <li>
+            <NavLink
+                to={link.href}
+                end
+                className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        isActive
+                            ? "bg-white text-gray-900 font-medium shadow-sm"
+                            : "text-gray-700 hover:bg-gray-100"
+                    }`
+                }
+            >
+                {NAV_ICONS[link.name]}
+                <span>{link.label}</span>
+            </NavLink>
+        </li>
+    );
+});
 
 interface SociosNavProps {
     links: Link[];
@@ -78,24 +100,7 @@ export default function SociosNav({ links }: SociosNavProps) {
                                         );
                                     }
 
-                                    return (
-                                        <li key={link.name}>
-                                            <NavLink
-                                                to={link.href}
-                                                end
-                                                className={({ isActive }) =>
-                                                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                                        isActive
-                                                            ? "bg-white text-gray-900 font-medium shadow-sm"
-                                                            : "text-gray-700 hover:bg-gray-100"
-                                                    }`
-                                                }
-                                            >
-                                                {NAV_ICONS[link.name]}
-                                                <span>{link.label}</span>
-                                            </NavLink>
-                                        </li>
-                                    );
+                                    return <NavItem key={link.name} link={link} />;
                                 })}
                             </ul>
                         </div>

@@ -6,20 +6,20 @@ interface IssueStatusBadgeProps {
     status: IssueStatus;
 }
 
-export const IssueStatusBadge: React.FC<IssueStatusBadgeProps> = ({
-    status,
-}) => {
-    const config = ISSUE_STATUS_CONFIG[status];
+export const IssueStatusBadge: React.FC<IssueStatusBadgeProps> = React.memo(
+    ({ status }) => {
+        const config = ISSUE_STATUS_CONFIG[status];
 
-    if (!config) {
-        return <span className="text-gray-600">Estado desconocido</span>;
+        if (!config) {
+            return <span className="text-gray-600">Estado desconocido</span>;
+        }
+
+        return (
+            <span
+                className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${config.className}`}
+            >
+                {config.label}
+            </span>
+        );
     }
-
-    return (
-        <span
-            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${config.className}`}
-        >
-            {config.label}
-        </span>
-    );
-};
+);

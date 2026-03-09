@@ -1,4 +1,6 @@
-export function StatCard({
+import React from "react";
+
+export const StatCard = React.memo(function StatCard({
     label,
     value,
     className,
@@ -13,4 +15,4 @@ export function StatCard({
             <p className="text-2xl font-bold text-gray-900">{value}</p>
         </div>
     );
-}
+});

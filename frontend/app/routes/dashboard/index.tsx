@@ -25,8 +25,8 @@ export default function AreaSociosIndex() {
     const { personal, admin, reportSnapshot, loading, error, refetch } = useDashboardData();
 
     const personalCounts: Record<string, number> = {
-        myOrders: personal.totalOrders,
-        issues: personal.totalIssues,
+        myOrders: personal?.totalOrders ?? 0,
+        issues: personal?.totalIssues ?? 0,
         merch: 0,
     };
 
@@ -58,7 +58,7 @@ export default function AreaSociosIndex() {
                     />
 
                     {/* Recent orders */}
-                    <RecentOrdersList orders={personal.recentOrders} />
+                    <RecentOrdersList orders={personal?.recentOrders ?? []} />
 
                     {/* Admin section — only visible with admin permissions */}
                     {admin && <AdminStatsSection data={admin} reportSnapshot={reportSnapshot} />}

@@ -5,6 +5,8 @@ import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.repository.SettingsRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -20,29 +22,35 @@ public class SettingsService {
 
     private final SettingsRepository settingsRepository;
 
+    @Cacheable(value = "settings", key = "'all'")
     public List<Settings> getAllSettings() {
         return settingsRepository.findAll();
     }
 
+    @Cacheable(value = "settings", key = "#category")
     public List<Settings> getSettingsByCategory(String category) {
         return settingsRepository.findByCategory(category);
     }
 
+    @Cacheable(value = "settings", key = "#key")
     public Settings getSettingByKey(@NonNull String key) {
         return settingsRepository.findByKey(key)
                 .orElseThrow(() -> new ResourceNotFoundException("Setting not found with key: " + key));
     }
 
+    @Cacheable(value = "settings", key = "#key + '_opt'")
     public Optional<Settings> findSettingByKey(@NonNull String key) {
         return settingsRepository.findByKey(key);
     }
 
+    @Cacheable(value = "settings", key = "#key + '_val'")
     public String getSettingValue(@NonNull String key, String defaultValue) {
         return settingsRepository.findByKey(key)
                 .map(Settings::getValue)
                 .orElse(defaultValue);
     }
 
+    @CacheEvict(value = "settings", allEntries = true)
     public Settings createSetting(@NonNull String key, String value, String description, String category) {
         if (settingsRepository.findByKey(key).isPresent()) {
             throw new BadRequestException("Setting with key '" + key + "' already exists");
@@ -58,6 +66,7 @@ public class SettingsService {
         return settingsRepository.save(setting);
     }
 
+    @CacheEvict(value = "settings", allEntries = true)
     public Settings updateSetting(@NonNull String key, String value, String description, String category) {
         Settings setting = settingsRepository.findByKey(key)
                 .orElseThrow(() -> new ResourceNotFoundException("Setting not found with key: " + key));
@@ -75,6 +84,7 @@ public class SettingsService {
         return settingsRepository.save(setting);
     }
 
+    @CacheEvict(value = "settings", allEntries = true)
     public Settings upsertSetting(@NonNull String key, String value) {
         return settingsRepository.findByKey(key)
                 .map(setting -> {
@@ -90,6 +100,7 @@ public class SettingsService {
                 });
     }
 
+    @CacheEvict(value = "settings", allEntries = true)
     public void deleteSetting(@NonNull String key) {
         Settings setting = settingsRepository.findByKey(key)
                 .orElseThrow(() -> new ResourceNotFoundException("Setting not found with key: " + key));

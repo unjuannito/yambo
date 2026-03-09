@@ -1,10 +1,14 @@
+import React, { Suspense } from "react";
 import SummaryCards from "~/components/dashboard/home/SummaryCards";
 import RecentActivitiesList from "~/components/dashboard/home/RecentActivitiesList";
-import ReportSnapshot from "~/components/dashboard/home/ReportSnapshot";
 import { ADMIN_CARDS } from "~/data/summaries";
 import { useAuth } from "~/hooks/useAuth";
 import type { AdminDashboardData } from "~/hooks/useDashboardData";
 import type { ReportSummary } from "~/types/report";
+
+const ReportSnapshot = React.lazy(
+    () => import("~/components/dashboard/home/ReportSnapshot")
+);
 
 interface AdminStatsSectionProps {
     data: AdminDashboardData;
@@ -45,7 +49,15 @@ export default function AdminStatsSection({ data, reportSnapshot }: AdminStatsSe
                         title="Resumen de la plataforma"
                     />
 
-                    {reportSnapshot && <ReportSnapshot data={reportSnapshot} />}
+                    {reportSnapshot && (
+                        <Suspense
+                            fallback={
+                                <div className="animate-pulse rounded-xl bg-gray-100 h-64" />
+                            }
+                        >
+                            <ReportSnapshot data={reportSnapshot} />
+                        </Suspense>
+                    )}
 
                     {activities.length > 0 && (
                         <RecentActivitiesList activities={activities} />

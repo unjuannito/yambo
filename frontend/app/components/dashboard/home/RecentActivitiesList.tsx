@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
@@ -23,6 +24,49 @@ function formatDate(dateString: string | null): string {
         year: "numeric",
     });
 }
+
+const ActivityRow = React.memo(function ActivityRow({ activity }: { activity: Activity }) {
+    const statusValue = activity.status?.value ?? "";
+    const statusLabel = activity.status?.label ?? statusValue;
+    const colorClass =
+        STATUS_COLORS[statusValue] ?? "bg-gray-100 text-gray-800";
+
+    return (
+        <div
+            className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors"
+        >
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex-shrink-0">
+                <FontAwesomeIcon
+                    icon={faCalendarDays}
+                    className="w-4 h-4"
+                />
+            </div>
+
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                    {activity.name}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span>{formatDate(activity.date)}</span>
+                    {activity.project && (
+                        <>
+                            <span>·</span>
+                            <span className="truncate">
+                                {activity.project.name}
+                            </span>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${colorClass}`}
+            >
+                {statusLabel}
+            </span>
+        </div>
+    );
+});
 
 export default function RecentActivitiesList({
     activities,
@@ -54,49 +98,9 @@ export default function RecentActivitiesList({
             </div>
 
             <div className="divide-y divide-gray-100">
-                {activities.map((activity) => {
-                    const statusValue = activity.status?.value ?? "";
-                    const statusLabel = activity.status?.label ?? statusValue;
-                    const colorClass =
-                        STATUS_COLORS[statusValue] ?? "bg-gray-100 text-gray-800";
-
-                    return (
-                        <div
-                            key={activity.id}
-                            className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors"
-                        >
-                            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-100 text-amber-600 flex-shrink-0">
-                                <FontAwesomeIcon
-                                    icon={faCalendarDays}
-                                    className="w-4 h-4"
-                                />
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                    {activity.name}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <span>{formatDate(activity.date)}</span>
-                                    {activity.project && (
-                                        <>
-                                            <span>·</span>
-                                            <span className="truncate">
-                                                {activity.project.name}
-                                            </span>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${colorClass}`}
-                            >
-                                {statusLabel}
-                            </span>
-                        </div>
-                    );
-                })}
+                {activities.map((activity) => (
+                    <ActivityRow key={activity.id} activity={activity} />
+                ))}
             </div>
         </section>
     );
