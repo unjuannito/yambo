@@ -21,7 +21,7 @@ export default function PaymentInstructions({
 
     const generatePaymentReference = () => {
         const year = new Date().getFullYear();
-        return `merch-${year}-${orderId}`;
+        return `merch ${year} ${orderId}`;
     };
 
     useEffect(() => {

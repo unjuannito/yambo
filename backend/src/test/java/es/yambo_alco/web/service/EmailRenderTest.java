@@ -118,7 +118,7 @@ class EmailRenderTest {
         ctx.setVariable("iban",           IBAN);
         ctx.setVariable("legalName",      LEGAL_NAME);
         ctx.setVariable("paymentReference",
-                "merch-" + ORDER_DATE.getYear() + "-" + ORDER_ID);
+                "merch " + ORDER_DATE.getYear() + " " + ORDER_ID);
 
         String html = engine.process(status.getEmailTemplate(), ctx);
 

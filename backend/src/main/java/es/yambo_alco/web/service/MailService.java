@@ -34,7 +34,7 @@ public interface MailService {
     void sendPasswordResetEmail(String to, String resetLink, long expirationHours);
 
     default String generatePaymentReference(LocalDateTime orderDate, String orderId) {
-        return "merch-" + orderDate.getYear() + "-" + orderId;
+        return "merch " + orderDate.getYear() + " " + orderId;
     }
 
     record OrderProductInfo(String name, Integer quantity, BigDecimal price, String configuration) {
