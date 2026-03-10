@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ public class UserServiceTest {
         private UserService userService;
         private ProfileRepository profileRepository;
     private ProjectGroupRepository projectGroupRepository;
+    private UserProjectGroupRepository userProjectGroupRepository;
     private PendingDeletionService pendingDeletionService;
 
     @BeforeEach
@@ -44,8 +46,9 @@ public class UserServiceTest {
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
         profileRepository = Mockito.mock(ProfileRepository.class);
         projectGroupRepository = Mockito.mock(ProjectGroupRepository.class);
+        userProjectGroupRepository = Mockito.mock(UserProjectGroupRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
-        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, pendingDeletionService);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService);
     }
 
     @Test
@@ -83,7 +86,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateProfile("U0000001", "New Name", "new@example.com", null, null);
+        User result = userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null);
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -103,7 +106,7 @@ public class UserServiceTest {
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com", null, null))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com", null, null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already in use");
 
@@ -116,7 +119,7 @@ public class UserServiceTest {
         when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com", null, null))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -178,6 +181,7 @@ public class UserServiceTest {
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("testuser")
+                .profiles(new HashSet<>())
                 .build();
 
         Profile role1 = Profile.builder().id("ROLE_USER").build();

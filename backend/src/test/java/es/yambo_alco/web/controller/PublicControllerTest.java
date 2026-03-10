@@ -119,7 +119,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findMonitorsByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.of(seo));
 
         // When / Then
@@ -138,7 +138,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findMonitorsByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
 
         // When / Then

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLoaderData } from "react-router";
 import { getProjectDetail } from "~/services/publicService.server";
-import type { ProjectDetail, Monitor, ProjectGroupDetail } from "~/services/publicService";
+import type { ProjectDetail, StaffMember, ProjectGroupDetail } from "~/services/publicService";
 import MonitorCard from "~/components/home/MonitorCard";
 import { hashColor } from "~/utils/hashColor";
 import type { Route } from "./+types/proyecto";
@@ -46,6 +46,15 @@ export function meta({ data }: Route.MetaArgs) {
   ];
 }
 
+function getProjectRole(member: StaffMember, projectName: string): 'COORDINATOR' | 'MONITOR' | 'BOTH' {
+  const projectGroups = member.groups.filter(g => g.projectName === projectName);
+  const isCoord = projectGroups.some(g => g.role === 'COORDINATOR');
+  const isMon = projectGroups.some(g => g.role === 'MONITOR');
+  if (isCoord && isMon) return 'BOTH';
+  if (isCoord) return 'COORDINATOR';
+  return 'MONITOR';
+}
+
 export default function Proyecto() {
   const { project } = useLoaderData<typeof loader>();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -54,17 +63,35 @@ export default function Proyecto() {
   // Named groups only (exclude default/unnamed groups)
   const namedGroups: ProjectGroupDetail[] = project?.groups.filter(g => g.name) ?? [];
 
+  // Split staff by role within THIS project
+  const allStaff = project?.staff ?? [];
+  const coordinators = allStaff.filter(m => {
+    const role = getProjectRole(m, project?.name ?? "");
+    return role === 'COORDINATOR' || role === 'BOTH';
+  });
+  const monitors = allStaff.filter(m => {
+    const role = getProjectRole(m, project?.name ?? "");
+    return role === 'MONITOR' || role === 'BOTH';
+  });
+
   // Filter monitors
-  const filteredMonitors: Monitor[] = (project?.monitors ?? []).filter((monitor) => {
-    // Filter by group
+  const filteredMonitors: StaffMember[] = monitors.filter((monitor) => {
     if (selectedGroupId) {
       const hasGroup = monitor.groups.some(g => g.id === selectedGroupId);
       if (!hasGroup) return false;
     }
-    // Filter by name search
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
       if (!monitor.name.toLowerCase().includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Filter coordinators by search only (no group filter)
+  const filteredCoordinators: StaffMember[] = coordinators.filter((c) => {
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase().trim();
+      if (!c.name.toLowerCase().includes(search)) return false;
     }
     return true;
   });
@@ -121,6 +148,18 @@ export default function Proyecto() {
               alt={project.name}
               className="w-full h-full object-cover"
             />
+          </div>
+        )}
+
+        {/* Coordinators section */}
+        {filteredCoordinators.length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Coordinación</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {filteredCoordinators.map((coord) => (
+                <MonitorCard key={coord.id} monitor={coord} projectName={project.name} />
+              ))}
+            </div>
           </div>
         )}
 
@@ -205,12 +244,12 @@ export default function Proyecto() {
           {filteredMonitors.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {filteredMonitors.map((monitor) => (
-                <MonitorCard key={monitor.id} monitor={monitor}/>
+                <MonitorCard key={monitor.id} monitor={monitor} projectName={project.name} />
               ))}
             </div>
           ) : (
             <p className="text-gray-500 text-center py-12">
-              {project.monitors.length === 0
+              {monitors.length === 0
                 ? "Este proyecto aún no tiene monitores asignados."
                 : "No se encontraron monitores con los filtros seleccionados."}
             </p>

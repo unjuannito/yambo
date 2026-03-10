@@ -8,7 +8,7 @@ import MonitorsGallery from "~/components/home/MonitorsGallery";
 import {
     getHomeSettings,
     getFeaturedProjects,
-    getMonitors,
+    getStaff,
     getPublicActivities,
 } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
@@ -67,14 +67,14 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     { id: "about", visible: true, title: "¿Qué es Yambo?" },
     { id: "projects", visible: true, title: "Proyectos Destacados" },
     { id: "activities", visible: true, title: "Actividades" },
-    { id: "monitors", visible: true, title: "Equipo de Monitores" },
+    { id: "monitors", visible: true, title: "Nuestro Equipo" },
 ];
 
 export async function loader() {
     const [settings, projects, monitors, activities] = await Promise.all([
         getHomeSettings(),
         getFeaturedProjects(),
-        getMonitors(),
+        getStaff(),
         getPublicActivities(),
     ]);
     return { settings, projects, monitors, activities, siteUrl: getSiteUrl() };

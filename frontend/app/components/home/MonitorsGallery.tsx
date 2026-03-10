@@ -1,8 +1,8 @@
-import type { Monitor } from "~/services/publicService";
+import type { StaffMember } from "~/services/publicService";
 import MonitorCard from "~/components/home/MonitorCard";
 
 interface MonitorsGalleryProps {
-    monitors: Monitor[];
+    monitors: StaffMember[];
     title?: string;
     loading?: boolean;
 }
@@ -11,7 +11,7 @@ export default function MonitorsGallery({ monitors, title, loading }: MonitorsGa
     return (
         <section id="monitores" className="w-full bg-white py-16">
             <div className="max-w-6xl mx-auto px-4">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">{title || "Equipo de Monitores"}</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-6">{title || "Nuestro Equipo"}</h2>
                 <div className="flex space-x-6 overflow-x-auto snap-x snap-mandatory no-scrollbar py-2">
                     {loading ? (
                         [1, 2, 3, 4, 5].map((i) => (
@@ -28,13 +28,13 @@ export default function MonitorsGallery({ monitors, title, loading }: MonitorsGa
                         ))
                     ) : monitors.length > 0 ? (
                         monitors.map((monitor) => (
-                            <div key={monitor.id} className="min-w-[220px] flex-shrink-0">
+                            <div key={monitor.id} className="w-[220px] min-w-[220px] flex-shrink-0">
                                 <MonitorCard monitor={monitor} />
                             </div>
                         ))
                     ) : (
                         <p className="text-gray-500 text-center w-full py-8">
-                            No hay monitores disponibles.
+                            No hay equipo disponible.
                         </p>
                     )}
                 </div>

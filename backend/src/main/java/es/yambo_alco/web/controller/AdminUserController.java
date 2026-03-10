@@ -1,6 +1,8 @@
 package es.yambo_alco.web.controller;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -95,7 +98,7 @@ public class AdminUserController {
         User userToUpdate = userService.getUserById(request.getId());
 
         User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail(),
-                request.getPhoto(), request.getBio());
+                request.getPhoto(), request.getBio(), request.getFunFact());
         AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -105,8 +108,43 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> updateUserGroups(
             @PathVariable @NonNull String userId,
             @Valid @RequestBody UpdateGroupsRequest request) {
-        User updatedUser = userService.updateUserGroups(userId, request.getGroupIds());
+        // Legacy endpoint — kept for backward compatibility but now role-based
+        // Assigns all provided groups as MONITOR role
+        for (String groupId : request.getGroupIds()) {
+            userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+        }
+        User user = userService.getUserById(userId);
+        return ResponseEntity.ok(new AdminUserResponse(user));
+    }
+
+    @PostMapping("/{userId}/group-roles")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> assignGroupRole(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody AssignGroupRoleRequest request) {
+        User updatedUser = userService.assignGroupRole(userId, request.getGroupId(), request.getRole());
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @DeleteMapping("/{userId}/group-roles/{groupId}/{role}")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> removeGroupRole(
+            @PathVariable @NonNull String userId,
+            @PathVariable @NonNull String groupId,
+            @PathVariable @NonNull UserProjectGroupRole role) {
+        User updatedUser = userService.removeGroupRole(userId, groupId, role);
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @GetMapping("/{userId}/group-roles")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
+    public ResponseEntity<List<GroupRoleResponse>> getUserGroupRoles(
+            @PathVariable @NonNull String userId) {
+        List<UserProjectGroup> groupRoles = userService.getUserGroupRoles(userId);
+        List<GroupRoleResponse> response = groupRoles.stream()
+                .map(GroupRoleResponse::new)
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{userId}")
@@ -140,6 +178,8 @@ public class AdminUserController {
         private String photo;
 
         private String bio;
+
+        private String funFact;
     }
 
     @Data
@@ -149,13 +189,23 @@ public class AdminUserController {
     }
 
     @Data
+    public static class AssignGroupRoleRequest {
+        @NotBlank(message = "Group ID is required")
+        private String groupId;
+
+        @jakarta.validation.constraints.NotNull(message = "Role is required")
+        private UserProjectGroupRole role;
+    }
+
+    @Data
     public static class AdminUserResponse {
         private String id;
         private String email;
         private String name;
         private String photo;
         private String bio;
-        private AdminGroupResponse[] groups;
+        private String funFact;
+        private GroupRoleResponse[] groupRoles;
         private AdminUserProfileResponse[] profiles;
         private AdminUserPermissionResponse[] permissions;
         private String createdAt;
@@ -168,9 +218,10 @@ public class AdminUserController {
             this.name = user.getName();
             this.photo = user.getPhoto();
             this.bio = user.getBio();
-            this.groups = user.getGroups().stream()
-                    .map(AdminGroupResponse::new)
-                    .toArray(AdminGroupResponse[]::new);
+            this.funFact = user.getFunFact();
+            this.groupRoles = user.getGroupRoles().stream()
+                    .map(GroupRoleResponse::new)
+                    .toArray(GroupRoleResponse[]::new);
 
             this.profiles = user.getProfiles().stream()
                     .map(profile -> new AdminUserProfileResponse(profile.getId(), profile.getName()))
@@ -214,6 +265,23 @@ public class AdminUserController {
             this.name = group.getName();
             this.projectId = group.getProject().getId();
             this.projectName = group.getProject().getName();
+        }
+    }
+
+    @Data
+    public static class GroupRoleResponse {
+        private String groupId;
+        private String groupName;
+        private String projectId;
+        private String projectName;
+        private String role;
+
+        public GroupRoleResponse(UserProjectGroup upg) {
+            this.groupId = upg.getProjectGroup().getId();
+            this.groupName = upg.getProjectGroup().getName();
+            this.projectId = upg.getProjectGroup().getProject().getId();
+            this.projectName = upg.getProjectGroup().getProject().getName();
+            this.role = upg.getRole().name();
         }
     }
 

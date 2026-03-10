@@ -96,7 +96,7 @@ public class ActivityServiceTest {
         // Given
         when(projectRepository.findById("PRJ00001")).thenReturn(Optional.of(testProject));
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(testManager));
-        when(userRepository.findMonitorsByProjectId("PRJ00001")).thenReturn(List.of(testManager));
+        when(userRepository.findStaffByProjectId("PRJ00001")).thenReturn(List.of(testManager));
         when(activityRepository.save(any(Activity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
@@ -115,14 +115,14 @@ public class ActivityServiceTest {
         // Given — manager is NOT in the project's monitors list
         when(projectRepository.findById("PRJ00001")).thenReturn(Optional.of(testProject));
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(testManager));
-        when(userRepository.findMonitorsByProjectId("PRJ00001")).thenReturn(List.of()); // empty
+        when(userRepository.findStaffByProjectId("PRJ00001")).thenReturn(List.of()); // empty
 
         // When & Then
         assertThatThrownBy(() -> activityService.createActivity(
                 "Workshop", null, null,
                 null, false, "PRJ00001", "U0000001"))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("no es monitor del proyecto");
+                .hasMessageContaining("no pertenece al equipo del proyecto");
     }
 
     @Test
@@ -351,16 +351,16 @@ public class ActivityServiceTest {
                 .hasMessage("Activity not found");
     }
 
-    // ── getMonitorsByProject ────────────────────────────────────────────
+    // ── getStaffByProject ────────────────────────────────────────────
 
     @Test
-    public void getMonitorsByProject_WhenProjectExists_ShouldReturnMonitors() {
+    public void getStaffByProject_WhenProjectExists_ShouldReturnStaff() {
         // Given
         when(projectRepository.existsById("PRJ00001")).thenReturn(true);
-        when(userRepository.findMonitorsByProjectId("PRJ00001")).thenReturn(List.of(testManager));
+        when(userRepository.findStaffByProjectId("PRJ00001")).thenReturn(List.of(testManager));
 
         // When
-        List<User> result = activityService.getMonitorsByProject("PRJ00001");
+        List<User> result = activityService.getStaffByProject("PRJ00001");
 
         // Then
         assertThat(result).hasSize(1);
@@ -368,12 +368,12 @@ public class ActivityServiceTest {
     }
 
     @Test
-    public void getMonitorsByProject_WhenProjectNotFound_ShouldThrow() {
+    public void getStaffByProject_WhenProjectNotFound_ShouldThrow() {
         // Given
         when(projectRepository.existsById("INVALID")).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> activityService.getMonitorsByProject("INVALID"))
+        assertThatThrownBy(() -> activityService.getStaffByProject("INVALID"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Project not found");
     }

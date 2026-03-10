@@ -10,7 +10,7 @@
 import type {
     HomeSettings,
     FeaturedProject,
-    Monitor,
+    StaffMember,
     ActiveProject,
     ProjectDetail,
     ContactSettings,
@@ -47,7 +47,7 @@ export async function getFeaturedProjects(): Promise<FeaturedProject[]> {
     return fetchJson("/public/projects/featured");
 }
 
-export async function getMonitors(): Promise<Monitor[]> {
+export async function getStaff(): Promise<StaffMember[]> {
     return fetchJson("/public/monitors");
 }
 

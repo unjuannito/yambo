@@ -3,7 +3,9 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.spec.ProjectSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectGroupRepository projectGroupRepository;
     private final SeoMetadataService seoMetadataService;
 
     public Project getProjectById(@NonNull String projectId) {
@@ -49,6 +52,14 @@ public class ProjectService {
                 .build();
 
         Project saved = projectRepository.save(project);
+
+        // Auto-create project-level group for coordinator assignments
+        ProjectGroup projectLevelGroup = ProjectGroup.builder()
+                .name(null)
+                .project(saved)
+                .build();
+        projectGroupRepository.save(projectLevelGroup);
+
         seoMetadataService.generateAndSaveForProject(saved);
         return saved;
     }

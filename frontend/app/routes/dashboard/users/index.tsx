@@ -22,14 +22,20 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
+interface GroupRoleEntry {
+    groupId: string;
+    role: 'MONITOR' | 'COORDINATOR';
+}
+
 interface UserForm {
     userId: string;
     name: string;
     email: string;
     profileIds: string[];
-    groupIds: string[];
+    groupRoles: GroupRoleEntry[];
     photo: string;
     bio: string;
+    funFact: string;
 }
 
 const EMPTY_FORM: UserForm = {
@@ -37,9 +43,10 @@ const EMPTY_FORM: UserForm = {
     name: "",
     email: "",
     profileIds: [],
-    groupIds: [],
+    groupRoles: [],
     photo: "",
     bio: "",
+    funFact: "",
 };
 
 export default function Users() {
@@ -113,9 +120,10 @@ export default function Users() {
             name: user.name,
             email: user.email,
             profileIds: user.profiles.map(p => p.id),
-            groupIds: user.groups?.map(g => g.id) || [],
+            groupRoles: user.groupRoles?.map(gr => ({ groupId: gr.groupId, role: gr.role })) || [],
             photo: user.photo || "",
             bio: user.bio || "",
+            funFact: user.funFact || "",
         });
         setIsModalOpen(true);
     };
@@ -143,20 +151,28 @@ export default function Users() {
                     email: form.email,
                     photo: form.photo || undefined,
                     bio: form.bio || undefined,
+                    funFact: form.funFact || undefined,
                 });
 
-                // Resolve project:ID placeholders into real default group IDs
-                const resolvedGroupIds: string[] = [];
-                for (const gid of form.groupIds) {
-                    if (gid.startsWith("project:")) {
-                        const projectId = gid.replace("project:", "");
-                        const created = await projectService.createGroup(projectId);
-                        resolvedGroupIds.push(created.id);
-                    } else {
-                        resolvedGroupIds.push(gid);
+                // Sync group roles: get current, compute diff, apply
+                const currentRoles = await adminUserService.getUserGroupRoles(editing);
+                const currentKey = (gr: { groupId: string; role: string }) => `${gr.groupId}:${gr.role}`;
+                const currentSet = new Set(currentRoles.map(currentKey));
+                const desiredSet = new Set(form.groupRoles.map(gr => `${gr.groupId}:${gr.role}`));
+
+                // Remove roles no longer desired
+                for (const cr of currentRoles) {
+                    if (!desiredSet.has(currentKey(cr))) {
+                        await adminUserService.removeGroupRole(editing, cr.groupId, cr.role);
                     }
                 }
-                await adminUserService.updateUserGroups(editing, resolvedGroupIds);
+                // Add new roles
+                for (const gr of form.groupRoles) {
+                    if (!currentSet.has(`${gr.groupId}:${gr.role}`)) {
+                        await adminUserService.assignGroupRole(editing, gr.groupId, gr.role);
+                    }
+                }
+
                 toast.success("Usuario actualizado correctamente");
             }
             resetForm();
@@ -259,26 +275,30 @@ export default function Users() {
             ),
         },
         {
-            key: "groups",
-            header: "Grupos",
+            key: "groupRoles",
+            header: "Roles / Grupos",
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
-                    {user.groups && user.groups.length > 0 ? (
-                        user.groups.slice(0, 3).map((group) => (
+                    {user.groupRoles && user.groupRoles.length > 0 ? (
+                        user.groupRoles.slice(0, 3).map((gr) => (
                             <span
-                                key={group.id}
-                                className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs"
-                                title={group.projectName}
+                                key={`${gr.groupId}:${gr.role}`}
+                                className={`px-2 py-1 rounded text-xs ${
+                                    gr.role === 'COORDINATOR'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : 'bg-green-100 text-green-800'
+                                }`}
+                                title={`${gr.role} - ${gr.projectName}`}
                             >
-                                {group.name || group.projectName}
+                                {gr.role === 'COORDINATOR' ? 'C' : 'M'}: {gr.groupName || gr.projectName}
                             </span>
                         ))
                     ) : (
-                        <span className="text-gray-500 text-xs italic">Sin grupos</span>
+                        <span className="text-gray-500 text-xs italic">Sin roles</span>
                     )}
-                    {user.groups && user.groups.length > 3 && (
+                    {user.groupRoles && user.groupRoles.length > 3 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                            +{user.groups.length - 3} más
+                            +{user.groupRoles.length - 3} más
                         </span>
                     )}
                 </div>
@@ -414,21 +434,58 @@ export default function Users() {
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Grupos
+                                Roles en Grupos
                             </label>
-                            <MultiSelectComponent
-                                options={groupOptions}
-                                value={form.groupIds}
-                                placeholder="Seleccionar grupos..."
-                                name="groupIds"
-                                onChange={(e) => {
-                                    const selectedValues = Array.from(
-                                        (e.target as HTMLSelectElement).selectedOptions,
-                                        option => option.value
-                                    );
-                                    setForm({ ...form, groupIds: selectedValues });
-                                }}
-                            />
+                            {form.groupRoles.map((gr, idx) => (
+                                <div key={idx} className="flex gap-2 mb-2 items-center">
+                                    <select
+                                        value={gr.groupId}
+                                        onChange={(e) => {
+                                            const updated = [...form.groupRoles];
+                                            updated[idx] = { ...updated[idx], groupId: e.target.value };
+                                            setForm({ ...form, groupRoles: updated });
+                                        }}
+                                        className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">Seleccionar grupo...</option>
+                                        {groupOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={gr.role}
+                                        onChange={(e) => {
+                                            const updated = [...form.groupRoles];
+                                            updated[idx] = { ...updated[idx], role: e.target.value as 'MONITOR' | 'COORDINATOR' };
+                                            setForm({ ...form, groupRoles: updated });
+                                        }}
+                                        className="w-36 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="MONITOR">Monitor</option>
+                                        <option value="COORDINATOR">Coordinador</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const updated = form.groupRoles.filter((_, i) => i !== idx);
+                                            setForm({ ...form, groupRoles: updated });
+                                        }}
+                                        className="text-red-500 hover:text-red-700 text-sm px-2"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => setForm({
+                                    ...form,
+                                    groupRoles: [...form.groupRoles, { groupId: "", role: "MONITOR" }]
+                                })}
+                                className="text-sm text-blue-600 hover:underline mt-1"
+                            >
+                                + Añadir rol en grupo
+                            </button>
                         </div>
                         <InputComponent
                             label="Foto (URL)"
@@ -437,18 +494,34 @@ export default function Users() {
                             value={form.photo}
                             onChange={(e) => setForm({ ...form, photo: e.target.value })}
                         />
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
-                            <textarea
-                                name="bio"
-                                value={form.bio}
-                                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                                placeholder="Biografía del usuario..."
-                                rows={3}
-                                maxLength={500}
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                            />
-                        </div>
+                        {form.groupRoles.length > 0 && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                                    <textarea
+                                        name="bio"
+                                        value={form.bio}
+                                        onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                                        placeholder="Biografía del usuario..."
+                                        rows={3}
+                                        maxLength={500}
+                                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                                    <input
+                                        name="funFact"
+                                        type="text"
+                                        value={form.funFact}
+                                        onChange={(e) => setForm({ ...form, funFact: e.target.value })}
+                                        placeholder="Un dato curioso sobre el usuario..."
+                                        maxLength={100}
+                                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                 </Modal>
             </main>

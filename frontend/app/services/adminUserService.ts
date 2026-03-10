@@ -25,10 +25,24 @@ export interface UpdateUserDetailsRequest {
     email: string;
     photo?: string;
     bio?: string;
+    funFact?: string;
 }
 
 export interface UpdateUserGroupsRequest {
     groupIds: string[];
+}
+
+export interface AssignGroupRoleRequest {
+    groupId: string;
+    role: 'MONITOR' | 'COORDINATOR';
+}
+
+export interface GroupRoleResponse {
+    groupId: string;
+    groupName: string | null;
+    projectId: string;
+    projectName: string;
+    role: 'MONITOR' | 'COORDINATOR';
 }
 
 export class AdminUserService extends ApiService {
@@ -68,6 +82,33 @@ export class AdminUserService extends ApiService {
         return await this.put<User, UpdateUserGroupsRequest>(
             `/admin/users/${userId}/groups`,
             { groupIds }
+        );
+    }
+
+    public async assignGroupRole(
+        userId: string,
+        groupId: string,
+        role: 'MONITOR' | 'COORDINATOR'
+    ): Promise<User> {
+        return await this.post<User, AssignGroupRoleRequest>(
+            `/admin/users/${userId}/group-roles`,
+            { groupId, role }
+        );
+    }
+
+    public async removeGroupRole(
+        userId: string,
+        groupId: string,
+        role: 'MONITOR' | 'COORDINATOR'
+    ): Promise<User> {
+        return await this.delete<User>(
+            `/admin/users/${userId}/group-roles/${groupId}/${role}`
+        );
+    }
+
+    public async getUserGroupRoles(userId: string): Promise<GroupRoleResponse[]> {
+        return await this.get<GroupRoleResponse[]>(
+            `/admin/users/${userId}/group-roles`
         );
     }
 }

@@ -78,4 +78,6 @@
     <include file="db/changelog/changes/67-merch-order-permissions.xml"/>
     <include file="db/changelog/changes/68-product-view.xml"/>
     <include file="db/changelog/changes/69-performance-indexes.xml"/>
+    <include file="db/changelog/changes/70-user-group-roles.xml"/>
+    <include file="db/changelog/changes/71-fun-fact-field.xml"/>
 </databaseChangeLog>

@@ -6,6 +6,7 @@ export interface UpdateProfileRequest {
   email: string;
   photo?: string;
   bio?: string;
+  funFact?: string;
 }
 
 export interface ChangePasswordRequest {

@@ -119,11 +119,11 @@ public class ActivityService {
         return activityRepository.save(activity);
     }
 
-    public List<User> getMonitorsByProject(@NonNull String projectId) {
+    public List<User> getStaffByProject(@NonNull String projectId) {
         if (!projectRepository.existsById(projectId)) {
             throw new ResourceNotFoundException("Project not found");
         }
-        return userRepository.findMonitorsByProjectId(projectId);
+        return userRepository.findStaffByProjectId(projectId);
     }
 
     public void deleteActivity(@NonNull String id) {
@@ -132,10 +132,10 @@ public class ActivityService {
     }
 
     private void validateManagerBelongsToProject(User manager, String projectId) {
-        List<User> projectMonitors = userRepository.findMonitorsByProjectId(projectId);
-        boolean belongs = projectMonitors.stream().anyMatch(m -> m.getId().equals(manager.getId()));
+        List<User> projectStaff = userRepository.findStaffByProjectId(projectId);
+        boolean belongs = projectStaff.stream().anyMatch(m -> m.getId().equals(manager.getId()));
         if (!belongs) {
-            throw new BadRequestException("El responsable seleccionado no es monitor del proyecto");
+            throw new BadRequestException("El responsable seleccionado no pertenece al equipo del proyecto");
         }
     }
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLoaderData } from "react-router";
-import { getMonitors, getActiveProjects } from "~/services/publicService.server";
-import type { Monitor, ActiveProject } from "~/services/publicService";
+import { getStaff, getActiveProjects } from "~/services/publicService.server";
+import type { StaffMember, ActiveProject } from "~/services/publicService";
 import MonitorCard from "~/components/home/MonitorCard";
 import { hashColor } from "~/utils/hashColor";
 import { getSiteUrl } from "~/utils/env.server";
@@ -35,7 +35,7 @@ export function meta({ data }: Route.MetaArgs) {
 
 export async function loader() {
   const [monitors, projects] = await Promise.all([
-    getMonitors(),
+    getStaff(),
     getActiveProjects(),
   ]);
   return { monitors, projects, siteUrl: getSiteUrl() };

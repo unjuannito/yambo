@@ -273,7 +273,7 @@ class ActivityControllerTest {
                 .name("Monitor User")
                 .photo("/uploads/photo.jpg")
                 .build();
-        when(activityService.getMonitorsByProject("PRJ00001")).thenReturn(List.of(monitor));
+        when(activityService.getStaffByProject("PRJ00001")).thenReturn(List.of(monitor));
 
         // When & Then
         mockMvc.perform(get("/activities/projects/PRJ00001/monitors"))

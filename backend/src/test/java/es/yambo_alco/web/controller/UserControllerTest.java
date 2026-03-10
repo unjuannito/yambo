@@ -109,7 +109,7 @@ class UserControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
-        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com", null, null)).thenReturn(updatedUser);
+        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com", null, null, null)).thenReturn(updatedUser);
 
         String requestBody = """
                 {

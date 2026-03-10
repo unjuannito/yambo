@@ -6,7 +6,9 @@ import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -61,10 +63,10 @@ public class PublicController {
     }
 
     @GetMapping("/monitors")
-    public ResponseEntity<List<MonitorResponse>> getMonitors() {
-        List<User> monitors = userRepository.findMonitors();
-        List<MonitorResponse> response = monitors.stream()
-                .map(MonitorResponse::new)
+    public ResponseEntity<List<StaffResponse>> getMonitors() {
+        List<User> staff = userRepository.findStaff();
+        List<StaffResponse> response = staff.stream()
+                .map(StaffResponse::new)
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -92,9 +94,9 @@ public class PublicController {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Project not found"));
         List<ProjectGroup> groups = projectGroupRepository.findByProjectId(id);
-        List<User> monitors = userRepository.findMonitorsByProjectId(id);
+        List<User> staff = userRepository.findStaffByProjectId(id);
         SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.PROJECT, id).orElse(null);
-        return ResponseEntity.ok(new ProjectDetailResponse(project, groups, monitors, seo));
+        return ResponseEntity.ok(new ProjectDetailResponse(project, groups, staff, seo));
     }
 
     @GetMapping("/projects/{id}/seo")
@@ -122,34 +124,53 @@ public class PublicController {
     }
 
     @Data
-    public static class MonitorResponse {
+    public static class StaffResponse {
         private String id;
         private String name;
         private String photo;
         private String bio;
-        private MonitorGroupResponse[] groups;
+        private String funFact;
+        private String role;
+        private StaffGroupResponse[] groups;
 
-        public MonitorResponse(User user) {
+        public StaffResponse(User user) {
             this.id = user.getId();
             this.name = user.getName();
             this.photo = user.getPhoto();
             this.bio = user.getBio();
-            this.groups = user.getGroups().stream()
-                    .map(MonitorGroupResponse::new)
-                    .toArray(MonitorGroupResponse[]::new);
+            this.funFact = user.getFunFact();
+
+            // Determine primary role from groupRoles
+            boolean isCoordinator = user.getGroupRoles().stream()
+                    .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR);
+            boolean isMonitor = user.getGroupRoles().stream()
+                    .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.MONITOR);
+            if (isCoordinator && isMonitor) {
+                this.role = "BOTH";
+            } else if (isCoordinator) {
+                this.role = "COORDINATOR";
+            } else {
+                this.role = "MONITOR";
+            }
+
+            this.groups = user.getGroupRoles().stream()
+                    .map(StaffGroupResponse::new)
+                    .toArray(StaffGroupResponse[]::new);
         }
     }
 
     @Data
-    public static class MonitorGroupResponse {
+    public static class StaffGroupResponse {
         private String id;
         private String name;
         private String projectName;
+        private String role;
 
-        public MonitorGroupResponse(ProjectGroup group) {
-            this.id = group.getId();
-            this.name = group.getName();
-            this.projectName = group.getProject().getName();
+        public StaffGroupResponse(UserProjectGroup upg) {
+            this.id = upg.getProjectGroup().getId();
+            this.name = upg.getProjectGroup().getName();
+            this.projectName = upg.getProjectGroup().getProject().getName();
+            this.role = upg.getRole().name();
         }
     }
 
@@ -180,10 +201,10 @@ public class PublicController {
         private String description;
         private String image;
         private List<ProjectGroupDetail> groups;
-        private List<MonitorResponse> monitors;
+        private List<StaffResponse> staff;
         private SeoMetadataResponse seo;
 
-        public ProjectDetailResponse(Project project, List<ProjectGroup> groups, List<User> monitors, SeoMetadata seo) {
+        public ProjectDetailResponse(Project project, List<ProjectGroup> groups, List<User> staff, SeoMetadata seo) {
             this.id = project.getId();
             this.name = project.getName();
             this.season = project.getSeason();
@@ -192,8 +213,8 @@ public class PublicController {
             this.groups = groups.stream()
                     .map(ProjectGroupDetail::new)
                     .toList();
-            this.monitors = monitors.stream()
-                    .map(MonitorResponse::new)
+            this.staff = staff.stream()
+                    .map(StaffResponse::new)
                     .toList();
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }

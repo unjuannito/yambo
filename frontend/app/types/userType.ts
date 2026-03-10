@@ -4,7 +4,8 @@ export type CurrentUser = {
     name: string;
     photo?: string;
     bio?: string;
-    groups?: UserGroup[];
+    funFact?: string;
+    groupRoles?: UserGroupRole[];
     permissions: Permission[]
 };
 
@@ -14,7 +15,8 @@ export type User = {
     name: string;
     photo?: string;
     bio?: string;
-    groups?: UserGroup[];
+    funFact?: string;
+    groupRoles?: UserGroupRole[];
     createdAt: string;
     created_by: string;
     permissions: Permission[]
@@ -23,11 +25,12 @@ export type User = {
     system?: boolean;
 }
 
-export type UserGroup = {
-    id: string;
-    name: string | null;
+export type UserGroupRole = {
+    groupId: string;
+    groupName: string | null;
     projectId: string;
     projectName: string;
+    role: 'MONITOR' | 'COORDINATOR';
 }
 
 export type Profile = {

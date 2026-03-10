@@ -12,18 +12,21 @@ export interface FeaturedProject {
     image: string;
 }
 
-export interface MonitorGroup {
+export interface StaffGroup {
     id: string;
     name: string | null;
     projectName: string;
+    role: 'MONITOR' | 'COORDINATOR';
 }
 
-export interface Monitor {
+export interface StaffMember {
     id: string;
     name: string;
     photo: string;
     bio: string;
-    groups: MonitorGroup[];
+    funFact: string;
+    role: 'MONITOR' | 'COORDINATOR' | 'BOTH';
+    groups: StaffGroup[];
 }
 
 export interface ActiveProject {
@@ -54,7 +57,7 @@ export interface ProjectDetail {
     description: string | null;
     image: string | null;
     groups: ProjectGroupDetail[];
-    monitors: Monitor[];
+    staff: StaffMember[];
     seo: SeoMetadata | null;
 }
 
@@ -75,7 +78,7 @@ export class PublicService extends ApiService {
         return await this.get('/public/projects/featured');
     }
 
-    public async getMonitors(): Promise<Monitor[]> {
+    public async getStaff(): Promise<StaffMember[]> {
         return await this.get('/public/monitors');
     }
 

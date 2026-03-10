@@ -43,6 +43,7 @@ export default function MyAccount() {
     email: user?.email || "",
     photo: user?.photo || "",
     bio: user?.bio || "",
+    funFact: user?.funFact || "",
   });
 
   // Estados para el formulario de contraseña
@@ -66,6 +67,7 @@ export default function MyAccount() {
         email: user.email,
         photo: user.photo || "",
         bio: user.bio || "",
+        funFact: user.funFact || "",
       });
     }
   }, [user]);
@@ -204,29 +206,51 @@ export default function MyAccount() {
                 setProfileData((prev) => ({ ...prev, photo: file.url }))
               }
             />
-            {user?.groups && user.groups.length > 0 && (
+            {user?.groupRoles && user.groupRoles.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Grupos</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Roles en Grupos</label>
                 <p className="text-sm text-gray-600">
-                  {user.groups.map(g => g.name ? `${g.name} (${g.projectName})` : g.projectName).join(", ")}
+                  {user.groupRoles.map(gr => {
+                    const label = gr.groupName ? `${gr.groupName} (${gr.projectName})` : gr.projectName;
+                    return `${gr.role === 'COORDINATOR' ? 'Coordinador' : 'Monitor'} - ${label}`;
+                  }).join(", ")}
                 </p>
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
-              <textarea
-                name="bio"
-                value={profileData.bio}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, bio: e.target.value }))
-                }
-                placeholder="Cuéntanos algo sobre ti..."
-                rows={3}
-                maxLength={500}
-                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-1 text-right">{profileData.bio.length}/500</p>
-            </div>
+            {user?.groupRoles && user.groupRoles.length > 0 && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                  <textarea
+                    name="bio"
+                    value={profileData.bio}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({ ...prev, bio: e.target.value }))
+                    }
+                    placeholder="Cuéntanos algo sobre ti..."
+                    rows={3}
+                    maxLength={500}
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                  <p className="text-xs text-gray-400 mt-1 text-right">{profileData.bio.length}/500</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                  <input
+                    name="funFact"
+                    type="text"
+                    value={profileData.funFact}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({ ...prev, funFact: e.target.value }))
+                    }
+                    placeholder="Un dato curioso sobre ti..."
+                    maxLength={100}
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1 text-right">{profileData.funFact.length}/100</p>
+                </div>
+              </>
+            )}
             <div className="flex justify-end pt-2">
               <ButtonComponent
                 type="submit"

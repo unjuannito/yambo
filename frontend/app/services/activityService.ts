@@ -59,7 +59,7 @@ export class ActivityService extends ApiService {
         return await this.put(`/activities/${id}`, data);
     }
 
-    public async getProjectMonitors(projectId: string): Promise<ActivityManager[]> {
+    public async getProjectStaff(projectId: string): Promise<ActivityManager[]> {
         return await this.get(`/activities/projects/${projectId}/monitors`);
     }
 

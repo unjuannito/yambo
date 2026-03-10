@@ -6,7 +6,7 @@
  * `meta()` convention:  `{ "script:ld+json": organizationJsonLd(...) }`
  */
 
-import type { ActiveProject, ProjectDetail, Monitor } from "~/services/publicService";
+import type { ActiveProject, ProjectDetail } from "~/services/publicService";
 import type { Activity } from "~/types/activity";
 
 /* ── Organisation ─────────────────────────────────────────────────── */

@@ -4,6 +4,7 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,9 @@ class ProjectServiceTest {
 
     @Mock
     private ProjectRepository projectRepository;
+
+    @Mock
+    private ProjectGroupRepository projectGroupRepository;
 
     @Mock
     private SeoMetadataService seoMetadataService;

@@ -74,8 +74,8 @@ public class ActivityController {
     @GetMapping("/projects/{projectId}/monitors")
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'read')")
     public ResponseEntity<List<ManagerSummary>> getProjectMonitors(@PathVariable String projectId) {
-        List<User> monitors = activityService.getMonitorsByProject(projectId);
-        List<ManagerSummary> response = monitors.stream()
+        List<User> staff = activityService.getStaffByProject(projectId);
+        List<ManagerSummary> response = staff.stream()
                 .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getPhoto()))
                 .toList();
         return ResponseEntity.ok(response);

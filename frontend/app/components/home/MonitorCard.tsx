@@ -1,34 +1,34 @@
 import { useState } from "react";
-import type { Monitor } from "~/services/publicService";
+import type { StaffMember } from "~/services/publicService";
 import { hashColor } from "~/utils/hashColor";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 
 interface MonitorCardProps {
-    monitor: Monitor;
+    monitor: StaffMember;
+    roleLabel?: string;
+    /** When set, only shows groups from this project and omits the project name prefix */
+    projectName?: string;
 }
 
-const FUN_FACTS = [
-    // TODO: replace with real fun facts about monitors
-    "Le encanta el helado de chocolate."
-];
-
-function getFunFact(name: string): string {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-        hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
-    }
-    return FUN_FACTS[Math.abs(hash) % FUN_FACTS.length];
-}
-
-export default function MonitorCard({ monitor }: MonitorCardProps) {
+export default function MonitorCard({ monitor, roleLabel, projectName }: MonitorCardProps) {
     const [isFlipped, setIsFlipped] = useState(false);
-    const funFact = getFunFact(monitor.name);
+    const hasFunFact = !!monitor.funFact;
+
+    // When inside a project page, filter to that project's groups and show only group name
+    const displayGroups = projectName
+        ? monitor.groups
+            .filter(g => g.projectName === projectName && g.name)
+            .map(g => ({ ...g, label: g.name! }))
+        : monitor.groups.map(g => ({
+            ...g,
+            label: g.name ? `${g.projectName} - ${g.name}` : g.projectName,
+        }));
 
     return (
         <div
-            className="ee-card-perspective h-[340px]"
-            onDoubleClick={() => setIsFlipped((f) => !f)}
+            className="ee-card-perspective"
+            onDoubleClick={() => hasFunFact && setIsFlipped((f) => !f)}
         >
             <div className={`ee-card-inner ${isFlipped ? "ee-flipped" : ""}`}>
                 {/* ── Front face ────────────────────────────── */}
@@ -48,12 +48,17 @@ export default function MonitorCard({ monitor }: MonitorCardProps) {
                         )}
                     </div>
                     <div className="p-3">
-                        <h3 className="text-base font-semibold text-gray-900">
+                        <h3 className="text-base font-semibold text-gray-900 line-clamp-2">
                             {monitor.name}
                         </h3>
-                        {monitor.groups && monitor.groups.length > 0 && (
+                        {roleLabel && (
+                            <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                                {roleLabel}
+                            </span>
+                        )}
+                        {displayGroups.length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1">
-                                {monitor.groups.map((g) => {
+                                {displayGroups.map((g) => {
                                     const { bg, text } = hashColor(g.projectName + (g.name || ""));
                                     return (
                                         <span
@@ -61,16 +66,14 @@ export default function MonitorCard({ monitor }: MonitorCardProps) {
                                             className="inline-block text-xs font-medium px-1.5 py-0.5 rounded"
                                             style={{ backgroundColor: bg, color: text }}
                                         >
-                                            {g.name
-                                                ? `${g.projectName} - ${g.name}`
-                                                : g.projectName}
+                                            {g.label}
                                         </span>
                                     );
                                 })}
                             </div>
                         )}
                         {monitor.bio && (
-                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                            <p className="text-xs text-gray-500 mt-1">
                                 {monitor.bio}
                             </p>
                         )}
@@ -82,7 +85,7 @@ export default function MonitorCard({ monitor }: MonitorCardProps) {
                     <div className="text-5xl mb-4">🤫</div>
                     <h3 className="text-lg font-bold mb-2">{monitor.name}</h3>
                     <p className="text-base leading-relaxed opacity-90">
-                        {funFact}
+                        {monitor.funFact}
                     </p>
                     <p className="text-xs mt-6 opacity-50">
                         Doble clic para volver

@@ -4,6 +4,7 @@ import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
 import es.yambo_alco.web.service.UserService;
@@ -45,7 +46,7 @@ public class UserController {
     public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User currentUser = authService.getCurrentUser(true);
         User updatedUser = userService.updateProfile(currentUser.getId(), request.getName(), request.getEmail(),
-                request.getPhoto(), request.getBio());
+                request.getPhoto(), request.getBio(), request.getFunFact());
         UserResponse response = new UserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -80,6 +81,8 @@ public class UserController {
         private String photo;
 
         private String bio;
+
+        private String funFact;
     }
 
     @Data
@@ -99,7 +102,8 @@ public class UserController {
         private String name;
         private String photo;
         private String bio;
-        private GroupResponse[] groups;
+        private String funFact;
+        private GroupRoleResponse[] groupRoles;
         private PermissionResponse[] permissions;
 
         public UserResponse(User user) {
@@ -108,9 +112,10 @@ public class UserController {
             this.name = user.getName();
             this.photo = user.getPhoto();
             this.bio = user.getBio();
-            this.groups = user.getGroups().stream()
-                    .map(GroupResponse::new)
-                    .toArray(GroupResponse[]::new);
+            this.funFact = user.getFunFact();
+            this.groupRoles = user.getGroupRoles().stream()
+                    .map(GroupRoleResponse::new)
+                    .toArray(GroupRoleResponse[]::new);
             Map<String, Set<String>> resourceActions = user.getProfiles().stream()
                     .flatMap(profile -> profile.getPermissions().stream())
                     .collect(Collectors.groupingBy(
@@ -123,17 +128,19 @@ public class UserController {
     }
 
     @Data
-    public static class GroupResponse {
-        private String id;
-        private String name;
+    public static class GroupRoleResponse {
+        private String groupId;
+        private String groupName;
         private String projectId;
         private String projectName;
+        private String role;
 
-        public GroupResponse(ProjectGroup group) {
-            this.id = group.getId();
-            this.name = group.getName();
-            this.projectId = group.getProject().getId();
-            this.projectName = group.getProject().getName();
+        public GroupRoleResponse(UserProjectGroup upg) {
+            this.groupId = upg.getProjectGroup().getId();
+            this.groupName = upg.getProjectGroup().getName();
+            this.projectId = upg.getProjectGroup().getProject().getId();
+            this.projectName = upg.getProjectGroup().getProject().getName();
+            this.role = upg.getRole().name();
         }
     }
 
