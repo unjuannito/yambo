@@ -13,6 +13,7 @@ export interface UserFilters {
     email?: string;
     enabled?: boolean;
     profiles?: string[];
+    role?: string;
 }
 
 export interface UpdateProfilesRequest {

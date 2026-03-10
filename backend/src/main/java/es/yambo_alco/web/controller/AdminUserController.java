@@ -53,6 +53,7 @@ public class AdminUserController {
             @RequestParam(required = false) Boolean enabled,
             @RequestParam(required = false) String permissions,
             @RequestParam(required = false) String profiles,
+            @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size,
             @RequestParam(required = false) String sortBy,
@@ -73,7 +74,7 @@ public class AdminUserController {
                 : PageRequest.of(page, size, dir, sortBy);
 
         Page<User> users = userService.listUsers(id, name, email, enabled, perms == null ? null : List.copyOf(perms),
-                profilesList, pr);
+                profilesList, role, pr);
         return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
 

@@ -37,6 +37,7 @@ export default [
         route("mi-espacio/admin/informes", "routes/dashboard/reports/index.tsx"),
 
         // Proyectos
+        route("mi-espacio/admin/equipo", "routes/dashboard/crew/index.tsx"),
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
 
         // Actividades

@@ -77,7 +77,7 @@ public class UserService {
 	}
 
 public Page<User> listUsers(String id, String name, String email, Boolean enabled, List<String> permissions,
-			List<String> profiles, Pageable pageable) {
+			List<String> profiles, String role, Pageable pageable) {
 		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
 		Set<String> profileSet = profiles == null ? null : profiles.stream().collect(Collectors.toSet());
 		Specification<User> spec = Specification.where(null);
@@ -89,6 +89,8 @@ public Page<User> listUsers(String id, String name, String email, Boolean enable
 			spec = spec.and(UserSpecifications.hasPermissions(perms));
 		if (profileSet != null && !profileSet.isEmpty())
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
+		if (role != null && !role.isBlank())
+			spec = spec.and(UserSpecifications.hasGroupRole(role));
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();

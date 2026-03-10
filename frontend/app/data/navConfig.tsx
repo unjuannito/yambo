@@ -9,6 +9,7 @@ import {
     faEnvelopesBulk,
     faMagnifyingGlass,
     faChartLine,
+    faPeopleGroup,
 } from "@fortawesome/free-solid-svg-icons";
 
 export interface NavSection {
@@ -28,7 +29,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Proyectos",
-        items: ["projects", "activities"]
+        items: ["crew", "projects", "activities"]
     },
     {
         title: "Merch",
@@ -51,6 +52,7 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     seo: <FontAwesomeIcon icon={faMagnifyingGlass} className="w-5 h-5" />,
     reports: <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />,
     projects: <FontAwesomeIcon icon={faFolder} className="w-5 h-5" />,
+    crew: <FontAwesomeIcon icon={faPeopleGroup} className="w-5 h-5" />,
     activities: <FontAwesomeIcon icon={faCalendarDays} className="w-5 h-5" />,
     merch: <FontAwesomeIcon icon={faBagShopping} className="w-5 h-5" />,
     merchFamilies: <FontAwesomeIcon icon={faCubes} className="w-5 h-5" />,

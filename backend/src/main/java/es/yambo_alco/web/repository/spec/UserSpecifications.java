@@ -3,6 +3,8 @@ package es.yambo_alco.web.repository.spec;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
@@ -44,6 +46,19 @@ public final class UserSpecifications {
             if (profiles == null || profiles.isEmpty()) return null;
             Join<User, Profile> profileJoin = root.join("profiles", JoinType.LEFT);
             return profileJoin.get("id").in(profiles);
+        };
+    }
+
+    public static Specification<User> hasGroupRole(String role) {
+        return (root, query, cb) -> {
+            if (role == null || role.isBlank()) return null;
+            Join<User, UserProjectGroup> grJoin = root.join("groupRoles", JoinType.INNER);
+            query.distinct(true);
+            if ("ANY".equalsIgnoreCase(role)) {
+                return grJoin.get("role").isNotNull();
+            }
+            UserProjectGroupRole enumRole = UserProjectGroupRole.valueOf(role.toUpperCase());
+            return cb.equal(grJoin.get("role"), enumRole);
         };
     }
 }

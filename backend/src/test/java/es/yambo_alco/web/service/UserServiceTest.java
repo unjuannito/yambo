@@ -58,7 +58,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(null, null, null, null, (List<String>) null, (List<String>) null,
+        Page<User> res = userService.listUsers(null, null, null, null, (List<String>) null, (List<String>) null, null,
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("a@b.com");
