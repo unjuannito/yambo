@@ -25,11 +25,11 @@ export function RequirePermission({
     const toastShown = useRef(false);
 
     useEffect(() => {
-        if (!loading && !hasPermission(permission) && !toastShown.current) {
+        if (redirect && !loading && !hasPermission(permission) && !toastShown.current) {
             toastShown.current = true;
             toast.error("No tienes permiso para acceder a esta sección");
         }
-    }, [loading, hasPermission, permission]);
+    }, [redirect, loading, hasPermission, permission]);
 
     if (loading) return null;
 
