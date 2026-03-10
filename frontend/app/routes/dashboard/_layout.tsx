@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, useLocation } from "react-router";
 import SociosNav from "~/components/dashboard/Nav";
 import SociosHeader from "~/components/dashboard/Header";
 import { useAuth } from "~/hooks/useAuth";
 import LINKS_MAP from "~/data/links";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
+import { getLoginUrl } from "~/utils/auth";
 
 export const ssr = false;
 
@@ -12,11 +13,12 @@ export const ssr = false;
 export default function AreaSociosLayout() {
   const { user, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const links = LINKS_MAP.filter(link => link.need == null || user && user.permissions && (user.permissions.filter(perm => perm.obj == link.need!.obj && perm.actions.includes(link.need!.action))).length > 0);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated()) navigate("/login");
+    if (!loading && !isAuthenticated()) navigate(getLoginUrl(location.pathname + location.search));
   }, [loading, navigate]);
 
   if (loading || !user) {

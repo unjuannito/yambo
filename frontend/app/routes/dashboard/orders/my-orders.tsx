@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
 import { orderService, type Order } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
@@ -179,10 +179,6 @@ export default function MyOrdersPage() {
       initialSelectedOrderedProductIds: preselectedOrderedProductId ? [preselectedOrderedProductId] : undefined,
     });
   };
-
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

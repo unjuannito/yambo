@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import toast from "react-hot-toast";
-import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import { productService, type OptionValue, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
@@ -138,7 +137,6 @@ function normalizeOption(option: ProductOption): ProductOption {
 }
 
 export default function ProductEditor({ mode, productId }: ProductEditorProps) {
-    const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     const isEditing = mode === "edit";
@@ -200,10 +198,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         optionIdListRef.current = ids;
         return ids;
     }, [product.options.length]);
-
-    if (!isAuthenticated()) {
-        return <Navigate to="/login" replace />;
-    }
 
     useEffect(() => {
         const loadProducts = async () => {

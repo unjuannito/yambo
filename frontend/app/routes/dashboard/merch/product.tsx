@@ -3,9 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { productService, type Product, type ProductOption } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { productViewService } from "~/services/productViewService";
-import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
-import { Navigate } from "react-router";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import SelectComponent from "~/components/common/forms/SelectComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -29,7 +27,6 @@ export function meta() {
 export default function ProductPage() {
     const { productId } = useParams<{ productId: string }>();
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
     const { addItem } = useCart();
     const [product, setProduct] = useState<Product | null>(null);
     const [drop, setDrop] = useState<FamilyProduct | null>(null);
@@ -38,10 +35,6 @@ export default function ProductPage() {
     const [configuration, setConfiguration] = useState<Record<string, any>>({});
     const [totalPrice, setTotalPrice] = useState(0);
     const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-
-    if (!isAuthenticated()) {
-        return <Navigate to="/login" replace />;
-    }
 
     useEffect(() => {
         const loadProduct = async () => {

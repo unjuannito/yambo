@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGift } from "@fortawesome/free-solid-svg-icons";
 import { fireRainbow } from "~/utils/confetti";
+import { getSafeReturnTo } from "~/utils/auth";
 
 // Easter egg: gag passwords
 const GAG_PASSWORDS: Record<string, { message: string; rainbow?: boolean }> = {
@@ -44,13 +45,14 @@ export default function Index() {
     const [loading, setLoading] = useState(false);
     const [rainbowMode, setRainbowMode] = useState(false);
     const inviteToken = searchParams.get("invite");
+    const returnTo = getSafeReturnTo(searchParams.get("returnTo")) ?? "/mi-espacio";
 
     const emailRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (isAuthenticated()) {
-            navigate("/mi-espacio", { replace: true });
+            navigate(returnTo, { replace: true });
         }
     }, []);
 
@@ -90,7 +92,7 @@ export default function Index() {
                 }
             }
 
-            navigate("/mi-espacio", { replace: true });
+            navigate(returnTo, { replace: true });
         } catch (err) {
             // Easter egg: show gag message instead of generic error for known passwords
             const gag = GAG_PASSWORDS[password.toLowerCase()];

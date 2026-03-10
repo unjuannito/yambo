@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -28,10 +28,6 @@ export default function CartPage() {
   const [completedOrderId, setCompletedOrderId] = useState<string>("");
   const [orderTotal, setOrderTotal] = useState<number>(0);
   const [drops, setDrops] = useState<FamilyProduct[]>([]);
-
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
 
   useEffect(() => {
     const loadDrops = async () => {
