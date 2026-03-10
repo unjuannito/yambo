@@ -33,6 +33,10 @@ export default function NominativeInvitations() {
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+    const [batchEmails, setBatchEmails] = useState("");
+    const [batchProfileIds, setBatchProfileIds] = useState<string[]>([]);
+    const [batchSaving, setBatchSaving] = useState(false);
     const [profileOptions, setProfileOptions] = useState<
         { value: string; label: string }[]
     >([]);
@@ -108,6 +112,55 @@ export default function NominativeInvitations() {
             toast.error(getErrorMessage(err, "Error al crear la invitación"));
         } finally {
             setSaving(false);
+        }
+    };
+
+    const openBatchModal = () => {
+        setBatchEmails("");
+        setBatchProfileIds([]);
+        setIsBatchModalOpen(true);
+    };
+
+    const closeBatchModal = () => {
+        setBatchEmails("");
+        setBatchProfileIds([]);
+        setIsBatchModalOpen(false);
+        setBatchSaving(false);
+    };
+
+    const handleBatchSave = async () => {
+        const emails = batchEmails
+            .split(/[,\n]+/)
+            .map((e) => e.trim())
+            .filter((e) => e.length > 0);
+
+        if (emails.length === 0) {
+            toast.error("Introduce al menos un email");
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const invalid = emails.filter((e) => !emailRegex.test(e));
+        if (invalid.length > 0) {
+            toast.error(`Emails inválidos: ${invalid.join(", ")}`);
+            return;
+        }
+
+        try {
+            setBatchSaving(true);
+            const result = await nominativeInvitationService.createBatchInvitations({
+                emails,
+                profileIds: batchProfileIds,
+            });
+            setInvitations((prev) => [...result.invitations, ...prev]);
+            toast.success(
+                `${result.invitations.length} invitaciones creadas. Enviando emails...`,
+            );
+            closeBatchModal();
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al crear las invitaciones"));
+        } finally {
+            setBatchSaving(false);
         }
     };
 
@@ -210,12 +263,20 @@ export default function NominativeInvitations() {
                         permission={{ obj: "invitation", action: "create" }}
                         redirect={false}
                     >
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={openCreateModal}
-                        >
-                            + Nueva Invitación
-                        </ButtonComponent>
+                        <div className="flex gap-2">
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={openBatchModal}
+                            >
+                                + Invitar en Lote
+                            </ButtonComponent>
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={openCreateModal}
+                            >
+                                + Nueva Invitación
+                            </ButtonComponent>
+                        </div>
                     </RequirePermission>
                 </div>
 
@@ -294,6 +355,59 @@ export default function NominativeInvitations() {
                                     ...prev,
                                     profileIds: selected,
                                 }));
+                            }}
+                            placeholder="Seleccionar perfiles..."
+                        />
+                    </div>
+                </Modal>
+
+                <Modal
+                    isOpen={isBatchModalOpen}
+                    onClose={closeBatchModal}
+                    title="Invitar en Lote"
+                    footer={
+                        <>
+                            <ButtonComponent
+                                onClick={closeBatchModal}
+                                variant="neutral"
+                                disabled={batchSaving}
+                            >
+                                Cancelar
+                            </ButtonComponent>
+                            <ButtonComponent
+                                onClick={handleBatchSave}
+                                variant="primary"
+                                disabled={batchSaving}
+                            >
+                                {batchSaving ? "Creando..." : "Enviar Invitaciones"}
+                            </ButtonComponent>
+                        </>
+                    }
+                >
+                    <div className="flex flex-col gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Emails (uno por línea o separados por comas)
+                            </label>
+                            <textarea
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                rows={6}
+                                value={batchEmails}
+                                onChange={(e) => setBatchEmails(e.target.value)}
+                                placeholder={"usuario1@ejemplo.com\nusuario2@ejemplo.com\nusuario3@ejemplo.com"}
+                            />
+                        </div>
+                        <MultiSelectComponent
+                            label="Perfiles"
+                            name="batchProfileIds"
+                            value={batchProfileIds}
+                            options={profileOptions}
+                            onChange={(e) => {
+                                const selected = Array.from(
+                                    (e.target as HTMLSelectElement).selectedOptions,
+                                    option => option.value,
+                                );
+                                setBatchProfileIds(selected);
                             }}
                             placeholder="Seleccionar perfiles..."
                         />

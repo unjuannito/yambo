@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class SeoMetadataControllerTest {
 
     @MockitoBean
     private PermissionCheckService permissionCheckService;
+
+    @MockitoBean
+    private AuthService authService;
 
     private SeoMetadata sampleMetadata;
 
@@ -197,12 +201,14 @@ class SeoMetadataControllerTest {
     @Test
     @WithMockUser
     void bulkGenerate_ShouldTriggerBulkGeneration() throws Exception {
-        doNothing().when(seoMetadataService).bulkGenerateForProjects();
+        es.yambo_alco.web.model.User user = es.yambo_alco.web.model.User.builder()
+                .email("admin").build();
+        when(authService.getCurrentUser(true)).thenReturn(user);
 
         mockMvc.perform(post("/admin/seo/bulk-generate"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Generación masiva SEO iniciada"));
 
-        verify(seoMetadataService).bulkGenerateForProjects();
+        verify(seoMetadataService).bulkGenerateForProjects(anyString(), eq("admin"));
     }
 }

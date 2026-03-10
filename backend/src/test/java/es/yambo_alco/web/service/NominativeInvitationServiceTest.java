@@ -21,7 +21,10 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
@@ -454,5 +457,104 @@ class NominativeInvitationServiceTest {
         // Then
         verify(nominativeInvitationRepository).findById(invitationId);
         verify(nominativeInvitationRepository).delete(invitation);
+    }
+
+    // ── sendInvitationEmail ──────────────────────────────────────────────
+
+    @Test
+    void sendInvitationEmail_ShouldBuildLinkAndCallMailService() {
+        String email = "test@example.com";
+        String token = "abc123";
+
+        nominativeInvitationService.sendInvitationEmail(email, token, 72L);
+
+        verify(mailService).sendInvitation(
+                eq(email),
+                eq("Invitación a Yambo"),
+                contains("http://localhost:5173/register?invitation=abc123"));
+    }
+
+    @Test
+    void sendInvitationEmail_ShouldIncludeExpirationHoursInBody() {
+        nominativeInvitationService.sendInvitationEmail("a@b.com", "tok", 48L);
+
+        verify(mailService).sendInvitation(
+                eq("a@b.com"),
+                anyString(),
+                contains("48 horas"));
+    }
+
+    // ── createBatchInvitations ───────────────────────────────────────────
+
+    @Test
+    void createBatchInvitations_ShouldCreateInvitationsForAllEmails() {
+        List<String> emails = List.of("a@test.com", "b@test.com");
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        List<NominativeInvitation> result = nominativeInvitationService
+                .createBatchInvitations(emails, "U0000001", null);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(NominativeInvitation::getEmail)
+                .containsExactly("a@test.com", "b@test.com");
+        verify(nominativeInvitationRepository, org.mockito.Mockito.times(2)).save(any(NominativeInvitation.class));
+    }
+
+    @Test
+    void createBatchInvitations_ShouldSkipExistingUsers() {
+        List<String> emails = List.of("existing@test.com", "new@test.com");
+        when(userRepository.existsByEmail("existing@test.com")).thenReturn(true);
+        when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        List<NominativeInvitation> result = nominativeInvitationService
+                .createBatchInvitations(emails, "U0000001", null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEmail()).isEqualTo("new@test.com");
+    }
+
+    @Test
+    void createBatchInvitations_ShouldNotSendEmails() {
+        List<String> emails = List.of("a@test.com");
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        nominativeInvitationService.createBatchInvitations(emails, "U0000001", null);
+
+        verify(mailService, never()).sendInvitation(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void createBatchInvitations_WithProfiles_ShouldAssignProfiles() {
+        List<String> emails = List.of("a@test.com");
+        Set<String> profileIds = Set.of("SOCIO");
+        Profile socio = Profile.builder().id("SOCIO").build();
+
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socio));
+        when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        List<NominativeInvitation> result = nominativeInvitationService
+                .createBatchInvitations(emails, "U0000001", profileIds);
+
+        assertThat(result.get(0).getProfiles()).containsExactly(socio);
+    }
+
+    @Test
+    void createBatchInvitations_AllExistingUsers_ShouldReturnEmptyList() {
+        List<String> emails = List.of("a@test.com", "b@test.com");
+        when(userRepository.existsByEmail(anyString())).thenReturn(true);
+
+        List<NominativeInvitation> result = nominativeInvitationService
+                .createBatchInvitations(emails, "U0000001", null);
+
+        assertThat(result).isEmpty();
+        verify(nominativeInvitationRepository, never()).save(any(NominativeInvitation.class));
     }
 }

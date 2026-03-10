@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -241,7 +242,7 @@ public class OrderService {
         return savedOrder;
     }
 
-    private void sendOrderStatusUpdateEmail(Order order, OrderStatus newStatus) {
+    public void sendOrderStatusUpdateEmail(Order order, OrderStatus newStatus) {
         User user = userRepository.findById(order.getCustomerId())
                 .orElse(null);
 
@@ -582,9 +583,10 @@ public class OrderService {
     /**
      * Update all order product statuses for products belonging to a given family product.
      * Called when the family product status changes.
+     * Returns a list of pending email notifications to be sent asynchronously.
      */
     @Transactional
-    public void updateOrderProductStatusByFamilyProduct(@NonNull String familyProductId,
+    public List<PendingOrderEmail> updateOrderProductStatusByFamilyProduct(@NonNull String familyProductId,
             @NonNull OrderProductStatus newStatus) {
         List<Product> products = productRepository.findAll(
                 (root, query, cb) -> cb.equal(root.get("familyProduct").get("id"), familyProductId));
@@ -594,7 +596,7 @@ public class OrderService {
                 .collect(Collectors.toSet());
 
         if (productIds.isEmpty()) {
-            return;
+            return List.of();
         }
 
         List<OrderProduct> orderProducts = orderProductRepository.findAll(
@@ -612,6 +614,8 @@ public class OrderService {
             affectedOrderIds.add(op.getOrderId());
         }
 
+        List<PendingOrderEmail> pendingEmails = new ArrayList<>();
+
         // When drop moves to fabrication or beyond, transition orders from PAYMENT_CONFIRMED to PENDING_PRODUCTS
         if (newStatus == OrderProductStatus.PENDING_FABRICATION
                 || newStatus == OrderProductStatus.TO_BE_DELIVERED
@@ -623,12 +627,7 @@ public class OrderService {
                     orderRepository.save(order);
 
                     recordStatusChange(orderId, OrderStatus.PAYMENT_CONFIRMED, OrderStatus.PENDING_PRODUCTS, null);
-
-                    try {
-                        sendOrderStatusUpdateEmail(order, OrderStatus.PENDING_PRODUCTS);
-                    } catch (Exception e) {
-                        log.error("Failed to send order status update email for order: {}", orderId, e);
-                    }
+                    pendingEmails.add(new PendingOrderEmail(orderId, OrderStatus.PENDING_PRODUCTS));
                 }
             }
         }
@@ -636,10 +635,35 @@ public class OrderService {
         // Check if any affected orders should be auto-closed
         if (newStatus == OrderProductStatus.DELIVERED) {
             for (String orderId : affectedOrderIds) {
-                checkAndCloseOrder(orderId);
+                Order order = getOrderById(orderId);
+                if (order.getStatus() == OrderStatus.CLOSED || order.getStatus() == OrderStatus.CANCELED) {
+                    continue;
+                }
+                List<OrderProduct> ops = getOrderProducts(orderId);
+                if (ops.isEmpty()) continue;
+                boolean allDelivered = ops.stream()
+                        .allMatch(op -> op.getStatus() == OrderProductStatus.DELIVERED);
+                if (!allDelivered) continue;
+                List<Issue> issues = issueRepository.findByOrderId(orderId);
+                boolean hasOpenIssues = issues.stream()
+                        .anyMatch(issue -> {
+                            IssueStatus is = issue.getStatus();
+                            return is == IssueStatus.OPEN || is == IssueStatus.IN_PROGRESS || is == IssueStatus.REOPENED;
+                        });
+                if (hasOpenIssues) continue;
+
+                order.setStatus(OrderStatus.CLOSED);
+                order.setClosedAt(LocalDateTime.now());
+                orderRepository.save(order);
+                recordStatusChange(orderId, OrderStatus.PENDING_PRODUCTS, OrderStatus.CLOSED, null);
+                pendingEmails.add(new PendingOrderEmail(orderId, OrderStatus.CLOSED));
             }
         }
+
+        return pendingEmails;
     }
+
+    public record PendingOrderEmail(String orderId, OrderStatus newStatus) {}
 
     private void recordStatusChange(String orderId, OrderStatus fromStatus, OrderStatus toStatus, String changedBy) {
         try {

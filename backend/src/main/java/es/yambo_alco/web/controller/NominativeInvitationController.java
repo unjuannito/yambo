@@ -3,10 +3,12 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.model.NominativeInvitation;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.NominativeInvitationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -35,6 +38,8 @@ public class NominativeInvitationController {
     private final AuthService authService;
 
     private final UserRepository userRepository;
+
+    private final BatchEmailService batchEmailService;
 
     private NominativeInvitationResponse buildInvitationResponse(NominativeInvitation inv) {
         UserInfo invitedByUser = null;
@@ -65,6 +70,26 @@ public class NominativeInvitationController {
         var result = nominativeInvitationService.createInvitation(req.getEmail(), user.getId(), req.getProfileIds());
         NominativeInvitationResponse res = buildInvitationResponse(result);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
+    }
+
+    @PostMapping("/batch")
+    @PreAuthorize("@permissionCheck.hasPermission('invitation', 'create')")
+    public ResponseEntity<BatchInvitationResponse> createBatchInvitations(
+            @Valid @RequestBody BatchInvitationRequest req, Authentication authentication) {
+        User user = authService.getCurrentUser(true);
+
+        List<NominativeInvitation> invitations = nominativeInvitationService
+                .createBatchInvitations(req.getEmails(), user.getId(), req.getProfileIds());
+
+        String batchId = UUID.randomUUID().toString();
+        batchEmailService.processBatchInvitations(batchId, user.getUsername(), invitations);
+
+        List<NominativeInvitationResponse> created = invitations.stream()
+                .map(this::buildInvitationResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new BatchInvitationResponse(batchId, created));
     }
 
     @GetMapping
@@ -115,5 +140,19 @@ public class NominativeInvitationController {
         private String username;
         private String name;
         private String email;
+    }
+
+    @Data
+    public static class BatchInvitationRequest {
+        @NotEmpty
+        private List<@Email @NotBlank String> emails;
+        private Set<String> profileIds;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class BatchInvitationResponse {
+        private String batchId;
+        private List<NominativeInvitationResponse> invitations;
     }
 }

@@ -1338,7 +1338,6 @@ class OrderServiceTest {
                 .id("ORD001").customerId("USER001")
                 .status(OrderStatus.PAYMENT_CONFIRMED)
                 .createdAt(LocalDateTime.now()).build();
-        User user = User.builder().id("USER001").email("u@test.com").name("User").build();
 
         @SuppressWarnings("unchecked")
         Specification<Product> prodSpec = any(Specification.class);
@@ -1349,15 +1348,15 @@ class OrderServiceTest {
         when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
 
         assertEquals(OrderProductStatus.PENDING_FABRICATION, op.getStatus());
         assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
-        verify(mailService).sendOrderStatusUpdate(
-                eq("u@test.com"), eq("User"), eq("ORD001"),
-                any(), eq(OrderStatus.PENDING_PRODUCTS), any(), any());
+        assertEquals(1, result.size());
+        assertEquals("ORD001", result.get(0).orderId());
+        assertEquals(OrderStatus.PENDING_PRODUCTS, result.get(0).newStatus());
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -1375,12 +1374,12 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
         when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
 
         assertEquals(OrderProductStatus.ORDER_CLOSED, op.getStatus());
+        assertTrue(result.isEmpty());
         // Should NOT attempt to transition orders for ORDER_CLOSED status
         verify(orderRepository, never()).findById(any());
-        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -1397,9 +1396,10 @@ class OrderServiceTest {
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(canceledOp));
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
 
         assertEquals(OrderProductStatus.CANCELED, canceledOp.getStatus()); // Should remain CANCELED
+        assertTrue(result.isEmpty());
         verify(orderProductRepository, never()).save(any());
     }
 
@@ -1409,8 +1409,9 @@ class OrderServiceTest {
         Specification<Product> prodSpec = any(Specification.class);
         when(productRepository.findAll(prodSpec)).thenReturn(List.of());
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
 
+        assertTrue(result.isEmpty());
         verify(orderProductRepository, never()).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
         verify(orderRepository, never()).findById(any());
     }
@@ -1435,12 +1436,12 @@ class OrderServiceTest {
         when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.TO_BE_DELIVERED);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.TO_BE_DELIVERED);
 
         // Order should stay at PENDING_PRODUCTS (not PAYMENT_CONFIRMED, so no transition)
         assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        assertTrue(result.isEmpty());
         verify(orderRepository, never()).save(any(Order.class));
-        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
     }
 
     // ---- hasOpenIssues tests ----

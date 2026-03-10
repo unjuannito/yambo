@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
@@ -42,13 +43,7 @@ public class NominativeInvitationService {
             throw new BadRequestException("Email already registered");
         }
 
-        Set<Profile> profiles = Set.of();
-        if (profileIds != null && !profileIds.isEmpty()) {
-            profiles = Set.copyOf(profileRepository.findAllById(profileIds));
-            if (profiles.size() != profileIds.size()) {
-                throw new BadRequestException("One or more profiles not found");
-            }
-        }
+        Set<Profile> profiles = resolveProfiles(profileIds);
 
         String token = generateToken();
         LocalDateTime now = LocalDateTime.now();
@@ -62,14 +57,60 @@ public class NominativeInvitationService {
                 .profiles(profiles)
                 .build();
 
+        sendInvitationEmail(email, token, expirationHours);
+
+        return nominativeInvitationRepository.save(inv);
+    }
+
+    public void sendInvitationEmail(String email, String token, long hours) {
         String link = buildInvitationLink(token);
         String orgName = settingsService.getOrganizationName();
         String subject = "Invitación a " + orgName;
-        String body = "Has sido invitado a registrarte en " + orgName + ". Usa este enlace: " + link + "\nEl enlace expira en "
-                + expirationHours + " horas.";
+        String body = "Has sido invitado a registrarte en " + orgName + ". Usa este enlace: " + link
+                + "\nEl enlace expira en " + hours + " horas.";
         mailService.sendInvitation(email, subject, body);
+    }
 
-        return nominativeInvitationRepository.save(inv);
+    @Transactional
+    public List<NominativeInvitation> createBatchInvitations(List<String> emails, String invitedBy, Set<String> profileIds) {
+        Set<Profile> profiles = resolveProfiles(profileIds);
+
+        List<NominativeInvitation> invitations = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+
+        for (String email : emails) {
+            if (userRepository.existsByEmail(email)) {
+                skipped.add(email);
+                continue;
+            }
+
+            String token = generateToken();
+            LocalDateTime now = LocalDateTime.now();
+            NominativeInvitation inv = NominativeInvitation.builder()
+                    .email(email)
+                    .token(token)
+                    .createdAt(now)
+                    .expiresAt(now.plusHours(expirationHours))
+                    .used(false)
+                    .invitedBy(invitedBy)
+                    .profiles(profiles)
+                    .build();
+
+            invitations.add(nominativeInvitationRepository.save(inv));
+        }
+
+        return invitations;
+    }
+
+    private Set<Profile> resolveProfiles(Set<String> profileIds) {
+        if (profileIds == null || profileIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<Profile> profiles = Set.copyOf(profileRepository.findAllById(profileIds));
+        if (profiles.size() != profileIds.size()) {
+            throw new BadRequestException("One or more profiles not found");
+        }
+        return profiles;
     }
 
     @Transactional

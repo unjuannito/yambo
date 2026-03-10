@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -79,6 +80,7 @@ public class HtmlMailService implements MailService {
 
     // ── Invitation ───────────────────────────────────────────────────────
 
+    @Async("mailExecutor")
     @Override
     public void sendInvitation(String to, String subject, String body) {
         send(to, subject, "emails/invitation",
@@ -98,6 +100,7 @@ public class HtmlMailService implements MailService {
 
     // ── Order status updates ─────────────────────────────────────────────
 
+    @Async("mailExecutor")
     @Override
     public void sendOrderStatusUpdate(String to, String userName, String orderId,
             LocalDateTime orderDate, OrderStatus newStatus,
@@ -124,6 +127,7 @@ public class HtmlMailService implements MailService {
                 buildOrderPlainText(userName, orderId, orderDate, newStatus, products, totalPrice));
     }
 
+    @Async("mailExecutor")
     @Override
     public void sendOrderCanceled(String to, String userName, String orderId,
             LocalDateTime orderDate, List<OrderProductInfo> products,
@@ -149,6 +153,7 @@ public class HtmlMailService implements MailService {
 
     // ── Issues ───────────────────────────────────────────────────────────
 
+    @Async("mailExecutor")
     @Override
     public void sendIssueCreated(String to, String userName, String issueId, String issueTitle,
             String productName, String orderId, String createdBy, LocalDateTime createdAt,
@@ -173,6 +178,7 @@ public class HtmlMailService implements MailService {
                 buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt, description));
     }
 
+    @Async("mailExecutor")
     @Override
     public void sendIssueCommentAdded(String to, String userName, String issueId, String issueTitle,
             String productName, String commentAuthor, String commentText, LocalDateTime commentDate,
@@ -205,6 +211,7 @@ public class HtmlMailService implements MailService {
                         commentDate, oldStatus, newStatus));
     }
 
+    @Async("mailExecutor")
     @Override
     public void sendIssueStatusChanged(String to, String userName, String issueId, String issueTitle,
             String productName, IssueStatus oldStatus, IssueStatus newStatus,
@@ -231,6 +238,7 @@ public class HtmlMailService implements MailService {
 
     // ── Password Reset ───────────────────────────────────────────────────
 
+    @Async("mailExecutor")
     @Override
     public void sendPasswordResetEmail(String to, String resetLink, long expirationHours) {
         String orgName = settingsService.getOrganizationName();

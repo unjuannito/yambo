@@ -12,9 +12,17 @@ import { AuthProvider } from "./context/AuthContext";
 import { DialogProvider } from "./context/DialogContext";
 import { Toaster } from "react-hot-toast";
 import { fireFireworks } from "./utils/confetti";
+import { useWebSocket } from "./hooks/useWebSocket";
+import { useBatchProgress } from "./hooks/useBatchProgress";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+
+function WebSocketProvider({ children }: { children: React.ReactNode }) {
+    useWebSocket();
+    useBatchProgress();
+    return <>{children}</>;
+}
 
 export const links: Route.LinksFunction = () => [
     { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -70,7 +78,9 @@ export default function Document() {
                 />
                 <AuthProvider>
                     <DialogProvider>
-                        <Outlet />
+                        <WebSocketProvider>
+                            <Outlet />
+                        </WebSocketProvider>
                     </DialogProvider>
                 </AuthProvider>
                 <ScrollRestoration />

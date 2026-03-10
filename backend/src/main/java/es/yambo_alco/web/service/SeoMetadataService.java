@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import es.yambo_alco.web.dto.ws.BatchCompleteMessage;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.SeoMetadata;
@@ -19,6 +20,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,11 +37,12 @@ public class SeoMetadataService {
     private final ProjectRepository projectRepository;
     private final OllamaService ollamaService;
     private final ObjectMapper objectMapper;
+    private final BatchProgressNotifier progressNotifier;
 
     private static final Pattern JSON_BLOCK_PATTERN = Pattern.compile("\\{[^{}]*(?:\\{[^{}]*}[^{}]*)*}",
             Pattern.DOTALL);
 
-    @Async
+    @Async("batchExecutor")
     @Transactional
     public void generateAndSaveForProject(Project project) {
         try {
@@ -122,7 +125,7 @@ public class SeoMetadataService {
 
     // ── AI regeneration ────────────────────────────────────────
 
-    @Async
+    @Async("batchExecutor")
     @Transactional
     public void regenerateForProject(String entityId) {
         Project project = projectRepository.findById(entityId)
@@ -130,8 +133,8 @@ public class SeoMetadataService {
         generateAndSaveForProject(project);
     }
 
-    @Async
-    public void bulkGenerateForProjects() {
+    @Async("batchExecutor")
+    public void bulkGenerateForProjects(String batchId, String username) {
         List<Project> allProjects = projectRepository.findAll();
         Set<String> existingEntityIds = seoMetadataRepository.findByEntityType(SeoEntityType.PROJECT)
                 .stream()
@@ -142,18 +145,58 @@ public class SeoMetadataService {
                 .filter(p -> !existingEntityIds.contains(p.getId()))
                 .toList();
 
-        log.info("Bulk SEO generation: {} projects missing metadata out of {} total",
-                missing.size(), allProjects.size());
+        int total = missing.size();
+        int sent = 0;
+        int failed = 0;
+        List<BatchCompleteMessage.FailureDetail> failures = new ArrayList<>();
 
-        for (Project project : missing) {
+        log.info("Bulk SEO generation [{}]: {} projects missing metadata out of {} total",
+                batchId, total, allProjects.size());
+
+        for (int i = 0; i < total; i++) {
+            Project project = missing.get(i);
+            boolean success;
+            String errorMessage = null;
+
             try {
-                generateAndSaveForProject(project);
+                generateAndSaveForProjectSync(project);
+                success = true;
+                sent++;
             } catch (Exception e) {
-                log.error("Bulk generation failed for project '{}': {}", project.getName(), e.getMessage());
+                success = false;
+                failed++;
+                errorMessage = e.getMessage();
+                failures.add(new BatchCompleteMessage.FailureDetail(project.getName(), errorMessage));
+                log.error("Bulk SEO [{}]: Failed for project '{}': {}", batchId, project.getName(), e.getMessage());
             }
+
+            progressNotifier.sendProgress(username, batchId, i + 1, total, project.getName(), success, errorMessage);
         }
 
-        log.info("Bulk SEO generation completed");
+        progressNotifier.sendComplete(username, batchId, total, sent, failed, failures);
+
+        log.info("Bulk SEO generation [{}] completed: {}/{} generated, {} failed", batchId, sent, total, failed);
+    }
+
+    private void generateAndSaveForProjectSync(Project project) {
+        String prompt = buildProjectPrompt(project);
+        log.info("Generating SEO metadata for project '{}' (id: {})", project.getName(), project.getId());
+
+        String aiResponse = ollamaService.generate(prompt);
+        String json = extractJson(aiResponse);
+
+        if (json == null) {
+            throw new RuntimeException("Could not extract JSON from Ollama response");
+        }
+
+        try {
+            JsonNode seoData = objectMapper.readTree(json);
+            upsertSeoMetadata(SeoEntityType.PROJECT, project.getId(), seoData);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to parse AI response JSON: " + e.getMessage(), e);
+        }
+
+        log.info("SEO metadata saved for project '{}' (id: {})", project.getName(), project.getId());
     }
 
     // ── Entity name resolution ─────────────────────────────────

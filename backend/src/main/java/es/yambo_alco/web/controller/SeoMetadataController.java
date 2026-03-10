@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/seo")
@@ -23,6 +25,7 @@ import java.util.List;
 public class SeoMetadataController {
 
     private final SeoMetadataService seoMetadataService;
+    private final AuthService authService;
 
     // ── List (paginated, optionally filtered by entityType) ────
 
@@ -108,7 +111,9 @@ public class SeoMetadataController {
     @PostMapping("/bulk-generate")
     @PreAuthorize("@permissionCheck.hasPermission('seo_metadata', 'create')")
     public ResponseEntity<String> bulkGenerate() {
-        seoMetadataService.bulkGenerateForProjects();
+        String batchId = UUID.randomUUID().toString();
+        String username = authService.getCurrentUser(true).getUsername();
+        seoMetadataService.bulkGenerateForProjects(batchId, username);
         return ResponseEntity.ok("Generación masiva SEO iniciada");
     }
 

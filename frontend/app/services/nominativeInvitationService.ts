@@ -23,6 +23,16 @@ export interface CreateNominativeInvitationRequest {
     profileIds: string[];
 }
 
+export interface BatchInvitationRequest {
+    emails: string[];
+    profileIds: string[];
+}
+
+export interface BatchInvitationResponse {
+    batchId: string;
+    invitations: NominativeInvitation[];
+}
+
 export class NominativeInvitationService extends ApiService {
     public async getAllInvitations(startDate?: string): Promise<NominativeInvitation[]> {
         const params = new URLSearchParams();
@@ -44,6 +54,15 @@ export class NominativeInvitationService extends ApiService {
 
     public async deleteInvitation(id: string): Promise<string> {
         return await this.delete<string>(`/nominative-invitations/${id}`);
+    }
+
+    public async createBatchInvitations(
+        data: BatchInvitationRequest,
+    ): Promise<BatchInvitationResponse> {
+        return await this.post<BatchInvitationResponse, BatchInvitationRequest>(
+            "/nominative-invitations/batch",
+            data,
+        );
     }
 
     public async register(

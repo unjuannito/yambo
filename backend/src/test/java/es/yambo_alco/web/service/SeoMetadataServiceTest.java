@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.SeoMetadataRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,10 +27,16 @@ class SeoMetadataServiceTest {
     private SeoMetadataRepository seoMetadataRepository;
 
     @Mock
+    private ProjectRepository projectRepository;
+
+    @Mock
     private OllamaService ollamaService;
 
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
+
+    @Mock
+    private BatchProgressNotifier progressNotifier;
 
     @InjectMocks
     private SeoMetadataService seoMetadataService;

@@ -7,6 +7,7 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.model.enums.OrderProductStatus;
+import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -20,9 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,9 @@ public class FamilyProductService {
     private final ProfileRepository profileRepository;
     private final ProjectRepository projectRepository;
     private final OrderService orderService;
+    private final BatchEmailService batchEmailService;
+
+    public record FamilyProductUpdateResult(FamilyProduct familyProduct, List<PendingOrderEmail> pendingEmails) {}
 
     @Transactional
     public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms,
@@ -186,12 +192,12 @@ public class FamilyProductService {
      * Validates allowed status transitions.
      */
     @Transactional
-    public FamilyProduct updateFamilyProductStatus(@NonNull String id, @NonNull FamilyProductStatus status) {
+    public FamilyProductUpdateResult updateFamilyProductStatus(@NonNull String id, @NonNull FamilyProductStatus status) {
         FamilyProduct familyProduct = getFamilyProductById(id);
 
         FamilyProductStatus currentStatus = familyProduct.getStatus();
         if (currentStatus == status) {
-            return familyProduct;
+            return new FamilyProductUpdateResult(familyProduct, List.of());
         }
 
         validateStatusTransition(currentStatus, status);
@@ -201,9 +207,9 @@ public class FamilyProductService {
 
         // Propagate status to order products
         OrderProductStatus orderProductStatus = OrderProductStatus.fromFamilyProductStatus(status);
-        orderService.updateOrderProductStatusByFamilyProduct(id, orderProductStatus);
+        List<PendingOrderEmail> pendingEmails = orderService.updateOrderProductStatusByFamilyProduct(id, orderProductStatus);
 
-        return saved;
+        return new FamilyProductUpdateResult(saved, pendingEmails);
     }
 
     /**
@@ -215,12 +221,20 @@ public class FamilyProductService {
         List<FamilyProduct> expiredDrops = familyProductRepository
                 .findByStatusAndEndTmsBefore(FamilyProductStatus.OPEN, LocalDateTime.now());
 
+        List<PendingOrderEmail> allPendingEmails = new ArrayList<>();
+
         for (FamilyProduct drop : expiredDrops) {
             drop.setStatus(FamilyProductStatus.ORDER_CLOSED);
             familyProductRepository.save(drop);
 
             OrderProductStatus orderProductStatus = OrderProductStatus.fromFamilyProductStatus(FamilyProductStatus.ORDER_CLOSED);
-            orderService.updateOrderProductStatusByFamilyProduct(drop.getId(), orderProductStatus);
+            List<PendingOrderEmail> pendingEmails = orderService.updateOrderProductStatusByFamilyProduct(drop.getId(), orderProductStatus);
+            allPendingEmails.addAll(pendingEmails);
+        }
+
+        if (!allPendingEmails.isEmpty()) {
+            String batchId = UUID.randomUUID().toString();
+            batchEmailService.processBatchOrderEmails(batchId, null, allPendingEmails);
         }
     }
 

@@ -26,6 +26,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import es.yambo_alco.web.jwt.JwtAuthenticationFilter;
 import es.yambo_alco.web.jwt.JwtService;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.SettingsService;
 
 @Configuration
 @EnableWebSecurity
@@ -35,6 +36,7 @@ public class SecurityConfig {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final Environment env;
+    private final SettingsService settingsService;
     private final HandlerExceptionResolver exceptionResolver;
 
     public SecurityConfig(
@@ -42,11 +44,13 @@ public class SecurityConfig {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             Environment env,
+            SettingsService settingsService,
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.env = env;
+        this.settingsService = settingsService;
         this.exceptionResolver = exceptionResolver;
     }
 
@@ -60,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/projects/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/public/**").permitAll()
@@ -98,7 +103,7 @@ public class SecurityConfig {
         if (env.acceptsProfiles(Profiles.of("dev"))) {
             config.setAllowedOrigins(List.of("http://localhost:5173"));
         } else {
-            String allowedOrigins = env.getProperty("CORS_ALLOWED_ORIGINS", "https://yambo.cabrasky.net");
+            String allowedOrigins = env.getProperty("CORS_ALLOWED_ORIGINS", settingsService.getDomain());
             config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

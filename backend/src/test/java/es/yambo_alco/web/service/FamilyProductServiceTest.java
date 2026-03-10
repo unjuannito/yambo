@@ -7,6 +7,8 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.model.enums.OrderProductStatus;
+import es.yambo_alco.web.service.FamilyProductService.FamilyProductUpdateResult;
+import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -22,7 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +42,9 @@ class FamilyProductServiceTest {
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private BatchEmailService batchEmailService;
 
     @InjectMocks
     private FamilyProductService familyProductService;
@@ -131,9 +136,10 @@ class FamilyProductServiceTest {
                 .id("FAM001").status(FamilyProductStatus.OPEN).build();
         when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
 
-        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.OPEN);
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.OPEN);
 
-        assertEquals(FamilyProductStatus.OPEN, result.getStatus());
+        assertEquals(FamilyProductStatus.OPEN, result.familyProduct().getStatus());
+        assertTrue(result.pendingEmails().isEmpty());
         verify(familyProductRepository, never()).save(any());
         verify(orderService, never()).updateOrderProductStatusByFamilyProduct(any(), any());
     }
@@ -144,10 +150,13 @@ class FamilyProductServiceTest {
                 .id("FAM001").status(FamilyProductStatus.OPEN).build();
         when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED))
+                .thenReturn(List.of());
 
-        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.ORDER_CLOSED);
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.ORDER_CLOSED);
 
-        assertEquals(FamilyProductStatus.ORDER_CLOSED, result.getStatus());
+        assertEquals(FamilyProductStatus.ORDER_CLOSED, result.familyProduct().getStatus());
+        assertTrue(result.pendingEmails().isEmpty());
         verify(orderService).updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
     }
 
@@ -157,10 +166,12 @@ class FamilyProductServiceTest {
                 .id("FAM001").status(FamilyProductStatus.OPEN).build();
         when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.CANCELED))
+                .thenReturn(List.of());
 
-        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.CANCELED);
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.CANCELED);
 
-        assertEquals(FamilyProductStatus.CANCELED, result.getStatus());
+        assertEquals(FamilyProductStatus.CANCELED, result.familyProduct().getStatus());
         verify(orderService).updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.CANCELED);
     }
 
@@ -182,10 +193,13 @@ class FamilyProductServiceTest {
                 .id("FAM001").status(FamilyProductStatus.ORDER_CLOSED).build();
         when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION))
+                .thenReturn(List.of(new PendingOrderEmail("ORD001", es.yambo_alco.web.model.enums.OrderStatus.PENDING_PRODUCTS)));
 
-        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.PENDING_FABRICATION);
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.PENDING_FABRICATION);
 
-        assertEquals(FamilyProductStatus.PENDING_FABRICATION, result.getStatus());
+        assertEquals(FamilyProductStatus.PENDING_FABRICATION, result.familyProduct().getStatus());
+        assertEquals(1, result.pendingEmails().size());
     }
 
     @Test
@@ -214,10 +228,12 @@ class FamilyProductServiceTest {
                 .id("FAM001").status(FamilyProductStatus.PENDING_FABRICATION).build();
         when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.TO_BE_DELIVERED))
+                .thenReturn(List.of());
 
-        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.TO_BE_DELIVERED);
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.TO_BE_DELIVERED);
 
-        assertEquals(FamilyProductStatus.TO_BE_DELIVERED, result.getStatus());
+        assertEquals(FamilyProductStatus.TO_BE_DELIVERED, result.familyProduct().getStatus());
     }
 
     @Test
@@ -226,10 +242,12 @@ class FamilyProductServiceTest {
                 .id("FAM001").status(FamilyProductStatus.TO_BE_DELIVERED).build();
         when(familyProductRepository.findById("FAM001")).thenReturn(Optional.of(fp));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.DELIVERED))
+                .thenReturn(List.of());
 
-        FamilyProduct result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.DELIVERED);
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus("FAM001", FamilyProductStatus.DELIVERED);
 
-        assertEquals(FamilyProductStatus.DELIVERED, result.getStatus());
+        assertEquals(FamilyProductStatus.DELIVERED, result.familyProduct().getStatus());
     }
 
     // closeExpiredDrops tests
@@ -246,6 +264,10 @@ class FamilyProductServiceTest {
         when(familyProductRepository.findByStatusAndEndTmsBefore(eq(FamilyProductStatus.OPEN), any(LocalDateTime.class)))
                 .thenReturn(List.of(drop1, drop2));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED))
+                .thenReturn(List.of(new PendingOrderEmail("ORD001", es.yambo_alco.web.model.enums.OrderStatus.PENDING_PRODUCTS)));
+        when(orderService.updateOrderProductStatusByFamilyProduct("FAM002", OrderProductStatus.ORDER_CLOSED))
+                .thenReturn(List.of());
 
         familyProductService.closeExpiredDrops();
 
@@ -254,6 +276,7 @@ class FamilyProductServiceTest {
         verify(familyProductRepository, times(2)).save(any(FamilyProduct.class));
         verify(orderService).updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
         verify(orderService).updateOrderProductStatusByFamilyProduct("FAM002", OrderProductStatus.ORDER_CLOSED);
+        verify(batchEmailService).processBatchOrderEmails(anyString(), isNull(), anyList());
     }
 
     @Test
@@ -265,5 +288,6 @@ class FamilyProductServiceTest {
 
         verify(familyProductRepository, never()).save(any());
         verify(orderService, never()).updateOrderProductStatusByFamilyProduct(any(), any());
+        verify(batchEmailService, never()).processBatchOrderEmails(any(), any(), anyList());
     }
 }

@@ -5,6 +5,7 @@ import es.yambo_alco.web.model.NominativeInvitation;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.NominativeInvitationService;
 import es.yambo_alco.web.service.UserService;
 import es.yambo_alco.web.util.PermissionCheckService;
@@ -53,6 +54,9 @@ class NominativeInvitationControllerTest {
 
     @MockitoBean
     private PermissionCheckService permissionCheckService;
+
+    @MockitoBean
+    private BatchEmailService batchEmailService;
 
     @BeforeEach
     void setUp() {
@@ -259,5 +263,68 @@ class NominativeInvitationControllerTest {
 
         verify(nominativeInvitationService, times(1)).deleteInvitation(1L);
         verify(nominativeInvitationService, times(1)).deleteInvitation(2L);
+    }
+
+    // ── Batch endpoint ───────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void createBatchInvitations_ShouldReturn202WithBatchId() throws Exception {
+        User currentUser = User.builder().id("U0000001").email("admin@example.com").name("Admin").build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        NominativeInvitation inv = NominativeInvitation.builder()
+                .id(1L).email("a@test.com").token("tok1").invitedBy("U0000001")
+                .profiles(java.util.Set.of()).build();
+
+        when(nominativeInvitationService.createBatchInvitations(any(), any(), any()))
+                .thenReturn(List.of(inv));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(currentUser));
+
+        mvc.perform(post("/nominative-invitations/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer test.jwt.token")
+                .content("{\"emails\":[\"a@test.com\"],\"profileIds\":[]}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.batchId").isNotEmpty())
+                .andExpect(jsonPath("$.invitations", hasSize(1)))
+                .andExpect(jsonPath("$.invitations[0].email").value("a@test.com"));
+
+        verify(batchEmailService).processBatchInvitations(any(), any(), any());
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void createBatchInvitations_WithEmptyEmails_ShouldReturn400() throws Exception {
+        mvc.perform(post("/nominative-invitations/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer test.jwt.token")
+                .content("{\"emails\":[],\"profileIds\":[]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(authorities = "INVITE_USERS")
+    void createBatchInvitations_WithMultipleEmails_ShouldReturnAll() throws Exception {
+        User currentUser = User.builder().id("U0000001").email("admin@example.com").name("Admin").build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        NominativeInvitation inv1 = NominativeInvitation.builder()
+                .id(1L).email("a@test.com").token("tok1").invitedBy("U0000001")
+                .profiles(java.util.Set.of()).build();
+        NominativeInvitation inv2 = NominativeInvitation.builder()
+                .id(2L).email("b@test.com").token("tok2").invitedBy("U0000001")
+                .profiles(java.util.Set.of()).build();
+
+        when(nominativeInvitationService.createBatchInvitations(any(), any(), any()))
+                .thenReturn(List.of(inv1, inv2));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(currentUser));
+
+        mvc.perform(post("/nominative-invitations/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer test.jwt.token")
+                .content("{\"emails\":[\"a@test.com\",\"b@test.com\"]}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.invitations", hasSize(2)));
     }
 }

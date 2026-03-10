@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.9.15",
+  "version": "0.9.16",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "@mdxeditor/editor": "^3.52.4",
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
+    "@stomp/stompjs": "^7.3.0",
     "@types/axios": "^0.9.36",
     "axios": "^1.9.0",
     "canvas-confetti": "^1.9.4",

@@ -185,9 +185,8 @@ export default function SeoAdmin() {
         try {
             await seoService.bulkGenerate();
             toast.success(
-                "Generación masiva iniciada. Los metadatos se crearán en segundo plano.",
+                "Generación masiva iniciada. Verás el progreso en tiempo real.",
             );
-            setTimeout(() => setRefreshKey((prev) => prev + 1), 5000);
         } catch (err) {
             toast.error(
                 getErrorMessage(

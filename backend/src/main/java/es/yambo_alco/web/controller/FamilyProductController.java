@@ -3,7 +3,9 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.FamilyProductService;
+import es.yambo_alco.web.service.FamilyProductService.FamilyProductUpdateResult;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -23,6 +25,7 @@ import es.yambo_alco.web.util.PermissionCheckService;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -32,6 +35,7 @@ public class FamilyProductController {
 
     private final FamilyProductService familyProductService;
     private final AuthService authService;
+    private final BatchEmailService batchEmailService;
     private final PermissionCheckService permissionCheck;
 
     @PostMapping
@@ -118,8 +122,15 @@ public class FamilyProductController {
     public ResponseEntity<FamilyProductResponse> updateStatus(
             @PathVariable String id,
             @Valid @RequestBody UpdateFamilyProductStatusRequest request) {
-        FamilyProduct familyProduct = familyProductService.updateFamilyProductStatus(id, request.getStatus());
-        return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
+        FamilyProductUpdateResult result = familyProductService.updateFamilyProductStatus(id, request.getStatus());
+
+        if (!result.pendingEmails().isEmpty()) {
+            String batchId = UUID.randomUUID().toString();
+            String username = authService.getCurrentUser(true).getUsername();
+            batchEmailService.processBatchOrderEmails(batchId, username, result.pendingEmails());
+        }
+
+        return ResponseEntity.ok(new FamilyProductResponse(result.familyProduct()));
     }
 
     @Data

@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>es.yambo-alco</groupId>
 	<artifactId>web</artifactId>
-	<version>0.9.13</version>
+	<version>0.9.14</version>
 	<name>web</name>
 	<description>Web backend for Yambo&apos;s web page</description>
 
@@ -46,6 +46,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<!-- WebSocket (STOMP) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
 
 		<!-- Thymeleaf Extras -->
