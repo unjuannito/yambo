@@ -3,7 +3,7 @@ import { useLoaderData } from "react-router";
 import { getProjectDetail } from "~/services/publicService.server";
 import type { ProjectDetail, StaffMember, ProjectGroupDetail } from "~/services/publicService";
 import MonitorCard from "~/components/home/MonitorCard";
-import { hashColor } from "~/utils/hashColor";
+import { projectColor } from "~/utils/projectColor";
 import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
 import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
@@ -34,7 +34,6 @@ export function meta({ data }: Route.MetaArgs) {
     { property: "og:url", content: pageUrl },
     { property: "og:type", content: "website" },
     ...(project?.image ? [{ property: "og:image", content: project.image }] : []),
-    // JSON-LD
     ...(project ? [
       { "script:ld+json": projectJsonLd(project, siteUrl) },
       { "script:ld+json": breadcrumbJsonLd([
@@ -60,10 +59,7 @@ export default function Proyecto() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
 
-  // Named groups only (exclude default/unnamed groups)
   const namedGroups: ProjectGroupDetail[] = project?.groups.filter(g => g.name) ?? [];
-
-  // Split staff by role within THIS project
   const allStaff = project?.staff ?? [];
   const coordinators = allStaff.filter(m => {
     const role = getProjectRole(m, project?.name ?? "");
@@ -74,7 +70,6 @@ export default function Proyecto() {
     return role === 'MONITOR' || role === 'BOTH';
   });
 
-  // Filter monitors
   const filteredMonitors: StaffMember[] = monitors.filter((monitor) => {
     if (selectedGroupId) {
       const hasGroup = monitor.groups.some(g => g.id === selectedGroupId);
@@ -87,7 +82,6 @@ export default function Proyecto() {
     return true;
   });
 
-  // Filter coordinators by search only (no group filter)
   const filteredCoordinators: StaffMember[] = coordinators.filter((c) => {
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
@@ -98,10 +92,11 @@ export default function Proyecto() {
 
   if (!project) {
     return (
-      <section className="w-full bg-white min-h-screen pt-24 pb-16">
+      <section className="w-full bg-yambo-white min-h-screen pt-24 pb-16">
         <div className="max-w-6xl mx-auto px-4 text-center py-20">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Proyecto no encontrado</h1>
-          <a href="/proyectos" className="text-blue-600 hover:underline">
+          <p className="text-6xl mb-4">🔍</p>
+          <h1 className="text-2xl font-bold text-yambo-black mb-4">Proyecto no encontrado</h1>
+          <a href="/proyectos" className="text-yambo-green-600 hover:underline font-semibold">
             ← Volver a proyectos
           </a>
         </div>
@@ -109,40 +104,43 @@ export default function Proyecto() {
     );
   }
 
+  const pc = projectColor(project.id, project.signatureColor);
+
   return (
-    <section className="w-full bg-white min-h-screen pt-24 pb-16">
+    <section
+      className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen pt-24 pb-16"
+      style={{
+        '--pc-text': pc.text,
+        '--pc-text-hover': pc.textHover,
+        '--pc-bg': pc.bg,
+        '--pc-border': pc.border,
+      } as React.CSSProperties}
+    >
       <div className="max-w-6xl mx-auto px-4">
-        {/* Back link */}
-        <a href="/proyectos" className="text-blue-600 hover:underline text-sm mb-4 inline-block">
+        <a href="/proyectos" className="inline-flex items-center gap-1 text-sm font-semibold mb-6 transition-colors [color:var(--pc-text)] hover:[color:var(--pc-text-hover)]">
           ← Todos los proyectos
         </a>
 
         {/* Project header */}
-        <div className="mb-8">
+        <div className="mb-8 fade-up">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-bold text-gray-900">{project.name}</h1>
+            <h1 className="text-4xl font-extrabold text-yambo-black font-display"
+              style={project.signatureColor ? { textDecorationLine: 'underline', textDecorationColor: project.signatureColor, textUnderlineOffset: '6px', textDecorationThickness: '3px' } : undefined}
+            >{project.name}</h1>
             {project.season && (
-              (() => {
-                const { bg, text } = hashColor(project.id);
-                return (
-                  <span
-                    className="text-sm font-medium px-3 py-1 rounded-full"
-                    style={{ backgroundColor: bg, color: text }}
-                  >
-                    {project.season}
-                  </span>
-                );
-              })()
+              <span className="text-sm font-semibold px-3 py-1 rounded-full [background-color:var(--pc-bg)] [color:var(--pc-text)]">
+                {project.season}
+              </span>
             )}
           </div>
           {project.description && (
-            <p className="text-gray-600 text-lg max-w-3xl">{project.description}</p>
+            <p className="text-gray-500 text-lg max-w-3xl">{project.description}</p>
           )}
         </div>
 
         {/* Project image */}
         {project.image && (
-          <div className="w-full h-64 md:h-80 rounded-xl overflow-hidden mb-10">
+          <div className="w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-10 shadow-lg fade-up" style={{ animationDelay: "0.1s" }}>
             <img
               src={project.image}
               alt={project.name}
@@ -151,11 +149,11 @@ export default function Proyecto() {
           </div>
         )}
 
-        {/* Coordinators section */}
+        {/* Coordinators */}
         {filteredCoordinators.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Coordinación</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="mb-10 fade-up" style={{ animationDelay: "0.2s" }}>
+            <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">Coordinación</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 stagger">
               {filteredCoordinators.map((coord) => (
                 <MonitorCard key={coord.id} monitor={coord} projectName={project.name} />
               ))}
@@ -163,52 +161,50 @@ export default function Proyecto() {
           </div>
         )}
 
-        {/* Monitors section */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Equipo de Monitores</h2>
+        {/* Monitors */}
+        <div className="mb-6 fade-up" style={{ animationDelay: "0.3s" }}>
+          <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">Equipo de Monitores</h2>
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            {/* Search input */}
             <div className="relative flex-1 max-w-xs">
               <input
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Buscar monitor..."
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 outline-none bg-white shadow-sm transition-all"
               />
               <FontAwesomeIcon
                 icon={faMagnifyingGlass}
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
               />
             </div>
 
-            {/* Group filter buttons */}
             {namedGroups.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedGroupId(null)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border-2 ${
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                     selectedGroupId === null
-                      ? "bg-gray-800 text-white border-gray-800 shadow-md"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                      ? "bg-yambo-black text-white shadow-md"
+                      : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
                   }`}
                 >
                   Todos
                 </button>
                 {namedGroups.map((group) => {
-                  const { bg, text, border } = hashColor(group.id);
+                  const colors = projectColor(group.id);
                   const isSelected = selectedGroupId === group.id;
                   return (
                     <button
                       key={group.id}
                       onClick={() => setSelectedGroupId(group.id === selectedGroupId ? null : group.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all border-2`}
+                      className="px-4 py-2 rounded-full text-sm font-semibold transition-all border hover:brightness-90"
                       style={
                         isSelected
-                          ? { backgroundColor: text, color: "#fff", borderColor: text, boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }
-                          : { backgroundColor: bg, color: text, borderColor: border }
+                          ? { backgroundColor: colors.text, color: "#fff", borderColor: colors.text, boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }
+                          : { backgroundColor: colors.bg, color: colors.text, borderColor: colors.border }
                       }
                     >
                       {group.name}
@@ -219,40 +215,36 @@ export default function Proyecto() {
             )}
           </div>
 
-          {/* Active filters summary */}
           {(selectedGroupId || searchText.trim()) && (
-            <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
+            <div className="flex items-center gap-2 mb-4 text-sm text-gray-400">
               <span>
                 {filteredMonitors.length} {filteredMonitors.length === 1 ? "monitor" : "monitores"}
                 {" encontrado" + (filteredMonitors.length === 1 ? "" : "s")}
               </span>
-              {(selectedGroupId || searchText.trim()) && (
-                <button
-                  onClick={() => {
-                    setSelectedGroupId(null);
-                    setSearchText("");
-                  }}
-                  className="text-blue-600 hover:underline"
-                >
-                  Limpiar filtros
-                </button>
-              )}
+              <button
+                onClick={() => { setSelectedGroupId(null); setSearchText(""); }}
+                className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
+              >
+                Limpiar filtros
+              </button>
             </div>
           )}
 
-          {/* Monitor cards */}
           {filteredMonitors.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 stagger">
               {filteredMonitors.map((monitor) => (
                 <MonitorCard key={monitor.id} monitor={monitor} projectName={project.name} />
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-12">
-              {monitors.length === 0
-                ? "Este proyecto aún no tiene monitores asignados."
-                : "No se encontraron monitores con los filtros seleccionados."}
-            </p>
+            <div className="text-center py-12">
+              <p className="text-6xl mb-4">👥</p>
+              <p className="text-gray-400">
+                {monitors.length === 0
+                  ? "Este proyecto aún no tiene monitores asignados."
+                  : "No se encontraron monitores con los filtros seleccionados."}
+              </p>
+            </div>
           )}
         </div>
       </div>

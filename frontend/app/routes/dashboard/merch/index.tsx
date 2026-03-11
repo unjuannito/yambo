@@ -56,7 +56,6 @@ export default function Merch() {
         loadData();
     }, []);
 
-    // ── Column definitions (search filter) ──────────────────────────
     const columns = useMemo<FilterableColumn<Product>[]>(() => [
         {
             key: "name" as keyof Product,
@@ -69,7 +68,6 @@ export default function Merch() {
         },
     ], []);
 
-    // ── Extra filter: drop selector ─────────────────────────────────
     const dropFilterOptions = useMemo(() =>
         drops.map((drop) => {
             const count = products.filter(p => p.familyProductId === drop.id).length;
@@ -91,9 +89,7 @@ export default function Merch() {
         [drops, dropFilterOptions]
     );
 
-    // ── Custom filter: search across name + description ─────────────
     const filterFn = useCallback((product: Product, filters: FilterValues): boolean => {
-        // Text search across name + description
         const searchQuery = filters.name as string | undefined;
         if (searchQuery && searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim();
@@ -102,7 +98,6 @@ export default function Merch() {
             if (!matchesName && !matchesDesc) return false;
         }
 
-        // Drop filter (multi-select: array of IDs)
         const dropFilter = filters.familyProductId as string[] | undefined;
         if (dropFilter && dropFilter.length > 0) {
             if (!product.familyProductId || !dropFilter.includes(product.familyProductId)) return false;
@@ -111,7 +106,6 @@ export default function Merch() {
         return true;
     }, []);
 
-    // ── Image modal ─────────────────────────────────────────────────
     const openImageModal = (product: Product, index: number) => {
         setSelectedProduct(product);
         setSelectedImageIndex(index);
@@ -139,7 +133,6 @@ export default function Merch() {
         }
     };
 
-    // ── Render slots ────────────────────────────────────────────────
     const renderAboveContent = useCallback((info: ContentInfo<Product>) => {
         const { allData, filteredData, filters, updateFilter, clearFilters } = info;
         const selectedDrops = (filters.familyProductId as string[] | undefined) ?? [];
@@ -148,16 +141,15 @@ export default function Merch() {
 
         return (
             <>
-                {/* Active Filters Chips */}
                 {hasActiveFilters && (
-                    <div className="flex items-center gap-2 -mt-2 mb-2">
-                        <span className="text-xs text-gray-500">Filtros activos:</span>
+                    <div className="flex items-center gap-2 -mt-2 mb-2 flex-wrap">
+                        <span className="text-xs text-gray-400">Filtros activos:</span>
                         {searchQuery?.trim() && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-yambo-green-50 text-yambo-green-700 text-xs rounded-full font-medium">
                                 Nombre: &quot;{searchQuery.trim()}&quot;
                                 <button
                                     onClick={() => updateFilter("name", undefined)}
-                                    className="hover:text-blue-900 font-bold"
+                                    className="hover:text-yambo-green-900 font-bold"
                                     aria-label="Quitar filtro de nombre"
                                 >
                                     ×
@@ -168,11 +160,11 @@ export default function Merch() {
                             const drop = drops.find(d => d.id === dropId);
                             if (!drop) return null;
                             return (
-                                <span key={dropId} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                                <span key={dropId} className="inline-flex items-center gap-1 px-2.5 py-1 bg-yambo-green-50 text-yambo-green-700 text-xs rounded-full font-medium">
                                     Drop: {drop.name}
                                     <button
                                         onClick={() => updateFilter("familyProductId", selectedDrops.filter(id => id !== dropId))}
-                                        className="hover:text-blue-900 font-bold"
+                                        className="hover:text-yambo-green-900 font-bold"
                                         aria-label={`Quitar filtro de drop ${drop.name}`}
                                     >
                                         ×
@@ -182,17 +174,16 @@ export default function Merch() {
                         })}
                         <button
                             onClick={clearFilters}
-                            className="text-xs text-gray-500 hover:text-gray-700 underline ml-auto"
+                            className="text-xs text-gray-400 hover:text-gray-600 underline ml-auto"
                         >
                             Limpiar filtros
                         </button>
                     </div>
                 )}
 
-                {/* Drop Quick-Select Pills */}
                 {drops.length > 1 && (
                     <div className="mb-2">
-                        <h2 className="text-lg font-semibold text-gray-700 mb-3">Drops disponibles</h2>
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-3">Drops disponibles</h2>
                         <div className="flex flex-wrap gap-2">
                             {drops.map((drop) => {
                                 const productCount = allData.filter(p => p.familyProductId === drop.id).length;
@@ -206,14 +197,14 @@ export default function Merch() {
                                                 : [...selectedDrops, drop.id];
                                             updateFilter("familyProductId", newDrops.length > 0 ? newDrops : undefined);
                                         }}
-                                        className={`inline-flex items-center gap-2 px-4 py-2 border rounded-full text-sm font-medium transition-colors shadow-sm ${
+                                        className={`inline-flex items-center gap-2 px-4 py-2 border rounded-full text-sm font-medium transition-all ${
                                             isSelected
-                                                ? "bg-blue-100 border-blue-400 text-blue-800 hover:bg-blue-200"
-                                                : "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                                                ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 border-yambo-green-500 text-white shadow-md shadow-yambo-green-500/25"
+                                                : "bg-white border-gray-200 text-gray-600 hover:bg-yambo-green-50 hover:border-yambo-green-300 hover:text-yambo-green-700"
                                         }`}
                                     >
                                         <span>{drop.name}</span>
-                                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${isSelected ? "bg-blue-200 text-blue-900" : "bg-gray-100 text-gray-600"}`}>
+                                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${isSelected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                             {productCount}
                                         </span>
                                     </button>
@@ -223,15 +214,14 @@ export default function Merch() {
                     </div>
                 )}
 
-                {/* Results Count */}
                 <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-400">
                         {filteredData.length === allData.length
                             ? `${allData.length} artículo${allData.length !== 1 ? "s" : ""}`
                             : `${filteredData.length} de ${allData.length} artículo${allData.length !== 1 ? "s" : ""}`
                         }
                         {selectedDrops.length > 0 && (
-                            <span className="font-medium text-blue-600 ml-1">
+                            <span className="font-medium text-yambo-green-600 ml-1">
                                 en {selectedDrops.map(id => drops.find(d => d.id === id)?.name).filter(Boolean).join(", ")}
                             </span>
                         )}
@@ -242,8 +232,8 @@ export default function Merch() {
     }, [drops]);
 
     const renderEmptyState = useCallback((clearFilters: () => void) => (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-100">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <svg className="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
             <p className="text-gray-500 text-lg mb-2">No se encontraron artículos</p>
@@ -262,7 +252,7 @@ export default function Merch() {
             : null;
 
         return (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all">
                 <ImageCarousel
                     images={product.images || []}
                     alt={product.name}
@@ -273,16 +263,16 @@ export default function Merch() {
                 <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            <h3 className="text-lg font-bold font-display text-yambo-black mb-2">
                                 {product.name}
                             </h3>
                             {productDrop && (
                                 <div className="mb-2 text-sm">
-                                    <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                                    <span className="inline-block bg-yambo-green-50 text-yambo-green-700 px-2.5 py-1 rounded-full font-medium">
                                         {productDrop.name}
                                     </span>
                                     {productDrop.endTms && (
-                                        <p className="mt-1 text-gray-600">
+                                        <p className="mt-1 text-gray-400">
                                             Disponible hasta: {new Date(productDrop.endTms).toLocaleDateString('es-ES', {
                                                 day: 'numeric',
                                                 month: 'long',
@@ -292,7 +282,7 @@ export default function Merch() {
                                     )}
                                 </div>
                             )}
-                            <p className="text-2xl font-bold text-blue-600">
+                            <p className="text-2xl font-extrabold text-yambo-green-600">
                                 {product.basePrice.toFixed(2)} €
                             </p>
                         </div>
@@ -302,7 +292,7 @@ export default function Merch() {
                                     e.stopPropagation();
                                     navigate(`/mi-espacio/merch/${product.id}/configurar`);
                                 }}
-                                className="ml-4 px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+                                className="ml-4 px-3 py-1.5 bg-gray-100 text-gray-600 text-sm rounded-full hover:bg-gray-200 transition-colors font-medium"
                                 title="Editar producto"
                             >
                                 Editar
@@ -310,7 +300,7 @@ export default function Merch() {
                         )}
                     </div>
                     {product.options && product.options.length > 0 && (
-                        <p className="text-sm text-gray-600 mb-4">
+                        <p className="text-sm text-gray-400 mb-4">
                             {product.options.length} opción
                             {product.options.length !== 1 ? "es" : ""} disponible
                             {product.options.length !== 1 ? "s" : ""}
@@ -324,11 +314,10 @@ export default function Merch() {
         );
     }, [drops, hasPermission, navigate]);
 
-    // ── Loading / Error states ──────────────────────────────────────
     if (loading) {
         return (
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-6">Merch</h1>
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Merch</h1>
                 <div className="flex justify-center py-12">
                     <LoadingSpinner size="lg" message="Cargando artículos..." />
                 </div>
@@ -338,19 +327,17 @@ export default function Merch() {
 
     if (error) {
         return (
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-6">Merch</h1>
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Merch</h1>
                 <ErrorMessage message={error} />
             </main>
         );
     }
 
-    // ── Main render ─────────────────────────────────────────────────
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-            {/* Header */}
+        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
             <div className="flex justify-between items-center mb-2">
-                <h1 className="text-3xl font-bold">Merch</h1>
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black">Merch</h1>
                 {hasPermission({ obj: "product", action: "create" }) && (
                     <ButtonComponent
                         variant="primary"
@@ -360,9 +347,9 @@ export default function Merch() {
                     </ButtonComponent>
                 )}
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-400 mb-6">
                 Artículos disponibles de nuestra campaña de merch.
-                <span className="text-sm text-gray-500 ml-1">
+                <span className="text-sm text-gray-400 ml-1">
                     Todos los artículos se ofrecen a coste, sin beneficio para la asociación.
                 </span>
             </p>
@@ -387,10 +374,9 @@ export default function Merch() {
                 }}
             />
 
-            {/* Image Modal */}
             {selectedImageIndex !== null && selectedProduct?.images && (
                 <div
-                    className="fixed inset-0 bg-black/75 flex items-center justify-center z-50"
+                    className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50"
                     onClick={closeImageModal}
                     role="dialog"
                     aria-modal="true"
@@ -408,7 +394,7 @@ export default function Merch() {
                         <img
                             src={selectedProduct.images[selectedImageIndex]}
                             alt={`${selectedProduct.name} - imagen ${selectedImageIndex + 1} de ${selectedProduct.images.length}`}
-                            className="max-w-full max-h-[80vh] object-contain"
+                            className="max-w-full max-h-[80vh] object-contain rounded-2xl"
                             onClick={(e) => e.stopPropagation()}
                         />
 

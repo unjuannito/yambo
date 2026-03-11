@@ -47,13 +47,12 @@ export default function ProductPage() {
                 setTotalPrice(prod.basePrice);
                 document.title = `Yambo - ${prod.name}`;
 
-                // Load drop if product has one
                 if (prod.familyProductId) {
                     try {
                         const dropData = await familyProductService.getFamilyProduct(prod.familyProductId);
                         setDrop(dropData);
                     } catch {
-                        // Drop data is supplementary; product still usable without it
+                        // Drop data is supplementary
                     }
                 }
             } catch (err) {
@@ -66,7 +65,6 @@ export default function ProductPage() {
         loadProduct();
     }, [productId]);
 
-    // Track product view (fire-and-forget)
     useEffect(() => {
         if (productId) {
             productViewService.trackView(productId);
@@ -99,7 +97,6 @@ export default function ProductPage() {
     };
 
     const handleSelectChange = (optionName: string, value: string) => {
-        // Store both id and label for display purposes
         const option = product?.options.find(opt => opt.name === optionName);
         const selectedOption = option?.values?.find(v => v.id === value);
 
@@ -124,7 +121,6 @@ export default function ProductPage() {
     const handleAddToCart = () => {
         if (!product) return;
 
-        // Validate required options
         const missingRequired = product.options.filter(
             (option) => option.required && !configuration[option.name]
         );
@@ -222,7 +218,7 @@ export default function ProductPage() {
     if (error || !product) {
         return (
             <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-6">Producto no encontrado</h1>
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Producto no encontrado</h1>
                 <ErrorMessage message={error || "Producto no disponible"} className="mb-4" />
                 <div>
                     <ButtonComponent
@@ -249,15 +245,16 @@ export default function ProductPage() {
             </div>
 
             <div className="grid lg:grid-cols-4 gap-4 sm:gap-6">
+                {/* Images */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-                        <h2 className="text-xl font-semibold mb-4">Imágenes del producto</h2>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Imágenes del producto</h2>
                         {product.images && product.images.length > 0 ? (
                             <div className="space-y-4">
                                 <img
                                     src={product.images[0]}
                                     alt={product.name}
-                                    className="w-full h-92 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                    className="w-full h-92 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
                                     onClick={() => openImageModal(0)}
                                 />
                                 {product.images.length > 1 && (
@@ -267,7 +264,7 @@ export default function ProductPage() {
                                                 key={index}
                                                 src={image}
                                                 alt={`${product.name} ${index + 2}`}
-                                                className="w-full h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                                className="w-full h-16 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
                                                 onClick={() => openImageModal(index + 1)}
                                             />
                                         ))}
@@ -275,28 +272,29 @@ export default function ProductPage() {
                                 )}
                             </div>
                         ) : (
-                            <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                                <span className="text-gray-500">Sin imagen</span>
+                            <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center">
+                                <span className="text-gray-400">Sin imagen</span>
                             </div>
                         )}
                     </div>
                 </div>
 
+                {/* Details */}
                 <div className="lg:col-span-2 min-w-0 space-y-4 sm:space-y-6">
-                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 overflow-hidden">
                         <div className="flex items-baseline justify-between gap-2 sm:gap-4 mb-4">
-                            <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-                            <span className="text-2xl font-bold text-blue-600">{product.basePrice.toFixed(2)}€</span>
+                            <h1 className="text-3xl font-extrabold font-display text-yambo-black">{product.name}</h1>
+                            <span className="text-2xl font-extrabold text-yambo-green-600">{product.basePrice.toFixed(2)}€</span>
                         </div>
                         {drop && (
-                            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="mb-6 p-4 bg-yambo-green-50/50 border border-yambo-green-100 rounded-2xl">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full font-medium text-sm">
+                                    <span className="inline-block bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white px-3 py-1 rounded-full font-medium text-sm">
                                         {drop.name}
                                     </span>
                                 </div>
                                 {drop.endTms && (
-                                    <p className="text-sm text-gray-700">
+                                    <p className="text-sm text-gray-500">
                                         <span className="font-medium">Disponible hasta:</span>{' '}
                                         {new Date(drop.endTms).toLocaleDateString('es-ES', {
                                             day: 'numeric',
@@ -309,16 +307,16 @@ export default function ProductPage() {
                         )}
                         {product.description && (
                             <div className="mb-6">
-                                <h2 className="text-xl font-semibold mb-2">Descripción</h2>
+                                <h2 className="text-xl font-bold font-display text-yambo-black mb-2">Descripción</h2>
                                 <MarkdownEditor
                                     value={product.description}
                                     readOnly
-                                    className="border rounded"
+                                    className="border rounded-xl"
                                 />
                             </div>
                         )}
                         <div className="space-y-6">
-                            <h2 className="text-xl font-semibold">Opciones</h2>
+                            <h2 className="text-xl font-bold font-display text-yambo-black">Opciones</h2>
                             {product.options.map((option, index) => (
                                 <div key={index}>{renderOption(option)}</div>
                             ))}
@@ -326,13 +324,14 @@ export default function ProductPage() {
                     </div>
                 </div>
 
+                {/* Order Summary Sidebar */}
                 <div className="lg:sticky lg:top-8 h-fit">
-                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-                        <h2 className="text-xl font-semibold mb-6">Resumen del pedido</h2>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-6">Resumen del pedido</h2>
                         <div className="space-y-3">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Precio base</span>
-                                <span>{product.basePrice.toFixed(2)}€</span>
+                                <span className="text-gray-400">Precio base</span>
+                                <span className="text-yambo-black">{product.basePrice.toFixed(2)}€</span>
                             </div>
 
                             {product.options.map((option) => {
@@ -345,28 +344,28 @@ export default function ProductPage() {
                                     if (value?.price) {
                                         return (
                                             <div key={option.name} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">
+                                                <span className="text-gray-400">
                                                     {option.name}: {value.label}
                                                 </span>
-                                                <span>+{value.price.toFixed(2)}€</span>
+                                                <span className="text-yambo-black">+{value.price.toFixed(2)}€</span>
                                             </div>
                                         );
                                     }
                                 } else if (option.type === "text_input" && selectedValue.trim() !== "" && option.price) {
                                     return (
                                         <div key={option.name} className="flex justify-between text-sm">
-                                            <span className="text-gray-600">{option.name}</span>
-                                            <span>+{option.price.toFixed(2)}€</span>
+                                            <span className="text-gray-400">{option.name}</span>
+                                            <span className="text-yambo-black">+{option.price.toFixed(2)}€</span>
                                         </div>
                                     );
                                 }
                                 return null;
                             })}
 
-                            <div className="border-t pt-3">
-                                <div className="flex justify-between text-lg font-bold">
-                                    <span>Total</span>
-                                    <span>{totalPrice.toFixed(2)}€</span>
+                            <div className="border-t border-gray-100 pt-3">
+                                <div className="flex justify-between text-lg font-extrabold">
+                                    <span className="text-yambo-black">Total</span>
+                                    <span className="text-yambo-green-600">{totalPrice.toFixed(2)}€</span>
                                 </div>
                             </div>
                         </div>
@@ -380,9 +379,8 @@ export default function ProductPage() {
 
             {/* Image Modal */}
             {selectedImageIndex !== null && product?.images && (
-                <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50" onClick={closeImageModal}>
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50" onClick={closeImageModal}>
                     <div className="relative max-w-4xl max-h-full p-4">
-                        {/* Close button */}
                         <button
                             onClick={closeImageModal}
                             className="absolute top-6 right-6 z-10 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
@@ -390,15 +388,13 @@ export default function ProductPage() {
                             ✕
                         </button>
 
-                        {/* Main image */}
                         <img
                             src={product.images[selectedImageIndex]}
                             alt={`${product.name} ${selectedImageIndex + 1}`}
-                            className="max-w-full max-h-[80vh] object-contain"
+                            className="max-w-full max-h-[80vh] object-contain rounded-2xl"
                             onClick={(e) => e.stopPropagation()}
                         />
 
-                        {/* Navigation arrows */}
                         {product.images.length > 1 && (
                             <>
                                 <button
@@ -422,7 +418,6 @@ export default function ProductPage() {
                             </>
                         )}
 
-                        {/* Image counter */}
                         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
                             {selectedImageIndex + 1} / {product.images.length}
                         </div>

@@ -37,7 +37,8 @@ public class ProjectService {
     }
 
     public Project createProject(@NonNull String name, Boolean active, String season,
-                                   String description, String image, Boolean featured) {
+                                   String description, String image, Boolean featured,
+                                   String signatureColor) {
         if (projectRepository.existsByName(name)) {
             throw new BadRequestException("Project name already exists");
         }
@@ -49,6 +50,7 @@ public class ProjectService {
                 .description(description)
                 .image(image)
                 .featured(featured != null ? featured : false)
+                .signatureColor(signatureColor)
                 .build();
 
         Project saved = projectRepository.save(project);
@@ -65,7 +67,8 @@ public class ProjectService {
     }
 
     public Project updateProject(@NonNull String projectId, String name, Boolean active, String season,
-                                  String description, String image, Boolean featured) {
+                                  String description, String image, Boolean featured,
+                                  String signatureColor) {
         Project project = getProjectById(projectId);
 
         boolean seoRelevantChange = false;
@@ -104,6 +107,10 @@ public class ProjectService {
 
         if (featured != null) {
             project.setFeatured(featured);
+        }
+
+        if (signatureColor != null) {
+            project.setSignatureColor(signatureColor.isEmpty() ? null : signatureColor);
         }
 
         Project saved = projectRepository.save(project);

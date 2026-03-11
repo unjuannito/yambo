@@ -218,10 +218,10 @@ export default function MyOrdersPage() {
   };
 
   return (
-    <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+    <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Mis Pedidos</h1>
-        <p className="text-gray-600">Resumen de tus pedidos y sus incidencias</p>
+        <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Mis Pedidos 📦</h1>
+        <p className="text-gray-400">Resumen de tus pedidos y sus incidencias</p>
       </div>
 
       <StatusWorkflow
@@ -259,16 +259,16 @@ export default function MyOrdersPage() {
       )}
 
       {!isLoading && !error && orders.length === 0 && (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
           <FontAwesomeIcon
             icon={faClipboard}
-            className="w-24 h-24 mx-auto mb-4 text-gray-400"
+            className="w-24 h-24 mx-auto mb-4 text-gray-300"
           />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">No tienes pedidos aún</h2>
-          <p className="text-gray-600 mb-6">Explora nuestro merch y realiza tu primer pedido</p>
+          <h2 className="text-2xl font-bold font-display text-yambo-black mb-2">No tienes pedidos aún</h2>
+          <p className="text-gray-400 mb-6">Explora nuestro merch y realiza tu primer pedido</p>
           <button
             onClick={() => navigate("/mi-espacio/merch")}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all font-medium"
           >
             Ir al merch
           </button>
@@ -280,13 +280,13 @@ export default function MyOrdersPage() {
           {orders
             .filter((order) => selectedStatuses.length === 0 || selectedStatuses.includes(order.status))
             .map((order) => (
-            <div key={order.id} className="bg-white rounded-lg shadow-md p-5">
+            <div key={order.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">
-                    Pedido <span className="font-mono font-medium text-gray-900">#{order.id}</span>
+                  <p className="text-sm text-gray-400">
+                    Pedido <span className="font-mono font-medium text-yambo-black">#{order.id}</span>
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{formatDate(order.createdAt)}</p>
+                  <p className="text-xs text-gray-400 mt-1">{formatDate(order.createdAt)}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {order.hasOpenIssues && (
@@ -303,31 +303,31 @@ export default function MyOrdersPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                <div className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-500">Productos</p>
-                  <p className="text-lg font-semibold text-gray-900">{order.products.length}</p>
+                <div className="rounded-xl bg-yambo-green-50/30 px-3 py-2">
+                  <p className="text-xs text-gray-400">Productos</p>
+                  <p className="text-lg font-semibold text-yambo-black">{order.products.length}</p>
                 </div>
-                <div className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-500">Incidencias</p>
-                  <p className="text-lg font-semibold text-gray-900">{orderIssues[order.id]?.length || 0}</p>
+                <div className="rounded-xl bg-yambo-green-50/30 px-3 py-2">
+                  <p className="text-xs text-gray-400">Incidencias</p>
+                  <p className="text-lg font-semibold text-yambo-black">{orderIssues[order.id]?.length || 0}</p>
                 </div>
-                <div className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-500">Total</p>
-                  <p className="text-lg font-semibold text-gray-900">{getOrderTotal(order).toFixed(2)} €</p>
+                <div className="rounded-xl bg-yambo-green-50/30 px-3 py-2">
+                  <p className="text-xs text-gray-400">Total</p>
+                  <p className="text-lg font-semibold text-yambo-green-600">{getOrderTotal(order).toFixed(2)} €</p>
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   onClick={() => setOrderDetail(order)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all text-sm font-medium"
                 >
                   Ver detalles
                 </button>
                 {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                   <button
                     onClick={() => handleShowPaymentInstructions(order)}
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                    className="px-4 py-2 bg-gray-100 text-yambo-black rounded-full hover:bg-gray-200 transition-colors text-sm font-medium"
                   >
                     Instrucciones de pago
                   </button>
@@ -335,14 +335,14 @@ export default function MyOrdersPage() {
                 {order.status === "PENDING_PAYMENT" && (
                   <button
                     onClick={() => setUploadReceiptOrder(order)}
-                    className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
+                    className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                     Subir justificante
                   </button>
                 )}
                 {order.status === "CONFIRMING_PAYMENT" && (
-                  <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                  <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-medium flex items-center gap-2">
                     <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
                     Verificando justificante...
                   </span>
@@ -351,7 +351,7 @@ export default function MyOrdersPage() {
                   <button
                     onClick={() => setOrderToCancel(order)}
                     disabled={cancelingOrderId === order.id}
-                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium disabled:opacity-50"
+                    className="px-4 py-2 bg-coral/10 text-coral rounded-full hover:bg-coral/20 transition-colors text-sm font-medium disabled:opacity-50"
                   >
                     {cancelingOrderId === order.id ? "Cancelando..." : "Cancelar pedido"}
                   </button>
@@ -371,12 +371,12 @@ export default function MyOrdersPage() {
         {orderDetail && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-gray-600">Creado el {formatDate(orderDetail.createdAt)}</p>
+              <p className="text-sm text-gray-400">Creado el {formatDate(orderDetail.createdAt)}</p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => openIssueWindow(orderDetail)}
                   disabled={!!issueWindow}
-                  className="px-3 py-1 text-sm text-orange-700 bg-orange-100 rounded-md hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400"
+                  className="px-3 py-1 text-sm text-orange-700 bg-orange-100 rounded-full hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 transition-colors"
                 >
                   Nueva incidencia (varios productos)
                 </button>
@@ -402,17 +402,17 @@ export default function MyOrdersPage() {
                 const hasIssue = productIssues.length > 0;
 
                 return (
-                  <div key={`${orderDetail.id}-${product.productId}-${idx}`} className="rounded-lg border border-gray-200 p-4">
+                  <div key={`${orderDetail.id}-${product.productId}-${idx}`} className="rounded-2xl border border-gray-100 p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">{product.productName || product.productId}</p>
+                        <p className="font-medium text-yambo-black">{product.productName || product.productId}</p>
                         {productDrop && (
                           <div className="mt-1 mb-2">
-                            <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium text-xs">
+                            <span className="inline-block bg-yambo-green-50 text-yambo-green-700 px-2 py-1 rounded-full font-medium text-xs">
                               {productDrop.name}
                             </span>
                             {productDrop.endTms && (
-                              <span className="text-xs text-gray-600 ml-2">
+                              <span className="text-xs text-gray-400 ml-2">
                                 Disponible hasta: {new Date(productDrop.endTms).toLocaleDateString("es-ES", {
                                   day: "numeric",
                                   month: "long",
@@ -424,15 +424,15 @@ export default function MyOrdersPage() {
                         )}
 
                         {product.configuration && product.configuration !== "{}" && (
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-400 mt-1">
                             <span className="font-medium">Configuración:</span> {formatConfiguration(product.configuration)}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
                           <span>Cantidad: {product.quantity}</span>
                           <span>•</span>
-                          <span className="font-medium text-blue-600">{product.price.toFixed(2)} € c/u</span>
+                          <span className="font-medium text-yambo-green-600">{product.price.toFixed(2)} € c/u</span>
                         </div>
 
                         {hasIssue ? (
@@ -440,7 +440,7 @@ export default function MyOrdersPage() {
                             <IssueStatusBadge status={productIssues[0].status} />
                             <button
                               onClick={() => navigate(`/mi-espacio/incidencias/${productIssues[0].id}`)}
-                              className="text-sm text-blue-600 hover:text-blue-800 underline"
+                              className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium"
                             >
                               Ver incidencia
                             </button>
@@ -457,8 +457,8 @@ export default function MyOrdersPage() {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600">Subtotal</p>
-                        <p className="text-lg font-bold text-gray-900">
+                        <p className="text-sm text-gray-400">Subtotal</p>
+                        <p className="text-lg font-bold text-yambo-black">
                           {(product.price * product.quantity).toFixed(2)} €
                         </p>
                       </div>
@@ -472,13 +472,13 @@ export default function MyOrdersPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleShowPaymentInstructions(orderDetail)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all text-sm font-medium"
                 >
                   Ver instrucciones de pago
                 </button>
                 <button
                   onClick={() => setUploadReceiptOrder(orderDetail)}
-                  className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
                 >
                   <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                   Subir justificante
@@ -486,7 +486,7 @@ export default function MyOrdersPage() {
                 <button
                   onClick={() => setOrderToCancel(orderDetail)}
                   disabled={cancelingOrderId === orderDetail.id}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium disabled:opacity-50"
+                  className="px-4 py-2 bg-coral/10 text-coral rounded-full hover:bg-coral/20 transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   {cancelingOrderId === orderDetail.id ? "Cancelando..." : "Cancelar pedido"}
                 </button>
@@ -496,20 +496,20 @@ export default function MyOrdersPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleShowPaymentInstructions(orderDetail)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all text-sm font-medium"
                 >
                   Ver instrucciones de pago
                 </button>
-                <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-medium flex items-center gap-2">
                   <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
                   Verificando justificante...
                 </span>
               </div>
             )}
 
-            <div className="flex justify-between items-center border-t pt-3">
-              <span className="text-gray-700 font-medium">Total del pedido</span>
-              <span className="text-2xl font-bold text-gray-900">
+            <div className="flex justify-between items-center border-t border-gray-100 pt-3">
+              <span className="text-yambo-black font-medium">Total del pedido</span>
+              <span className="text-2xl font-bold text-yambo-green-600">
                 {getOrderTotal(orderDetail).toFixed(2)} €
               </span>
             </div>
@@ -548,7 +548,7 @@ export default function MyOrdersPage() {
       >
         {issueWindow && (
           <>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-400 mb-4">
               Selecciona uno o varios productos de este pedido para asociarlos a la incidencia.
             </p>
             <IssueForm
@@ -570,8 +570,8 @@ export default function MyOrdersPage() {
       >
         {uploadReceiptOrder && (
           <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
+            <div className="bg-yambo-green-50/50 border border-yambo-green-100 rounded-xl p-4">
+              <p className="text-sm text-yambo-green-800">
                 Sube el justificante de la transferencia bancaria para el pedido{" "}
                 <strong>#{uploadReceiptOrder.id}</strong>. Una vez recibido,
                 nuestro equipo verificará el pago.
@@ -591,7 +591,7 @@ export default function MyOrdersPage() {
               />
             )}
 
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-400">
               Formatos aceptados: imágenes (JPG, PNG) y PDF. Tamaño máximo: 10 MB.
             </div>
           </div>
@@ -600,5 +600,3 @@ export default function MyOrdersPage() {
     </main>
   );
 }
-
-

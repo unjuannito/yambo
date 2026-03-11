@@ -173,13 +173,13 @@ export default function MerchFamilies() {
                 type: "search",
                 placeholder: "Buscar por nombre...",
             },
-            render: (drop) => <span className="font-medium">{drop.name}</span>,
+            render: (drop) => <span className="font-medium text-yambo-black">{drop.name}</span>,
         },
         {
             key: "endTms",
             header: "Fin",
             render: (drop) => (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-400">
                     {drop.endTms ? new Date(drop.endTms).toLocaleString() : "-"}
                 </span>
             ),
@@ -188,7 +188,7 @@ export default function MerchFamilies() {
             key: "startTms",
             header: "Inicio",
             render: (drop) => (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-400">
                     {drop.startTms ? new Date(drop.startTms).toLocaleString() : "-"}
                 </span>
             ),
@@ -201,7 +201,7 @@ export default function MerchFamilies() {
                     .map((id) => projects.find((p) => p.id === id)?.name || id)
                     .join(", ");
                 return (
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-400">
                         {names || "-"}
                     </span>
                 );
@@ -215,24 +215,24 @@ export default function MerchFamilies() {
                 const statusConfig = statusKey ? FAMILY_PRODUCT_STATUS_CONFIG[statusKey] : null;
                 if (!canUpdate) {
                     return statusConfig ? (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.className}`}>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
                             {statusConfig.label}
                         </span>
-                    ) : <span className="text-sm text-gray-500">{drop.status || "-"}</span>;
+                    ) : <span className="text-sm text-gray-400">{drop.status || "-"}</span>;
                 }
                 const transitions = FAMILY_PRODUCT_WORKFLOW_TRANSITIONS[(drop.status || "OPEN") as FamilyProductStatus] || [];
                 if (transitions.length === 0) {
                     return statusConfig ? (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.className}`}>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
                             {statusConfig.label}
                         </span>
-                    ) : <span className="text-sm text-gray-500">{drop.status || "-"}</span>;
+                    ) : <span className="text-sm text-gray-400">{drop.status || "-"}</span>;
                 }
                 return (
                     <select
                         value={drop.status || "OPEN"}
                         onChange={(e) => handleStatusChange(drop, e.target.value)}
-                        className={`text-xs font-medium rounded-full px-2.5 py-0.5 border-0 cursor-pointer ${statusConfig?.className || "bg-gray-100 text-gray-800"}`}
+                        className={`text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer ${statusConfig?.className || "bg-gray-100 text-gray-800"}`}
                     >
                         <option value={drop.status || "OPEN"}>{statusConfig?.label || drop.status}</option>
                         {transitions.map((status) => {
@@ -273,9 +273,9 @@ export default function MerchFamilies() {
 
     return (
         <RequirePermission permission={{ obj: "family_product", action: "read" }} redirectTo="/mi-espacio/merch">
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Drops de Merch</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Drops de Merch</h1>
                     <RequirePermission permission={{ obj: "family_product", action: "create" }} redirect={false}>
                         <ButtonComponent
                             variant="primary"
@@ -292,7 +292,7 @@ export default function MerchFamilies() {
                     transitions={FAMILY_PRODUCT_WORKFLOW_TRANSITIONS}
                 />
 
-                <section className="bg-white rounded-lg shadow p-6">
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                     {loading ? (
                         <div className="flex justify-center py-8">
                             <LoadingSpinner size="md" message="Cargando drops..." />
@@ -365,7 +365,7 @@ export default function MerchFamilies() {
                             />
                         </div>
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">
                                 Proyectos
                             </label>
                             <MultiSelectComponent

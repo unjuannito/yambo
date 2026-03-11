@@ -33,12 +33,11 @@ export const links: Route.LinksFunction = () => [
     },
     {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap",
     },
     { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
 ];
 
-// This is the main Document component that wraps the entire app
 export default function Document() {
     return (
         <html lang="es">
@@ -56,21 +55,26 @@ export default function Document() {
                 <Meta />
                 <Links />
             </head>
-            <body className="min-h-screen ">
+            <body className="min-h-screen bg-yambo-white text-yambo-black">
                 <Toaster
                     position="top-right"
                     toastOptions={{
+                        style: {
+                            borderRadius: "9999px",
+                            padding: "8px 16px",
+                            fontWeight: 500,
+                        },
                         success: {
                             duration: 3000,
                             iconTheme: {
-                                primary: "#10b981",
+                                primary: "#33a35e",
                                 secondary: "#fff",
                             },
                         },
                         error: {
                             duration: 5000,
                             iconTheme: {
-                                primary: "#ef4444",
+                                primary: "#ff6b6b",
                                 secondary: "#fff",
                             },
                         },
@@ -91,8 +95,8 @@ export default function Document() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-    let message = "Oops!";
-    let details = "An unexpected error occurred.";
+    let message = "¡Ups!";
+    let details = "Ha ocurrido un error inesperado.";
     let stack: string | undefined;
     let is404 = false;
 
@@ -101,7 +105,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         message = is404 ? "Error 404" : "Error";
         details =
             error.status === 404
-                ? "No se ha encontrado esta pagina."
+                ? "No se ha encontrado esta página."
                 : error.statusText || details;
     } else if (import.meta.env.DEV && error && error instanceof Error) {
         details = error.message;
@@ -120,21 +124,29 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
                 <Links />
                 <link
                     rel="stylesheet"
-                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap"
+                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
                 />
             </head>
-            <body style={{ fontFamily: "'Inter', sans-serif" }}>
+            <body className="bg-yambo-white text-yambo-black" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>
                 {is404 ? (
                     <CatchTheLogoGame />
                 ) : (
-                    <main className="min-h-screen items-center justify-center flex flex-col">
-                        <h1 className="font-bold text-4xl p-4">{message}</h1>
-                        <p className="text-2xl p-4">{details}</p>
+                    <main className="min-h-screen items-center justify-center flex flex-col gap-4 relative overflow-hidden">
+                        <div className="blob-green -top-20 -left-20" />
+                        <div className="blob-purple top-40 -right-20" />
+                        <h1 className="font-bold text-5xl gradient-text">{message}</h1>
+                        <p className="text-xl text-gray-600">{details}</p>
                         {stack && (
-                            <pre className="w-full p-4 overflow-x-auto">
+                            <pre className="w-full max-w-2xl p-4 overflow-x-auto bg-yambo-black text-gray-100 rounded-2xl text-sm">
                                 <code>{stack}</code>
                             </pre>
                         )}
+                        <a
+                            href="/"
+                            className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full font-semibold hover:shadow-lg transition-all hover-pop"
+                        >
+                            Volver al inicio →
+                        </a>
                     </main>
                 )}
                 <Scripts />
@@ -176,15 +188,19 @@ function CatchTheLogoGame() {
     }, [catches, gameWon, moveTarget]);
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 relative overflow-hidden">
+        <main className="min-h-screen bg-gradient-to-br from-yambo-green-50 via-white to-yambo-purple-50 relative overflow-hidden">
+            {/* Decorative blobs */}
+            <div className="blob-green top-10 left-10 opacity-60" />
+            <div className="blob-purple bottom-20 right-10 opacity-60" />
+
             {/* Header */}
             <div className="text-center pt-12 relative z-10">
-                <h1 className="text-6xl font-black text-gray-900 mb-2">404</h1>
+                <h1 className="text-7xl font-black gradient-text mb-3">404</h1>
                 <p className="text-xl text-gray-600 mb-2">
                     ¡Ups! Esta página no existe...
                 </p>
                 {!gameWon && (
-                    <p className="text-sm text-blue-600 font-medium animate-pulse">
+                    <p className="text-sm text-yambo-green-600 font-semibold animate-pulse">
                         🎯 ¡Atrapa el logo {TARGET_CATCHES} veces! ({catches}/{TARGET_CATCHES})
                     </p>
                 )}
@@ -213,9 +229,9 @@ function CatchTheLogoGame() {
             {/* Win state */}
             {gameWon && (
                 <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <div className="text-center ee-slide-down bg-white/90 backdrop-blur rounded-2xl p-10 shadow-2xl max-w-md mx-4">
+                    <div className="text-center bounce-in glass rounded-3xl p-10 shadow-2xl max-w-md mx-4">
                         <div className="text-6xl mb-4">🏆</div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                        <h2 className="text-3xl font-bold text-yambo-black mb-2">
                             ¡Eres increíble!
                         </h2>
                         <p className="text-gray-600 mb-6">
@@ -223,7 +239,7 @@ function CatchTheLogoGame() {
                         </p>
                         <a
                             href="/"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-purple-500 text-white rounded-full font-semibold hover:shadow-lg transition-all hover-pop"
                         >
                             Volver al inicio →
                         </a>
@@ -238,8 +254,8 @@ function CatchTheLogoGame() {
                         key={i}
                         className={`w-4 h-4 rounded-full transition-all duration-300 ${
                             i < catches
-                                ? "bg-blue-600 scale-110"
-                                : "bg-gray-300"
+                                ? "bg-gradient-to-br from-yambo-green-400 to-yambo-purple-400 scale-110 shadow-md"
+                                : "bg-gray-200"
                         }`}
                     />
                 ))}

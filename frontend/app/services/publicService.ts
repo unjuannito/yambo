@@ -10,6 +10,7 @@ export interface FeaturedProject {
     name: string;
     description: string;
     image: string;
+    signatureColor?: string | null;
 }
 
 export interface StaffGroup {
@@ -36,6 +37,7 @@ export interface ActiveProject {
     description: string | null;
     image: string | null;
     featured: boolean;
+    signatureColor?: string | null;
 }
 
 export interface ProjectGroupDetail {
@@ -56,6 +58,7 @@ export interface ProjectDetail {
     season: string | null;
     description: string | null;
     image: string | null;
+    signatureColor?: string | null;
     groups: ProjectGroupDetail[];
     staff: StaffMember[];
     seo: SeoMetadata | null;

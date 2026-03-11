@@ -83,8 +83,8 @@ export default function ResetPassword() {
     }
 
     const footer = (
-        <p className="text-xs text-center text-gray-500">
-            <Link to="/login" className="text-blue-600 hover:underline">
+        <p className="text-xs text-center text-gray-400">
+            <Link to="/login" className="text-yambo-green-600 hover:underline font-medium">
                 Volver al inicio de sesión
             </Link>
         </p>
@@ -98,8 +98,8 @@ export default function ResetPassword() {
                 footer={footer}
             >
                 <div className="space-y-4">
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-700 font-medium">
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-2xl">
+                        <p className="text-sm text-red-700 font-semibold">
                             ⚠️ {error}
                         </p>
                     </div>
@@ -141,7 +141,7 @@ export default function ResetPassword() {
                     type="submit"
                     variant="primary"
                     className="w-full"
-                    loading={loading}
+                    isLoading={loading}
                 >
                     Restablecer contraseña
                 </ButtonComponent>

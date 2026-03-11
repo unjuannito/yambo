@@ -28,9 +28,10 @@ type ProjectForm = {
     description: string;
     image: string;
     featured: boolean;
+    signatureColor: string;
 };
 
-const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false };
+const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false, signatureColor: "" };
 
 export default function Projects() {
     const { hasPermission } = useAuth();
@@ -102,6 +103,7 @@ export default function Projects() {
                     description: form.description || null,
                     image: form.image || null,
                     featured: form.featured,
+                    signatureColor: form.signatureColor || null,
                 });
                 toast.success("Proyecto actualizado correctamente");
             } else {
@@ -112,6 +114,7 @@ export default function Projects() {
                     description: form.description || null,
                     image: form.image || null,
                     featured: form.featured,
+                    signatureColor: form.signatureColor || null,
                 });
                 toast.success("Proyecto creado correctamente");
             }
@@ -133,6 +136,7 @@ export default function Projects() {
             description: project.description || "",
             image: project.image || "",
             featured: project.featured,
+            signatureColor: project.signatureColor || "",
         });
         setIsModalOpen(true);
         loadGroups(project.id);
@@ -210,7 +214,7 @@ export default function Projects() {
                 type: "search",
                 placeholder: "Buscar por nombre...",
             },
-            render: (project) => <span className="font-medium">{project.name}</span>,
+            render: (project) => <span className="font-medium text-yambo-black">{project.name}</span>,
         },
         {
             key: "season",
@@ -221,7 +225,7 @@ export default function Projects() {
                 placeholder: "Temporada...",
             },
             render: (project) => (
-                <span className="text-sm text-gray-600">{project.season || "-"}</span>
+                <span className="text-sm text-gray-400">{project.season || "-"}</span>
             ),
         },
         {
@@ -233,7 +237,7 @@ export default function Projects() {
             },
             render: (project) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    project.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    project.active ? "bg-yambo-green-50 text-yambo-green-700" : "bg-coral/10 text-coral"
                 }`}>
                     {project.active ? "Activo" : "Inactivo"}
                 </span>
@@ -248,7 +252,7 @@ export default function Projects() {
             },
             render: (project) => (
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    project.featured ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-600"
+                    project.featured ? "bg-gold/20 text-yellow-800" : "bg-gray-100 text-gray-500"
                 }`}>
                     {project.featured ? "Sí" : "No"}
                 </span>
@@ -284,9 +288,9 @@ export default function Projects() {
 
     return (
         <RequirePermission permission={{ obj: "project", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Proyectos</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Proyectos</h1>
                     {canCreate && (
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
                             + Nuevo Proyecto
@@ -294,7 +298,7 @@ export default function Projects() {
                     )}
                 </div>
 
-                <section className="bg-white rounded-lg shadow p-6">
+                <section className="bg-white rounded-2xl border border-gray-100 p-6">
                     {loading ? (
                         <div className="flex justify-center py-8">
                             <LoadingSpinner size="md" message="Cargando proyectos..." />
@@ -365,14 +369,14 @@ export default function Projects() {
                                 <img
                                     src={form.image}
                                     alt="Vista previa"
-                                    className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                                    className="h-20 w-20 object-cover rounded-xl border border-gray-100"
                                 />
                             </div>
                         )}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                             <textarea
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-y"
                                 rows={3}
                                 maxLength={1000}
                                 value={form.description}
@@ -395,10 +399,35 @@ export default function Projects() {
                                 onChange={(e) => setForm((prev) => ({ ...prev, featured: e.target.checked }))}
                             />
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Color identificativo</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="color"
+                                    value={form.signatureColor || "#33a35e"}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, signatureColor: e.target.value }))}
+                                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="#33a35e"
+                                    value={form.signatureColor}
+                                    onChange={(e) => setForm((prev) => ({ ...prev, signatureColor: e.target.value }))}
+                                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
+                                    maxLength={7}
+                                />
+                                {form.signatureColor && (
+                                    <div
+                                        className="w-10 h-10 rounded-xl border border-gray-100 shrink-0"
+                                        style={{ backgroundColor: form.signatureColor }}
+                                    />
+                                )}
+                            </div>
+                        </div>
 
                         {editing && (
-                            <div className="border-t pt-4 mt-2">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-3">Grupos del proyecto</h3>
+                            <div className="border-t border-gray-100 pt-4 mt-2">
+                                <h3 className="text-sm font-semibold text-yambo-black mb-3">Grupos del proyecto</h3>
 
                                 {/* Existing named groups */}
                                 {groups.filter(g => g.name).length > 0 ? (
@@ -409,7 +438,7 @@ export default function Projects() {
                                                     <>
                                                         <input
                                                             type="text"
-                                                            className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                                             value={editingGroupName}
                                                             onChange={(e) => setEditingGroupName(e.target.value)}
                                                             onKeyDown={(e) => {
@@ -436,7 +465,7 @@ export default function Projects() {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <span className="flex-1 px-2 py-1 bg-green-50 text-green-800 rounded text-sm">
+                                                        <span className="flex-1 px-2 py-1 bg-yambo-green-50 text-yambo-green-700 rounded-full text-sm">
                                                             {group.name}
                                                         </span>
                                                         {canUpdate && (
@@ -471,7 +500,7 @@ export default function Projects() {
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
-                                            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                             placeholder="Nombre del nuevo grupo..."
                                             value={newGroupName}
                                             onChange={(e) => setNewGroupName(e.target.value)}

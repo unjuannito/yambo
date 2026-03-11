@@ -36,13 +36,14 @@ export default function AdminStatsSection({ data, reportSnapshot }: AdminStatsSe
     };
 
     return (
-        <div className="space-y-6">
-            <div className="border-t border-gray-200 pt-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">
+        <div className="space-y-8">
+            <div className="border-t-2 border-yambo-green-200 pt-8">
+                <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-6 flex items-center gap-3">
+                    <span className="inline-block w-2 h-8 rounded-full bg-gradient-to-b from-yambo-green-400 to-yambo-green-600" />
                     Administración
                 </h2>
 
-                <div className="space-y-6">
+                <div className="space-y-8">
                     <SummaryCards
                         cards={ADMIN_CARDS}
                         counts={counts}
@@ -52,7 +53,7 @@ export default function AdminStatsSection({ data, reportSnapshot }: AdminStatsSe
                     {reportSnapshot && (
                         <Suspense
                             fallback={
-                                <div className="animate-pulse rounded-xl bg-gray-100 h-64" />
+                                <div className="animate-pulse rounded-2xl bg-yambo-green-50/50 h-64" />
                             }
                         >
                             <ReportSnapshot data={reportSnapshot} />

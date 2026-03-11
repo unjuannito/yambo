@@ -126,13 +126,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                         <ButtonComponent
                             type="button"
                             onClick={() => {closeDialog(); resolverRef.current.reject?.('user-cancelled');}}
-                            loading={isLoading}
+                            isLoading={isLoading}
                             variant="neutral"
                         >
                             {dialogOptions?.cancelLabel ?? "Cancelar"}
                         </ButtonComponent>
                         <ButtonComponent
-                            loading={isLoading}
+                            isLoading={isLoading}
                             variant={
                                 variantToButtonVariant[
                                 dialogOptions?.variant ?? "info"

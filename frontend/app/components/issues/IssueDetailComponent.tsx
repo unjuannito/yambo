@@ -48,7 +48,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
     }, [issueId]);
 
     if (loading) {
-        return <div className="text-center py-8">Cargando...</div>;
+        return <div className="text-center py-8 text-gray-400">Cargando...</div>;
     }
 
     if (error && !issue) {
@@ -56,21 +56,21 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
     }
 
     if (!issue) {
-        return <div className="text-center py-8">Incidencia no encontrada</div>;
+        return <div className="text-center py-8 text-gray-400">Incidencia no encontrada</div>;
     }
 
     return (
         <div className="max-w-6xl mx-auto space-y-6">
-            <section className="bg-white rounded-2xl shadow-md p-6">
+            <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
                     <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-500 mb-1">
+                        <p className="text-xs font-semibold text-gray-400 mb-1">
                             Incidencia #{issue.id}
                         </p>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 break-words">
+                        <h1 className="text-2xl md:text-3xl font-extrabold font-display text-yambo-black break-words">
                             {issue.title}
                         </h1>
-                        <p className="text-sm text-gray-600 mt-2">
+                        <p className="text-sm text-gray-400 mt-2">
                             Creada el {formatDate(issue.createdAt)}
                         </p>
                     </div>
@@ -89,7 +89,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
 
                 <div className="flex flex-wrap items-center gap-3">
                     <IssueStatusBadge status={issue.status} />
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-400">
                         {issue.comments?.length ?? 0} comentarios
                     </span>
                 </div>
@@ -97,15 +97,15 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <section className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-2xl shadow p-6">
-                        <h2 className="text-lg font-bold text-gray-900 mb-3">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-3">
                             Descripción
                         </h2>
                         <MarkdownEditor value={issue.description} readOnly />
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow p-6">
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
                             Comentarios
                         </h2>
 
@@ -121,15 +121,15 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                 issue.comments.map((comment: IssueComment) => (
                                     <article
                                         key={comment.id}
-                                        className={`rounded-xl p-4 border ${
+                                        className={`rounded-2xl p-4 border ${
                                             comment.status
-                                                ? "bg-blue-50 border-blue-200"
-                                                : "bg-gray-50 border-gray-200"
+                                                ? "bg-yambo-green-50/30 border-yambo-green-200"
+                                                : "bg-gray-50/50 border-gray-100"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <span className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <span className="h-8 w-8 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
                                                     {String(
                                                         comment.userName ||
                                                             comment.userId ||
@@ -138,19 +138,19 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                                         .charAt(0)
                                                         .toUpperCase()}
                                                 </span>
-                                                <span className="font-medium text-gray-800 truncate">
+                                                <span className="font-semibold text-yambo-black truncate">
                                                     {comment.userName ||
                                                         "Usuario"}
                                                 </span>
                                             </div>
-                                            <span className="text-xs text-gray-500 shrink-0">
+                                            <span className="text-xs text-gray-400 shrink-0">
                                                 {formatDate(comment.createdAt)}
                                             </span>
                                         </div>
                                         {comment.status && (
                                             <div className="mb-2">
                                                 <span
-                                                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${ISSUE_STATUS_CONFIG[comment.status].className}`}
+                                                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${ISSUE_STATUS_CONFIG[comment.status].className}`}
                                                 >
                                                     Estado actualizado a{" "}
                                                     {
@@ -165,7 +165,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                     </article>
                                 ))
                             ) : (
-                                <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+                                <div className="border border-dashed border-gray-200 rounded-2xl p-8 text-center text-gray-400">
                                     Sin comentarios aún
                                 </div>
                             )}
@@ -174,33 +174,33 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                 </section>
 
                 <aside className="space-y-4">
-                    <div className="bg-white rounded-2xl shadow p-5">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                        <h3 className="text-sm font-bold font-display text-yambo-black mb-3">
                             Datos de incidencia
                         </h3>
                         <dl className="space-y-2 text-sm">
                             <div className="flex items-start justify-between gap-3">
-                                <dt className="text-gray-500">ID</dt>
-                                <dd className="font-medium text-gray-800 break-all text-right">
+                                <dt className="text-gray-400">ID</dt>
+                                <dd className="font-semibold text-yambo-black break-all text-right">
                                     {issue.id}
                                 </dd>
                             </div>
                             <div className="flex items-start justify-between gap-3">
-                                <dt className="text-gray-500">Creación</dt>
-                                <dd className="font-medium text-gray-800 text-right">
+                                <dt className="text-gray-400">Creación</dt>
+                                <dd className="font-semibold text-yambo-black text-right">
                                     {formatDate(issue.createdAt)}
                                 </dd>
                             </div>
                             <div className="flex items-start justify-between gap-3">
-                                <dt className="text-gray-500">
+                                <dt className="text-gray-400">
                                     Última actualización
                                 </dt>
-                                <dd className="font-medium text-gray-800 text-right">
+                                <dd className="font-semibold text-yambo-black text-right">
                                     {formatDate(issue.updatedAt)}
                                 </dd>
                             </div>
                             <div className="pt-2 border-t border-gray-100">
-                                <dt className="text-gray-500 mb-1">
+                                <dt className="text-gray-400 mb-1">
                                     Productos relacionados
                                 </dt>
                                 {issue.relatedProducts &&
@@ -212,9 +212,9 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                                     key={
                                                         product.orderedProductId
                                                     }
-                                                    className="rounded-lg bg-gray-50 border border-gray-200 p-2"
+                                                    className="rounded-xl bg-yambo-green-50/30 border border-gray-100 p-2.5"
                                                 >
-                                                    <p className="text-xs font-semibold text-gray-800">
+                                                    <p className="text-xs font-semibold text-yambo-black">
                                                         {product.familyProductName
                                                             ? `${product.familyProductName} · `
                                                             : ""}
@@ -222,7 +222,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                                             product.productId ||
                                                             "Producto"}
                                                     </p>
-                                                    <p className="text-xs text-gray-600 mt-0.5">
+                                                    <p className="text-xs text-gray-400 mt-0.5">
                                                         ID:{" "}
                                                         <span className="font-mono">
                                                             {
@@ -230,7 +230,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                                             }
                                                         </span>
                                                     </p>
-                                                    <p className="text-xs text-gray-600 mt-0.5">
+                                                    <p className="text-xs text-gray-400 mt-0.5">
                                                         Cantidad:{" "}
                                                         {product.quantity ?? 1}
                                                         {product.unitPrice
@@ -240,7 +240,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                                     {product.configuration &&
                                                         product.configuration !==
                                                             "{}" && (
-                                                            <p className="text-xs text-gray-600 mt-0.5">
+                                                            <p className="text-xs text-gray-400 mt-0.5">
                                                                 Configuración:{" "}
                                                                 {formatConfiguration(
                                                                     product.configuration,
@@ -257,7 +257,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                             (orderedProductId) => (
                                                 <span
                                                     key={orderedProductId}
-                                                    className="inline-block px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-mono"
+                                                    className="inline-block px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-mono"
                                                 >
                                                     {orderedProductId}
                                                 </span>

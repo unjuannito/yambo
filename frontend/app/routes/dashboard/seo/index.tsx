@@ -240,7 +240,7 @@ export default function SeoAdmin() {
                 },
                 render: (entry: SeoMetadataAdmin) => (
                     <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-yambo-black">
                             {entry.entityName}
                         </span>
                         <span className="text-xs text-gray-400 font-mono">
@@ -253,7 +253,7 @@ export default function SeoAdmin() {
                 key: "slug",
                 header: "Slug",
                 render: (entry: SeoMetadataAdmin) => (
-                    <span className="text-sm text-blue-600 font-mono">
+                    <span className="text-sm text-yambo-green-600 font-mono">
                         {truncate(entry.slug, 30)}
                     </span>
                 ),
@@ -262,7 +262,7 @@ export default function SeoAdmin() {
                 key: "metaDescription",
                 header: "Meta Description",
                 render: (entry: SeoMetadataAdmin) => (
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-400">
                         {truncate(entry.metaDescription, 50)}
                     </span>
                 ),
@@ -277,7 +277,7 @@ export default function SeoAdmin() {
                             {kws.slice(0, 3).map((kw, i) => (
                                 <span
                                     key={i}
-                                    className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                    className="px-2 py-0.5 rounded-full text-xs font-medium bg-yambo-green-50 text-yambo-green-700"
                                 >
                                     {kw}
                                 </span>
@@ -295,7 +295,7 @@ export default function SeoAdmin() {
                 key: "updatedAt",
                 header: "Actualizado",
                 render: (entry: SeoMetadataAdmin) => (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-400">
                         {formatDate(entry.updatedAt)}
                     </span>
                 ),
@@ -353,9 +353,9 @@ export default function SeoAdmin() {
             permission={{ obj: "seo_metadata", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">SEO</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">SEO 🔍</h1>
                     <RequirePermission
                         permission={{ obj: "seo_metadata", action: "create" }}
                         redirect={false}
@@ -363,7 +363,7 @@ export default function SeoAdmin() {
                         <ButtonComponent
                             variant="primary"
                             onClick={handleBulkGenerate}
-                            loading={bulkLoading}
+                            isLoading={bulkLoading}
                             disabled={bulkLoading}
                         >
                             <FontAwesomeIcon
@@ -409,7 +409,7 @@ export default function SeoAdmin() {
                             <ButtonComponent
                                 variant="primary"
                                 onClick={handleSave}
-                                loading={saving}
+                                isLoading={saving}
                                 disabled={saving}
                             >
                                 Guardar
@@ -446,7 +446,7 @@ export default function SeoAdmin() {
                                 }
                                 maxLength={200}
                                 rows={3}
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                 placeholder="Descripción para motores de búsqueda..."
                             />
                             <p
@@ -470,7 +470,7 @@ export default function SeoAdmin() {
                                 }
                                 maxLength={300}
                                 rows={3}
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                 placeholder="Descripción para Open Graph (redes sociales)..."
                             />
                             <p className="text-xs text-gray-400 mt-1">
@@ -489,7 +489,7 @@ export default function SeoAdmin() {
                                     })
                                 }
                                 rows={2}
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                 placeholder="palabra1, palabra2, palabra3..."
                             />
                             <p className="text-xs text-gray-400 mt-1">

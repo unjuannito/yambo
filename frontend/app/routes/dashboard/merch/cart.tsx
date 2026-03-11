@@ -47,7 +47,6 @@ export default function CartPage() {
       Object.entries(configuration)
         .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
         .reduce((acc, [key, value]) => {
-          // Extract ID from object if present, otherwise use value as-is
           acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
           return acc;
         }, {} as Record<string, any>)
@@ -57,14 +56,12 @@ export default function CartPage() {
   const formatConfiguration = (configuration: Record<string, any>): string => {
     return Object.entries(configuration)
       .map(([key, value]) => {
-        // Skip empty values
         if (!value || (typeof value === 'string' && value.trim() === '')) {
           return null;
         }
         if (typeof value === "boolean") {
           return value ? key : null;
         }
-        // If value is an object with label, use the label
         if (typeof value === 'object' && value !== null && 'label' in value) {
           return `${key}: ${value.label}`;
         }
@@ -83,7 +80,6 @@ export default function CartPage() {
     setIsSubmitting(true);
     try {
       const orderProducts = items.map(item => {
-        // Normalize configuration to only include IDs for backend
         const normalizedConfig = Object.entries(item.configuration).reduce((acc, [key, value]) => {
           acc[key] = (typeof value === 'object' && value !== null && 'id' in value) ? value.id : value;
           return acc;
@@ -102,7 +98,6 @@ export default function CartPage() {
         products: orderProducts
       });
 
-      // Store order details for payment instructions
       setCompletedOrderId(response.id);
       setOrderTotal(totalPrice);
 
@@ -123,13 +118,12 @@ export default function CartPage() {
     navigate("/mi-espacio/mis-pedidos");
   };
 
-  // Show payment instructions modal even if cart is empty (after completing order)
   if (showPaymentInstructions && completedOrderId) {
     return (
       <>
         <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
-          <div className="bg-white rounded-lg shadow-md p-8 sm:p-12 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Procesando pedido...</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
+            <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-2">Procesando pedido...</h2>
           </div>
         </main>
         <PaymentInstructions
@@ -144,13 +138,13 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
-        <div className="bg-white rounded-lg shadow-md p-8 sm:p-12 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
           <FontAwesomeIcon
             icon={faBagShopping}
-            className="w-24 h-24 mx-auto mb-4 text-gray-400"
+            className="w-24 h-24 mx-auto mb-4 text-gray-300"
           />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Tu cesta está vacía</h2>
-          <p className="text-gray-600 mb-6">Añade artículos desde el merch</p>
+          <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-2">Tu cesta está vacía</h2>
+          <p className="text-gray-400 mb-6">Añade artículos desde el merch</p>
           <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio/merch")}>
             Ir al merch
           </ButtonComponent>
@@ -164,13 +158,13 @@ export default function CartPage() {
       <div className="mb-6">
         <button
           onClick={() => navigate("/mi-espacio/merch")}
-          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900"
+          className="flex items-center px-4 py-2 text-gray-400 hover:text-yambo-black transition-colors font-medium"
         >
           ← Volver al merch
         </button>
       </div>
 
-      <h1 className="text-3xl font-bold mb-6">Tu Cesta</h1>
+      <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Tu Cesta</h1>
 
       <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Items List */}
@@ -183,7 +177,7 @@ export default function CartPage() {
               : null;
 
             return (
-              <div key={`${item.product.id}-${configKey}`} className="bg-white rounded-lg shadow-md p-3 sm:p-6">
+              <div key={`${item.product.id}-${configKey}`} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-6">
                 <div className="flex gap-3 sm:gap-6">
                   {/* Image */}
                   <div className="flex-shrink-0">
@@ -191,11 +185,11 @@ export default function CartPage() {
                       <img
                         src={item.product.images[0]}
                         alt={item.product.name}
-                        className="w-20 h-20 sm:w-32 sm:h-32 object-cover rounded-lg"
+                        className="w-20 h-20 sm:w-32 sm:h-32 object-cover rounded-xl"
                       />
                     ) : (
-                      <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500 text-xs sm:text-sm">Sin imagen</span>
+                      <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gray-100 rounded-xl flex items-center justify-center">
+                        <span className="text-gray-400 text-xs sm:text-sm">Sin imagen</span>
                       </div>
                     )}
                   </div>
@@ -203,10 +197,10 @@ export default function CartPage() {
                   {/* Details + Subtotal */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">{item.product.name}</h3>
+                      <h3 className="text-base sm:text-lg font-bold font-display text-yambo-black">{item.product.name}</h3>
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-xs text-gray-500">Subtotal</p>
-                        <p className="text-base sm:text-xl font-bold text-gray-900 whitespace-nowrap">
+                        <p className="text-xs text-gray-400">Subtotal</p>
+                        <p className="text-base sm:text-xl font-extrabold text-yambo-black whitespace-nowrap">
                           {(item.price * item.quantity).toFixed(2)} €
                         </p>
                       </div>
@@ -214,11 +208,11 @@ export default function CartPage() {
 
                     {itemDrop && (
                       <div className="mb-2">
-                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium text-xs">
+                        <span className="inline-block bg-yambo-green-50 text-yambo-green-700 px-2.5 py-1 rounded-full font-medium text-xs">
                           {itemDrop.name}
                         </span>
                         {itemDrop.endTms && (
-                          <p className="text-xs text-gray-600 mt-1">
+                          <p className="text-xs text-gray-400 mt-1">
                             Disponible hasta: {new Date(itemDrop.endTms).toLocaleDateString('es-ES', {
                               day: 'numeric',
                               month: 'long',
@@ -230,25 +224,25 @@ export default function CartPage() {
                     )}
 
                     {configText && (
-                      <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                        <span className="font-medium">Configuración:</span> {configText}
+                      <p className="text-xs sm:text-sm text-gray-400 mb-2">
+                        <span className="font-medium text-gray-500">Configuración:</span> {configText}
                       </p>
                     )}
 
-                    <p className="text-sm sm:text-lg font-bold text-blue-600 mb-3 sm:mb-4">{item.price.toFixed(2)} €</p>
+                    <p className="text-sm sm:text-lg font-extrabold text-yambo-green-600 mb-3 sm:mb-4">{item.price.toFixed(2)} €</p>
 
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <button
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity - 1)}
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded border border-gray-300 hover:bg-gray-100 flex items-center justify-center text-sm"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-sm transition-colors"
                         >
                           −
                         </button>
-                        <span className="w-8 sm:w-12 text-center font-medium text-sm sm:text-base">{item.quantity}</span>
+                        <span className="w-8 sm:w-12 text-center font-medium text-sm sm:text-base text-yambo-black">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity + 1)}
-                          className="w-7 h-7 sm:w-8 sm:h-8 rounded border border-gray-300 hover:bg-gray-100 flex items-center justify-center text-sm"
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-sm transition-colors"
                         >
                           +
                         </button>
@@ -256,7 +250,7 @@ export default function CartPage() {
 
                       <button
                         onClick={() => removeItem(item.product.id, configKey)}
-                        className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium"
+                        className="text-coral hover:text-red-700 text-xs sm:text-sm font-medium transition-colors"
                       >
                         Eliminar
                       </button>
@@ -270,22 +264,22 @@ export default function CartPage() {
 
         {/* Order Summary */}
         <div className="lg:sticky lg:top-24 h-fit">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Resumen del pedido</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Resumen del pedido</h2>
 
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Artículos ({getTotalItems()})</span>
-                <span className="font-medium">{getTotalPrice().toFixed(2)} €</span>
+                <span className="text-gray-400">Artículos ({getTotalItems()})</span>
+                <span className="font-medium text-yambo-black">{getTotalPrice().toFixed(2)} €</span>
               </div>
             </div>
 
-            <div className="border-t pt-4 mb-6">
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>{getTotalPrice().toFixed(2)} €</span>
+            <div className="border-t border-gray-100 pt-4 mb-6">
+              <div className="flex justify-between text-lg font-extrabold">
+                <span className="text-yambo-black">Total</span>
+                <span className="text-yambo-green-600">{getTotalPrice().toFixed(2)} €</span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">Coste sin beneficio para la asociación</p>
+              <p className="text-xs text-gray-400 mt-2">Coste sin beneficio para la asociación</p>
             </div>
 
             <ButtonComponent
@@ -303,7 +297,7 @@ export default function CartPage() {
                   clearCart();
                 }
               }}
-              className="w-full text-sm text-gray-600 hover:text-gray-900"
+              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors"
             >
               Vaciar cesta
             </button>

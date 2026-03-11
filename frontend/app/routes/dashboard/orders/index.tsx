@@ -94,7 +94,6 @@ export default function Orders() {
                     setSelectedOrderIssues([]);
                 }
 
-                // Load receipt file URL if available
                 if (selectedOrder.receiptFileId) {
                     try {
                         const file = await fileService.getById(selectedOrder.receiptFileId);
@@ -113,13 +112,13 @@ export default function Orders() {
 
         loadOrderIssues();
     }, [selectedOrder]);
+
     const fetchOrdersData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
             const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
-            // Date range filter from UI overrides the tab-based startDate
             const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
             const effectiveStartDate = dateRange?.startDate
                 ? new Date(dateRange.startDate).toISOString()
@@ -138,7 +137,7 @@ export default function Orders() {
                 effectiveEndDate,
             );
             setAllOrdersOnPage(result.content);
-            setSelectedOrders([]); // Clear selections when data changes
+            setSelectedOrders([]);
             return result;
         },
         [refreshKey, activeTab],
@@ -148,7 +147,7 @@ export default function Orders() {
         try {
             await orderService.updateOrderStatus(orderId, newStatus);
             toast.success("Estado del pedido actualizado");
-            setRefreshKey((prev) => prev + 1); // Refresh table
+            setRefreshKey((prev) => prev + 1);
         } catch (err) {
             toast.error(
                 getErrorMessage(err, "Error al actualizar el estado"),
@@ -270,7 +269,7 @@ export default function Orders() {
                             }
                         }}
                         onChange={toggleSelectAll}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        className="w-4 h-4 text-yambo-green-600 rounded focus:ring-2 focus:ring-yambo-green-500/50 cursor-pointer"
                         title={
                             selectedOrders.length > 0 &&
                             selectedOrders.length === allOrdersOnPage.length
@@ -285,7 +284,7 @@ export default function Orders() {
                     type="checkbox"
                     checked={selectedOrders.includes(order.id)}
                     onChange={() => toggleOrderSelection(order.id)}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="w-4 h-4 text-yambo-green-600 rounded focus:ring-2 focus:ring-yambo-green-500/50 cursor-pointer"
                 />
             ),
         },
@@ -298,7 +297,7 @@ export default function Orders() {
                 placeholder: "Buscar por ID...",
             },
             render: (order: Order) => (
-                <span className="font-mono text-xs">{order.id}</span>
+                <span className="font-mono text-xs text-gray-400">{order.id}</span>
             ),
         },
         {
@@ -311,8 +310,8 @@ export default function Orders() {
             },
             render: (order: Order) => (
                 <div className="text-xs">
-                    <p className="font-medium">{order.user?.name || "N/A"}</p>
-                    <p className="text-gray-500 text-xs">
+                    <p className="font-medium text-yambo-black">{order.user?.name || "N/A"}</p>
+                    <p className="text-gray-400 text-xs">
                         {order.user?.email || ""}
                     </p>
                 </div>
@@ -335,14 +334,14 @@ export default function Orders() {
                 return (
                     <div className="flex flex-col gap-1">
                         <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                                 config?.className || "bg-gray-100 text-gray-800"
                             }`}
                         >
                             {config?.shortLabel || order.status}
                         </span>
                         {order.hasOpenIssues && (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
                                 Inc. Pendientes
                             </span>
                         )}
@@ -358,7 +357,7 @@ export default function Orders() {
                 type: "date-range",
             },
             render: (order: Order) => (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-400">
                     {new Date(order.createdAt).toLocaleDateString()}
                 </span>
             ),
@@ -367,7 +366,7 @@ export default function Orders() {
             key: "products",
             header: "Productos",
             render: (order: Order) => (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-400">
                     {order.products.reduce((sum, p) => sum + p.quantity, 0) ||
                         0}{" "}
                     productos
@@ -384,7 +383,7 @@ export default function Orders() {
                         0,
                     ) || 0;
                 return (
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-yambo-black">
                         {total.toFixed(2)} €
                     </span>
                 );
@@ -404,7 +403,7 @@ export default function Orders() {
                                 onChange={(e) =>
                                     handleStatusChange(order.id, e.target.value)
                                 }
-                                className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50"
                             >
                                 <option value={order.status}>
                                     {currentConfig?.shortLabel || order.status}
@@ -419,14 +418,14 @@ export default function Orders() {
                                 })}
                             </select>
                         ) : (
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${currentConfig?.className || "bg-gray-100 text-gray-800"}`}>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${currentConfig?.className || "bg-gray-100 text-gray-800"}`}>
                                 {currentConfig?.shortLabel || order.status}
                             </span>
                         );
                     })()}
                     <button
                         onClick={() => setSelectedOrder(order)}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                        className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
                         title="Ver detalles"
                     >
                         Ver
@@ -434,7 +433,7 @@ export default function Orders() {
                     {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                         <button
                             onClick={() => setUploadReceiptOrder(order)}
-                            className="text-green-600 hover:text-green-800 text-xs font-medium"
+                            className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
                             title={order.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
                         >
                             <FontAwesomeIcon icon={faUpload} className="w-3 h-3 mr-1" />
@@ -444,7 +443,7 @@ export default function Orders() {
                     {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                         <button
                             onClick={() => setOrderToCancel(order)}
-                            className="text-red-600 hover:text-red-800 text-xs font-medium"
+                            className="text-coral hover:text-red-700 text-xs font-medium transition-colors"
                             title="Cancelar pedido"
                         >
                             Cancelar
@@ -483,14 +482,14 @@ export default function Orders() {
             permission={{ obj: "order", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-bold">Pedidos</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Pedidos</h1>
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setIsExportModalOpen(true)}
                             disabled={isExporting}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-md hover:shadow-yambo-green-500/25 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium"
                         >
                             <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
                             Exportar a Excel
@@ -508,9 +507,9 @@ export default function Orders() {
 
                 {/* Bulk Actions Toolbar */}
                 {selectedOrders.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex items-center gap-4">
+                    <div className="bg-yambo-green-50/50 border border-yambo-green-200 rounded-2xl p-4 mb-4 flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-blue-900">
+                            <span className="text-sm font-medium text-yambo-green-800">
                                 {selectedOrders.length} pedido
                                 {selectedOrders.length !== 1 ? "s" : ""}{" "}
                                 seleccionado
@@ -519,7 +518,6 @@ export default function Orders() {
                         </div>
                         <div className="flex items-center gap-2 flex-1">
                             {(() => {
-                                // Compute intersection of valid transitions for all selected orders
                                 const selectedOrderObjects = allOrdersOnPage.filter(o => selectedOrders.includes(o.id));
                                 const transitionSets = selectedOrderObjects.map(o => ORDER_WORKFLOW_TRANSITIONS[o.status as OrderStatus] || []);
                                 const commonTransitions = transitionSets.length > 0
@@ -529,7 +527,7 @@ export default function Orders() {
                                     <select
                                         value={bulkStatus}
                                         onChange={(e) => setBulkStatus(e.target.value)}
-                                        className="text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50"
                                         disabled={commonTransitions.length === 0}
                                     >
                                         <option value="">
@@ -551,14 +549,14 @@ export default function Orders() {
                             <button
                                 onClick={handleBulkStatusUpdate}
                                 disabled={!bulkStatus}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                className="px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all text-sm font-medium"
                             >
                                 Actualizar
                             </button>
                         </div>
                         <button
                             onClick={() => setSelectedOrders([])}
-                            className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                            className="text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
                         >
                             Cancelar
                         </button>
@@ -589,14 +587,14 @@ export default function Orders() {
                         <button
                             onClick={() => setIsExportModalOpen(false)}
                             disabled={isExporting}
-                            className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                            className="px-4 py-2 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-60 transition-colors"
                         >
                             Cancelar
                         </button>
                         <button
                             onClick={exportToExcel}
                             disabled={isExporting}
-                            className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            className="px-4 py-2 rounded-full bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white hover:shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
                         >
                             {isExporting ? "Exportando..." : "Exportar"}
                         </button>
@@ -604,7 +602,7 @@ export default function Orders() {
                 }
             >
                 <div className="flex flex-col gap-4">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-400">
                         Selecciona los drops a incluir. Si no eliges ninguno, se exportan todos.
                     </p>
                     <MultiSelectComponent
@@ -624,7 +622,7 @@ export default function Orders() {
                             setSelectedDropIds(values);
                         }}
                     />
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-400">
                         Se excluyen automáticamente los pedidos pendientes de pago y cancelados.
                         El archivo incluye una hoja resumen y una hoja por producto con configuraciones detalladas.
                     </div>
@@ -634,20 +632,20 @@ export default function Orders() {
             {/* Order Details Modal */}
             {selectedOrder && (
                 <div
-                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
                     onClick={() => setSelectedOrder(null)}
                 >
                     <div
-                        className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
+                        className="bg-white rounded-3xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden bounce-in"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <div className="bg-yambo-green-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">
+                                <h2 className="text-xl font-extrabold font-display text-yambo-black">
                                     Detalles del Pedido
                                 </h2>
-                                <p className="text-sm text-gray-600 mt-1">
+                                <p className="text-sm text-gray-400 mt-1">
                                     ID:{" "}
                                     <span className="font-mono">
                                         {selectedOrder.id}
@@ -656,7 +654,7 @@ export default function Orders() {
                             </div>
                             <button
                                 onClick={() => setSelectedOrder(null)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                className="text-gray-300 hover:text-gray-500 transition-colors"
                             >
                                 <FontAwesomeIcon icon={faXmark} className="w-6 h-6" />
                             </button>
@@ -665,15 +663,15 @@ export default function Orders() {
                         {/* Modal Body */}
                         <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
                             {/* Order Info */}
-                            <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
+                            <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-100">
                                 <div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-gray-400">
                                         Cliente
                                     </p>
-                                    <p className="text-sm font-medium">
+                                    <p className="text-sm font-medium text-yambo-black">
                                         {selectedOrder.user?.name || "N/A"}
                                     </p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-gray-400">
                                         <a
                                             href={`mailto:${selectedOrder.user?.email || ""}`}
                                         >
@@ -682,7 +680,7 @@ export default function Orders() {
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-gray-400">
                                         Estado
                                     </p>
                                     <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -719,17 +717,17 @@ export default function Orders() {
                                             );
                                         })()}
                                         {selectedOrder.hasOpenIssues && (
-                                            <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+                                            <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-amber-50 text-amber-700">
                                                 Incidencias Pendientes
                                             </span>
                                         )}
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-gray-400">
                                         Fecha de creación
                                     </p>
-                                    <p className="text-sm font-medium">
+                                    <p className="text-sm font-medium text-yambo-black">
                                         {new Date(
                                             selectedOrder.createdAt,
                                         ).toLocaleString("es-ES", {
@@ -745,15 +743,15 @@ export default function Orders() {
 
                             {/* Receipt File */}
                             {(selectedOrder.status === "PENDING_PAYMENT" || selectedOrder.status === "CONFIRMING_PAYMENT") && (
-                                <div className="mb-6 pb-6 border-b border-gray-200">
-                                    <p className="text-sm text-gray-600 mb-2">Justificante de pago</p>
+                                <div className="mb-6 pb-6 border-b border-gray-100">
+                                    <p className="text-sm text-gray-400 mb-2">Justificante de pago</p>
                                     <div className="flex items-center gap-3">
                                         {selectedOrder.receiptFileId && receiptFileUrl && (
                                             <a
                                                 href={receiptFileUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                                                className="inline-flex items-center gap-2 px-3 py-2 bg-yambo-green-50 text-yambo-green-700 rounded-xl hover:bg-yambo-green-100 transition-colors text-sm font-medium"
                                             >
                                                 <FontAwesomeIcon icon={faFileArrowDown} className="w-4 h-4" />
                                                 Ver justificante
@@ -761,7 +759,7 @@ export default function Orders() {
                                         )}
                                         <button
                                             onClick={() => setUploadReceiptOrder(selectedOrder)}
-                                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
+                                            className="inline-flex items-center gap-2 px-3 py-2 bg-yambo-green-50 text-yambo-green-700 rounded-xl hover:bg-yambo-green-100 transition-colors text-sm font-medium"
                                         >
                                             <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                                             {selectedOrder.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
@@ -772,7 +770,7 @@ export default function Orders() {
 
                             {/* Products */}
                             <div>
-                                <h3 className="text-lg font-semibold mb-4">
+                                <h3 className="text-lg font-bold font-display text-yambo-black mb-4">
                                     Productos
                                 </h3>
                                 <div className="space-y-4">
@@ -792,21 +790,21 @@ export default function Orders() {
                                                 return (
                                                     <div
                                                         key={`${selectedOrder.id}-${product.productId}-${idx}`}
-                                                        className="bg-gray-50 rounded-lg p-4"
+                                                        className="bg-gray-50/50 rounded-2xl p-4"
                                                     >
                                                         <div className="flex justify-between items-start mb-2">
                                                             <div className="flex-1">
-                                                                <p className="font-medium text-gray-900">
+                                                                <p className="font-medium text-yambo-black">
                                                                     {product.productName ||
                                                                         product.productId}
                                                                 </p>
                                                                 {productDrop && (
                                                                     <div className="mt-1 mb-2">
-                                                                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium text-xs">
+                                                                        <span className="inline-block bg-yambo-green-50 text-yambo-green-700 px-2.5 py-1 rounded-full font-medium text-xs">
                                                                             {productDrop.name}
                                                                         </span>
                                                                         {productDrop.endTms && (
-                                                                            <span className="text-xs text-gray-600 ml-2">
+                                                                            <span className="text-xs text-gray-400 ml-2">
                                                                                 Disponible hasta: {new Date(productDrop.endTms).toLocaleDateString('es-ES', {
                                                                                     day: 'numeric',
                                                                                     month: 'long',
@@ -819,8 +817,8 @@ export default function Orders() {
                                                                 {product.configuration &&
                                                                     product.configuration !==
                                                                         "{}" && (
-                                                                        <p className="text-sm text-gray-600 mt-1">
-                                                                            <span className="font-medium">
+                                                                        <p className="text-sm text-gray-400 mt-1">
+                                                                            <span className="font-medium text-gray-500">
                                                                                 Configuración:
                                                                             </span>{" "}
                                                                             {formatConfiguration(
@@ -836,7 +834,7 @@ export default function Orders() {
                                                                                 setSelectedOrder(null);
                                                                                 navigate(`/mi-espacio/incidencias/${productIssue.id}`);
                                                                             }}
-                                                                            className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                                                            className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium transition-colors"
                                                                         >
                                                                             Ver incidencia
                                                                         </button>
@@ -844,10 +842,10 @@ export default function Orders() {
                                                                 )}
                                                         </div>
                                                         <div className="text-right ml-4">
-                                                            <p className="text-sm text-gray-600">
+                                                            <p className="text-sm text-gray-400">
                                                                 Precio unitario
                                                             </p>
-                                                            <p className="font-bold text-blue-600">
+                                                            <p className="font-bold text-yambo-green-600">
                                                                 {product.price.toFixed(
                                                                     2,
                                                                 )}{" "}
@@ -855,10 +853,10 @@ export default function Orders() {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                                                        <p className="text-sm text-gray-600">
+                                                    <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                                                        <p className="text-sm text-gray-400">
                                                             Cantidad:{" "}
-                                                            <span className="font-medium text-gray-900">
+                                                            <span className="font-medium text-yambo-black">
                                                                 {
                                                                     product.quantity
                                                                 }
@@ -866,7 +864,7 @@ export default function Orders() {
                                                         </p>
                                                         <p className="text-sm">
                                                             Subtotal:{" "}
-                                                            <span className="font-bold text-gray-900">
+                                                            <span className="font-bold text-yambo-black">
                                                                 {(
                                                                     product.price *
                                                                     product.quantity
@@ -882,7 +880,7 @@ export default function Orders() {
                                             },
                                         )
                                     ) : (
-                                        <p className="text-gray-500 italic text-center py-4">
+                                        <p className="text-gray-400 italic text-center py-4">
                                             Sin productos
                                         </p>
                                     )}
@@ -891,10 +889,10 @@ export default function Orders() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-                            <div className="text-lg font-bold text-gray-900">
+                        <div className="bg-yambo-green-50/30 px-6 py-4 border-t border-gray-100 flex justify-between items-center">
+                            <div className="text-lg font-bold text-yambo-black">
                                 Total del pedido:
-                                <span className="ml-2 text-2xl text-blue-600">
+                                <span className="ml-2 text-2xl text-yambo-green-600 font-extrabold">
                                     {selectedOrder.products
                                         ?.reduce(
                                             (total, p) =>
@@ -909,14 +907,14 @@ export default function Orders() {
                                 {(selectedOrder.status === "PENDING_PAYMENT" || selectedOrder.status === "CONFIRMING_PAYMENT") && (
                                     <button
                                         onClick={() => setOrderToCancel(selectedOrder)}
-                                        className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                                        className="px-4 py-2 bg-coral/10 text-coral rounded-full hover:bg-coral/20 transition-colors text-sm font-medium"
                                     >
                                         Cancelar pedido
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setSelectedOrder(null)}
-                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                    className="px-4 py-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
                                 >
                                     Cerrar
                                 </button>
@@ -947,8 +945,8 @@ export default function Orders() {
             >
                 {uploadReceiptOrder && (
                     <div className="space-y-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p className="text-sm text-blue-800">
+                        <div className="bg-yambo-green-50/50 border border-yambo-green-100 rounded-2xl p-4">
+                            <p className="text-sm text-yambo-green-800">
                                 Sube el justificante de pago para el pedido{" "}
                                 <strong>#{uploadReceiptOrder.id}</strong> del cliente{" "}
                                 <strong>{uploadReceiptOrder.user?.name}</strong>.
@@ -967,7 +965,7 @@ export default function Orders() {
                                 maxSizeMb={10}
                             />
                         )}
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-400">
                             Formatos aceptados: imágenes (JPG, PNG) y PDF. Tamaño máximo: 10 MB.
                         </div>
                     </div>
@@ -977,5 +975,3 @@ export default function Orders() {
 
     );
 }
-
-

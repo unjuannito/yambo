@@ -24,7 +24,6 @@ export default function ActivitiesAdminPage() {
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [editing, setEditing] = useState<string | null>(null);
 
-    // Form state for create/edit
     const [form, setForm] = useState({
         name: "",
         description: "",
@@ -35,7 +34,6 @@ export default function ActivitiesAdminPage() {
         managerId: "",
     });
 
-    // Project and manager options
     const [projectOptions, setProjectOptions] = useState<
         { value: string; label: string }[]
     >([]);
@@ -43,7 +41,6 @@ export default function ActivitiesAdminPage() {
         { value: string; label: string }[]
     >([]);
 
-    // Fetch projects and managers for select fields
     useEffect(() => {
         async function fetchProjects() {
             const { content } = await projectService.listProjects(0, 50);
@@ -64,7 +61,6 @@ export default function ActivitiesAdminPage() {
         fetchManagers();
     }, []);
 
-    // Columns definition
     const columns: FilterableColumn<Activity>[] = [
         {
             key: "name",
@@ -75,7 +71,7 @@ export default function ActivitiesAdminPage() {
                 placeholder: "Buscar nombre",
             },
             render: (a: Activity) => (
-                <span className="font-semibold">{a.name}</span>
+                <span className="font-semibold text-yambo-black">{a.name}</span>
             ),
         },
         {
@@ -86,7 +82,7 @@ export default function ActivitiesAdminPage() {
                 type: "date-range" as const,
             },
             render: (a: Activity) => (
-                <span>
+                <span className="text-gray-500">
                     {a.date ? new Date(a.date).toLocaleDateString() : "-"}
                 </span>
             ),
@@ -114,7 +110,7 @@ export default function ActivitiesAdminPage() {
             render: (a: Activity) =>
                 a.status ? (
                     <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
                         style={{ backgroundColor: a.status.color }}
                     >
                         {a.status.label}
@@ -142,7 +138,11 @@ export default function ActivitiesAdminPage() {
                 enabled: true,
                 type: "toggle" as const,
             },
-            render: (a: Activity) => <span>{a.public ? "Sí" : "No"}</span>,
+            render: (a: Activity) => (
+                <span className={a.public ? "text-yambo-green-600 font-medium" : "text-gray-400"}>
+                    {a.public ? "Sí" : "No"}
+                </span>
+            ),
         },
         {
             key: "actions",
@@ -173,7 +173,6 @@ export default function ActivitiesAdminPage() {
         },
     ];
 
-    // Fetch activities from backend
     const fetchData = async ({
         page,
         size,
@@ -187,7 +186,6 @@ export default function ActivitiesAdminPage() {
             totalPages: number;
         };
     }> => {
-        // Date range filter
         const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
         const startDate = dateRange?.startDate
             ? new Date(dateRange.startDate).toISOString()
@@ -218,7 +216,6 @@ export default function ActivitiesAdminPage() {
         };
     };
 
-    // Handle edit click
     const handleEditClick = (activity: Activity) => {
         setSelectedActivity(activity);
         setEditing(activity.id);
@@ -234,7 +231,6 @@ export default function ActivitiesAdminPage() {
         setFormModalOpen(true);
     };
 
-    // Handle create click
     const handleCreateClick = () => {
         setSelectedActivity(null);
         setEditing(null);
@@ -250,12 +246,10 @@ export default function ActivitiesAdminPage() {
         setFormModalOpen(true);
     };
 
-    // Handle form changes
     const handleFormChange = (field: string, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
-    // Handle form submit (create or edit)
     const handleFormSubmit = async () => {
         if (editing) {
             await activityService.updateActivity(editing, form);
@@ -267,8 +261,8 @@ export default function ActivitiesAdminPage() {
     };
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-            <h1 className="text-3xl font-bold mb-6">Panel de actividades</h1>
+        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Panel de actividades</h1>
             <div className="mb-4">
                 <ButtonComponent variant="success" onClick={handleCreateClick}>
                     Crear actividad
@@ -279,7 +273,7 @@ export default function ActivitiesAdminPage() {
                 keyField="id"
                 serverSide={{ fetchData }}
                 features={{ enableFilters: true, enablePagination: true }}
-                className="bg-white rounded-lg shadow p-4"
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4"
             />
             {/* Detalles modal */}
             <Modal
@@ -294,7 +288,7 @@ export default function ActivitiesAdminPage() {
                             <MarkdownEditor
                                 value={selectedActivity.description || "-"}
                                 readOnly
-                                className="border rounded"
+                                className="border rounded-xl"
                             />
                         </LabelComponent>
                         <LabelComponent label="Fecha">

@@ -169,7 +169,7 @@ export default function NominativeInvitations() {
             key: "id",
             header: "ID",
             render: (invitation) => (
-                <span className="font-mono text-xs">{invitation.id}</span>
+                <span className="font-mono text-xs text-gray-400">{invitation.id}</span>
             ),
         },
         {
@@ -180,20 +180,22 @@ export default function NominativeInvitations() {
                 type: "search",
                 placeholder: "Buscar email...",
             },
-            render: (invitation) => <span>{invitation.email}</span>,
+            render: (invitation) => (
+                <span className="font-medium text-yambo-black">{invitation.email}</span>
+            ),
         },
         {
             key: "invitedByUser" as any,
             header: "Invitado por",
             render: (invitation) => (
-                <span>{invitation.invitedByUser?.name || "N/A"}</span>
+                <span className="text-gray-500">{invitation.invitedByUser?.name || "N/A"}</span>
             ),
         },
         {
             key: "createdAt",
             header: "Creado",
             render: (invitation) => (
-                <span>
+                <span className="text-sm text-gray-400">
                     {new Date(invitation.createdAt).toLocaleDateString()}
                 </span>
             ),
@@ -202,7 +204,7 @@ export default function NominativeInvitations() {
             key: "expiresAt",
             header: "Expira",
             render: (invitation) => (
-                <span>
+                <span className="text-sm text-gray-400">
                     {new Date(invitation.expiresAt).toLocaleDateString()}
                 </span>
             ),
@@ -222,9 +224,11 @@ export default function NominativeInvitations() {
             },
             render: (invitation) => (
                 <span
-                    className={
-                        invitation.used ? "text-green-600" : "text-red-600"
-                    }
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                        invitation.used
+                            ? "bg-yambo-green-50 text-yambo-green-700"
+                            : "bg-coral/10 text-coral"
+                    }`}
                 >
                     {invitation.used ? "Sí" : "No"}
                 </span>
@@ -256,9 +260,11 @@ export default function NominativeInvitations() {
             permission={{ obj: "invitation", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Invitaciones Nominativas</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">
+                        Invitaciones Nominativas
+                    </h1>
                     <RequirePermission
                         permission={{ obj: "invitation", action: "create" }}
                         redirect={false}
@@ -282,7 +288,7 @@ export default function NominativeInvitations() {
 
                 <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-                <section className="bg-white rounded-lg shadow p-6">
+                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                     {loading ? (
                         <div className="flex justify-center py-8">
                             <LoadingSpinner size="md" message="Cargando invitaciones..." />
@@ -386,11 +392,11 @@ export default function NominativeInvitations() {
                 >
                     <div className="flex flex-col gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">
                                 Emails (uno por línea o separados por comas)
                             </label>
                             <textarea
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 transition-colors"
                                 rows={6}
                                 value={batchEmails}
                                 onChange={(e) => setBatchEmails(e.target.value)}

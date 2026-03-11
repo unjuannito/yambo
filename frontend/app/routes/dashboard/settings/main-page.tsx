@@ -224,7 +224,7 @@ export default function MainPageEditor() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                     <LoadingSpinner message="Cargando configuración..." size="lg" />
                 </main>
             </RequirePermission>
@@ -234,7 +234,7 @@ export default function MainPageEditor() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                     <ErrorMessage message={error} onRetry={loadSettings} />
                 </main>
             </RequirePermission>
@@ -243,19 +243,20 @@ export default function MainPageEditor() {
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-6">Editor de Página Principal</h1>
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Editor de Página Principal 🏠</h1>
+                <p className="text-gray-400 mb-6">Personaliza el contenido visible en la página de inicio.</p>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 mb-6">
+                <div className="flex border-b border-gray-100 mb-6">
                     {tabs.map(tab => (
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
                             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                                 activeTab === tab.key
-                                    ? "border-blue-500 text-blue-600"
-                                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    ? "border-yambo-green-500 text-yambo-green-600"
+                                    : "border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300"
                             }`}
                         >
                             {tab.label}
@@ -265,10 +266,10 @@ export default function MainPageEditor() {
 
                 {/* Sections Tab */}
                 {activeTab === "sections" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-6">
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
                         <div>
-                            <h2 className="text-xl font-semibold mb-1">Configuración de Secciones</h2>
-                            <p className="text-sm text-gray-500 mb-4">
+                            <h2 className="text-xl font-bold font-display text-yambo-black mb-1">Configuración de Secciones</h2>
+                            <p className="text-sm text-gray-400 mb-4">
                                 Configura el orden, visibilidad y títulos de cada sección de la página principal.
                             </p>
                         </div>
@@ -277,9 +278,9 @@ export default function MainPageEditor() {
                             {sections.map((section, index) => (
                                 <div
                                     key={section.id}
-                                    className={`border rounded-lg p-4 transition-colors ${
+                                    className={`border rounded-2xl p-4 transition-colors ${
                                         section.visible
-                                            ? "bg-white border-gray-200"
+                                            ? "bg-white border-gray-100"
                                             : "bg-gray-50 border-gray-100 opacity-60"
                                     }`}
                                 >
@@ -311,9 +312,9 @@ export default function MainPageEditor() {
                                         <button
                                             type="button"
                                             onClick={() => toggleSectionVisibility(index)}
-                                            className={`p-2 rounded-lg transition-colors ${
+                                            className={`p-2 rounded-full transition-colors ${
                                                 section.visible
-                                                    ? "text-green-600 hover:bg-green-50"
+                                                    ? "text-yambo-green-600 hover:bg-yambo-green-50"
                                                     : "text-gray-400 hover:bg-gray-100"
                                             }`}
                                             title={section.visible ? "Ocultar sección" : "Mostrar sección"}
@@ -332,7 +333,7 @@ export default function MainPageEditor() {
                                                 </span>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                                                     section.visible
-                                                        ? "bg-green-100 text-green-700"
+                                                        ? "bg-yambo-green-50 text-yambo-green-700"
                                                         : "bg-gray-100 text-gray-500"
                                                 }`}>
                                                     {section.visible ? "Visible" : "Oculto"}
@@ -344,7 +345,7 @@ export default function MainPageEditor() {
                                                     value={section.title}
                                                     onChange={(e) => updateSectionTitle(index, e.target.value)}
                                                     placeholder={SECTION_LABELS[section.id] || "Título de sección"}
-                                                    className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full border border-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                                 />
                                             )}
                                             {section.id === "hero" && (
@@ -363,7 +364,7 @@ export default function MainPageEditor() {
                             ))}
                         </div>
 
-                        <div className="flex justify-end pt-4 border-t">
+                        <div className="flex justify-end pt-4 border-t border-gray-100">
                             <ButtonComponent
                                 variant="primary"
                                 onClick={handleSaveSections}
@@ -377,10 +378,10 @@ export default function MainPageEditor() {
 
                 {/* Hero Tab */}
                 {activeTab === "hero" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-6">
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
                         <div>
-                            <h2 className="text-xl font-semibold mb-1">Sección Hero</h2>
-                            <p className="text-sm text-gray-500 mb-4">
+                            <h2 className="text-xl font-bold font-display text-yambo-black mb-1">Sección Hero</h2>
+                            <p className="text-sm text-gray-400 mb-4">
                                 La cabecera principal de la página de inicio.
                             </p>
                         </div>
@@ -395,7 +396,7 @@ export default function MainPageEditor() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Subtítulo</label>
                             <textarea
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-y"
                                 rows={3}
                                 maxLength={500}
                                 value={heroSubtitle}
@@ -419,7 +420,7 @@ export default function MainPageEditor() {
                         {heroImage && (
                             <div>
                                 <p className="text-sm font-medium text-gray-700 mb-2">Vista previa</p>
-                                <div className="relative rounded-lg overflow-hidden h-48 bg-gray-100">
+                                <div className="relative rounded-2xl overflow-hidden h-48 bg-gray-100">
                                     <img
                                         src={heroImage}
                                         alt="Vista previa hero"
@@ -430,7 +431,7 @@ export default function MainPageEditor() {
                                     />
                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                         <div className="text-center text-white">
-                                            <p className="text-2xl font-bold">{heroTitle || "Título"}</p>
+                                            <p className="text-2xl font-extrabold font-display">{heroTitle || "Título"}</p>
                                             <p className="text-sm mt-1">{heroSubtitle || "Subtítulo"}</p>
                                         </div>
                                     </div>
@@ -438,7 +439,7 @@ export default function MainPageEditor() {
                             </div>
                         )}
 
-                        <div className="flex justify-end pt-4 border-t">
+                        <div className="flex justify-end pt-4 border-t border-gray-100">
                             <ButtonComponent
                                 variant="primary"
                                 onClick={handleSaveHero}
@@ -452,10 +453,10 @@ export default function MainPageEditor() {
 
                 {/* About Tab */}
                 {activeTab === "about" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-6">
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
                         <div>
-                            <h2 className="text-xl font-semibold mb-1">Sección Sobre Nosotros</h2>
-                            <p className="text-sm text-gray-500 mb-4">
+                            <h2 className="text-xl font-bold font-display text-yambo-black mb-1">Sección Sobre Nosotros</h2>
+                            <p className="text-sm text-gray-400 mb-4">
                                 Texto introductorio y puntos destacados.
                             </p>
                         </div>
@@ -463,7 +464,7 @@ export default function MainPageEditor() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Texto introductorio</label>
                             <textarea
-                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-y"
                                 rows={4}
                                 maxLength={1000}
                                 value={aboutIntro}
@@ -490,7 +491,7 @@ export default function MainPageEditor() {
                                 <img
                                     src={aboutImage}
                                     alt="Vista previa about"
-                                    className="rounded-lg max-h-48 object-cover"
+                                    className="rounded-2xl max-h-48 object-cover"
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).style.display = "none";
                                     }}
@@ -511,10 +512,10 @@ export default function MainPageEditor() {
                                 {aboutBullets.map((bullet, index) => (
                                     <div
                                         key={index}
-                                        className="border rounded-lg p-4 bg-gray-50 relative"
+                                        className="border border-gray-100 rounded-2xl p-4 bg-yambo-green-50/30 relative"
                                     >
                                         <div className="flex items-center justify-between mb-3">
-                                            <span className="text-xs font-semibold text-gray-500 uppercase">
+                                            <span className="text-xs font-semibold text-gray-400 uppercase">
                                                 Punto {index + 1}
                                             </span>
                                             <div className="flex gap-1">
@@ -540,7 +541,7 @@ export default function MainPageEditor() {
                                                     type="button"
                                                     onClick={() => removeBullet(index)}
                                                     disabled={aboutBullets.length <= 1}
-                                                    className="p-1 text-red-400 hover:text-red-600 disabled:opacity-30"
+                                                    className="p-1 text-coral hover:text-coral/80 disabled:opacity-30"
                                                     title="Eliminar"
                                                 >
                                                     <FontAwesomeIcon icon={faXmark} className="w-4 h-4" />
@@ -550,20 +551,20 @@ export default function MainPageEditor() {
 
                                         <div className="grid grid-cols-1 md:grid-cols-[4rem_1fr] gap-3">
                                             <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Icono</label>
+                                                <label className="block text-xs text-gray-400 mb-1">Icono</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full border rounded px-2 py-2 text-center text-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full border border-gray-100 rounded-xl px-2 py-2 text-center text-xl focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                                     value={bullet.icon}
                                                     maxLength={4}
                                                     onChange={(e) => updateBullet(index, "icon", e.target.value)}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Título</label>
+                                                <label className="block text-xs text-gray-400 mb-1">Título</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                                     value={bullet.title}
                                                     placeholder="Título del punto"
                                                     onChange={(e) => updateBullet(index, "title", e.target.value)}
@@ -572,9 +573,9 @@ export default function MainPageEditor() {
                                         </div>
 
                                         <div className="mt-3">
-                                            <label className="block text-xs text-gray-500 mb-1">Descripción</label>
+                                            <label className="block text-xs text-gray-400 mb-1">Descripción</label>
                                             <textarea
-                                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-y"
                                                 rows={2}
                                                 maxLength={300}
                                                 value={bullet.description}
@@ -584,10 +585,10 @@ export default function MainPageEditor() {
                                         </div>
 
                                         <div className="mt-3">
-                                            <label className="block text-xs text-gray-500 mb-1">Enlace (opcional)</label>
+                                            <label className="block text-xs text-gray-400 mb-1">Enlace (opcional)</label>
                                             <input
                                                 type="text"
-                                                className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                                 value={bullet.link}
                                                 placeholder="/ruta o https://..."
                                                 onChange={(e) => updateBullet(index, "link", e.target.value)}
@@ -598,7 +599,7 @@ export default function MainPageEditor() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-4 border-t">
+                        <div className="flex justify-end pt-4 border-t border-gray-100">
                             <ButtonComponent
                                 variant="primary"
                                 onClick={handleSaveAbout}

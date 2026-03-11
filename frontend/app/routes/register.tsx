@@ -55,9 +55,7 @@ export default function Register() {
             hasAppliedInvitation.current = true;
             setLoading(true);
             try {
-                await invitationService.acceptInvitation(
-                    inviteToken,
-                );
+                await invitationService.acceptInvitation(inviteToken);
                 toast.success("Invitación aplicada correctamente.");
                 await reload();
                 navigate("/mi-espacio", { replace: true });
@@ -115,7 +113,6 @@ export default function Register() {
         setLoading(true);
         try {
             if (isInvite) {
-                // Invitation flow
                 await invitationService.acceptInvitation(
                     inviteToken!,
                     {
@@ -125,11 +122,9 @@ export default function Register() {
                     }
                 );
                 toast.success("Registro exitoso. Iniciando sesión...");
-                // Login after registration
                 await authLogin(formData.email, formData.password);
                 navigate("/mi-espacio", { replace: true });
             } else {
-                // Nominative invitation flow
                 await nominativeInvitationService.register(
                     invitationToken!,
                     {
@@ -156,9 +151,6 @@ export default function Register() {
                     case "Invitation not found":
                         toast.error("El token de invitación no es válido.");
                         break;
-                    case "Invitation expired":
-                        toast.error("El token de invitación ha expirado.");
-                        break;
                     default:
                         toast.error("Error al registrar el usuario.");
                 }
@@ -170,22 +162,21 @@ export default function Register() {
         }
     }
 
-    // Guard: redirect if no token present
     if (!invitationToken && !inviteToken) {
         return null;
     }
 
     const invitationBanner = isInvite ? (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-700">
-                Registro con invitación
+        <div className="p-3 bg-yambo-purple-50 border border-yambo-purple-200 rounded-2xl">
+            <p className="text-xs text-yambo-purple-700 font-medium">
+                ✨ Registro con invitación
             </p>
         </div>
     ) : undefined;
 
     const footer = isInvite ? (
         <>
-            <p className="text-sm text-center text-gray-600 mb-3">
+            <p className="text-sm text-center text-gray-500 mb-3">
                 ¿Ya tienes una cuenta?
             </p>
             <ButtonComponent
@@ -266,7 +257,7 @@ export default function Register() {
                     type="submit"
                     className="w-full"
                     variant="primary"
-                    loading={loading}
+                    isLoading={loading}
                     disabled={
                         loading ||
                         !formData.name.trim() ||

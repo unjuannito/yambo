@@ -29,13 +29,11 @@ export default function PaymentInstructions({
             try {
                 const settings = await settingsService.getAllSettings();
 
-                // Find IBAN setting
                 const ibanSetting = settings.find((s) => s.key === "bank.iban");
                 if (ibanSetting) {
                     setIban(ibanSetting.value);
                 }
 
-                // Find legal name setting
                 const legalNameSetting = settings.find(
                     (s) => s.key === "organization.legal_name",
                 );
@@ -64,11 +62,11 @@ export default function PaymentInstructions({
 
     if (loading) {
         return (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-white rounded-3xl p-8 max-w-2xl w-full mx-4">
                     <div className="text-center py-12">
-                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                        <p className="mt-4 text-gray-600">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yambo-green-500 mx-auto"></div>
+                        <p className="mt-4 text-gray-400">
                             Cargando información de pago...
                         </p>
                     </div>
@@ -78,17 +76,17 @@ export default function PaymentInstructions({
     }
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto bounce-in">
                 {/* Header */}
-                <div className="bg-green-600 text-white p-6 rounded-t-lg">
-                    <div className="flex items-center justify-center mb-2">
+                <div className="bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white p-8 rounded-t-3xl">
+                    <div className="flex items-center justify-center mb-3">
                         <FontAwesomeIcon
                             icon={faCircleCheck}
                             className="w-16 h-16"
                         />
                     </div>
-                    <h2 className="text-2xl font-bold text-center">
+                    <h2 className="text-2xl font-extrabold font-display text-center">
                         ¡Pedido realizado con éxito!
                     </h2>
                     <p className="text-center text-green-100 mt-2">
@@ -97,18 +95,18 @@ export default function PaymentInstructions({
                 </div>
 
                 {/* Payment Instructions */}
-                <div className="p-6 space-y-6">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="p-6 md:p-8 space-y-6">
+                    <div className="bg-yambo-green-50/30 border border-yambo-green-200 rounded-2xl p-4">
                         <div className="flex items-start gap-3">
                             <FontAwesomeIcon
                                 icon={faCircleInfo}
-                                className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1"
+                                className="w-6 h-6 text-yambo-green-600 flex-shrink-0 mt-1"
                             />
                             <div>
-                                <h3 className="font-semibold text-blue-900 mb-1">
+                                <h3 className="font-bold text-yambo-black mb-1">
                                     Instrucciones de pago
                                 </h3>
-                                <p className="text-sm text-blue-800">
+                                <p className="text-sm text-gray-600">
                                     Para completar tu pedido, realiza una
                                     transferencia bancaria con los siguientes
                                     datos:
@@ -120,13 +118,13 @@ export default function PaymentInstructions({
                     {/* Payment Details */}
                     <div className="space-y-4">
                         {/* Amount */}
-                        <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                        <div className="border border-gray-100 rounded-2xl p-5 bg-yambo-green-50/20">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-600 font-medium">
+                                    <p className="text-sm text-gray-400 font-semibold">
                                         Importe
                                     </p>
-                                    <p className="text-3xl font-bold text-gray-900 mt-1">
+                                    <p className="text-3xl font-extrabold font-display text-yambo-black mt-1">
                                         {totalAmount.toFixed(2)} €
                                     </p>
                                 </div>
@@ -137,7 +135,7 @@ export default function PaymentInstructions({
                                             "Importe",
                                         )
                                     }
-                                    className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                    className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-semibold"
                                 >
                                     Copiar
                                 </button>
@@ -146,13 +144,13 @@ export default function PaymentInstructions({
 
                         {/* Beneficiary */}
                         {legalName && (
-                            <div className="border border-gray-300 rounded-lg p-4">
+                            <div className="border border-gray-100 rounded-2xl p-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                        <p className="text-sm text-gray-600 font-medium mb-1">
+                                        <p className="text-sm text-gray-400 font-semibold mb-1">
                                             Beneficiario
                                         </p>
-                                        <p className="text-lg font-semibold text-gray-900">
+                                        <p className="text-lg font-bold text-yambo-black">
                                             {legalName}
                                         </p>
                                     </div>
@@ -163,7 +161,7 @@ export default function PaymentInstructions({
                                                 "Beneficiario",
                                             )
                                         }
-                                        className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                        className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-semibold"
                                     >
                                         Copiar
                                     </button>
@@ -173,13 +171,13 @@ export default function PaymentInstructions({
 
                         {/* IBAN */}
                         {iban && (
-                            <div className="border border-gray-300 rounded-lg p-4">
+                            <div className="border border-gray-100 rounded-2xl p-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
-                                        <p className="text-sm text-gray-600 font-medium mb-1">
+                                        <p className="text-sm text-gray-400 font-semibold mb-1">
                                             IBAN
                                         </p>
-                                        <p className="text-lg font-mono font-semibold text-gray-900 break-all">
+                                        <p className="text-lg font-mono font-bold text-yambo-black break-all">
                                             {iban}
                                         </p>
                                     </div>
@@ -187,7 +185,7 @@ export default function PaymentInstructions({
                                         onClick={() =>
                                             copyToClipboard(iban, "IBAN")
                                         }
-                                        className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors ml-2"
+                                        className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-semibold ml-2"
                                     >
                                         Copiar
                                     </button>
@@ -196,22 +194,22 @@ export default function PaymentInstructions({
                         )}
 
                         {/* Payment Reference/Concept */}
-                        <div className="border border-gray-300 rounded-lg p-4 bg-yellow-50 border-yellow-300">
+                        <div className="border border-amber-200 rounded-2xl p-5 bg-amber-50/50">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <p className="text-sm text-gray-900 font-medium">
+                                        <p className="text-sm text-yambo-black font-bold">
                                             Concepto (IMPORTANTE)
                                         </p>
                                         <FontAwesomeIcon
                                             icon={faTriangleExclamation}
-                                            className="w-5 h-5 text-yellow-600"
+                                            className="w-5 h-5 text-amber-500"
                                         />
                                     </div>
-                                    <p className="text-lg font-mono font-bold text-gray-900 mb-2">
+                                    <p className="text-lg font-mono font-extrabold text-yambo-black mb-2">
                                         {paymentReference}
                                     </p>
-                                    <p className="text-sm text-gray-700">
+                                    <p className="text-sm text-gray-600">
                                         Es imprescindible incluir este concepto
                                         para identificar tu pago
                                     </p>
@@ -223,7 +221,7 @@ export default function PaymentInstructions({
                                             "Concepto",
                                         )
                                     }
-                                    className="px-3 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors flex-shrink-0"
+                                    className="px-4 py-2 text-sm bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-full hover:from-amber-500 hover:to-amber-600 transition-all font-semibold flex-shrink-0"
                                 >
                                     Copiar
                                 </button>
@@ -232,11 +230,11 @@ export default function PaymentInstructions({
                     </div>
 
                     {/* Additional Info */}
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                        <h4 className="font-semibold text-gray-900">
+                    <div className="bg-gray-50/50 rounded-2xl p-5 space-y-2 border border-gray-100">
+                        <h4 className="font-bold text-yambo-black">
                             Información adicional:
                         </h4>
-                        <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                        <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
                             <li>
                                 El pedido se procesará una vez confirmemos el
                                 pago
@@ -258,17 +256,17 @@ export default function PaymentInstructions({
                     </div>
 
                     {/* Upload Receipt Reminder */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-4">
                         <div className="flex items-start gap-3">
                             <FontAwesomeIcon
                                 icon={faUpload}
-                                className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1"
+                                className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1"
                             />
                             <div>
-                                <h3 className="font-semibold text-amber-900 mb-1">
+                                <h3 className="font-bold text-yambo-black mb-1">
                                     Recuerda subir tu justificante de pago
                                 </h3>
-                                <p className="text-sm text-amber-800">
+                                <p className="text-sm text-gray-600">
                                     Una vez realizada la transferencia, sube el
                                     justificante de pago desde{" "}
                                     <strong>"Mis Pedidos"</strong> para que
@@ -282,7 +280,7 @@ export default function PaymentInstructions({
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            className="w-full px-6 py-3.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:from-yambo-green-600 hover:to-yambo-green-700 transition-all font-bold text-lg shadow-lg shadow-yambo-green-500/25"
                         >
                             Ir a Mis Pedidos
                         </button>

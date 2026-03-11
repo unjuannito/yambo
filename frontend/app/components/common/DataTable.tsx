@@ -25,17 +25,19 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <div
-      className={twMerge(`overflow-x-auto bg-white rounded-lg shadow ${className}`)}
+      className={twMerge(
+        `overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-100 ${className}`
+      )}
     >
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-100">
+        <thead className="bg-yambo-green-50/50">
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
                 className={
                   column.className ||
-                  "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  "px-6 py-3 text-left text-xs font-bold text-yambo-green-700 uppercase tracking-wider"
                 }
               >
                 {column.header}
@@ -43,13 +45,17 @@ export function DataTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white divide-y divide-gray-50">
           {data.map((item) => (
-            <tr key={String(item[keyField])} className={onRowClick ? "cursor-pointer" : ""} onClick={() => onRowClick?.(item)}>
+            <tr
+              key={String(item[keyField])}
+              className={`transition-colors duration-150 hover:bg-yambo-green-50/30 ${onRowClick ? "cursor-pointer" : ""}`}
+              onClick={() => onRowClick?.(item)}
+            >
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"
                 >
                   {column.render
                     ? column.render(item)

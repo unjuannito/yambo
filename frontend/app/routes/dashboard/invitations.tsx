@@ -125,7 +125,7 @@ export default function Invitations() {
                 key: "token",
                 header: "Token",
                 render: (invitation) => (
-                    <span className="font-mono text-xs break-all">
+                    <span className="font-mono text-xs break-all text-gray-500">
                         {invitation.token}
                     </span>
                 ),
@@ -165,7 +165,7 @@ export default function Invitations() {
                 key: "startTms",
                 header: "Inicio",
                 render: (invitation) => (
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-500">
                         {new Date(invitation.startTms).toLocaleString()}
                     </span>
                 ),
@@ -174,7 +174,7 @@ export default function Invitations() {
                 key: "expiresAt",
                 header: "Fin",
                 render: (invitation) => (
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-500">
                         {formatDateTime(invitation.expiresAt)}
                     </span>
                 ),
@@ -197,7 +197,7 @@ export default function Invitations() {
                         )
                         .join(", ");
                     return (
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-500">
                             {names || "-"}
                         </span>
                     );
@@ -218,12 +218,12 @@ export default function Invitations() {
                 },
                 render: (invitation) => {
                     const status = invitation.computedStatus;
-                    let cls = "bg-green-100 text-green-700";
-                    if (status === "Pendiente") cls = "bg-yellow-100 text-yellow-700";
-                    else if (status === "Expirada") cls = "bg-gray-100 text-gray-700";
+                    let cls = "bg-yambo-green-50 text-yambo-green-700";
+                    if (status === "Pendiente") cls = "bg-amber-50 text-amber-700";
+                    else if (status === "Expirada") cls = "bg-gray-100 text-gray-500";
                     return (
                         <span
-                            className={`px-2 py-1 text-xs rounded-full ${cls}`}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-full ${cls}`}
                         >
                             {status}
                         </span>
@@ -280,9 +280,9 @@ export default function Invitations() {
             permission={{ obj: "invitation", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">
                         Invitaciones
                     </h1>
                     {!loading && !error && (
@@ -318,8 +318,8 @@ export default function Invitations() {
                 )}
 
                 {!loading && !error && (
-                    <section className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold mb-4">
+                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
                             Invitaciones creadas
                         </h2>
                         <FilterableTable
@@ -338,8 +338,8 @@ export default function Invitations() {
                 )}
 
                 {lastInvitation && (
-                    <section className="bg-white rounded-lg shadow p-6 mt-6">
-                        <h2 className="text-lg font-semibold mb-4">
+                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-6">
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
                             Última invitación creada
                         </h2>
                         <div className="grid gap-4">
