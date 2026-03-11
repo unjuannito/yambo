@@ -14,6 +14,7 @@ import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 type ProductEditorMode = "create" | "edit";
 
@@ -446,12 +447,13 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="mb-6">
-                <button
+                <ButtonComponent
+                    variant="ghost"
+                    size="sm"
                     onClick={() => navigate("/mi-espacio/merch")}
-                    className="flex items-center px-4 py-2 text-gray-400 hover:text-yambo-black transition-colors font-semibold"
                 >
                     ← Volver al merch
-                </button>
+                </ButtonComponent>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
@@ -561,12 +563,13 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold font-display text-yambo-black">Opciones del Producto</h2>
-                            <button
+                            <ButtonComponent
+                                variant="primary"
+                                size="sm"
                                 onClick={addOption}
-                                className="px-4 py-1.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:from-yambo-green-600 hover:to-yambo-green-700 text-sm font-semibold transition-all"
                             >
                                 + Añadir Opción
-                            </button>
+                            </ButtonComponent>
                         </div>
 
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOptionDragEnd}>
@@ -607,12 +610,14 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                             >
                                                 <FontAwesomeIcon icon={faArrowDown} className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <ButtonComponent
+                                                variant="danger-text"
+                                                size="sm"
                                                 onClick={() => removeOption(optionIndex)}
-                                                className="text-coral hover:text-red-600 ml-2 font-semibold text-sm"
+                                                className="ml-2"
                                             >
                                                 Eliminar
-                                            </button>
+                                            </ButtonComponent>
                                         </div>
                                     </div>
 
@@ -654,12 +659,13 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="font-semibold text-yambo-black">Valores</h4>
-                                                <button
+                                                <ButtonComponent
+                                                    variant="primary"
+                                                    size="sm"
                                                     onClick={() => addValue(optionIndex)}
-                                                    className="px-3 py-1 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:from-yambo-green-600 hover:to-yambo-green-700 text-sm font-semibold transition-all"
                                                 >
                                                     + Añadir Valor
-                                                </button>
+                                                </ButtonComponent>
                                             </div>
 
                                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleValueDragEnd(optionIndex)}>
@@ -768,13 +774,15 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                         </DndContext>
                     </div>
 
-                    <button
+                    <ButtonComponent
+                        variant="primary"
+                        size="lg"
                         onClick={saveProduct}
-                        disabled={saving}
-                        className="w-full px-6 py-3.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:from-yambo-green-600 hover:to-yambo-green-700 disabled:opacity-50 text-lg font-bold shadow-lg shadow-yambo-green-500/25 transition-all"
+                        isLoading={saving}
+                        className="w-full"
                     >
-                        {saving ? "Guardando..." : isEditing ? "Guardar Cambios" : "Crear Producto"}
-                    </button>
+                        {isEditing ? "Guardar Cambios" : "Crear Producto"}
+                    </ButtonComponent>
                 </div>
             </div>
         </div>

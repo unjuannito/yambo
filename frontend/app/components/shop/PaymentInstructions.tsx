@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { settingsService } from "~/services/settingsService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleInfo, faTriangleExclamation, faUpload } from "@fortawesome/free-solid-svg-icons";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 interface PaymentInstructionsProps {
     orderId: string;
@@ -128,17 +129,18 @@ export default function PaymentInstructions({
                                         {totalAmount.toFixed(2)} €
                                     </p>
                                 </div>
-                                <button
+                                <ButtonComponent
+                                    variant="neutral"
+                                    size="sm"
                                     onClick={() =>
                                         copyToClipboard(
                                             totalAmount.toFixed(2),
                                             "Importe",
                                         )
                                     }
-                                    className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-semibold"
                                 >
                                     Copiar
-                                </button>
+                                </ButtonComponent>
                             </div>
                         </div>
 
@@ -154,17 +156,18 @@ export default function PaymentInstructions({
                                             {legalName}
                                         </p>
                                     </div>
-                                    <button
+                                    <ButtonComponent
+                                        variant="neutral"
+                                        size="sm"
                                         onClick={() =>
                                             copyToClipboard(
                                                 legalName,
                                                 "Beneficiario",
                                             )
                                         }
-                                        className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-semibold"
                                     >
                                         Copiar
-                                    </button>
+                                    </ButtonComponent>
                                 </div>
                             </div>
                         )}
@@ -181,14 +184,16 @@ export default function PaymentInstructions({
                                             {iban}
                                         </p>
                                     </div>
-                                    <button
+                                    <ButtonComponent
+                                        variant="neutral"
+                                        size="sm"
                                         onClick={() =>
                                             copyToClipboard(iban, "IBAN")
                                         }
-                                        className="px-4 py-2 text-sm bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors font-semibold ml-2"
+                                        className="ml-2"
                                     >
                                         Copiar
-                                    </button>
+                                    </ButtonComponent>
                                 </div>
                             </div>
                         )}
@@ -278,12 +283,14 @@ export default function PaymentInstructions({
 
                     {/* Action Button */}
                     <div className="flex gap-3">
-                        <button
+                        <ButtonComponent
+                            variant="primary"
+                            size="lg"
                             onClick={onClose}
-                            className="w-full px-6 py-3.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:from-yambo-green-600 hover:to-yambo-green-700 transition-all font-bold text-lg shadow-lg shadow-yambo-green-500/25"
+                            className="w-full"
                         >
                             Ir a Mis Pedidos
-                        </button>
+                        </ButtonComponent>
                     </div>
                 </div>
             </div>

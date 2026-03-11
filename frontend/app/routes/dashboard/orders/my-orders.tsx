@@ -25,6 +25,7 @@ import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClipboard, faTriangleExclamation, faUpload, faClock } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -266,12 +267,12 @@ export default function MyOrdersPage() {
           />
           <h2 className="text-2xl font-bold font-display text-yambo-black mb-2">No tienes pedidos aún</h2>
           <p className="text-gray-400 mb-6">Explora nuestro merch y realiza tu primer pedido</p>
-          <button
+          <ButtonComponent
+            variant="primary"
             onClick={() => navigate("/mi-espacio/merch")}
-            className="px-6 py-2.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all font-medium"
           >
             Ir al merch
-          </button>
+          </ButtonComponent>
         </div>
       )}
 
@@ -318,19 +319,21 @@ export default function MyOrdersPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
+                <ButtonComponent
+                  variant="primary"
+                  size="sm"
                   onClick={() => setOrderDetail(order)}
-                  className="px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all text-sm font-medium"
                 >
                   Ver detalles
-                </button>
+                </ButtonComponent>
                 {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
-                  <button
+                  <ButtonComponent
+                    variant="secondary"
+                    size="sm"
                     onClick={() => handleShowPaymentInstructions(order)}
-                    className="px-4 py-2 bg-gray-100 text-yambo-black rounded-full hover:bg-gray-200 transition-colors text-sm font-medium"
                   >
                     Instrucciones de pago
-                  </button>
+                  </ButtonComponent>
                 )}
                 {order.status === "PENDING_PAYMENT" && (
                   <button
@@ -348,13 +351,14 @@ export default function MyOrdersPage() {
                   </span>
                 )}
                 {order.status === "PENDING_PAYMENT" && (
-                  <button
+                  <ButtonComponent
+                    variant="danger-text"
+                    size="sm"
                     onClick={() => setOrderToCancel(order)}
-                    disabled={cancelingOrderId === order.id}
-                    className="px-4 py-2 bg-coral/10 text-coral rounded-full hover:bg-coral/20 transition-colors text-sm font-medium disabled:opacity-50"
+                    isLoading={cancelingOrderId === order.id}
                   >
-                    {cancelingOrderId === order.id ? "Cancelando..." : "Cancelar pedido"}
-                  </button>
+                    Cancelar pedido
+                  </ButtonComponent>
                 )}
               </div>
             </div>
@@ -470,12 +474,14 @@ export default function MyOrdersPage() {
 
             {orderDetail.status === "PENDING_PAYMENT" && (
               <div className="flex gap-2">
-                <button
+                <ButtonComponent
+                  variant="primary"
+                  size="sm"
                   onClick={() => handleShowPaymentInstructions(orderDetail)}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all text-sm font-medium"
+                  className="flex-1"
                 >
                   Ver instrucciones de pago
-                </button>
+                </ButtonComponent>
                 <button
                   onClick={() => setUploadReceiptOrder(orderDetail)}
                   className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
@@ -483,23 +489,26 @@ export default function MyOrdersPage() {
                   <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                   Subir justificante
                 </button>
-                <button
+                <ButtonComponent
+                  variant="danger-text"
+                  size="sm"
                   onClick={() => setOrderToCancel(orderDetail)}
-                  disabled={cancelingOrderId === orderDetail.id}
-                  className="px-4 py-2 bg-coral/10 text-coral rounded-full hover:bg-coral/20 transition-colors text-sm font-medium disabled:opacity-50"
+                  isLoading={cancelingOrderId === orderDetail.id}
                 >
-                  {cancelingOrderId === orderDetail.id ? "Cancelando..." : "Cancelar pedido"}
-                </button>
+                  Cancelar pedido
+                </ButtonComponent>
               </div>
             )}
             {orderDetail.status === "CONFIRMING_PAYMENT" && (
               <div className="flex gap-2">
-                <button
+                <ButtonComponent
+                  variant="primary"
+                  size="sm"
                   onClick={() => handleShowPaymentInstructions(orderDetail)}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all text-sm font-medium"
+                  className="flex-1"
                 >
                   Ver instrucciones de pago
-                </button>
+                </ButtonComponent>
                 <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-medium flex items-center gap-2">
                   <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
                   Verificando justificante...

@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 interface ErrorMessageProps {
   message: string;
@@ -25,12 +26,14 @@ export function ErrorMessage({
           <p className="font-semibold">Error</p>
           <p className="text-sm mt-1">{message}</p>
           {onRetry && (
-            <button
+            <ButtonComponent
+              variant="danger-text"
+              size="sm"
               onClick={onRetry}
-              className="mt-2 text-sm font-semibold text-red-600 hover:text-red-800 underline hover:no-underline transition-colors"
+              className="mt-2"
             >
               Reintentar
-            </button>
+            </ButtonComponent>
           )}
         </div>
       </div>

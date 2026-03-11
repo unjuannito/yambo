@@ -156,12 +156,13 @@ export default function CartPage() {
   return (
     <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
       <div className="mb-6">
-        <button
+        <ButtonComponent
+          variant="ghost"
+          size="sm"
           onClick={() => navigate("/mi-espacio/merch")}
-          className="flex items-center px-4 py-2 text-gray-400 hover:text-yambo-black transition-colors font-medium"
         >
           ← Volver al merch
-        </button>
+        </ButtonComponent>
       </div>
 
       <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Tu Cesta</h1>
@@ -248,12 +249,13 @@ export default function CartPage() {
                         </button>
                       </div>
 
-                      <button
+                      <ButtonComponent
+                        variant="danger-text"
+                        size="sm"
                         onClick={() => removeItem(item.product.id, configKey)}
-                        className="text-coral hover:text-red-700 text-xs sm:text-sm font-medium transition-colors"
                       >
                         Eliminar
-                      </button>
+                      </ButtonComponent>
                     </div>
                   </div>
                 </div>
@@ -291,16 +293,18 @@ export default function CartPage() {
               {isSubmitting ? "Procesando..." : "Finalizar pedido"}
             </ButtonComponent>
 
-            <button
+            <ButtonComponent
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 if (confirm("¿Estás seguro de que quieres vaciar la cesta?")) {
                   clearCart();
                 }
               }}
-              className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              className="w-full"
             >
               Vaciar cesta
-            </button>
+            </ButtonComponent>
           </div>
         </div>
       </div>

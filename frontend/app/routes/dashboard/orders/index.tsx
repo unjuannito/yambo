@@ -31,6 +31,7 @@ import { faFileExport, faXmark, faFileArrowDown, faUpload } from "@fortawesome/f
 import FileUploader from "~/components/common/FileUploader";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import type { FileRecord } from "~/types/fileType";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -486,14 +487,14 @@ export default function Orders() {
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black">Pedidos</h1>
                     <div className="flex items-center gap-4">
-                        <button
+                        <ButtonComponent
+                            variant="primary"
                             onClick={() => setIsExportModalOpen(true)}
                             disabled={isExporting}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-md hover:shadow-yambo-green-500/25 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all font-medium"
                         >
                             <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
                             Exportar a Excel
-                        </button>
+                        </ButtonComponent>
                     </div>
                 </div>
 
@@ -546,20 +547,22 @@ export default function Orders() {
                                     </select>
                                 );
                             })()}
-                            <button
+                            <ButtonComponent
+                                variant="primary"
+                                size="sm"
                                 onClick={handleBulkStatusUpdate}
                                 disabled={!bulkStatus}
-                                className="px-4 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full hover:shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all text-sm font-medium"
                             >
                                 Actualizar
-                            </button>
+                            </ButtonComponent>
                         </div>
-                        <button
+                        <ButtonComponent
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setSelectedOrders([])}
-                            className="text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
                         >
                             Cancelar
-                        </button>
+                        </ButtonComponent>
                     </div>
                 )}
 
@@ -584,20 +587,20 @@ export default function Orders() {
                 size="md"
                 footer={
                     <>
-                        <button
+                        <ButtonComponent
+                            variant="secondary"
                             onClick={() => setIsExportModalOpen(false)}
                             disabled={isExporting}
-                            className="px-4 py-2 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-60 transition-colors"
                         >
                             Cancelar
-                        </button>
-                        <button
+                        </ButtonComponent>
+                        <ButtonComponent
+                            variant="primary"
                             onClick={exportToExcel}
-                            disabled={isExporting}
-                            className="px-4 py-2 rounded-full bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white hover:shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-all"
+                            isLoading={isExporting}
                         >
-                            {isExporting ? "Exportando..." : "Exportar"}
-                        </button>
+                            Exportar
+                        </ButtonComponent>
                     </>
                 }
             >
@@ -905,19 +908,20 @@ export default function Orders() {
                             </div>
                             <div className="flex items-center gap-2">
                                 {(selectedOrder.status === "PENDING_PAYMENT" || selectedOrder.status === "CONFIRMING_PAYMENT") && (
-                                    <button
+                                    <ButtonComponent
+                                        variant="danger-text"
+                                        size="sm"
                                         onClick={() => setOrderToCancel(selectedOrder)}
-                                        className="px-4 py-2 bg-coral/10 text-coral rounded-full hover:bg-coral/20 transition-colors text-sm font-medium"
                                     >
                                         Cancelar pedido
-                                    </button>
+                                    </ButtonComponent>
                                 )}
-                                <button
+                                <ButtonComponent
+                                    variant="secondary"
                                     onClick={() => setSelectedOrder(null)}
-                                    className="px-4 py-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
                                 >
                                     Cerrar
-                                </button>
+                                </ButtonComponent>
                             </div>
                         </div>
                     </div>

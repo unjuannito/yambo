@@ -1,3 +1,5 @@
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
+
 interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -10,12 +12,10 @@ interface ConfirmDialogProps {
   isLoading?: boolean;
 }
 
-const variantStyles = {
-  danger:
-    "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-md shadow-red-500/20",
-  warning:
-    "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 shadow-md shadow-yellow-500/20",
-  info: "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 hover:from-yambo-green-600 hover:to-yambo-green-700 shadow-md shadow-yambo-green-500/20",
+const confirmButtonVariant: Record<string, "danger" | "primary"> = {
+  danger: "danger",
+  warning: "primary",
+  info: "primary",
 };
 
 export function ConfirmDialog({
@@ -39,20 +39,20 @@ export function ConfirmDialog({
         </h2>
         <p className="text-gray-600 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
-          <button
+          <ButtonComponent
+            variant="secondary"
             onClick={onClose}
             disabled={isLoading}
-            className="px-5 py-2.5 text-gray-700 bg-gray-100 rounded-full hover:bg-gray-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {cancelLabel}
-          </button>
-          <button
+          </ButtonComponent>
+          <ButtonComponent
+            variant={confirmButtonVariant[variant] ?? "primary"}
             onClick={onConfirm}
-            disabled={isLoading}
-            className={`px-5 py-2.5 text-white rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold ${variantStyles[variant]}`}
+            isLoading={isLoading}
           >
-            {isLoading ? "Procesando..." : confirmLabel}
-          </button>
+            {confirmLabel}
+          </ButtonComponent>
         </div>
       </div>
     </div>
