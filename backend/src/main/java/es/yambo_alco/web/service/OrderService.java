@@ -46,6 +46,7 @@ public class OrderService {
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final AuthService authService;
     private final MailService mailService;
+    private final UserService userService;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -258,6 +259,13 @@ public class OrderService {
             return;
         }
 
+        NotificationPreferences prefs = userService.getNotificationPreferences(user.getId());
+        if (!prefs.isOrderStatus()) {
+            log.info("Skipping order status email for order {}: user {} has disabled order status notifications",
+                    order.getId(), user.getId());
+            return;
+        }
+
         List<OrderProduct> orderProducts = getOrderProducts(order.getId());
         List<MailService.OrderProductInfo> productInfos = orderProducts.stream()
                 .map(op -> {
@@ -301,6 +309,13 @@ public class OrderService {
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             log.warn("Cannot send cancellation email for order {}: user {} has no email", order.getId(),
                     order.getCustomerId());
+            return;
+        }
+
+        NotificationPreferences prefs = userService.getNotificationPreferences(user.getId());
+        if (!prefs.isOrderCancelled()) {
+            log.info("Skipping order cancellation email for order {}: user {} has disabled cancellation notifications",
+                    order.getId(), user.getId());
             return;
         }
 

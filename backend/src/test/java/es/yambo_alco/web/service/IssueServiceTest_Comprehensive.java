@@ -65,6 +65,9 @@ class IssueServiceTest_Comprehensive {
     @Mock
     private MailService mailService;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private IssueService issueService;
 

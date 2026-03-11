@@ -80,4 +80,5 @@
     <include file="db/changelog/changes/69-performance-indexes.xml"/>
     <include file="db/changelog/changes/70-user-group-roles.xml"/>
     <include file="db/changelog/changes/71-fun-fact-field.xml"/>
+    <include file="db/changelog/changes/72-notification-preferences.xml"/>
 </databaseChangeLog>

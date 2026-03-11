@@ -63,6 +63,9 @@ class OrderServiceTest {
     @Mock
     private MailService mailService;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private OrderService orderService;
 
@@ -396,6 +399,7 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
@@ -430,6 +434,7 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
@@ -464,6 +469,7 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
@@ -494,6 +500,7 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
@@ -900,6 +907,7 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
@@ -936,6 +944,7 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
@@ -2449,6 +2458,75 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
         assertEquals("FL000002", result.getReceiptFileId());
+    }
+
+    // Notification preferences tests
+
+    @Test
+    void updateOrderStatus_WhenOrderStatusNotificationsDisabled_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(true)
+                .issueCreated(true)
+                .issueComments(true)
+                .issueStatus(true)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(prefs);
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void cancelOrder_WhenCancelNotificationsDisabled_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(true)
+                .orderCancelled(false)
+                .issueCreated(true)
+                .issueComments(true)
+                .issueStatus(true)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(prefs);
+
+        Order result = orderService.cancelOrder("ORD001", false);
+
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
     }
 }
 

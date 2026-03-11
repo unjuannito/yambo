@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.DeletionObjectType;
+import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
@@ -283,6 +284,21 @@ public Page<User> listUsers(String id, String name, String email, Boolean enable
 		}
 
 		return userRepository.save(user);
+	}
+
+	public NotificationPreferences getNotificationPreferences(@NonNull String userId) {
+		User user = getUserById(userId);
+		NotificationPreferences prefs = user.getNotificationPreferences();
+		return prefs != null ? prefs : NotificationPreferences.defaults();
+	}
+
+	@Transactional
+	public NotificationPreferences updateNotificationPreferences(@NonNull String userId,
+			@NonNull NotificationPreferences prefs) {
+		User user = getUserById(userId);
+		user.setNotificationPreferences(prefs);
+		userRepository.save(user);
+		return prefs;
 	}
 
 	public void deleteUser(@NonNull String userId) {

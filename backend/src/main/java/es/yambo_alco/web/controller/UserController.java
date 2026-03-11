@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.DeletionObjectType;
+import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
@@ -59,6 +60,21 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/notification-preferences")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<NotificationPreferences> getNotificationPreferences() {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(userService.getNotificationPreferences(currentUser.getId()));
+    }
+
+    @PutMapping("/notification-preferences")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<NotificationPreferences> updateNotificationPreferences(
+            @RequestBody NotificationPreferences preferences) {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(userService.updateNotificationPreferences(currentUser.getId(), preferences));
+    }
+
     @PostMapping("/delete")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> scheduleAccountDeletion() {
@@ -103,6 +119,7 @@ public class UserController {
         private String photo;
         private String bio;
         private String funFact;
+        private NotificationPreferences notificationPreferences;
         private GroupRoleResponse[] groupRoles;
         private PermissionResponse[] permissions;
 
@@ -113,6 +130,9 @@ public class UserController {
             this.photo = user.getPhoto();
             this.bio = user.getBio();
             this.funFact = user.getFunFact();
+            this.notificationPreferences = user.getNotificationPreferences() != null
+                    ? user.getNotificationPreferences()
+                    : NotificationPreferences.defaults();
             this.groupRoles = user.getGroupRoles().stream()
                     .map(GroupRoleResponse::new)
                     .toArray(GroupRoleResponse[]::new);

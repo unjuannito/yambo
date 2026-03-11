@@ -41,6 +41,7 @@ public class IssueService {
     private final SettingsService settingsService;
     private final UserRepository userRepository;
     private final MailService mailService;
+    private final UserService userService;
 
     @Transactional
     public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy) {
@@ -93,17 +94,23 @@ public class IssueService {
         try {
             User customer = userRepository.findById(order.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-            String productName = buildProductNames(orderedProducts);
-            mailService.sendIssueCreated(
-                    customer.getEmail(),
-                    customer.getName(),
-                    savedIssue.getId(),
-                    savedIssue.getTitle(),
-                    productName,
-                    order.getId(),
-                    user.getName(),
-                    savedIssue.getCreatedAt(),
-                    savedIssue.getDescription());
+            NotificationPreferences prefs = userService.getNotificationPreferences(customer.getId());
+            if (!prefs.isIssueCreated()) {
+                log.info("Skipping issue created email for issue {}: user {} has disabled issue created notifications",
+                        savedIssue.getId(), customer.getId());
+            } else {
+                String productName = buildProductNames(orderedProducts);
+                mailService.sendIssueCreated(
+                        customer.getEmail(),
+                        customer.getName(),
+                        savedIssue.getId(),
+                        savedIssue.getTitle(),
+                        productName,
+                        order.getId(),
+                        user.getName(),
+                        savedIssue.getCreatedAt(),
+                        savedIssue.getDescription());
+            }
         } catch (Exception e) {
             log.error("Failed to send issue created email for issue: {}", savedIssue.getId(), e);
             // Don't fail the request if email fails
@@ -177,17 +184,31 @@ public class IssueService {
 
             // Don't send email to the comment author
             if (!userId.equals(customer.getId())) {
-                mailService.sendIssueCommentAdded(
-                        customer.getEmail(),
-                        customer.getName(),
-                        issue.getId(),
-                        issue.getTitle(),
-                        productName,
-                        user.getName(),
-                        savedComment.getText(),
-                        savedComment.getCreatedAt(),
-                        status != null && previousStatus != status ? previousStatus : null,
-                        status != null && previousStatus != status ? status : null);
+                NotificationPreferences prefs = userService.getNotificationPreferences(customer.getId());
+                boolean hasStatusChange = status != null && previousStatus != status;
+
+                if (hasStatusChange && !prefs.isIssueStatus()) {
+                    log.info("Skipping issue status change email for issue {}: user {} has disabled issue status notifications",
+                            issueId, customer.getId());
+                } else if (!hasStatusChange && !prefs.isIssueComments()) {
+                    log.info("Skipping issue comment email for issue {}: user {} has disabled issue comment notifications",
+                            issueId, customer.getId());
+                } else if (hasStatusChange && !prefs.isIssueComments() && !prefs.isIssueStatus()) {
+                    log.info("Skipping issue comment+status email for issue {}: user {} has disabled both notifications",
+                            issueId, customer.getId());
+                } else {
+                    mailService.sendIssueCommentAdded(
+                            customer.getEmail(),
+                            customer.getName(),
+                            issue.getId(),
+                            issue.getTitle(),
+                            productName,
+                            user.getName(),
+                            savedComment.getText(),
+                            savedComment.getCreatedAt(),
+                            hasStatusChange ? previousStatus : null,
+                            hasStatusChange ? status : null);
+                }
             }
         } catch (Exception e) {
             log.error("Failed to send issue comment email for issue: {}", issueId, e);

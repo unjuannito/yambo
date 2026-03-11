@@ -48,6 +48,9 @@ class IssueServiceTest {
     @Mock
     private MailService mailService;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -355,6 +358,7 @@ class IssueServiceTest {
         when(settingsService.getIssueCreationWindowDays()).thenReturn(30);
         when(userRepository.findById("USR001")).thenReturn(Optional.of(creator));
         when(userRepository.findById("CUS001")).thenReturn(Optional.of(customer));
+        when(userService.getNotificationPreferences("CUS001")).thenReturn(NotificationPreferences.defaults());
         when(issueRepository.save(any(Issue.class))).thenAnswer(inv -> {
             Issue saved = inv.getArgument(0);
             saved.setId("ISS001");
@@ -893,5 +897,82 @@ class IssueServiceTest {
         List<OrderProduct> results = issueService.getIssueProductsByIssueId("ISS001");
 
         assertEquals(1, results.size());
+    }
+
+    // ==================== Notification Preferences Tests ====================
+
+    @Test
+    void createIssue_WhenIssueCreatedNotificationsDisabled_ShouldNotSendEmail() {
+        FamilyProduct family = FamilyProduct.builder().id("FAM001").name("Drop Test").build();
+        Product product = Product.builder().id("PROD001").name("T-Shirt").familyProduct(family).build();
+        OrderProduct opWithProduct = OrderProduct.builder()
+                .id(orderedProductId)
+                .orderId("ORD001")
+                .product(product)
+                .build();
+        User customer = User.builder().id("CUS001").name("Customer").email("cus@test.com").build();
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(true)
+                .orderCancelled(true)
+                .issueCreated(false)
+                .issueComments(true)
+                .issueStatus(true)
+                .build();
+
+        when(orderProductRepository.findAllById(Set.of(orderedProductId))).thenReturn(List.of(opWithProduct));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(closedOrder));
+        when(settingsService.getIssueCreationWindowDays()).thenReturn(30);
+        when(userRepository.findById("USR001")).thenReturn(Optional.of(creator));
+        when(userRepository.findById("CUS001")).thenReturn(Optional.of(customer));
+        when(userService.getNotificationPreferences("CUS001")).thenReturn(prefs);
+        when(issueRepository.save(any(Issue.class))).thenAnswer(inv -> {
+            Issue saved = inv.getArgument(0);
+            saved.setId("ISS001");
+            return saved;
+        });
+
+        Issue result = issueService.createIssue(List.of(orderedProductId), "Test Issue", "Test Description", "USR001");
+
+        assertNotNull(result);
+        verify(mailService, never()).sendIssueCreated(any(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void addComment_WhenIssueCommentsNotificationsDisabled_ShouldNotSendEmail() {
+        Issue issue = Issue.builder()
+                .id("ISS001")
+                .status(IssueStatus.OPEN)
+                .orderedProductId(orderedProductId)
+                .build();
+
+        User commenter = User.builder().id("USR001").name("Commenter").build();
+        User customer = User.builder().id("CUS001").name("Customer").email("cus@test.com").build();
+        Order order = Order.builder().id("ORD001").customerId("CUS001").build();
+        OrderProduct op = OrderProduct.builder()
+                .id(orderedProductId)
+                .orderId("ORD001")
+                .order(order)
+                .build();
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(true)
+                .orderCancelled(true)
+                .issueCreated(true)
+                .issueComments(false)
+                .issueStatus(true)
+                .build();
+
+        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
+        when(userRepository.findById("USR001")).thenReturn(Optional.of(commenter));
+        when(userRepository.findById("CUS001")).thenReturn(Optional.of(customer));
+        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(issueRepository.findOrderProductsByIssueId("ISS001")).thenReturn(List.of(op));
+        when(userService.getNotificationPreferences("CUS001")).thenReturn(prefs);
+
+        IssueComment result = issueService.addComment("ISS001", "Just a comment", "USR001", null);
+
+        assertNotNull(result);
+        verify(mailService, never()).sendIssueCommentAdded(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

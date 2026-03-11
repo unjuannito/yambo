@@ -2,6 +2,7 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.ProfileRepository;
@@ -452,5 +453,90 @@ public class UserServiceTest {
                 .hasMessage("Cannot remove the ADMIN profile from a system user");
 
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    // ==================== Notification Preferences Tests ====================
+
+    @Test
+    public void getNotificationPreferences_WhenNull_ShouldReturnDefaults() {
+        User user = User.builder()
+                .id("U0000001")
+                .notificationPreferences(null)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+
+        NotificationPreferences result = userService.getNotificationPreferences("U0000001");
+
+        assertThat(result).isNotNull();
+        assertThat(result.isOrderStatus()).isTrue();
+        assertThat(result.isOrderCancelled()).isTrue();
+        assertThat(result.isIssueCreated()).isTrue();
+        assertThat(result.isIssueComments()).isTrue();
+        assertThat(result.isIssueStatus()).isTrue();
+    }
+
+    @Test
+    public void getNotificationPreferences_WhenSet_ShouldReturnStored() {
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(true)
+                .issueCreated(false)
+                .issueComments(true)
+                .issueStatus(false)
+                .build();
+
+        User user = User.builder()
+                .id("U0000001")
+                .notificationPreferences(prefs)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+
+        NotificationPreferences result = userService.getNotificationPreferences("U0000001");
+
+        assertThat(result).isNotNull();
+        assertThat(result.isOrderStatus()).isFalse();
+        assertThat(result.isOrderCancelled()).isTrue();
+        assertThat(result.isIssueCreated()).isFalse();
+        assertThat(result.isIssueComments()).isTrue();
+        assertThat(result.isIssueStatus()).isFalse();
+    }
+
+    @Test
+    public void getNotificationPreferences_WhenUserNotFound_ShouldThrow() {
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getNotificationPreferences("U0000001"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("User not found");
+    }
+
+    @Test
+    public void updateNotificationPreferences_ShouldPersist() {
+        User user = User.builder()
+                .id("U0000001")
+                .notificationPreferences(null)
+                .build();
+
+        NotificationPreferences newPrefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(false)
+                .issueCreated(true)
+                .issueComments(false)
+                .issueStatus(true)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificationPreferences result = userService.updateNotificationPreferences("U0000001", newPrefs);
+
+        assertThat(result.isOrderStatus()).isFalse();
+        assertThat(result.isOrderCancelled()).isFalse();
+        assertThat(result.isIssueCreated()).isTrue();
+        assertThat(result.isIssueComments()).isFalse();
+        assertThat(result.isIssueStatus()).isTrue();
+        verify(userRepository).save(any(User.class));
     }
 }

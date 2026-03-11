@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.exception.UnauthorizedException;
+import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
@@ -210,6 +211,77 @@ class UserControllerTest {
                 .header("Authorization", "Bearer invalid.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"days\": 30}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    void getNotificationPreferences_ShouldReturnPreferences() throws Exception {
+        User currentUser = User.builder().id("U0000001").build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(true)
+                .orderCancelled(false)
+                .issueCreated(true)
+                .issueComments(false)
+                .issueStatus(true)
+                .build();
+        when(userService.getNotificationPreferences("U0000001")).thenReturn(prefs);
+
+        mockMvc.perform(get("/user/notification-preferences")
+                .header("Authorization", "Bearer test.jwt.token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderStatus").value(true))
+                .andExpect(jsonPath("$.orderCancelled").value(false))
+                .andExpect(jsonPath("$.issueCreated").value(true))
+                .andExpect(jsonPath("$.issueComments").value(false))
+                .andExpect(jsonPath("$.issueStatus").value(true));
+    }
+
+    @Test
+    @WithMockUser
+    void updateNotificationPreferences_ShouldReturnUpdatedPreferences() throws Exception {
+        User currentUser = User.builder().id("U0000001").build();
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+
+        NotificationPreferences updatedPrefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(false)
+                .issueCreated(true)
+                .issueComments(true)
+                .issueStatus(false)
+                .build();
+        when(userService.updateNotificationPreferences(org.mockito.ArgumentMatchers.eq("U0000001"),
+                org.mockito.ArgumentMatchers.any(NotificationPreferences.class))).thenReturn(updatedPrefs);
+
+        String requestBody = """
+                {
+                    "orderStatus": false,
+                    "orderCancelled": false,
+                    "issueCreated": true,
+                    "issueComments": true,
+                    "issueStatus": false
+                }
+                """;
+
+        mockMvc.perform(put("/user/notification-preferences")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderStatus").value(false))
+                .andExpect(jsonPath("$.orderCancelled").value(false))
+                .andExpect(jsonPath("$.issueCreated").value(true))
+                .andExpect(jsonPath("$.issueComments").value(true))
+                .andExpect(jsonPath("$.issueStatus").value(false));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getNotificationPreferences_Unauthorized_ShouldReturn403() throws Exception {
+        mockMvc.perform(get("/user/notification-preferences")
+                .header("Authorization", "Bearer invalid.token"))
                 .andExpect(status().isForbidden());
     }
 

@@ -1,5 +1,5 @@
 import { ApiService } from './apiService';
-import type { CurrentUser } from '~/types/userType';
+import type { CurrentUser, NotificationPreferences } from '~/types/userType';
 
 export interface UpdateProfileRequest {
   name: string;
@@ -29,6 +29,14 @@ export class UserService extends ApiService {
 
   public async deleteAccount(): Promise<string> {
     return await this.post<string, {}>('/user/delete', {});
+  }
+
+  public async getNotificationPreferences(): Promise<NotificationPreferences> {
+    return await this.get<NotificationPreferences>('/user/notification-preferences');
+  }
+
+  public async updateNotificationPreferences(data: NotificationPreferences): Promise<NotificationPreferences> {
+    return await this.put<NotificationPreferences, NotificationPreferences>('/user/notification-preferences', data);
   }
 }
 

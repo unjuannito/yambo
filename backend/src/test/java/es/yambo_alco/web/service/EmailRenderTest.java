@@ -296,6 +296,7 @@ class EmailRenderTest {
         Context ctx = new Context();
         ctx.setVariable("currentYear", Year.now().getValue());
         ctx.setVariable("organizationName", ORG_NAME);
+        ctx.setVariable("preferencesUrl", FRONTEND_URL + "/mi-espacio/cuenta");
         return ctx;
     }
 
@@ -311,6 +312,10 @@ class EmailRenderTest {
         assertThat(html)
                 .as("should include copyright year")
                 .contains(String.valueOf(Year.now().getValue()));
+        assertThat(html)
+                .as("should include notification preferences link")
+                .contains("Gestionar preferencias de notificación")
+                .contains("/mi-espacio/cuenta");
     }
 
     /** Writes the rendered HTML to target/email-previews/{name}.html. */

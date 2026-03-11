@@ -10,8 +10,9 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLock, faTrash, faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faLock, faTrash, faCircleExclamation, faBell } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
+import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -23,6 +24,7 @@ export function meta({}: Route.MetaArgs) {
 const UserIcon = () => <FontAwesomeIcon icon={faUser} className="w-5 h-5" />;
 const LockIcon = () => <FontAwesomeIcon icon={faLock} className="w-5 h-5" />;
 const TrashIcon = () => <FontAwesomeIcon icon={faTrash} className="w-5 h-5" />;
+const BellIcon = () => <FontAwesomeIcon icon={faBell} className="w-5 h-5" />;
 
 function getInitials(name: string): string {
   return name
@@ -56,6 +58,15 @@ export default function MyAccount() {
   // Estado para el diálogo de confirmación de eliminación
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Estado para preferencias de notificación
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>({
+    orderStatus: true,
+    orderCancelled: true,
+    issueCreated: true,
+    issueComments: true,
+    issueStatus: true,
+  });
+
   // Errores de validación local
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
@@ -69,6 +80,9 @@ export default function MyAccount() {
         bio: user.bio || "",
         funFact: user.funFact || "",
       });
+      if (user.notificationPreferences) {
+        setNotifPrefs(user.notificationPreferences);
+      }
     }
   }, [user]);
 
@@ -105,6 +119,15 @@ export default function MyAccount() {
     },
   });
 
+  // Mutation para actualizar preferencias de notificación
+  const updateNotifPrefsMutation = useApiMutation<NotificationPreferences, NotificationPreferences>({
+    mutationFn: (data) => userService.updateNotificationPreferences(data),
+    successMessage: "Preferencias de notificación actualizadas",
+    onSuccess: () => {
+      reload();
+    },
+  });
+
   // Handlers
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +156,11 @@ export default function MyAccount() {
 
   const handleDeleteAccount = () => {
     deleteAccountMutation.mutate();
+  };
+
+  const handleNotifPrefsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateNotifPrefsMutation.mutate(notifPrefs);
   };
 
   return (
@@ -341,6 +369,62 @@ export default function MyAccount() {
           </form>
         </section>
 
+        {/* Sección de preferencias de notificación */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 border-b border-purple-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500 rounded-lg text-white">
+                <BellIcon />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Notificaciones</h2>
+                <p className="text-sm text-gray-500">Elige qué correos electrónicos deseas recibir</p>
+              </div>
+            </div>
+          </div>
+          <form onSubmit={handleNotifPrefsSubmit} className="p-6 space-y-4">
+            <NotifToggle
+              label="Actualizaciones de pedidos"
+              description="Recibe un correo cuando cambie el estado de tu pedido"
+              checked={notifPrefs.orderStatus}
+              onChange={(v) => setNotifPrefs((p) => ({ ...p, orderStatus: v }))}
+            />
+            <NotifToggle
+              label="Cancelaciones de pedidos"
+              description="Recibe un correo cuando se cancele un pedido"
+              checked={notifPrefs.orderCancelled}
+              onChange={(v) => setNotifPrefs((p) => ({ ...p, orderCancelled: v }))}
+            />
+            <NotifToggle
+              label="Nuevas incidencias"
+              description="Recibe un correo cuando se cree una incidencia en tu pedido"
+              checked={notifPrefs.issueCreated}
+              onChange={(v) => setNotifPrefs((p) => ({ ...p, issueCreated: v }))}
+            />
+            <NotifToggle
+              label="Comentarios en incidencias"
+              description="Recibe un correo cuando alguien comente en tu incidencia"
+              checked={notifPrefs.issueComments}
+              onChange={(v) => setNotifPrefs((p) => ({ ...p, issueComments: v }))}
+            />
+            <NotifToggle
+              label="Cambios de estado de incidencias"
+              description="Recibe un correo cuando cambie el estado de tu incidencia"
+              checked={notifPrefs.issueStatus}
+              onChange={(v) => setNotifPrefs((p) => ({ ...p, issueStatus: v }))}
+            />
+            <div className="flex justify-end pt-2">
+              <ButtonComponent
+                type="submit"
+                variant="primary"
+                loading={updateNotifPrefsMutation.isLoading}
+              >
+                Guardar preferencias
+              </ButtonComponent>
+            </div>
+          </form>
+        </section>
+
         {/* Sección de eliminación de cuenta */}
         <section className="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
           <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200">
@@ -388,5 +472,41 @@ export default function MyAccount() {
         isLoading={deleteAccountMutation.isLoading}
       />
     </main>
+  );
+}
+
+function NotifToggle({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-4 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+      <div>
+        <p className="text-sm font-medium text-gray-900">{label}</p>
+        <p className="text-xs text-gray-500">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+          checked ? "bg-purple-600" : "bg-gray-200"
+        }`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out ${
+            checked ? "translate-x-5" : "translate-x-0"
+          }`}
+        />
+      </button>
+    </label>
   );
 }

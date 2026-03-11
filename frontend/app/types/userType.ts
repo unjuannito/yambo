@@ -1,3 +1,11 @@
+export type NotificationPreferences = {
+    orderStatus: boolean;
+    orderCancelled: boolean;
+    issueCreated: boolean;
+    issueComments: boolean;
+    issueStatus: boolean;
+};
+
 export type CurrentUser = {
     id: string;
     email: string;
@@ -5,6 +13,7 @@ export type CurrentUser = {
     photo?: string;
     bio?: string;
     funFact?: string;
+    notificationPreferences?: NotificationPreferences;
     groupRoles?: UserGroupRole[];
     permissions: Permission[]
 };

@@ -65,10 +65,16 @@ public class HtmlMailService implements MailService {
             Context context = new Context();
             context.setVariable("currentYear", java.time.Year.now().getValue());
             context.setVariable("organizationName", settingsService.getOrganizationName());
+            context.setVariable("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
             variables.forEach(context::setVariable);
 
             String htmlContent = templateEngine.process(templateName, context);
-            helper.setText(plainText, htmlContent);
+
+            String preferencesUrl = settingsService.getDomain() + "/mi-espacio/cuenta";
+            String fullPlainText = plainText
+                    + "\n---\nGestionar preferencias de notificación: " + preferencesUrl + "\n";
+
+            helper.setText(fullPlainText, htmlContent);
 
             mailSender.send(message);
             log.info("Email sent [{}] to: {}", subject, to);

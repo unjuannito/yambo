@@ -3,6 +3,8 @@ package es.yambo_alco.web.model;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -69,6 +71,10 @@ public class User implements UserDetails {
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
+
+    @Column(name = "notification_preferences", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private NotificationPreferences notificationPreferences;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

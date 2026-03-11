@@ -30,6 +30,11 @@
             <p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 12px;">
                 &copy; <span th:text="${currentYear}">2026</span> <span th:text="${organizationName}">Yambo</span>. Todos los derechos reservados.
             </p>
+            <p th:if="${preferencesUrl}" style="margin: 8px 0 0 0;">
+                <a th:href="${preferencesUrl}" style="color: #8B5CF6; font-size: 12px; text-decoration: none;">
+                    Gestionar preferencias de notificación
+                </a>
+            </p>
         </td>
     </tr>
 </th:block>

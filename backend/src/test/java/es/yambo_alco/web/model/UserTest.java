@@ -88,4 +88,38 @@ class UserTest {
         assertEquals(user1, user2);
         assertEquals(user1.hashCode(), user2.hashCode());
     }
+
+    @Test
+    void notificationPreferences_ShouldBeStoredOnUser() {
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(true)
+                .issueCreated(false)
+                .issueComments(true)
+                .issueStatus(false)
+                .build();
+
+        User user = User.builder()
+                .id("U0000001")
+                .email("test@example.com")
+                .notificationPreferences(prefs)
+                .build();
+
+        assertNotNull(user.getNotificationPreferences());
+        assertFalse(user.getNotificationPreferences().isOrderStatus());
+        assertTrue(user.getNotificationPreferences().isOrderCancelled());
+        assertFalse(user.getNotificationPreferences().isIssueCreated());
+        assertTrue(user.getNotificationPreferences().isIssueComments());
+        assertFalse(user.getNotificationPreferences().isIssueStatus());
+    }
+
+    @Test
+    void notificationPreferences_WhenNotSet_ShouldBeNull() {
+        User user = User.builder()
+                .id("U0000001")
+                .email("test@example.com")
+                .build();
+
+        assertNull(user.getNotificationPreferences());
+    }
 }
