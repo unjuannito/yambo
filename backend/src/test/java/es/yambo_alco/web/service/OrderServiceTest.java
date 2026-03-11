@@ -1068,6 +1068,7 @@ class OrderServiceTest {
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1141,6 +1142,7 @@ class OrderServiceTest {
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1217,6 +1219,7 @@ class OrderServiceTest {
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1307,6 +1310,7 @@ class OrderServiceTest {
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1748,6 +1752,7 @@ class OrderServiceTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
 
         orderService.checkAndCloseOrder("ORD001");
 
@@ -1782,6 +1787,7 @@ class OrderServiceTest {
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         doThrow(new RuntimeException("Email unavailable"))
                 .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
 
@@ -1917,6 +1923,7 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(orderProduct));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -1961,6 +1968,7 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(orderProduct));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         doThrow(new RuntimeException("Email unavailable"))
                 .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
 
@@ -2276,6 +2284,7 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         doThrow(new RuntimeException("Email unavailable"))
                 .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
 
@@ -2384,6 +2393,7 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> anySpec = any(Specification.class);
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
         doThrow(new RuntimeException("Email unavailable"))
                 .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
 

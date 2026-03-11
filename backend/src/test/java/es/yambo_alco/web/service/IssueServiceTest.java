@@ -322,6 +322,7 @@ class IssueServiceTest {
         when(settingsService.getIssueCreationWindowDays()).thenReturn(30);
         when(userRepository.findById("USR001")).thenReturn(Optional.of(creator));
         when(userRepository.findById("CUS001")).thenReturn(Optional.of(customer));
+        when(userService.getNotificationPreferences("CUS001")).thenReturn(NotificationPreferences.defaults());
         when(issueRepository.save(any(Issue.class))).thenAnswer(inv -> {
             Issue saved = inv.getArgument(0);
             saved.setId("ISS001");
@@ -949,9 +950,13 @@ class IssueServiceTest {
         User commenter = User.builder().id("USR001").name("Commenter").build();
         User customer = User.builder().id("CUS001").name("Customer").email("cus@test.com").build();
         Order order = Order.builder().id("ORD001").customerId("CUS001").build();
+        FamilyProduct family = FamilyProduct.builder().id("FAM001").name("Camisetas").build();
+        Product product = Product.builder().id("PROD001").name("Camiseta Logo").familyProduct(family).build();
         OrderProduct op = OrderProduct.builder()
                 .id(orderedProductId)
                 .orderId("ORD001")
+                .productId("PROD001")
+                .product(product)
                 .order(order)
                 .build();
 
