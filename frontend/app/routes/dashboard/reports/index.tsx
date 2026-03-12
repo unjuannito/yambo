@@ -18,7 +18,6 @@ import {
     faBoxOpen,
     faEye,
     faLayerGroup,
-    faFunnelDollar,
 } from "@fortawesome/free-solid-svg-icons";
 import {
     MetricCard,
@@ -40,12 +39,12 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
 };
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
-    PENDING_PAYMENT: "#f39c12",
-    CONFIRMING_PAYMENT: "#e67e22",
-    PAYMENT_CONFIRMED: "#27ae60",
-    PENDING_PRODUCTS: "#3498db",
-    CLOSED: "#16a085",
-    CANCELED: "#e74c3c",
+    PENDING_PAYMENT: "#ffd93d",
+    CONFIRMING_PAYMENT: "#ffa07a",
+    PAYMENT_CONFIRMED: "#33a35e",
+    PENDING_PRODUCTS: "#4ecdc4",
+    CLOSED: "#33a35e",
+    CANCELED: "#ff6b6b",
 };
 
 const ISSUE_STATUS_LABELS: Record<string, string> = {
@@ -57,11 +56,11 @@ const ISSUE_STATUS_LABELS: Record<string, string> = {
 };
 
 const ISSUE_STATUS_COLORS: Record<string, string> = {
-    OPEN: "#e67e22",
-    IN_PROGRESS: "#3498db",
-    RESOLVED: "#27ae60",
+    OPEN: "#ffa07a",
+    IN_PROGRESS: "#4ecdc4",
+    RESOLVED: "#33a35e",
     CLOSED: "#6b7280",
-    REOPENED: "#7c3aed",
+    REOPENED: "#906bac",
 };
 
 const ORDER_PRODUCT_STATUS_LABELS: Record<string, string> = {
@@ -74,17 +73,17 @@ const ORDER_PRODUCT_STATUS_LABELS: Record<string, string> = {
 };
 
 const ORDER_PRODUCT_STATUS_COLORS: Record<string, string> = {
-    OPEN: "#3498db",
-    ORDER_CLOSED: "#16a085",
-    PENDING_FABRICATION: "#e67e22",
-    TO_BE_DELIVERED: "#f39c12",
-    DELIVERED: "#27ae60",
-    CANCELED: "#e74c3c",
+    OPEN: "#4ecdc4",
+    ORDER_CLOSED: "#33a35e",
+    PENDING_FABRICATION: "#ffa07a",
+    TO_BE_DELIVERED: "#ffd93d",
+    DELIVERED: "#33a35e",
+    CANCELED: "#ff6b6b",
 };
 
 const TOP_PRODUCT_COLORS = [
-    "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
-    "#06b6d4", "#ec4899", "#14b8a6", "#f97316", "#6366f1",
+    "#33a35e", "#906bac", "#4ecdc4", "#ff6b6b", "#ffd93d",
+    "#ffa07a", "#33a35e", "#906bac", "#4ecdc4", "#ff6b6b",
 ];
 
 export function meta({}: Route.MetaArgs) {
@@ -107,17 +106,17 @@ export default function ReportsPage() {
     } = useReportData();
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-3">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black flex items-center gap-3">
                         <FontAwesomeIcon
                             icon={faChartLine}
-                            className="text-blue-600"
+                            className="text-yambo-green-500"
                         />
-                        Informes
+                        Informes 📊
                     </h1>
-                    <p className="text-gray-500 mt-1">
+                    <p className="text-gray-400 mt-1">
                         Analíticas y métricas de la plataforma
                     </p>
                 </div>
@@ -140,10 +139,10 @@ export default function ReportsPage() {
                 <div className="mt-8 space-y-10">
                     {/* ── Order Section ──────────────────────────────── */}
                     <section>
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4 flex items-center gap-2">
                             <FontAwesomeIcon
                                 icon={faShoppingCart}
-                                className="text-blue-500"
+                                className="text-yambo-green-500"
                             />
                             Pedidos
                         </h2>
@@ -205,7 +204,7 @@ export default function ReportsPage() {
                                     <ReportLineChart
                                         data={data.orders.ordersOverTime}
                                         label="Pedidos"
-                                        color="#3b82f6"
+                                        color="#33a35e"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -218,8 +217,8 @@ export default function ReportsPage() {
                                     <ReportLineChart
                                         data={data.orders.revenueOverTime}
                                         label="Ingresos (€)"
-                                        color="#10b981"
-                                        fillColor="rgba(16, 185, 129, 0.1)"
+                                        color="#33a35e"
+                                        fillColor="rgba(51, 163, 94, 0.1)"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -259,10 +258,10 @@ export default function ReportsPage() {
 
                     {/* ── User Engagement Section ───────────────────── */}
                     <section>
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4 flex items-center gap-2">
                             <FontAwesomeIcon
                                 icon={faUsers}
-                                className="text-green-500"
+                                className="text-yambo-purple-500"
                             />
                             Usuarios
                         </h2>
@@ -324,8 +323,8 @@ export default function ReportsPage() {
                                             data.users.registrationsOverTime
                                         }
                                         label="Registros"
-                                        color="#10b981"
-                                        fillColor="rgba(16, 185, 129, 0.1)"
+                                        color="#33a35e"
+                                        fillColor="rgba(51, 163, 94, 0.1)"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -340,8 +339,8 @@ export default function ReportsPage() {
                                             data.users.activeUsersOverTime
                                         }
                                         label="Usuarios activos"
-                                        color="#8b5cf6"
-                                        fillColor="rgba(139, 92, 246, 0.1)"
+                                        color="#906bac"
+                                        fillColor="rgba(144, 107, 172, 0.1)"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -354,10 +353,10 @@ export default function ReportsPage() {
 
                     {/* ── Issue Metrics Section ─────────────────────── */}
                     <section>
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4 flex items-center gap-2">
                             <FontAwesomeIcon
                                 icon={faExclamationTriangle}
-                                className="text-yellow-500"
+                                className="text-gold"
                             />
                             Incidencias
                         </h2>
@@ -419,8 +418,8 @@ export default function ReportsPage() {
                                     <ReportLineChart
                                         data={data.issues.issuesOverTime}
                                         label="Incidencias"
-                                        color="#f59e0b"
-                                        fillColor="rgba(245, 158, 11, 0.1)"
+                                        color="#ffd93d"
+                                        fillColor="rgba(255, 217, 61, 0.1)"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -460,10 +459,10 @@ export default function ReportsPage() {
 
                     {/* ── Product Analytics Section ──────────────────── */}
                     <section>
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4 flex items-center gap-2">
                             <FontAwesomeIcon
                                 icon={faCubes}
-                                className="text-indigo-500"
+                                className="text-sky"
                             />
                             Productos
                         </h2>
@@ -526,8 +525,8 @@ export default function ReportsPage() {
                                     <ReportLineChart
                                         data={data.products.productSalesOverTime}
                                         label="Unidades vendidas"
-                                        color="#6366f1"
-                                        fillColor="rgba(99, 102, 241, 0.1)"
+                                        color="#906bac"
+                                        fillColor="rgba(144, 107, 172, 0.1)"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -540,8 +539,8 @@ export default function ReportsPage() {
                                     <ReportLineChart
                                         data={data.products.productRevenueOverTime}
                                         label="Ingresos (€)"
-                                        color="#10b981"
-                                        fillColor="rgba(16, 185, 129, 0.1)"
+                                        color="#33a35e"
+                                        fillColor="rgba(51, 163, 94, 0.1)"
                                     />
                                 ) : (
                                     <p className="text-gray-400 text-sm text-center py-12">
@@ -654,17 +653,17 @@ export default function ReportsPage() {
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
-                                                <tr className="border-b border-gray-200">
-                                                    <th className="text-left py-2 px-3 text-gray-600 font-medium">
+                                                <tr className="border-b border-gray-100">
+                                                    <th className="text-left py-2 px-3 text-gray-400 font-medium">
                                                         Producto
                                                     </th>
-                                                    <th className="text-right py-2 px-3 text-gray-600 font-medium">
+                                                    <th className="text-right py-2 px-3 text-gray-400 font-medium">
                                                         Vistas
                                                     </th>
-                                                    <th className="text-right py-2 px-3 text-gray-600 font-medium">
+                                                    <th className="text-right py-2 px-3 text-gray-400 font-medium">
                                                         Compras
                                                     </th>
-                                                    <th className="text-right py-2 px-3 text-gray-600 font-medium">
+                                                    <th className="text-right py-2 px-3 text-gray-400 font-medium">
                                                         Conversión
                                                     </th>
                                                     <th className="py-2 px-3 w-40">
@@ -677,39 +676,39 @@ export default function ReportsPage() {
                                                     (item) => (
                                                         <tr
                                                             key={item.productId}
-                                                            className="border-b border-gray-100 hover:bg-gray-50"
+                                                            className="border-b border-gray-50 hover:bg-yambo-green-50/20 transition-colors"
                                                         >
-                                                            <td className="py-2 px-3 text-gray-900 font-medium">
+                                                            <td className="py-2 px-3 text-yambo-black font-medium">
                                                                 {item.productName}
                                                             </td>
-                                                            <td className="py-2 px-3 text-right text-gray-600">
+                                                            <td className="py-2 px-3 text-right text-gray-400">
                                                                 {item.views}
                                                             </td>
-                                                            <td className="py-2 px-3 text-right text-gray-600">
+                                                            <td className="py-2 px-3 text-right text-gray-400">
                                                                 {item.purchases}
                                                             </td>
                                                             <td className="py-2 px-3 text-right">
                                                                 <span
                                                                     className={`font-semibold ${
                                                                         item.conversionRate >= 10
-                                                                            ? "text-green-600"
+                                                                            ? "text-yambo-green-600"
                                                                             : item.conversionRate >= 3
-                                                                              ? "text-yellow-600"
-                                                                              : "text-red-500"
+                                                                              ? "text-gold"
+                                                                              : "text-coral"
                                                                     }`}
                                                                 >
                                                                     {item.conversionRate}%
                                                                 </span>
                                                             </td>
                                                             <td className="py-2 px-3">
-                                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                                <div className="w-full bg-gray-100 rounded-full h-2">
                                                                     <div
                                                                         className={`h-2 rounded-full ${
                                                                             item.conversionRate >= 10
-                                                                                ? "bg-green-500"
+                                                                                ? "bg-yambo-green-500"
                                                                                 : item.conversionRate >= 3
-                                                                                  ? "bg-yellow-500"
-                                                                                  : "bg-red-400"
+                                                                                  ? "bg-gold"
+                                                                                  : "bg-coral"
                                                                         }`}
                                                                         style={{
                                                                             width: `${Math.min(item.conversionRate, 100)}%`,
@@ -736,14 +735,14 @@ export default function ReportsPage() {
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead>
-                                            <tr className="border-b border-gray-200">
-                                                <th className="text-left py-2 px-3 text-gray-600 font-medium">
+                                            <tr className="border-b border-gray-100">
+                                                <th className="text-left py-2 px-3 text-gray-400 font-medium">
                                                     Familia
                                                 </th>
-                                                <th className="text-right py-2 px-3 text-gray-600 font-medium">
+                                                <th className="text-right py-2 px-3 text-gray-400 font-medium">
                                                     Unidades
                                                 </th>
-                                                <th className="text-right py-2 px-3 text-gray-600 font-medium">
+                                                <th className="text-right py-2 px-3 text-gray-400 font-medium">
                                                     Ingresos
                                                 </th>
                                             </tr>
@@ -753,21 +752,21 @@ export default function ReportsPage() {
                                                 (fam) => (
                                                     <tr
                                                         key={fam.familyId}
-                                                        className="border-b border-gray-100 hover:bg-gray-50"
+                                                        className="border-b border-gray-50 hover:bg-yambo-green-50/20 transition-colors"
                                                     >
-                                                        <td className="py-2 px-3 text-gray-900 font-medium">
+                                                        <td className="py-2 px-3 text-yambo-black font-medium">
                                                             <div className="flex items-center gap-2">
                                                                 <FontAwesomeIcon
                                                                     icon={faLayerGroup}
-                                                                    className="w-3 h-3 text-indigo-400"
+                                                                    className="w-3 h-3 text-yambo-purple-400"
                                                                 />
                                                                 {fam.familyName}
                                                             </div>
                                                         </td>
-                                                        <td className="py-2 px-3 text-right text-gray-600">
+                                                        <td className="py-2 px-3 text-right text-gray-400">
                                                             {fam.quantity}
                                                         </td>
-                                                        <td className="py-2 px-3 text-right text-gray-600">
+                                                        <td className="py-2 px-3 text-right text-gray-400">
                                                             {fam.revenue.toFixed(2)} €
                                                         </td>
                                                     </tr>

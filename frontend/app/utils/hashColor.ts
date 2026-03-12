@@ -4,7 +4,7 @@
  * with a matching darker text and border color.
  */
 
-function hashCode(str: string): number {
+export function hashCode(str: string): number {
     let hash = 5381;
     for (let i = 0; i < str.length; i++) {
         hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0; // djb2
@@ -13,7 +13,7 @@ function hashCode(str: string): number {
 }
 
 // Golden-angle spacing gives perceptually distinct hues even for sequential ids
-const GOLDEN_ANGLE = 137.508;
+export const GOLDEN_ANGLE = 137.508;
 
 export function hashColor(id: string): { bg: string; text: string; border: string } {
     const h = hashCode(id);

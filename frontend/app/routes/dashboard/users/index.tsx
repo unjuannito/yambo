@@ -81,11 +81,9 @@ export default function Users() {
                     const defaultGroup = groups.find(g => !g.name);
 
                     if (namedGroups.length === 0) {
-                        // Project has no named groups — show project-level entry
                         const value = defaultGroup ? defaultGroup.id : `project:${project.id}`;
                         allOptions.push({ value, label: project.name });
                     } else {
-                        // Show project-level entry (no group) + each named group
                         const projectValue = defaultGroup ? defaultGroup.id : `project:${project.id}`;
                         allOptions.push({ value: projectValue, label: `${project.name} (sin grupo)` });
                         for (const g of namedGroups) {
@@ -198,7 +196,7 @@ export default function Users() {
         }
     };
 
-    const userTableColumns : FilterableColumn<User>[] = [
+    const userTableColumns: FilterableColumn<User>[] = [
         {
             key: "id",
             header: "ID",
@@ -220,10 +218,10 @@ export default function Users() {
                 placeholder: "Buscar por nombre...",
             },
             render: (user: User) => (
-                <span className="font-medium">
+                <span className="font-medium text-yambo-black">
                     {user.name}
                     {user.system && (
-                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-normal">
+                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
                             Sistema
                         </span>
                     )}
@@ -250,28 +248,28 @@ export default function Users() {
             },
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
-                        {user.profiles.length > 0 ? (
-                            user.profiles
-                                .slice(0, 3)
-                                .map((profile) => (
-                                    <span
-                                        key={profile.id}
-                                        className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
-                                    >
-                                        {profile.name}
-                                    </span>
-                                ))
-                        ) : (
-                            <span className="text-gray-500 text-xs italic">
-                                Sin permisos
-                            </span>
-                        )}
-                        {user.profiles.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                                +{user.profiles.length - 3} más
-                            </span>
-                        )}
-                    </div>
+                    {user.profiles.length > 0 ? (
+                        user.profiles
+                            .slice(0, 3)
+                            .map((profile) => (
+                                <span
+                                    key={profile.id}
+                                    className="px-2 py-1 bg-yambo-green-50 text-yambo-green-700 rounded-full text-xs"
+                                >
+                                    {profile.name}
+                                </span>
+                            ))
+                    ) : (
+                        <span className="text-gray-400 text-xs italic">
+                            Sin permisos
+                        </span>
+                    )}
+                    {user.profiles.length > 3 && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                            +{user.profiles.length - 3} más
+                        </span>
+                    )}
+                </div>
             ),
         },
         {
@@ -283,10 +281,10 @@ export default function Users() {
                         user.groupRoles.slice(0, 3).map((gr) => (
                             <span
                                 key={`${gr.groupId}:${gr.role}`}
-                                className={`px-2 py-1 rounded text-xs ${
+                                className={`px-2 py-1 rounded-full text-xs ${
                                     gr.role === 'COORDINATOR'
-                                        ? 'bg-purple-100 text-purple-800'
-                                        : 'bg-green-100 text-green-800'
+                                        ? 'bg-yambo-purple-100 text-yambo-purple-800'
+                                        : 'bg-yambo-green-50 text-yambo-green-700'
                                 }`}
                                 title={`${gr.role} - ${gr.projectName}`}
                             >
@@ -294,10 +292,10 @@ export default function Users() {
                             </span>
                         ))
                     ) : (
-                        <span className="text-gray-500 text-xs italic">Sin roles</span>
+                        <span className="text-gray-400 text-xs italic">Sin roles</span>
                     )}
                     {user.groupRoles && user.groupRoles.length > 3 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
                             +{user.groupRoles.length - 3} más
                         </span>
                     )}
@@ -323,6 +321,7 @@ export default function Users() {
                     type="checkbox"
                     checked={user.enabled}
                     disabled
+                    className="rounded border-gray-300 text-yambo-green-600"
                 />
             ),
         },
@@ -358,8 +357,8 @@ export default function Users() {
 
     return (
         <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-6">Usuarios</h1>
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Usuarios 👥</h1>
                 <FilterableTable
                     columns={userTableColumns}
                     keyField="id"
@@ -445,7 +444,7 @@ export default function Users() {
                                             updated[idx] = { ...updated[idx], groupId: e.target.value };
                                             setForm({ ...form, groupRoles: updated });
                                         }}
-                                        className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="flex-1 border border-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
                                         <option value="">Seleccionar grupo...</option>
                                         {groupOptions.map(opt => (
@@ -459,7 +458,7 @@ export default function Users() {
                                             updated[idx] = { ...updated[idx], role: e.target.value as 'MONITOR' | 'COORDINATOR' };
                                             setForm({ ...form, groupRoles: updated });
                                         }}
-                                        className="w-36 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-36 border border-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
                                         <option value="MONITOR">Monitor</option>
                                         <option value="COORDINATOR">Coordinador</option>
@@ -470,7 +469,7 @@ export default function Users() {
                                             const updated = form.groupRoles.filter((_, i) => i !== idx);
                                             setForm({ ...form, groupRoles: updated });
                                         }}
-                                        className="text-red-500 hover:text-red-700 text-sm px-2"
+                                        className="text-coral hover:text-coral/80 text-sm px-2"
                                     >
                                         ✕
                                     </button>
@@ -482,7 +481,7 @@ export default function Users() {
                                     ...form,
                                     groupRoles: [...form.groupRoles, { groupId: "", role: "MONITOR" }]
                                 })}
-                                className="text-sm text-blue-600 hover:underline mt-1"
+                                className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium mt-1"
                             >
                                 + Añadir rol en grupo
                             </button>
@@ -505,7 +504,7 @@ export default function Users() {
                                         placeholder="Biografía del usuario..."
                                         rows={3}
                                         maxLength={500}
-                                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                        className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-none"
                                     />
                                 </div>
                                 <div>
@@ -517,7 +516,7 @@ export default function Users() {
                                         onChange={(e) => setForm({ ...form, funFact: e.target.value })}
                                         placeholder="Un dato curioso sobre el usuario..."
                                         maxLength={100}
-                                        className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     />
                                 </div>
                             </>

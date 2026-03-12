@@ -1,62 +1,275 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
-   Easter Egg Animations
+   YAMBO V2 — Playful Design System
+   Brand Colors: Verde Yambo #33a35e · Morado Yambo #906bac
    ═══════════════════════════════════════════════════════════ */
 
-/* Logo spin on multi-click */
+@theme {
+  /* ── Brand Green Scale ── */
+  --color-yambo-green-50:  #eafaf0;
+  --color-yambo-green-100: #c8f0d6;
+  --color-yambo-green-200: #99e3b3;
+  --color-yambo-green-300: #66d38c;
+  --color-yambo-green-400: #47c572;
+  --color-yambo-green-500: #33a35e;
+  --color-yambo-green-600: #2a8a4e;
+  --color-yambo-green-700: #1f6e3c;
+  --color-yambo-green-800: #16522d;
+  --color-yambo-green-900: #0e3a20;
+
+  /* ── Brand Purple Scale ── */
+  --color-yambo-purple-50:  #f5f0fa;
+  --color-yambo-purple-100: #e4d8f0;
+  --color-yambo-purple-200: #cdb5e2;
+  --color-yambo-purple-300: #b592d4;
+  --color-yambo-purple-400: #a07ec3;
+  --color-yambo-purple-500: #906bac;
+  --color-yambo-purple-600: #7a5a93;
+  --color-yambo-purple-700: #624878;
+  --color-yambo-purple-800: #4a365b;
+  --color-yambo-purple-900: #34263f;
+
+  /* ── Neutral Black/White ── */
+  --color-yambo-black: #2a2a2a;
+  --color-yambo-white: #fefefe;
+
+  /* ── Accent colors for playfulness ── */
+  --color-yambo-coral:  #ff6b6b;
+  --color-yambo-gold:   #ffd93d;
+  --color-yambo-sky:    #4ecdc4;
+  --color-yambo-peach:  #ffa07a;
+
+  /* ── Typography ── */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Playful Border Radius Tokens ── */
+  --radius-playful: 1rem;
+  --radius-pill: 9999px;
+  --radius-blob: 2rem;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Global Defaults
+   ═══════════════════════════════════════════════════════════ */
+
+html,
+body {
+  color-scheme: light;
+  color: var(--color-yambo-black);
+  background: var(--color-yambo-white);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Playful Animations
+   ═══════════════════════════════════════════════════════════ */
+
+/* Bounce entrance */
+@keyframes bounce-in {
+  0%   { opacity: 0; transform: scale(0.3); }
+  50%  { opacity: 1; transform: scale(1.05); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.bounce-in { animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Fade-slide up */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.5s ease-out both; }
+
+/* Fade-slide down */
+@keyframes fade-down {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-down { animation: fade-down 0.5s ease-out both; }
+
+/* Wiggle */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  15%  { transform: rotate(-8deg); }
+  30%  { transform: rotate(6deg); }
+  45%  { transform: rotate(-4deg); }
+  60%  { transform: rotate(2deg); }
+}
+.wiggle { animation: wiggle 0.5s ease-in-out; }
+
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(51, 163, 94, 0.4); }
+  50%      { box-shadow: 0 0 0 12px rgba(51, 163, 94, 0); }
+}
+.pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* Float */
+@keyframes float-anim {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.float-anim { animation: float-anim 3s ease-in-out infinite; }
+
+/* Gradient shift */
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* Spin slow */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spin-slow { animation: spin-slow 8s linear infinite; }
+
+/* Scale pop on hover */
+.hover-pop { transition: transform 0.2s ease; }
+.hover-pop:hover { transform: scale(1.05); }
+
+/* Lift on hover — card elevation */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px -12px rgba(51, 163, 94, 0.15),
+              0 8px 24px -8px rgba(144, 107, 172, 0.1);
+}
+
+/* Underline grow for nav links */
+.underline-grow {
+  position: relative;
+}
+.underline-grow::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-yambo-green-500), var(--color-yambo-purple-500));
+  transition: width 0.3s ease, left 0.3s ease;
+  border-radius: 999px;
+}
+.underline-grow:hover::after {
+  width: 100%;
+  left: 0;
+}
+
+/* ── Staggered animation delays (for lists/grids) ── */
+.stagger > :nth-child(1) { animation-delay: 0ms; }
+.stagger > :nth-child(2) { animation-delay: 60ms; }
+.stagger > :nth-child(3) { animation-delay: 120ms; }
+.stagger > :nth-child(4) { animation-delay: 180ms; }
+.stagger > :nth-child(5) { animation-delay: 240ms; }
+.stagger > :nth-child(6) { animation-delay: 300ms; }
+.stagger > :nth-child(7) { animation-delay: 360ms; }
+.stagger > :nth-child(8) { animation-delay: 420ms; }
+.stagger > :nth-child(9) { animation-delay: 480ms; }
+.stagger > :nth-child(10) { animation-delay: 540ms; }
+
+/* ═══════════════════════════════════════════════════════════
+   Playful UI Utilities
+   ═══════════════════════════════════════════════════════════ */
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-yambo-green-500), var(--color-yambo-purple-500));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient border wrapper */
+.gradient-border {
+  position: relative;
+  border-radius: 1rem;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--color-yambo-green-400), var(--color-yambo-purple-400));
+}
+.gradient-border > * {
+  border-radius: calc(1rem - 2px);
+  background: white;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(254, 254, 254, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Blob shape */
+.blob-shape {
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+}
+
+/* Decorative blobs (for background) */
+.blob-green {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  background: linear-gradient(135deg, rgba(51, 163, 94, 0.15), rgba(51, 163, 94, 0.05));
+  filter: blur(40px);
+  pointer-events: none;
+}
+.blob-purple {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%;
+  background: linear-gradient(135deg, rgba(144, 107, 172, 0.15), rgba(144, 107, 172, 0.05));
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+/* Wavy section divider */
+.wave-top {
+  position: relative;
+}
+.wave-top::before {
+  content: "";
+  position: absolute;
+  top: -48px;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 48'%3E%3Cpath fill='%23fefefe' d='M0,48L60,42.7C120,37.3,240,26.7,360,26.7C480,26.7,600,37.3,720,40C840,42.7,960,37.3,1080,32C1200,26.7,1320,21.3,1380,18.7L1440,16L1440,48L1380,48C1320,48,1200,48,1080,48C960,48,840,48,720,48C600,48,480,48,360,48C240,48,120,48,60,48L0,48Z'/%3E%3C/svg%3E") no-repeat bottom;
+  background-size: cover;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Easter Egg Animations (ported from v1)
+   ═══════════════════════════════════════════════════════════ */
+
 @keyframes ee-spin-once {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
+.ee-spin { animation: ee-spin-once 0.6s ease-in-out; }
 
-.ee-spin {
-  animation: ee-spin-once 0.6s ease-in-out;
-}
-
-/* Wobble for icons */
 @keyframes ee-wobble {
-
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-
-  15% {
-    transform: rotate(-12deg);
-  }
-
-  30% {
-    transform: rotate(10deg);
-  }
-
-  45% {
-    transform: rotate(-8deg);
-  }
-
-  60% {
-    transform: rotate(6deg);
-  }
-
-  75% {
-    transform: rotate(-3deg);
-  }
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(-12deg); }
+  30% { transform: rotate(10deg); }
+  45% { transform: rotate(-8deg); }
+  60% { transform: rotate(6deg); }
+  75% { transform: rotate(-3deg); }
 }
+.ee-wobble { animation: ee-wobble 0.6s ease-in-out; }
 
-.ee-wobble {
-  animation: ee-wobble 0.6s ease-in-out;
-}
-
-/* 3D Card flip */
-.ee-card-perspective {
-  perspective: 1000px;
-}
-
+.ee-card-perspective { perspective: 1000px; }
 .ee-card-inner {
   position: relative;
   width: 100%;
@@ -64,213 +277,76 @@
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
+.ee-card-inner.ee-flipped { transform: rotateY(180deg); }
+.ee-card-front, .ee-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.ee-card-front { position: relative; }
+.ee-card-back { position: absolute; inset: 0; transform: rotateY(180deg); }
 
-.ee-card-inner.ee-flipped {
-  transform: rotateY(180deg);
-}
-
-.ee-card-front,
-.ee-card-back {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.ee-card-front {
-  position: relative;
-}
-
-.ee-card-back {
-  position: absolute;
-  inset: 0;
-  transform: rotateY(180deg);
-}
-
-/* Floating animation for 404 logo game */
 @keyframes ee-float {
-
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-
-  25% {
-    transform: translate(10px, -15px) rotate(5deg);
-  }
-
-  50% {
-    transform: translate(-8px, 10px) rotate(-3deg);
-  }
-
-  75% {
-    transform: translate(12px, 5px) rotate(4deg);
-  }
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(10px, -15px) rotate(5deg); }
+  50% { transform: translate(-8px, 10px) rotate(-3deg); }
+  75% { transform: translate(12px, 5px) rotate(4deg); }
 }
+.ee-float { animation: ee-float 3s ease-in-out infinite; }
 
-.ee-float {
-  animation: ee-float 3s ease-in-out infinite;
-}
-
-/* Pulse glow for calendar today cell */
 @keyframes ee-pulse-glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
-  }
-
-  50% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 40px rgba(59, 130, 246, 0.2);
-  }
+  0%, 100% { box-shadow: 0 0 5px rgba(51, 163, 94, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(51, 163, 94, 0.6), 0 0 40px rgba(51, 163, 94, 0.2); }
 }
+.ee-pulse-glow { animation: ee-pulse-glow 1.5s ease-in-out infinite; }
 
-.ee-pulse-glow {
-  animation: ee-pulse-glow 1.5s ease-in-out infinite;
-}
+@keyframes ee-rainbow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+.ee-rainbow { animation: ee-rainbow 2s linear; }
 
-/* Rainbow background wave */
-@keyframes ee-rainbow {
-  0% {
-    filter: hue-rotate(0deg);
-  }
+@keyframes ee-gradient-cycle { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+.ee-gradient-cycle { animation: ee-gradient-cycle 3s linear infinite; }
 
-  100% {
-    filter: hue-rotate(360deg);
-  }
-}
-
-.ee-rainbow {
-  animation: ee-rainbow 2s linear;
-}
-
-/* Rainbow gradient cycle for project cards */
-@keyframes ee-gradient-cycle {
-  0% {
-    filter: hue-rotate(0deg);
-  }
-
-  100% {
-    filter: hue-rotate(360deg);
-  }
-}
-
-.ee-gradient-cycle {
-  animation: ee-gradient-cycle 3s linear infinite;
-}
-
-/* Slide-down reveal */
 @keyframes ee-slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+.ee-slide-down { animation: ee-slide-down 0.4s ease-out forwards; }
 
-.ee-slide-down {
-  animation: ee-slide-down 0.4s ease-out forwards;
-}
-
-/* Bounce scale for emoji icons */
 @keyframes ee-bounce-scale {
-  0% {
-    transform: scale(1);
-  }
-
-  40% {
-    transform: scale(1.4);
-  }
-
-  60% {
-    transform: scale(0.9);
-  }
-
-  80% {
-    transform: scale(1.15);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  40% { transform: scale(1.4); }
+  60% { transform: scale(0.9); }
+  80% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
+.ee-bounce-scale { animation: ee-bounce-scale 0.5s ease-in-out; }
 
-.ee-bounce-scale {
-  animation: ee-bounce-scale 0.5s ease-in-out;
-}
-
-/* Hero secret mode — rainbow overlay */
 .ee-hero-secret .ee-hero-overlay {
   background: linear-gradient(135deg,
-      rgba(255, 0, 0, 0.15),
-      rgba(255, 165, 0, 0.15),
-      rgba(255, 255, 0, 0.15),
-      rgba(0, 128, 0, 0.15),
-      rgba(0, 0, 255, 0.15),
-      rgba(75, 0, 130, 0.15),
-      rgba(238, 130, 238, 0.15)) !important;
+    rgba(51, 163, 94, 0.15),
+    rgba(144, 107, 172, 0.15),
+    rgba(255, 217, 61, 0.15),
+    rgba(78, 205, 196, 0.15)) !important;
   transition: background 0.5s ease;
 }
 
-/* Sparkle fade-in */
 @keyframes ee-sparkle {
-
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(0.5) rotate(0deg);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.2) rotate(180deg);
-  }
+  0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
 }
+.ee-sparkle { animation: ee-sparkle 1.5s ease-in-out infinite; }
 
-.ee-sparkle {
-  animation: ee-sparkle 1.5s ease-in-out infinite;
-}
+.ee-catch-target { cursor: pointer; transition: all 0.3s ease; user-select: none; }
+.ee-catch-target:hover { transform: scale(1.1); }
+.ee-catch-target:active { transform: scale(0.9); }
 
-/* 404 game — cursor pointer on logo */
-.ee-catch-target {
-  cursor: pointer;
-  transition: all 0.3s ease;
-  user-select: none;
-}
-
-.ee-catch-target:hover {
-  transform: scale(1.1);
-}
-
-.ee-catch-target:active {
-  transform: scale(0.9);
-}
-
-/* Login rainbow background */
 @keyframes ee-login-rainbow {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
-
 .ee-login-rainbow {
-  background: linear-gradient(270deg,
-      #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6, #ff6b6b);
+  background: linear-gradient(270deg, var(--color-yambo-green-400), var(--color-yambo-purple-400), var(--color-yambo-coral), var(--color-yambo-green-400));
   background-size: 400% 400%;
   animation: ee-login-rainbow 3s ease infinite;
 }
 
-/* Tooltip/message bubble */
 .ee-message {
   position: absolute;
   top: 100%;
@@ -280,139 +356,39 @@
   z-index: 100;
 }
 
-/* Custom prose overrides for markdown (MDXEditor/Tailwind) */
-.prose h1 {
-  @apply text-3xl font-bold mt-4 mb-2 text-gray-900;
-}
+/* ═══════════════════════════════════════════════════════════
+   Prose / Markdown overrides
+   ═══════════════════════════════════════════════════════════ */
 
-.prose h2 {
-  @apply text-2xl font-semibold mt-3 mb-2 text-gray-900;
-}
-
-.prose h3 {
-  @apply text-xl font-semibold mt-2 mb-1 text-gray-900;
-}
-
-.prose h4 {
-  @apply text-lg font-semibold mt-1 mb-1 text-gray-900;
-}
-
-.prose p {
-  @apply text-base leading-relaxed mb-2 text-gray-800;
-}
-
-.prose blockquote {
-  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 bg-gray-50 py-1 my-2;
-}
-
-.prose code {
-  @apply bg-gray-100 text-pink-600 px-1 py-0.5 rounded font-mono text-sm;
-}
-
-.prose pre {
-  @apply bg-gray-900 text-gray-100 rounded p-3 overflow-x-auto my-2 text-sm;
-}
-
-.prose ul {
-  @apply list-disc pl-6 mb-2;
-}
-
-.prose ol {
-  @apply list-decimal pl-6 mb-2;
-}
-
-.prose li {
-  @apply mb-0.5;
-}
-
-.prose a {
-  @apply text-blue-600 underline hover:text-blue-800 transition;
-}
-
-.prose hr {
-  @apply border-t border-gray-300 my-4;
-}
-
-.prose table {
-  @apply border-collapse my-3;
-  width: max-content;
-}
-
-/* Make the MDXEditor table decorator wrapper the scroll container */
-.prose div[data-lexical-decorator]:has(table) {
-  overflow-x: auto;
-  max-width: 100%;
-}
-
-.prose th {
-  @apply border-b border-gray-300 px-3 py-1.5 text-left font-semibold bg-gray-100 whitespace-nowrap;
-}
-
-.prose td {
-  @apply border-b border-gray-200 px-3 py-1.5 whitespace-nowrap;
-}
-
-/* Override MDXEditor inline styles that cause table cell text to wrap char-by-char */
+.prose h1 { @apply text-3xl font-bold mt-4 mb-2 text-yambo-black; }
+.prose h2 { @apply text-2xl font-semibold mt-3 mb-2 text-yambo-black; }
+.prose h3 { @apply text-xl font-semibold mt-2 mb-1 text-yambo-black; }
+.prose h4 { @apply text-lg font-semibold mt-1 mb-1 text-yambo-black; }
+.prose p  { @apply text-base leading-relaxed mb-2 text-gray-700; }
+.prose blockquote { @apply border-l-4 border-yambo-green-300 pl-4 italic text-gray-600 bg-yambo-green-50 py-1 my-2 rounded-r-lg; }
+.prose code { @apply bg-yambo-purple-50 text-yambo-purple-700 px-1 py-0.5 rounded-md font-mono text-sm; }
+.prose pre  { @apply bg-yambo-black text-gray-100 rounded-2xl p-4 overflow-x-auto my-2 text-sm; }
+.prose ul  { @apply list-disc pl-6 mb-2; }
+.prose ol  { @apply list-decimal pl-6 mb-2; }
+.prose li  { @apply mb-0.5; }
+.prose a   { @apply text-yambo-green-600 underline hover:text-yambo-green-700 transition; }
+.prose hr  { @apply border-t border-gray-200 my-4; }
+.prose table { @apply border-collapse my-3; width: max-content; }
+.prose div[data-lexical-decorator]:has(table) { overflow-x: auto; max-width: 100%; }
+.prose th  { @apply border-b border-gray-300 px-3 py-1.5 text-left font-semibold bg-yambo-green-50 whitespace-nowrap; }
+.prose td  { @apply border-b border-gray-200 px-3 py-1.5 whitespace-nowrap; }
 .prose table th div[data-lexical-editor],
-.prose table td div[data-lexical-editor] {
-  white-space: nowrap !important;
-  word-break: normal !important;
-}
+.prose table td div[data-lexical-editor] { white-space: nowrap !important; word-break: normal !important; }
+.prose img { @apply max-w-full rounded-2xl shadow my-2; }
+[data-radix-portal] { z-index: 100; }
+.prose strong { @apply font-bold text-yambo-black; }
+.prose em { @apply italic text-gray-600; }
 
-.prose img {
-  @apply max-w-full rounded shadow my-2;
-}
-
-/* Ensure MDXEditor Radix dialogs render above custom modals */
-[data-radix-portal] {
-  z-index: 100;
-}
-
-.prose strong {
-  @apply font-bold text-gray-900;
-}
-
-.prose em {
-  @apply italic text-gray-700;
-}
-
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
-
-html,
-body {
-  color-scheme: light;
-}
+/* ═══════════════════════════════════════════════════════════
+   Responsive Utilities
+   ═══════════════════════════════════════════════════════════ */
 
 @media (max-width: 818px) {
-  .custom-break {
-    display: none;
-  }
-
-  .custom-break-button {
-    display: inline-flex;
-  }
-}
-
-
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
-
-html,
-body {
-  color-scheme: light;
-}
-
-@media (max-width: 818px) {
-  .custom-break {
-    display: none;
-  }
-
-  .custom-break-button {
-    display: inline-flex;
-  }
+  .custom-break { display: none; }
+  .custom-break-button { display: inline-flex; }
 }

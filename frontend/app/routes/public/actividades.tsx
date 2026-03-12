@@ -56,7 +56,7 @@ function getDaysInMonth(year: number, month: number) {
 
 function getFirstDayOfWeek(year: number, month: number) {
     const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1; // Monday = 0
+    return day === 0 ? 6 : day - 1;
 }
 
 function isSameDay(d1: Date, d2: Date) {
@@ -83,14 +83,12 @@ function ActivityCalendar({
     const [month, setMonth] = useState(today.getMonth());
     const [todayGlow, setTodayGlow] = useState(false);
 
-    // Easter egg: triple-click on today's date
     const todayClicksRef = useRef(0);
     const todayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const daysInMonth = getDaysInMonth(year, month);
     const firstDay = getFirstDayOfWeek(year, month);
 
-    // Map date string → activities for fast lookup
     const activityMap = useMemo(() => {
         const map = new Map<string, Activity[]>();
         for (const a of activities) {
@@ -117,16 +115,16 @@ function ActivityCalendar({
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                <button onClick={prev} className="p-2 rounded-lg hover:bg-gray-100 transition text-gray-500">
+                <button onClick={prev} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
                     <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4" />
                 </button>
-                <h3 className="text-lg font-semibold text-gray-800">
+                <h3 className="text-lg font-bold text-yambo-black font-display">
                     {MONTH_NAMES[month]} {year}
                 </h3>
-                <button onClick={next} className="p-2 rounded-lg hover:bg-gray-100 transition text-gray-500">
+                <button onClick={next} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
                     <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4" />
                 </button>
             </div>
@@ -134,7 +132,7 @@ function ActivityCalendar({
             {/* Day names */}
             <div className="grid grid-cols-7 gap-1 mb-1">
                 {DAY_NAMES.map((d) => (
-                    <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">
+                    <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">
                         {d}
                     </div>
                 ))}
@@ -155,7 +153,6 @@ function ActivityCalendar({
                         <button
                             key={key}
                             onClick={() => {
-                                // Easter egg: triple-click on today
                                 if (isToday) {
                                     todayClicksRef.current++;
                                     if (todayTimerRef.current) clearTimeout(todayTimerRef.current);
@@ -168,7 +165,7 @@ function ActivityCalendar({
                                         fireEmojiRain("🎊");
                                         toast("🎊 ¡Hoy es un gran día para hacer algo increíble!", {
                                             duration: 3000,
-                                            style: { background: "#3b82f6", color: "white", fontWeight: 600 },
+                                            style: { background: "#33a35e", color: "white", fontWeight: 600, borderRadius: "9999px" },
                                         });
                                         setTimeout(() => setTodayGlow(false), 3000);
                                     }
@@ -178,13 +175,13 @@ function ActivityCalendar({
                             }}
                             className={`
                                 relative flex flex-col items-center justify-center
-                                h-10 rounded-lg text-sm transition-all
+                                h-10 rounded-xl text-sm transition-all
                                 ${isSelected
-                                    ? "bg-blue-600 text-white font-bold shadow-md"
+                                    ? "bg-gradient-to-br from-yambo-green-500 to-yambo-green-600 text-white font-bold shadow-md"
                                     : isToday
-                                        ? `bg-blue-50 text-blue-700 font-semibold ring-1 ring-blue-300 ${todayGlow ? "ee-pulse-glow" : ""}`
+                                        ? `bg-yambo-green-50 text-yambo-green-700 font-semibold ring-1 ring-yambo-green-300 ${todayGlow ? "ee-pulse-glow" : ""}`
                                         : hasActivities
-                                            ? "hover:bg-gray-100 text-gray-800 font-medium"
+                                            ? "hover:bg-yambo-green-50 text-yambo-black font-medium"
                                             : "text-gray-400 hover:bg-gray-50"
                                 }
                             `}
@@ -196,7 +193,7 @@ function ActivityCalendar({
                                         <span
                                             key={idx}
                                             className="w-1.5 h-1.5 rounded-full"
-                                            style={{ backgroundColor: isSelected ? "white" : (a.status?.color || "#3b82f6") }}
+                                            style={{ backgroundColor: isSelected ? "white" : (a.status?.color || "#33a35e") }}
                                         />
                                     ))}
                                 </span>
@@ -206,11 +203,10 @@ function ActivityCalendar({
                 })}
             </div>
 
-            {/* Legend */}
             {selectedDate && (
                 <button
                     onClick={() => onSelectDate(null)}
-                    className="mt-3 text-xs text-blue-600 hover:underline w-full text-center"
+                    className="mt-3 text-xs text-yambo-green-600 hover:underline w-full text-center font-medium"
                 >
                     Mostrar todas las actividades
                 </button>
@@ -226,21 +222,21 @@ function ActivityCard({ activity, expanded, onToggle }: { activity: Activity; ex
 
     return (
         <article
-            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer hover-lift"
             onClick={onToggle}
         >
             {/* Color accent bar */}
             <div
-                className="h-1.5"
+                className="h-1.5 rounded-t-full"
                 style={{ backgroundColor: activity.status?.color || "#e5e7eb" }}
             />
 
-            <div className="p-5">
-                {/* Top row: status + date */}
+            <div className="p-6">
+                {/* Top row */}
                 <div className="flex items-center justify-between mb-3">
                     {activity.status && (
                         <span
-                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold text-white"
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white"
                             style={{ backgroundColor: activity.status.color }}
                         >
                             {activity.status.label}
@@ -249,44 +245,34 @@ function ActivityCard({ activity, expanded, onToggle }: { activity: Activity; ex
                     {dateObj && (
                         <span className="flex items-center gap-1.5 text-xs text-gray-400">
                             <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-                            {dateObj.toLocaleDateString("es-ES", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                            })}
+                            {dateObj.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
                             {" · "}
-                            {dateObj.toLocaleTimeString("es-ES", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                            })}
+                            {dateObj.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                     )}
                 </div>
 
-                {/* Title */}
-                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                <h3 className="text-lg font-bold text-yambo-black mb-1">
                     {activity.name}
                 </h3>
 
-                {/* Project */}
                 {activity.project && (
                     <p className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
-                        <FontAwesomeIcon icon={faMapPin} className="w-3 h-3 text-gray-400" />
+                        <FontAwesomeIcon icon={faMapPin} className="w-3 h-3 text-yambo-green-400" />
                         {activity.project.name}
                     </p>
                 )}
 
-                {/* Manager */}
                 {activity.manager && (
                     <div className="flex items-center gap-2 mb-3">
                         {activity.manager.photo ? (
                             <img
                                 src={activity.manager.photo}
                                 alt={activity.manager.name}
-                                className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm"
+                                className="h-8 w-8 rounded-full object-cover ring-2 ring-yambo-green-100 shadow-sm"
                             />
                         ) : (
-                            <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 ring-2 ring-white shadow-sm">
+                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-yambo-green-200 to-yambo-purple-200 flex items-center justify-center text-xs font-bold text-yambo-black ring-2 ring-white shadow-sm">
                                 {activity.manager.name.charAt(0)}
                             </div>
                         )}
@@ -297,16 +283,14 @@ function ActivityCard({ activity, expanded, onToggle }: { activity: Activity; ex
                     </div>
                 )}
 
-                {/* Description (expanded) */}
                 {expanded && activity.description && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                         <MarkdownEditor value={activity.description} readOnly />
                     </div>
                 )}
 
-                {/* Expand hint */}
                 {activity.description && (
-                    <p className="text-xs text-blue-500 mt-2">
+                    <p className="text-xs text-yambo-green-600 mt-2 font-medium">
                         {expanded ? "Haz clic para cerrar" : "Haz clic para ver más"}
                     </p>
                 )}
@@ -330,7 +314,6 @@ export default function PublicActivities() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
-    // Filter activities by selected calendar date
     const filteredActivities = useMemo(() => {
         if (!selectedDate) return activities;
         return activities.filter((a) => {
@@ -339,7 +322,6 @@ export default function PublicActivities() {
         });
     }, [activities, selectedDate]);
 
-    // Upcoming activities (sorted by date)
     const sortedActivities = useMemo(() => {
         return [...filteredActivities].sort((a, b) => {
             if (!a.date) return 1;
@@ -349,23 +331,24 @@ export default function PublicActivities() {
     }, [filteredActivities]);
 
     return (
-        <section className="w-full bg-white min-h-screen pt-24 pb-16">
+        <section className="w-full bg-gradient-to-b from-yambo-green-50/30 to-yambo-white min-h-screen pt-24 pb-16">
             <div className="max-w-6xl mx-auto px-4">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">Actividades</h1>
-                <p className="text-gray-600 mb-10">
-                    Descubre las actividades abiertas al público.
-                </p>
+                <div className="fade-up">
+                    <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display">Actividades</h1>
+                    <p className="text-gray-500 mb-10">
+                        Descubre las actividades abiertas al público 🎉
+                    </p>
+                </div>
 
-                {/* View toggle + count */}
                 {activities.length > 0 && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 fade-up" style={{ animationDelay: "0.1s" }}>
                         <div className="flex bg-gray-100 rounded-full p-1">
                             <button
                                 onClick={() => { setView("list"); setSelectedDate(null); }}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
                                     view === "list"
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-700 hover:bg-gray-200"
+                                        ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white shadow-sm"
+                                        : "text-gray-600 hover:bg-gray-200"
                                 }`}
                             >
                                 <FontAwesomeIcon icon={faList} className="w-4 h-4" />
@@ -373,31 +356,33 @@ export default function PublicActivities() {
                             </button>
                             <button
                                 onClick={() => setView("calendar")}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
                                     view === "calendar"
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-700 hover:bg-gray-200"
+                                        ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white shadow-sm"
+                                        : "text-gray-600 hover:bg-gray-200"
                                 }`}
                             >
                                 <FontAwesomeIcon icon={faCalendarDays} className="w-4 h-4" />
                                 Calendario
                             </button>
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-400">
                             {filteredActivities.length} actividad{filteredActivities.length !== 1 ? "es" : ""}
                             {selectedDate && (
-                                <> &middot; <button onClick={() => setSelectedDate(null)} className="text-blue-600 hover:underline">Limpiar filtro</button></>
+                                <> &middot; <button onClick={() => setSelectedDate(null)} className="text-yambo-green-600 hover:underline font-medium">Limpiar filtro</button></>
                             )}
                         </span>
                     </div>
                 )}
 
                 {activities.length === 0 ? (
-                    <p className="text-gray-500 text-center py-12">
-                        No hay actividades públicas disponibles.
-                    </p>
+                    <div className="text-center py-20">
+                        <p className="text-6xl mb-4">📅</p>
+                        <p className="text-gray-400 text-lg">
+                            No hay actividades públicas disponibles.
+                        </p>
+                    </div>
                 ) : view === "calendar" ? (
-                    /* ── Calendar view ─────────────────────────────── */
                     <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
                         <ActivityCalendar
                             activities={activities}
@@ -406,7 +391,7 @@ export default function PublicActivities() {
                         />
                         <div className="space-y-4">
                             {selectedDate && (
-                                <h2 className="text-lg font-semibold text-gray-700">
+                                <h2 className="text-lg font-bold text-yambo-black capitalize">
                                     {selectedDate.toLocaleDateString("es-ES", {
                                         weekday: "long",
                                         day: "numeric",
@@ -432,8 +417,7 @@ export default function PublicActivities() {
                         </div>
                     </div>
                 ) : (
-                    /* ── List view ─────────────────────────────────── */
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger">
                         {sortedActivities.map((a) => (
                             <ActivityCard
                                 key={a.id}

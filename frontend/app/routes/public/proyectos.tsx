@@ -1,7 +1,7 @@
 import { useLoaderData } from "react-router";
 import { getActiveProjects } from "~/services/publicService.server";
 import type { ActiveProject } from "~/services/publicService";
-import { hashColor } from "~/utils/hashColor";
+import { projectColor } from "~/utils/projectColor";
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import type { Route } from "./+types/proyectos";
@@ -40,77 +40,83 @@ export default function Proyectos() {
   const { projects } = useLoaderData<typeof loader>();
 
   return (
-    <section className="w-full bg-white min-h-screen pt-24 pb-16">
+    <section className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen pt-24 pb-16">
       <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Proyectos</h1>
-        <p className="text-gray-600 mb-10">
-          Conoce todos los proyectos en los que trabajamos.
-        </p>
+        <div className="fade-up">
+          <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display">Proyectos</h1>
+          <p className="text-gray-500 mb-10">
+            Conoce todos los proyectos en los que trabajamos 🚀
+          </p>
+        </div>
 
         {projects.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {projects.map((project) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 stagger">
+            {projects.map((project, idx) => {
+              const pc = projectColor(project.id, project.signatureColor);
+              return (
               <a
                 key={project.id}
                 href={`/proyectos/${project.id}`}
-                className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                className="group fade-up"
+                style={{
+                  animationDelay: `${idx * 100}ms`,
+                  '--pc-text': pc.text,
+                  '--pc-text-hover': pc.textHover,
+                  '--pc-bg': pc.bg,
+                  '--pc-border': pc.border,
+                } as React.CSSProperties}
               >
-                {project.image ? (
-                  <div className="w-full h-48 overflow-hidden">
-                    <img
-                      src={project.image}
-                      alt={project.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                ) : (
-                  (() => {
-                    const { bg, border } = hashColor(project.id);
-                    return (
-                      <div
-                        className="w-full h-48 flex items-center justify-center"
-                        style={{ background: `linear-gradient(135deg, ${bg}, ${border})` }}
-                      >
-                        <FontAwesomeIcon icon={faFolder} className="w-12 h-12 opacity-30" />
-                      </div>
-                    );
-                  })()
-                )}
-                <div className="p-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {project.name}
-                    </h3>
-                    {project.season && (
-                      (() => {
-                        const { bg, text } = hashColor(project.id);
-                        return (
-                          <span
-                            className="text-xs font-medium px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: bg, color: text }}
-                          >
-                            {project.season}
-                          </span>
-                        );
-                      })()
-                    )}
-                  </div>
-                  {project.description && (
-                    <p className="text-gray-600 text-sm line-clamp-3">
-                      {project.description}
-                    </p>
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover-lift transition-all"
+                  style={project.signatureColor ? { borderLeftWidth: '4px', borderLeftColor: project.signatureColor } : undefined}
+                >
+                  {project.image ? (
+                    <div className="w-full h-48 overflow-hidden">
+                      <img
+                        src={project.image}
+                        alt={project.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="w-full h-48 flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, var(--pc-bg), var(--pc-border))' }}
+                    >
+                      <FontAwesomeIcon icon={faFolder} className="w-12 h-12 opacity-30 text-white" />
+                    </div>
                   )}
-                  <span className="mt-3 inline-block text-blue-600 text-sm font-medium group-hover:underline">
-                    Ver proyecto →
-                  </span>
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-xl font-bold transition-colors [color:var(--pc-text)] group-hover:[color:var(--pc-text-hover)]">
+                        {project.name}
+                      </h3>
+                      {project.season && (
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full [background-color:var(--pc-bg)] [color:var(--pc-text)]">
+                          {project.season}
+                        </span>
+                      )}
+                    </div>
+                    {project.description && (
+                      <p className="text-gray-500 text-sm line-clamp-3 mb-3">
+                        {project.description}
+                      </p>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold transition-colors [color:var(--pc-text)] group-hover:[color:var(--pc-text-hover)]">
+                      Ver proyecto →
+                    </span>
+                  </div>
                 </div>
               </a>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-12">
-            No hay proyectos disponibles en este momento.
-          </p>
+          <div className="text-center py-20">
+            <p className="text-6xl mb-4">📁</p>
+            <p className="text-gray-400 text-lg">
+              No hay proyectos disponibles en este momento.
+            </p>
+          </div>
         )}
       </div>
     </section>

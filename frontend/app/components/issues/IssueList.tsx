@@ -48,7 +48,7 @@ export const IssueList: React.FC<IssueListProps> = ({
     };
 
     if (loading) {
-        return <div className="text-center py-4">Cargando incidencias...</div>;
+        return <div className="text-center py-4 text-gray-400">Cargando incidencias...</div>;
     }
 
     return (
@@ -56,8 +56,8 @@ export const IssueList: React.FC<IssueListProps> = ({
             {error && <ErrorMessage message={error} onRetry={loadIssues} />}
 
             {issues.length === 0 && !showForm ? (
-                <div className="bg-gray-50 rounded-lg p-6 text-center">
-                    <p className="text-gray-600 mb-4">
+                <div className="bg-yambo-green-50/30 rounded-2xl p-8 text-center border border-gray-100">
+                    <p className="text-gray-400 mb-4">
                         No hay incidencias reportadas para este pedido
                     </p>
                     <ButtonComponent
@@ -71,7 +71,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                 <>
                     {issues.length > 0 && (
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-gray-800">
+                            <h2 className="text-xl font-bold font-display text-yambo-black">
                                 Incidencias reportadas ({issues.length})
                             </h2>
                             <ButtonComponent
@@ -99,20 +99,20 @@ export const IssueList: React.FC<IssueListProps> = ({
                                     onClick={() =>
                                         onSelectIssue && onSelectIssue(issue.id)
                                     }
-                                    className="bg-white rounded-lg shadow p-4 hover:shadow-md transition cursor-pointer"
+                                    className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                                 >
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-bold text-gray-800">
+                                        <h3 className="font-bold text-yambo-black">
                                             {issue.title}
                                         </h3>
                                         <IssueStatusBadge
                                             status={issue.status}
                                         />
                                     </div>
-                                    <p className="text-gray-600 text-sm mb-2">
+                                    <p className="text-gray-400 text-sm mb-2">
                                         {issue.description}
                                     </p>
-                                    <div className="flex justify-between text-xs text-gray-500">
+                                    <div className="flex justify-between text-xs text-gray-400">
                                         <span>ID: {issue.id}</span>
                                         <span>
                                             {new Date(

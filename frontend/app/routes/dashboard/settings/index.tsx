@@ -231,10 +231,20 @@ export default function Settings() {
         }
     };
 
+    const tabItems: { key: SettingsTab; label: string }[] = [
+        { key: "organization", label: "Organización" },
+        { key: "application", label: "Aplicación" },
+        { key: "bank", label: "Banco" },
+        { key: "email", label: "Email" },
+        { key: "contact", label: "Contacto" },
+        { key: "upload", label: "Archivos" },
+        { key: "ai", label: "IA" },
+    ];
+
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                     <LoadingSpinner message="Cargando configuración..." size="lg" />
                 </main>
             </RequirePermission>
@@ -244,8 +254,8 @@ export default function Settings() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                    <h1 className="text-3xl font-bold mb-6">Configuración General</h1>
+                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Configuración General ⚙️</h1>
                     <ErrorMessage message={error} onRetry={loadSettings} />
                 </main>
             </RequirePermission>
@@ -254,67 +264,31 @@ export default function Settings() {
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-bold mb-2">Configuración General</h1>
-                <p className="text-gray-600 mb-6">Gestiona la configuración del sistema por secciones.</p>
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Configuración General ⚙️</h1>
+                <p className="text-gray-400 mb-6">Gestiona la configuración del sistema por secciones.</p>
 
-                <section className="bg-white rounded-lg shadow p-4 mb-6">
+                <section className="bg-white rounded-2xl border border-gray-100 p-4 mb-6">
                     <div className="flex flex-wrap gap-2">
-                        <ButtonComponent
-                            variant={activeTab === "organization" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("organization")}
-                        >
-                            Organización
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant={activeTab === "application" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("application")}
-                        >
-                            Aplicación
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant={activeTab === "bank" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("bank")}
-                        >
-                            Banco
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant={activeTab === "email" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("email")}
-                        >
-                            Email
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant={activeTab === "contact" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("contact")}
-                        >
-                            Contacto
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant={activeTab === "upload" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("upload")}
-                        >
-                            Archivos
-                        </ButtonComponent>
-                        <ButtonComponent
-                            variant={activeTab === "ai" ? "primary" : "neutral"}
-                            size="sm"
-                            onClick={() => setActiveTab("ai")}
-                        >
-                            IA
-                        </ButtonComponent>
+                        {tabItems.map((tab) => (
+                            <button
+                                key={tab.key}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                    activeTab === tab.key
+                                        ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white shadow-lg shadow-yambo-green-500/25"
+                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
                 </section>
 
                 {activeTab === "organization" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración de la Organización</h2>
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de la Organización</h2>
                         <InputComponent
                             label="Nombre de la Organización"
                             type="text"
@@ -323,7 +297,7 @@ export default function Settings() {
                             placeholder="Yambo"
                             required
                         />
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Nombre corto que se usará en los asuntos de los correos electrónicos.
                         </p>
                         <InputComponent
@@ -334,7 +308,7 @@ export default function Settings() {
                             placeholder="Yambo ALCO"
                             required
                         />
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Este nombre se mostrará como beneficiario en las instrucciones de pago de los pedidos.
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
@@ -352,8 +326,8 @@ export default function Settings() {
                 )}
 
                 {activeTab === "application" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración de la Aplicación</h2>
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de la Aplicación</h2>
                         <div className="flex gap-2">
                             <div className="flex-1">
                                 <InputComponent
@@ -375,7 +349,7 @@ export default function Settings() {
                                 </ButtonComponent>
                             </div>
                         </div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Este dominio se utilizará para generar enlaces correctos en los correos electrónicos enviados por la aplicación.
                         </p>
                         <InputComponent
@@ -388,7 +362,7 @@ export default function Settings() {
                             placeholder="30"
                             required
                         />
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Pasado este plazo, no se podrán crear nuevas incidencias para pedidos cerrados.
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
@@ -406,8 +380,8 @@ export default function Settings() {
                 )}
 
                 {activeTab === "bank" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración Bancaria</h2>
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración Bancaria</h2>
                         <InputComponent
                             label="IBAN"
                             type="text"
@@ -431,8 +405,8 @@ export default function Settings() {
                 )}
 
                 {activeTab === "email" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración de Correo Electrónico</h2>
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de Correo Electrónico</h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputComponent
@@ -485,11 +459,11 @@ export default function Settings() {
                             />
                         </div>
 
-                        <div className="border-t pt-4 mt-2">
+                        <div className="border-t border-gray-100 pt-4 mt-2">
                             <button
                                 type="button"
                                 onClick={() => setShowAdvanced(!showAdvanced)}
-                                className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                                className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-yambo-black transition-colors"
                             >
                                 <FontAwesomeIcon
                                     icon={faChevronRight}
@@ -506,7 +480,7 @@ export default function Settings() {
                                                 type="checkbox"
                                                 checked={smtpConfig.auth}
                                                 onChange={(e) => setSmtpConfig({ ...smtpConfig, auth: e.target.checked })}
-                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
                                             />
                                             <span className="text-sm">Autenticación SMTP</span>
                                         </label>
@@ -515,7 +489,7 @@ export default function Settings() {
                                                 type="checkbox"
                                                 checked={smtpConfig.starttlsEnable}
                                                 onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsEnable: e.target.checked })}
-                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
                                             />
                                             <span className="text-sm">Habilitar STARTTLS</span>
                                         </label>
@@ -524,7 +498,7 @@ export default function Settings() {
                                                 type="checkbox"
                                                 checked={smtpConfig.starttlsRequired}
                                                 onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsRequired: e.target.checked })}
-                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
                                             />
                                             <span className="text-sm">Requerir STARTTLS</span>
                                         </label>
@@ -571,9 +545,9 @@ export default function Settings() {
                 )}
 
                 {activeTab === "contact" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración de Contacto</h2>
-                        <p className="text-sm text-gray-600">
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de Contacto</h2>
+                        <p className="text-sm text-gray-400">
                             Estos datos se mostrarán en la página pública de contacto.
                         </p>
                         <InputComponent
@@ -612,9 +586,9 @@ export default function Settings() {
                 )}
 
                 {activeTab === "upload" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración de Archivos</h2>
-                        <p className="text-sm text-gray-600">
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de Archivos</h2>
+                        <p className="text-sm text-gray-400">
                             Configura los límites y tipos de archivo permitidos para la subida de imágenes.
                         </p>
                         <InputComponent
@@ -627,7 +601,7 @@ export default function Settings() {
                             placeholder="5"
                             required
                         />
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Tamaño máximo permitido por archivo subido. Afecta a todos los archivos subidos.
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
@@ -645,9 +619,9 @@ export default function Settings() {
                 )}
 
                 {activeTab === "ai" && (
-                    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-                        <h2 className="text-xl font-semibold">Configuración de IA (Ollama)</h2>
-                        <p className="text-sm text-gray-600">
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de IA (Ollama)</h2>
+                        <p className="text-sm text-gray-400">
                             Configura la conexión con el servidor de IA Ollama utilizado para la generación automática de metadatos SEO.
                         </p>
                         <InputComponent
@@ -658,7 +632,7 @@ export default function Settings() {
                             placeholder="http://localhost:11434"
                             required
                         />
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Dirección completa del servidor Ollama, incluyendo protocolo y puerto.
                         </p>
                         <InputComponent
@@ -669,7 +643,7 @@ export default function Settings() {
                             placeholder="phi3:mini"
                             required
                         />
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-400">
                             Nombre del modelo de Ollama a utilizar. Debe estar previamente descargado en el servidor.
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>

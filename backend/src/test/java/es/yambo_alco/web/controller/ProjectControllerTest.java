@@ -87,7 +87,7 @@ class ProjectControllerTest {
     @WithMockUser
     void createProject_WithPermission_ShouldCreateProject() throws Exception {
         Project project = Project.builder().id("PRJ001").name("Project 1").active(true).build();
-        when(projectService.createProject(eq("Project 1"), eq(true), eq("2026"), eq(null), eq(null), eq(null))).thenReturn(project);
+        when(projectService.createProject(eq("Project 1"), eq(true), eq("2026"), eq(null), eq(null), eq(null), eq(null))).thenReturn(project);
 
         String payload = """
                 {

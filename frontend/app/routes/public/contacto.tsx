@@ -2,10 +2,10 @@ import { useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 import { getContactSettings } from "~/services/publicService.server";
 import type { ContactSettings } from "~/services/publicService";
-import { hashColor } from "~/utils/hashColor";
+import { projectColor } from "~/utils/projectColor";
 import type { Route } from "./+types/contacto";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEnvelope, faComments, faShareNodes, faInbox } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faComments, faShareNodes } from "@fortawesome/free-solid-svg-icons";
 import { faInstagram, faTiktok } from "@fortawesome/free-brands-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { getSiteUrl } from "~/utils/env.server";
@@ -125,32 +125,36 @@ export default function Contacto() {
     const hasAnyContent = activeCards.length > 0 || activeSocials.length > 0;
 
     return (
-        <section className="w-full bg-white min-h-screen pt-24 pb-16">
+        <section className="w-full bg-yambo-white min-h-screen pt-24 pb-16">
             {/* Hero banner */}
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-b border-gray-200">
-                <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+            <div className="bg-gradient-to-br from-yambo-green-50/40 via-yambo-purple-50/30 to-yambo-green-50/20 border-b border-yambo-green-100/50 relative overflow-hidden">
+                {/* Decorative blobs */}
+                <div className="blob-green w-40 h-40 -top-10 -right-10 opacity-20" />
+                <div className="blob-purple w-32 h-32 -bottom-8 -left-8 opacity-15" />
+
+                <div className="max-w-4xl mx-auto px-4 py-14 text-center relative z-10">
                     <div
-                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-white shadow-sm mb-5 cursor-pointer select-none ${iconWobble ? "ee-wobble" : ""}`}
+                        className={`inline-flex items-center justify-center w-18 h-18 rounded-full bg-white shadow-md mb-5 cursor-pointer select-none transition-transform ${iconWobble ? "ee-wobble" : "hover:scale-110"}`}
                         onClick={handleIconClick}
                     >
-                        <FontAwesomeIcon icon={faComments} className="w-8 h-8" />
+                        <FontAwesomeIcon icon={faComments} className="w-9 h-9 text-yambo-green-500" />
                     </div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-3">
+                    <h1 className="text-4xl font-extrabold text-yambo-black mb-3 font-display fade-up">
                         Contacto
                     </h1>
-                    <p className="text-gray-600 text-lg max-w-xl mx-auto">
+                    <p className="text-gray-500 text-lg max-w-xl mx-auto fade-up" style={{ animationDelay: "0.05s" }}>
                         ¿Tienes alguna pregunta o quieres saber más sobre
-                        nosotros? Estamos encantados de ayudarte.
+                        nosotros? Estamos encantados de ayudarte. 💌
                     </p>
                     {secretMessage && (
-                        <p className="mt-3 text-sm text-purple-600 font-medium ee-slide-down">
+                        <p className="mt-3 text-sm text-yambo-purple-600 font-medium ee-slide-down">
                             Psst... también puedes mandarnos una paloma mensajera 🕊️
                         </p>
                     )}
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto px-4 -mt-6">
+            <div className="max-w-4xl mx-auto px-4 -mt-6 relative z-10">
                 {hasAnyContent ? (
                     <div className="space-y-8">
                         {/* Contact info cards */}
@@ -158,45 +162,39 @@ export default function Contacto() {
                             <div className="grid grid-cols-1 gap-4">
                                 {activeCards.map((card) => {
                                     const value = settings[card.key];
-                                    const { bg, text, border } = hashColor(
-                                        card.key,
-                                    );
+                                    const { bg, text, border } = projectColor(card.key);
                                     return (
                                         <div
                                             key={card.key}
-                                            className="rounded-xl border bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                                            className="rounded-3xl border bg-white p-7 shadow-sm hover:shadow-lg transition-all hover-lift fade-up"
                                             style={{ borderColor: border }}
                                         >
                                             <div className="flex items-start gap-4">
                                                 <div
-                                                    className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center"
-                                                    style={{
-                                                        backgroundColor: bg,
-                                                    }}
+                                                    className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center"
+                                                    style={{ backgroundColor: bg }}
                                                 >
-                                                    <FontAwesomeIcon icon={card.icon} className="w-6 h-6" />
+                                                    <FontAwesomeIcon icon={card.icon} className="w-7 h-7" style={{ color: text }} />
                                                 </div>
                                                 <div className="min-w-0">
                                                     <h3
-                                                        className="text-sm font-semibold uppercase tracking-wide mb-0.5"
+                                                        className="text-sm font-bold uppercase tracking-wide mb-0.5"
                                                         style={{ color: text }}
                                                     >
                                                         {card.label}
                                                     </h3>
-                                                    <p className="text-sm text-gray-500 mb-2">
+                                                    <p className="text-sm text-gray-400 mb-2">
                                                         {card.description}
                                                     </p>
                                                     {card.href ? (
                                                         <a
-                                                            href={card.href(
-                                                                value,
-                                                            )}
-                                                            className="text-gray-900 font-medium hover:underline break-all text-lg"
+                                                            href={card.href(value)}
+                                                            className="text-yambo-black font-semibold hover:text-yambo-green-600 transition-colors break-all text-lg"
                                                         >
                                                             {value}
                                                         </a>
                                                     ) : (
-                                                        <p className="text-gray-900 font-medium whitespace-pre-line text-lg">
+                                                        <p className="text-yambo-black font-semibold whitespace-pre-line text-lg">
                                                             {value}
                                                         </p>
                                                     )}
@@ -210,50 +208,41 @@ export default function Contacto() {
 
                         {/* Social media */}
                         {activeSocials.length > 0 && (
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faShareNodes} className="w-5 h-5" /> Síguenos en redes
+                            <div className="fade-up" style={{ animationDelay: "0.15s" }}>
+                                <h2 className="text-xl font-bold text-yambo-black mb-4 flex items-center gap-2 font-display">
+                                    <FontAwesomeIcon icon={faShareNodes} className="w-5 h-5 text-yambo-purple-500" /> Síguenos en redes
                                 </h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {activeSocials.map((social) => {
                                         const value = settings[social.key];
-                                        const { bg, text, border } = hashColor(
-                                            social.key,
-                                        );
+                                        const { bg, text, border } = projectColor(social.key);
                                         return (
                                             <a
                                                 key={social.key}
                                                 href={social.href(value)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="group flex items-start gap-4 p-5 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all"
+                                                className="group flex items-start gap-4 p-6 rounded-3xl border bg-white shadow-sm hover:shadow-lg transition-all hover-lift"
                                                 style={{ borderColor: border }}
                                             >
                                                 <div
-                                                    className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center"
-                                                    style={{
-                                                        backgroundColor: bg,
-                                                        color: text,
-                                                    }}
+                                                    className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
+                                                    style={{ backgroundColor: bg, color: text }}
                                                 >
-                                                    <FontAwesomeIcon icon={social.icon} className="w-7 h-7" />
+                                                    <FontAwesomeIcon icon={social.icon} className="w-8 h-8" />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                    <h3 className="font-bold text-yambo-black group-hover:text-yambo-green-600 transition-colors">
                                                         {social.label}
                                                     </h3>
-                                                    <p className="text-sm text-gray-500 mb-1">
+                                                    <p className="text-sm text-gray-400 mb-1">
                                                         {social.description}
                                                     </p>
                                                     <span
-                                                        className="text-sm font-medium"
+                                                        className="text-sm font-semibold"
                                                         style={{ color: text }}
                                                     >
-                                                        {displaySocialValue(
-                                                            social.key,
-                                                            value,
-                                                        )}{" "}
-                                                        →
+                                                        {displaySocialValue(social.key, value)} →
                                                     </span>
                                                 </div>
                                             </a>
@@ -264,20 +253,18 @@ export default function Contacto() {
                         )}
 
                         {/* CTA section */}
-                        <div className="rounded-xl bg-gray-50 border border-gray-200 p-8 text-center">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                ¿Quieres formar parte de Yambo?
+                        <div className="rounded-3xl bg-gradient-to-br from-yambo-green-50 to-yambo-purple-50 border border-yambo-green-100/50 p-10 text-center fade-up" style={{ animationDelay: "0.25s" }}>
+                            <h3 className="text-xl font-bold text-yambo-black mb-2 font-display">
+                                ¿Quieres formar parte de Yambo? 🌟
                             </h3>
-                            <p className="text-gray-600 mb-5 max-w-md mx-auto">
+                            <p className="text-gray-500 mb-6 max-w-md mx-auto">
                                 Si te interesa participar como monitor o
                                 colaborar con nosotros, no dudes en contactarnos.
                             </p>
-                            {activeCards.some(
-                                (c) => c.key === "contact.email",
-                            ) && (
+                            {activeCards.some((c) => c.key === "contact.email") && (
                                 <a
                                     href={`mailto:${settings["contact.email"]}`}
-                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors"
+                                    className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white font-semibold hover:shadow-lg hover:shadow-yambo-green-200 transition-all active:scale-95"
                                 >
                                     <FontAwesomeIcon icon={faEnvelope} className="w-5 h-5" /> Envíanos un correo
                                 </a>
@@ -287,16 +274,16 @@ export default function Contacto() {
                 ) : (
                     /* Empty state */
                     <div className="text-center py-20 mt-6">
-                        <div className="mb-5 flex justify-center"><FontAwesomeIcon icon={faInbox} className="w-16 h-16 text-gray-400" /></div>
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                        <p className="text-6xl mb-5">📭</p>
+                        <h2 className="text-xl font-bold text-yambo-black mb-2 font-display">
                             Próximamente
                         </h2>
-                        <p className="text-gray-500 text-lg max-w-md mx-auto">
+                        <p className="text-gray-400 text-lg max-w-md mx-auto">
                             La información de contacto estará disponible en
                             breve. Mientras tanto, puedes volver a la{" "}
                             <a
                                 href="/"
-                                className="text-blue-600 hover:underline"
+                                className="text-yambo-green-600 hover:underline font-semibold"
                             >
                                 página principal
                             </a>

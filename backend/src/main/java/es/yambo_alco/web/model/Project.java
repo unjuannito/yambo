@@ -38,4 +38,7 @@ public class Project {
     @Builder.Default
     @Column(nullable = false)
     private boolean featured = false;
+
+    @Column(name = "signature_color", length = 7)
+    private String signatureColor;
 }

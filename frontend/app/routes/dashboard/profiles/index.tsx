@@ -115,7 +115,6 @@ export default function Profiles() {
                 });
                 toast.success("Perfil creado correctamente");
             }
-            // Trigger table refresh by not needing to reload - FilterableTable will handle it
             resetForm();
         } catch (err) {
             toast.error(
@@ -134,7 +133,6 @@ export default function Profiles() {
         try {
             await profileService.deleteProfile(profileId);
             toast.success("Perfil eliminado correctamente");
-            // Table will auto-refresh
         } catch (err) {
             toast.error(
                 getErrorMessage(err, "Error al eliminar el perfil"),
@@ -162,10 +160,10 @@ export default function Profiles() {
                     placeholder: "Buscar por nombre...",
                 },
                 render: (profile) => (
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-yambo-black">
                         {profile.name}
                         {profile.system && (
-                            <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-normal">
+                            <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
                                 Sistema
                             </span>
                         )}
@@ -189,18 +187,18 @@ export default function Profiles() {
                                 .map((permission) => (
                                     <span
                                         key={permission.id}
-                                        className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                                        className="px-2 py-1 bg-yambo-green-50 text-yambo-green-700 rounded-full text-xs"
                                     >
                                         {permission.description}
                                     </span>
                                 ))
                         ) : (
-                            <span className="text-gray-500 text-xs italic">
+                            <span className="text-gray-400 text-xs italic">
                                 Sin permisos
                             </span>
                         )}
                         {profile.permissions.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                            <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
                                 +{profile.permissions.length - 3} más
                             </span>
                         )}
@@ -240,8 +238,8 @@ export default function Profiles() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-                    <h1 className="text-3xl font-bold mb-6">Perfiles</h1>
+                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Perfiles</h1>
                     <div className="flex justify-center py-12">
                         <LoadingSpinner size="lg" message="Cargando perfiles..." />
                     </div>
@@ -252,9 +250,9 @@ export default function Profiles() {
 
     return (
         <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">Perfiles</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Perfiles</h1>
                     <RequirePermission
                         permission={{ obj: "profile", action: "create" }}
                         redirect={false}

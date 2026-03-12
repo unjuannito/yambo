@@ -100,7 +100,7 @@ export default function Index() {
                 toast(gag.message, {
                     duration: 3000,
                     style: gag.rainbow
-                        ? { background: "#8b5cf6", color: "white", fontWeight: 600 }
+                        ? { background: "#906bac", color: "white", fontWeight: 600 }
                         : undefined,
                 });
                 if (gag.rainbow) {
@@ -125,21 +125,22 @@ export default function Index() {
             setLoading(false);
         }
     }
+
     const invitationBanner = inviteToken ? (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700 font-medium">
+        <div className="p-3 bg-yambo-green-50 border border-yambo-green-200 rounded-2xl">
+            <p className="text-sm text-yambo-green-700 font-medium">
                 <FontAwesomeIcon icon={faGift} className="w-4 h-4 inline mr-1 align-text-bottom" /> Tienes una invitación pendiente
             </p>
-            <p className="text-xs text-green-600 mt-1">
+            <p className="text-xs text-yambo-green-600 mt-1">
                 Se aplicará automáticamente tras iniciar sesión
             </p>
         </div>
     ) : undefined;
 
     const footer = (
-        <p className="text-xs text-center text-gray-500">
+        <p className="text-xs text-center text-gray-400">
             ¿No eres socio?{" "}
-            <a className="text-blue-600" href="/contacto">
+            <a className="text-yambo-green-600 hover:underline font-semibold" href="/contacto">
                 Contacta con Yambo.
             </a>
         </p>
@@ -172,7 +173,7 @@ export default function Index() {
                 <div className="text-right">
                     <Link
                         to="/forgot-password"
-                        className="text-sm text-blue-600 hover:underline"
+                        className="text-sm text-yambo-green-600 hover:underline font-medium"
                     >
                         ¿Olvidaste tu contraseña?
                     </Link>
@@ -182,7 +183,7 @@ export default function Index() {
                     type="submit"
                     variant="primary"
                     className="w-full"
-                    loading={loading}
+                    isLoading={loading}
                 >
                     Iniciar sesión
                 </ButtonComponent>

@@ -35,7 +35,8 @@ public class ProjectController {
     public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody CreateProjectRequest request) {
         Project project = projectService.createProject(
                 request.getName(), request.getActive(), request.getSeason(),
-                request.getDescription(), request.getImage(), request.getFeatured());
+                request.getDescription(), request.getImage(), request.getFeatured(),
+                request.getSignatureColor());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ProjectResponse(project));
     }
 
@@ -62,7 +63,8 @@ public class ProjectController {
             @Valid @RequestBody UpdateProjectRequest request) {
         Project project = projectService.updateProject(
                 id, request.getName(), request.getActive(), request.getSeason(),
-                request.getDescription(), request.getImage(), request.getFeatured());
+                request.getDescription(), request.getImage(), request.getFeatured(),
+                request.getSignatureColor());
         return ResponseEntity.ok(new ProjectResponse(project));
     }
 
@@ -156,6 +158,8 @@ public class ProjectController {
         private String image;
 
         private Boolean featured;
+
+        private String signatureColor;
     }
 
     @Data
@@ -166,6 +170,7 @@ public class ProjectController {
         private String description;
         private String image;
         private Boolean featured;
+        private String signatureColor;
     }
 
     @Data
@@ -177,6 +182,7 @@ public class ProjectController {
         private String description;
         private String image;
         private boolean featured;
+        private String signatureColor;
 
         public ProjectResponse(Project project) {
             this.id = project.getId();
@@ -186,6 +192,7 @@ public class ProjectController {
             this.description = project.getDescription();
             this.image = project.getImage();
             this.featured = project.isFeatured();
+            this.signatureColor = project.getSignatureColor();
         }
     }
 

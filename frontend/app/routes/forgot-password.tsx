@@ -57,8 +57,8 @@ export default function ForgotPassword() {
     }
 
     const footer = (
-        <p className="text-xs text-center text-gray-500">
-            <Link to="/login" className="text-blue-600 hover:underline">
+        <p className="text-xs text-center text-gray-400">
+            <Link to="/login" className="text-yambo-green-600 hover:underline font-medium">
                 Volver al inicio de sesión
             </Link>
         </p>
@@ -72,11 +72,11 @@ export default function ForgotPassword() {
         >
             {sent ? (
                 <div className="space-y-4">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-700 font-medium">
+                    <div className="p-4 bg-yambo-green-50 border border-yambo-green-200 rounded-2xl">
+                        <p className="text-sm text-yambo-green-700 font-semibold">
                             📧 Correo enviado
                         </p>
-                        <p className="text-sm text-green-600 mt-1">
+                        <p className="text-sm text-yambo-green-600 mt-1">
                             Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.
                             Revisa también la carpeta de spam.
                         </p>
@@ -102,7 +102,7 @@ export default function ForgotPassword() {
                         type="submit"
                         variant="primary"
                         className="w-full"
-                        loading={loading}
+                        isLoading={loading}
                     >
                         Enviar enlace
                     </ButtonComponent>

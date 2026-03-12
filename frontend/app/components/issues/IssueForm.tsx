@@ -89,8 +89,8 @@ export const IssueForm: React.FC<IssueFormProps> = ({
     };
 
     return (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-4">
                 Reportar incidencia
             </h2>
 
@@ -100,7 +100,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                 <div className="mb-4">
                     <label
                         htmlFor="title"
-                        className="block text-sm font-medium text-gray-700 mb-1"
+                        className="block text-sm font-semibold text-yambo-black mb-1.5"
                     >
                         Título *
                     </label>
@@ -110,7 +110,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Describe la incidencia brevemente"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-400 transition-all"
                         disabled={loading}
                     />
                 </div>
@@ -118,10 +118,10 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                 <div className="mb-4">
                     {isMultiSelection ? (
                         <>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-semibold text-yambo-black mb-2">
                                 Productos relacionados *
                             </label>
-                            <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                            <div className="border border-gray-200 rounded-xl p-3 max-h-48 overflow-y-auto space-y-2">
                                 {orderedProducts.map((product) => {
                                     const checked =
                                         selectedOrderedProductIds.includes(
@@ -130,7 +130,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                                     return (
                                         <label
                                             key={product.id}
-                                            className="flex items-start gap-2 text-sm text-gray-700"
+                                            className="flex items-start gap-2.5 text-sm text-gray-600 hover:bg-yambo-green-50/30 rounded-lg p-1.5 transition-colors cursor-pointer"
                                         >
                                             <input
                                                 type="checkbox"
@@ -151,13 +151,13 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                                                     );
                                                 }}
                                                 disabled={loading}
-                                                className="w-4 h-4 text-blue-600 rounded mt-0.5"
+                                                className="w-4 h-4 text-yambo-green-500 rounded-md mt-0.5 accent-yambo-green-500"
                                             />
                                             <span>
-                                                <span className="block font-medium">
+                                                <span className="block font-semibold text-yambo-black">
                                                     {product.name}
                                                 </span>
-                                                <span className="block text-xs text-gray-500">
+                                                <span className="block text-xs text-gray-400">
                                                     Cantidad:{" "}
                                                     {product.quantity ?? 1}
                                                     {typeof product.unitPrice ===
@@ -168,7 +168,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                                                 {product.configuration &&
                                                     product.configuration !==
                                                         "{}" && (
-                                                        <span className="block text-xs text-gray-500">
+                                                        <span className="block text-xs text-gray-400">
                                                             Configuración:{" "}
                                                             {formatConfiguration(
                                                                 product.configuration,
@@ -180,21 +180,21 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                                     );
                                 })}
                             </div>
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="mt-1.5 text-xs text-gray-400">
                                 {selectedOrderedProductIds.length} seleccionados
                             </p>
                         </>
                     ) : (
                         <>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-semibold text-yambo-black mb-1.5">
                                 Producto relacionado
                             </label>
-                            <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
+                            <p className="text-sm text-gray-600 bg-yambo-green-50/30 border border-gray-100 rounded-xl px-4 py-2.5">
                                 {orderedProducts[0]?.name || "Producto"}
                             </p>
                             {orderedProducts[0]?.configuration &&
                                 orderedProducts[0].configuration !== "{}" && (
-                                    <p className="mt-1 text-xs text-gray-500">
+                                    <p className="mt-1.5 text-xs text-gray-400">
                                         Configuración:{" "}
                                         {formatConfiguration(
                                             orderedProducts[0].configuration,
@@ -208,7 +208,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                 <div className="mb-4">
                     <label
                         htmlFor="description"
-                        className="block text-sm font-medium text-gray-700 mb-1"
+                        className="block text-sm font-semibold text-yambo-black mb-1.5"
                     >
                         Descripción *
                     </label>
@@ -231,7 +231,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                     </ButtonComponent>
                     <ButtonComponent
                         type="submit"
-                        loading={loading}
+                        isLoading={loading}
                         variant="primary"
                     >
                         {loading ? "Guardando..." : "Reportar incidencia"}

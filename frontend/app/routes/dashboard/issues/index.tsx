@@ -47,7 +47,6 @@ export default function IssuesPage() {
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
-            // Date range filter from UI overrides the tab-based startDate
             const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
             const effectiveStartDate = dateRange?.startDate
                 ? new Date(dateRange.startDate).toISOString()
@@ -104,15 +103,15 @@ export default function IssuesPage() {
                 },
                 render: (row) => (
                     <div>
-                        <p className="font-medium text-gray-900">{row.title}</p>
-                        <p className="text-xs text-gray-500">ID: {row.id}</p>
+                        <p className="font-medium text-yambo-black">{row.title}</p>
+                        <p className="text-xs text-gray-400">ID: {row.id}</p>
                     </div>
                 ),
             },
             {
                 key: "orderId",
                 header: "Pedido",
-                render: (row) => <span className="font-mono text-xs">#{row.orderId}</span>,
+                render: (row) => <span className="font-mono text-xs text-gray-500">#{row.orderId}</span>,
             },
             {
                 key: "productName",
@@ -135,7 +134,7 @@ export default function IssuesPage() {
                     enabled: true,
                     type: "date-range",
                 },
-                render: (row) => new Date(row.createdAt).toLocaleString("es-ES"),
+                render: (row) => <span className="text-sm text-gray-500">{new Date(row.createdAt).toLocaleString("es-ES")}</span>,
             },
             {
                 key: "actions",
@@ -155,18 +154,18 @@ export default function IssuesPage() {
     );
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-            <div className="mb-6 rounded-2xl bg-white shadow-md p-6">
-                <h1 className="text-3xl font-bold mb-2">Incidencias</h1>
-                <p className="text-gray-600 mb-5">Consulta y sigue el estado de todas las incidencias de tus pedidos</p>
+        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <div className="mb-6 rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Incidencias</h1>
+                <p className="text-gray-400 mb-5">Consulta y sigue el estado de todas las incidencias de tus pedidos</p>
 
                 <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                    <StatCard label="Total" value={stats.total} className="bg-gray-50" />
-                    <StatCard label="Abiertas" value={stats.open} className="bg-red-50" />
-                    <StatCard label="En progreso" value={stats.inProgress} className="bg-orange-50" />
-                    <StatCard label="Resueltas" value={stats.resolved} className="bg-green-50" />
-                    <StatCard label="Cerradas" value={stats.closed} className="bg-slate-100" />
-                    <StatCard label="Reabiertas" value={stats.reopened} className="bg-violet-100" />
+                    <StatCard label="Total" value={stats.total} className="bg-gray-50 rounded-2xl" />
+                    <StatCard label="Abiertas" value={stats.open} className="bg-red-50 rounded-2xl" />
+                    <StatCard label="En progreso" value={stats.inProgress} className="bg-orange-50 rounded-2xl" />
+                    <StatCard label="Resueltas" value={stats.resolved} className="bg-yambo-green-50 rounded-2xl" />
+                    <StatCard label="Cerradas" value={stats.closed} className="bg-slate-100 rounded-2xl" />
+                    <StatCard label="Reabiertas" value={stats.reopened} className="bg-yambo-purple-50 rounded-2xl" />
                 </div>
             </div>
 
@@ -188,5 +187,3 @@ export default function IssuesPage() {
         </main>
     );
 }
-
-

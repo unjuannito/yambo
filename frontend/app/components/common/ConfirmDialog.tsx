@@ -1,58 +1,60 @@
-import type { ReactNode } from "react";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 interface ConfirmDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-    variant?: 'danger' | 'warning' | 'info';
-    isLoading?: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: "danger" | "warning" | "info";
+  isLoading?: boolean;
 }
 
-const variantStyles = {
-    danger: 'bg-red-600 hover:bg-red-700',
-    warning: 'bg-yellow-600 hover:bg-yellow-700',
-    info: 'bg-blue-600 hover:bg-blue-700',
+const confirmButtonVariant: Record<string, "danger" | "primary"> = {
+  danger: "danger",
+  warning: "primary",
+  info: "primary",
 };
 
 export function ConfirmDialog({
-    isOpen,
-    onClose,
-    onConfirm,
-    title,
-    message,
-    confirmLabel = 'Confirmar',
-    cancelLabel = 'Cancelar',
-    variant = 'info',
-    isLoading = false,
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmLabel = "Confirmar",
+  cancelLabel = "Cancelar",
+  variant = "info",
+  isLoading = false,
 }: ConfirmDialogProps) {
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
-                <h2 className="text-xl font-bold mb-4 text-gray-900">{title}</h2>
-                <p className="text-gray-700 mb-6">{message}</p>
-                <div className="flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        disabled={isLoading}
-                        className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {cancelLabel}
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={isLoading}
-                        className={`px-4 py-2 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantStyles[variant]}`}
-                    >
-                        {isLoading ? 'Procesando...' : confirmLabel}
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl bounce-in">
+        <h2 className="text-xl font-bold font-display mb-4 text-gray-900">
+          {title}
+        </h2>
+        <p className="text-gray-600 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          <ButtonComponent
+            variant="secondary"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            {cancelLabel}
+          </ButtonComponent>
+          <ButtonComponent
+            variant={confirmButtonVariant[variant] ?? "primary"}
+            onClick={onConfirm}
+            isLoading={isLoading}
+          >
+            {confirmLabel}
+          </ButtonComponent>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

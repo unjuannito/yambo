@@ -1,47 +1,39 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-
 interface LoadingSpinnerProps {
     size?: "sm" | "md" | "lg" | "xl";
     message?: string;
 }
 
-const sizeClasses = {
-    sm: {
-        text: "text-sm",
-        fontSize: "1rem",
-        gap: "gap-1"
-    },
-    md: {
-        text: "text-md",
-        fontSize: "2rem",
-        gap: "gap-2"
-    },
-    lg: {
-        text: "text-lg",
-        fontSize: "4rem",
-        gap: "gap-4"
-    },
-    xl: {
-        text: "text-xl",
-        fontSize: "8rem",
-        gap: "gap-8"
-    }
+const sizeConfig = {
+    sm: { dotSize: "w-2 h-2", gap: "gap-1.5", textSize: "text-sm" },
+    md: { dotSize: "w-3 h-3", gap: "gap-2", textSize: "text-base" },
+    lg: { dotSize: "w-4 h-4", gap: "gap-3", textSize: "text-lg" },
+    xl: { dotSize: "w-6 h-6", gap: "gap-4", textSize: "text-xl" },
 };
+
 export function LoadingSpinner({
     size = "md",
     message
 }: LoadingSpinnerProps) {
+    const cfg = sizeConfig[size];
 
-    return (<div className={`flex flex-col items-center justify-center ${sizeClasses[size].gap}`}>
-            <FontAwesomeIcon
-                icon={faSpinner}
-                spin
-                className="text-blue-600"
-                style={{ fontSize: sizeClasses[size].fontSize }}
-                role="status"
-                aria-label="Cargando"
-            />
-            {message && <span className={`text-gray-600`}>{message}</span>}
-        </div>);
+    return (
+        <div className={`flex flex-col items-center justify-center ${cfg.gap}`}>
+            <div className={`flex ${cfg.gap}`}>
+                {[0, 1, 2].map((i) => (
+                    <span
+                        key={i}
+                        className={`${cfg.dotSize} rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-purple-400`}
+                        style={{
+                            animation: `bounce-in 0.6s ease-in-out ${i * 0.15}s infinite alternate`,
+                        }}
+                    />
+                ))}
+            </div>
+            {message && (
+                <span className={`text-gray-500 font-medium ${cfg.textSize}`}>
+                    {message}
+                </span>
+            )}
+        </div>
+    );
 }

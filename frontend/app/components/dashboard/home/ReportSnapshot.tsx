@@ -83,10 +83,10 @@ function Sparkline({
 const ORDER_STATUS_COLORS: Record<string, string> = {
     PENDING_PAYMENT: "#f39c12",
     CONFIRMING_PAYMENT: "#e67e22",
-    PAYMENT_CONFIRMED: "#27ae60",
-    PENDING_PRODUCTS: "#3498db",
+    PAYMENT_CONFIRMED: "#33a35e",
+    PENDING_PRODUCTS: "#906bac",
     CLOSED: "#16a085",
-    CANCELED: "#e74c3c",
+    CANCELED: "#ff6b6b",
 };
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -110,7 +110,7 @@ function MiniDoughnut({ data }: { data: Record<string, number> }) {
                 backgroundColor: keys.map(
                     (k) => ORDER_STATUS_COLORS[k] || "#6b7280"
                 ),
-                borderWidth: 1,
+                borderWidth: 2,
                 borderColor: "#ffffff",
             },
         ],
@@ -127,7 +127,7 @@ function MiniDoughnut({ data }: { data: Record<string, number> }) {
             },
             tooltip: { enabled: true },
         },
-        cutout: "55%",
+        cutout: "60%",
     };
 
     return (
@@ -156,28 +156,28 @@ function StatTile({
 }) {
     const bgMap: Record<string, string> = {
         blue: "bg-blue-50 text-blue-600",
-        green: "bg-green-50 text-green-600",
-        yellow: "bg-yellow-50 text-yellow-600",
+        green: "bg-yambo-green-50 text-yambo-green-600",
+        yellow: "bg-amber-50 text-amber-600",
         red: "bg-red-50 text-red-600",
-        purple: "bg-purple-50 text-purple-600",
+        purple: "bg-yambo-purple-50 text-yambo-purple-600",
         indigo: "bg-indigo-50 text-indigo-600",
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2">
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center gap-3">
                 <div
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center ${bgMap[color] || bgMap.blue}`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${bgMap[color] || bgMap.green}`}
                 >
                     <FontAwesomeIcon icon={icon} className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="text-xs text-gray-500 truncate">{label}</p>
-                    <p className="text-lg font-bold text-gray-900">{value}</p>
+                    <p className="text-xs text-gray-400 truncate">{label}</p>
+                    <p className="text-lg font-bold text-yambo-black">{value}</p>
                 </div>
             </div>
             {sparklineData && sparklineData.length >= 2 && (
-                <Sparkline data={sparklineData} color={sparklineColor || "#3b82f6"} />
+                <Sparkline data={sparklineData} color={sparklineColor || "#33a35e"} />
             )}
         </div>
     );
@@ -193,15 +193,15 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
     const { orders, users, issues, products } = data;
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faChartLine} className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-lg font-bold font-display text-yambo-black flex items-center gap-2.5">
+                    <FontAwesomeIcon icon={faChartLine} className="w-4 h-4 text-yambo-purple-500" />
                     Resumen últimos 30 días
                 </h3>
                 <Link
                     to="/mi-espacio/admin/informes"
-                    className="text-sm text-indigo-600 hover:underline inline-flex items-center gap-1"
+                    className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-semibold inline-flex items-center gap-1.5 transition-colors"
                 >
                     Ver informes completos
                     <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
@@ -214,9 +214,9 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     label="Pedidos"
                     value={orders.totalOrders}
                     icon={faShoppingCart}
-                    color="blue"
+                    color="green"
                     sparklineData={orders.ordersOverTime}
-                    sparklineColor="#3b82f6"
+                    sparklineColor="#33a35e"
                 />
                 <StatTile
                     label="Ingresos"
@@ -236,9 +236,9 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     label="Usr. Activos"
                     value={users.activeUsers}
                     icon={faUsers}
-                    color="indigo"
+                    color="purple"
                     sparklineData={users.activeUsersOverTime}
-                    sparklineColor="#6366f1"
+                    sparklineColor="#906bac"
                 />
                 <StatTile
                     label="Incidencias"
@@ -258,9 +258,9 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     label="Prod. Vendidos"
                     value={products.totalProductsSold}
                     icon={faCubes}
-                    color="indigo"
+                    color="purple"
                     sparklineData={products.productSalesOverTime}
-                    sparklineColor="#6366f1"
+                    sparklineColor="#906bac"
                 />
                 <StatTile
                     label="Ingresos Prod."
@@ -268,47 +268,47 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     icon={faMoneyBillWave}
                     color="green"
                     sparklineData={products.productRevenueOverTime}
-                    sparklineColor="#10b981"
+                    sparklineColor="#33a35e"
                 />
             </div>
 
             {/* Charts row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Orders over time */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                    <h4 className="text-sm font-semibold text-yambo-black mb-3">
                         Pedidos (tendencia)
                     </h4>
                     {orders.ordersOverTime.length > 1 ? (
                         <SparklineChart
                             data={orders.ordersOverTime}
                             label="Pedidos"
-                            color="#3b82f6"
+                            color="#33a35e"
                         />
                     ) : (
-                        <p className="text-gray-400 text-xs text-center py-8">
+                        <p className="text-gray-300 text-xs text-center py-8">
                             Sin datos suficientes
                         </p>
                     )}
                 </div>
 
                 {/* Orders by status */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                    <h4 className="text-sm font-semibold text-yambo-black mb-3">
                         Pedidos por estado
                     </h4>
                     {Object.keys(orders.ordersByStatus).length > 0 ? (
                         <MiniDoughnut data={orders.ordersByStatus} />
                     ) : (
-                        <p className="text-gray-400 text-xs text-center py-8">
+                        <p className="text-gray-300 text-xs text-center py-8">
                             Sin datos
                         </p>
                     )}
                 </div>
 
                 {/* Top products */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                    <h4 className="text-sm font-semibold text-yambo-black mb-3">
                         Top productos vendidos
                     </h4>
                     {products.topProductsByQuantity.length > 0 ? (
@@ -317,7 +317,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                             values={products.topProductsByQuantity.slice(0, 5).map((p) => p.quantity)}
                         />
                     ) : (
-                        <p className="text-gray-400 text-xs text-center py-8">
+                        <p className="text-gray-300 text-xs text-center py-8">
                             Sin datos
                         </p>
                     )}
@@ -330,7 +330,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
 // ─── Mini Bar Chart ────────────────────────────────────────────────────
 
 const MINI_BAR_COLORS = [
-    "#6366f1", "#8b5cf6", "#a78bfa", "#c4b5fd", "#ddd6fe",
+    "#33a35e", "#906bac", "#4ecdc4", "#ff6b6b", "#ffd93d",
 ];
 
 function MiniBarChart({ labels, values }: { labels: string[]; values: number[] }) {
@@ -342,7 +342,7 @@ function MiniBarChart({ labels, values }: { labels: string[]; values: number[] }
             {
                 data: values,
                 backgroundColor: labels.map((_, i) => MINI_BAR_COLORS[i % MINI_BAR_COLORS.length]),
-                borderRadius: 4,
+                borderRadius: 8,
             },
         ],
     };

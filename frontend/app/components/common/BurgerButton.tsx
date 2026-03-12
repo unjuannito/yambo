@@ -16,7 +16,7 @@ export function BurgerButton({ isOpen, onClick, className = "" }: BurgerButtonPr
       variant="base"
       aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
       aria-expanded={isOpen}
-      className={twMerge(`focus:outline-none cursor-pointer text-black ${className}`)}
+      className={twMerge(`focus:outline-none cursor-pointer text-yambo-black ${className}`)}
       onClick={onClick}
     >
       <FontAwesomeIcon icon={isOpen ? faXmark : faBars} className="h-6 w-6" />

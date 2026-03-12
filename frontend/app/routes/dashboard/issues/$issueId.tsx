@@ -13,11 +13,15 @@ export default function IssueDetailPage() {
     ) || false;
 
     if (!issueId) {
-        return <div className="p-8 text-center">ID de incidencia no proporcionado</div>;
+        return (
+            <div className="p-8 text-center text-gray-400">
+                ID de incidencia no proporcionado
+            </div>
+        );
     }
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
+        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
             <div className="mb-4">
                 <ButtonComponent
                     onClick={() => navigate(-1)}

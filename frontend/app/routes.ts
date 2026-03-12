@@ -73,12 +73,13 @@ export default [
             route("mi-espacio/cesta", "routes/dashboard/merch/cart.tsx"),
         ]),
     ]),
+    route("/design-system", "routes/design-system.tsx"),
     route("/login", "routes/login.tsx"),
     route("/register", "routes/register.tsx"),
     route("/forgot-password", "routes/forgot-password.tsx"),
     route("/reset-password", "routes/reset-password.tsx"),
 
-    // SEO resource routes (no component – return raw responses)
+    // SEO resource routes
     route("sitemap.xml", "routes/sitemap[.]xml.tsx"),
     route("robots.txt", "routes/robots[.]txt.tsx"),
 ] satisfies RouteConfig;

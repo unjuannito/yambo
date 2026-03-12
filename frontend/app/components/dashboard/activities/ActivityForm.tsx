@@ -41,7 +41,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             <MarkdownEditor
                 value={form.description}
                 onChange={v => onChange("description", v)}
-                className="border rounded p-2 bg-gray-50"
+                className="border border-gray-200 rounded-xl p-2 bg-white"
             />
         </LabelComponent>
         <InputComponent
@@ -77,7 +77,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             options={managerOptions}
         />
         <div className="flex justify-end gap-2">
-            <ButtonComponent type="submit" variant="primary" loading={loading}>
+            <ButtonComponent type="submit" variant="primary" isLoading={loading}>
                 {submitLabel}
             </ButtonComponent>
         </div>

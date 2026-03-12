@@ -29,28 +29,18 @@ export function meta({ data }: Route.MetaArgs) {
             content:
                 "Yambo, asociación juvenil, Alcobendas, Madrid, ocio educativo, tiempo libre, actividades niños, actividades adolescentes, educación no formal, campamentos, proyectos juveniles, monitores",
         },
-
-        // Canonical
         { tagName: "link", rel: "canonical", href: siteUrl },
-
-        // Open Graph
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:url", content: siteUrl },
         { property: "og:type", content: "website" },
         { property: "og:site_name", content: "Yambo" },
         { property: "og:locale", content: "es_ES" },
-
-        // Twitter Card
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
-
-        // Additional SEO
         { name: "robots", content: "index, follow" },
         { name: "author", content: "Juan Cañas Cañate, Javier Mateos Mata" },
-
-        // JSON-LD structured data
         { "script:ld+json": organizationJsonLd(siteUrl) },
         { "script:ld+json": webSiteJsonLd(siteUrl) },
     ];

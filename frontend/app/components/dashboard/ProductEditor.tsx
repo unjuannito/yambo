@@ -14,6 +14,7 @@ import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, rectSortingStrategy, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 type ProductEditorMode = "create" | "edit";
 
@@ -40,7 +41,7 @@ function SortableImageItem({ id, url, index, onRemove }: {
             <img
                 src={url}
                 alt={`Imagen ${index + 1}`}
-                className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                className="w-full h-24 object-cover rounded-xl border border-gray-100"
                 onError={(e) => {
                     (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%239ca3af' font-size='12'%3EError%3C/text%3E%3C/svg%3E";
                 }}
@@ -56,11 +57,11 @@ function SortableImageItem({ id, url, index, onRemove }: {
             <button
                 type="button"
                 onClick={() => onRemove(index)}
-                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 bg-coral text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
             >
                 <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
             </button>
-            <span className="absolute bottom-1 left-1 bg-gray-800/70 text-white text-[10px] rounded px-1">
+            <span className="absolute bottom-1 left-1 bg-gray-800/70 text-white text-[10px] rounded-full px-1.5">
                 {index + 1}
             </span>
         </div>
@@ -168,14 +169,12 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         const usedIds = new Set<string>();
 
         const ids = imgs.map((url) => {
-            // Try to reuse an existing id for this url that hasn't been used yet
             const existingId = imageIdMap.current.get(url);
             if (existingId && !usedIds.has(existingId)) {
                 usedIds.add(existingId);
                 newMap.set(url, existingId);
                 return existingId;
             }
-            // Assign a new stable id
             const id = `img-${imageIdCounter.current++}`;
             usedIds.add(id);
             newMap.set(url, id);
@@ -189,11 +188,9 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
     const optionIds = useMemo(() => {
         const opts = product.options || [];
         const prev = optionIdListRef.current;
-        // Grow the id list if new options were added
         while (prev.length < opts.length) {
             prev.push(`opt-${optionIdCounter.current++}`);
         }
-        // Shrink if options were removed (keep the first N)
         const ids = prev.slice(0, opts.length);
         optionIdListRef.current = ids;
         return ids;
@@ -218,7 +215,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     return;
                 }
 
-                // create mode
                 const response = await productService.getAllProducts(0, 100);
                 setSavedProducts(response.content);
             } catch (err) {
@@ -291,7 +287,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
 
         const nextValues = [...(existing.values ?? [])];
 
-        // Auto-generate id from label in lowercase
         if (updates.label !== undefined) {
             updates.id = updates.label.toLowerCase();
         }
@@ -363,7 +358,6 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
         const target = direction === "up" ? index - 1 : index + 1;
         if (target < 0 || target >= opts.length) return;
         const newOpts = arrayMove(opts, index, target);
-        // Also reorder the stable ids
         optionIdListRef.current = arrayMove(optionIdListRef.current, index, target);
         setProduct({ ...product, options: newOpts });
     };
@@ -440,10 +434,10 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 py-12">
+            <div className="min-h-screen bg-gradient-to-br from-white to-yambo-green-50/30 py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yambo-green-500 mx-auto"></div>
                     </div>
                 </div>
             </div>
@@ -453,25 +447,26 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="mb-6">
-                <button
+                <ButtonComponent
+                    variant="ghost"
+                    size="sm"
                     onClick={() => navigate("/mi-espacio/merch")}
-                    className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900"
                 >
                     ← Volver al merch
-                </button>
+                </ButtonComponent>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h1 className="text-2xl font-bold mb-4">{isEditing ? "Editar Producto" : "Crear Nuevo Producto"}</h1>
-                <p className="text-gray-600">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+                <h1 className="text-2xl font-extrabold font-display text-yambo-black mb-2">{isEditing ? "Editar Producto" : "Crear Nuevo Producto"}</h1>
+                <p className="text-gray-400">
                     {isEditing ? "Modifica los detalles del producto" : "Crea un nuevo producto con todas sus opciones"}
                 </p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="space-y-6">
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Detalles del Producto</h2>
                         <div className="space-y-4">
                             <InputComponent
                                 label="Nombre del Producto"
@@ -518,17 +513,17 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold mb-4">Descripción del Producto</h2>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Descripción del Producto</h2>
                         <MarkdownEditor
                             value={product.description || ""}
                             onChange={(value) => setProduct({ ...product, description: value })}
-                            className="min-h-[200px] border rounded"
+                            className="min-h-[200px] border border-gray-200 rounded-xl"
                         />
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <h2 className="text-xl font-semibold mb-4">Imágenes del Producto</h2>
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Imágenes del Producto</h2>
                         <FileUploader
                             multiple
                             label="Arrastra o haz clic para subir archivos"
@@ -565,15 +560,16 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                         )}
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-semibold">Opciones del Producto</h2>
-                            <button
+                            <h2 className="text-xl font-bold font-display text-yambo-black">Opciones del Producto</h2>
+                            <ButtonComponent
+                                variant="primary"
+                                size="sm"
                                 onClick={addOption}
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                             >
                                 + Añadir Opción
-                            </button>
+                            </ButtonComponent>
                         </div>
 
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOptionDragEnd}>
@@ -582,25 +578,25 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                             {product.options.map((option, optionIndex) => (
                                 <SortableOptionItem key={optionIds[optionIndex]} id={optionIds[optionIndex]}>
                                     {({ dragHandleProps }) => (
-                                <div className="border border-gray-200 rounded-lg p-4">
+                                <div className="border border-gray-100 rounded-2xl p-5">
                                     <div className="flex justify-between items-center mb-4">
                                         <div className="flex items-center gap-2">
                                             <button
                                                 type="button"
                                                 {...dragHandleProps}
-                                                className="cursor-grab text-gray-400 hover:text-gray-600 p-1"
+                                                className="cursor-grab text-gray-300 hover:text-gray-500 p-1"
                                                 title="Arrastrar para reordenar"
                                             >
                                                 <FontAwesomeIcon icon={faGripVertical} className="w-4 h-4" />
                                             </button>
-                                            <h3 className="font-semibold text-lg">Opción {optionIndex + 1}</h3>
+                                            <h3 className="font-bold text-lg text-yambo-black">Opción {optionIndex + 1}</h3>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => moveOption(optionIndex, "up")}
                                                 disabled={optionIndex === 0}
-                                                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
                                                 title="Mover arriba"
                                             >
                                                 <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
@@ -609,17 +605,19 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 type="button"
                                                 onClick={() => moveOption(optionIndex, "down")}
                                                 disabled={optionIndex === product.options.length - 1}
-                                                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
                                                 title="Mover abajo"
                                             >
                                                 <FontAwesomeIcon icon={faArrowDown} className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <ButtonComponent
+                                                variant="danger-text"
+                                                size="sm"
                                                 onClick={() => removeOption(optionIndex)}
-                                                className="text-red-600 hover:text-red-800 ml-2"
+                                                className="ml-2"
                                             >
                                                 Eliminar
-                                            </button>
+                                            </ButtonComponent>
                                         </div>
                                     </div>
 
@@ -660,13 +658,14 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                     {option.type === "select" && (
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
-                                                <h4 className="font-medium">Valores</h4>
-                                                <button
+                                                <h4 className="font-semibold text-yambo-black">Valores</h4>
+                                                <ButtonComponent
+                                                    variant="primary"
+                                                    size="sm"
                                                     onClick={() => addValue(optionIndex)}
-                                                    className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                                                 >
                                                     + Añadir Valor
-                                                </button>
+                                                </ButtonComponent>
                                             </div>
 
                                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleValueDragEnd(optionIndex)}>
@@ -678,7 +677,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                     <button
                                                         type="button"
                                                         {...dragHandleProps}
-                                                        className="cursor-grab text-gray-400 hover:text-gray-600 p-1 self-center"
+                                                        className="cursor-grab text-gray-300 hover:text-gray-500 p-1 self-center"
                                                         title="Arrastrar para reordenar"
                                                     >
                                                         <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3" />
@@ -688,7 +687,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                             type="button"
                                                             onClick={() => moveValue(optionIndex, valueIndex, "up")}
                                                             disabled={valueIndex === 0}
-                                                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
+                                                            className="text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
                                                             title="Mover arriba"
                                                         >
                                                             <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3" />
@@ -697,7 +696,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                             type="button"
                                                             onClick={() => moveValue(optionIndex, valueIndex, "down")}
                                                             disabled={valueIndex === (option.values || []).length - 1}
-                                                            className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
+                                                            className="text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
                                                             title="Mover abajo"
                                                         >
                                                             <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3" />
@@ -728,7 +727,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                     </div>
                                                     <button
                                                         onClick={() => removeValue(optionIndex, valueIndex)}
-                                                        className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                                        className="px-2 py-1 bg-coral text-white rounded-full hover:bg-red-500 text-sm transition-colors"
                                                     >
                                                         <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                                                     </button>
@@ -740,7 +739,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                             </DndContext>
 
                                             {(option.values || []).length === 0 && (
-                                                <p className="text-gray-500 text-sm">No hay valores añadidos aún.</p>
+                                                <p className="text-gray-400 text-sm">No hay valores añadidos aún.</p>
                                             )}
                                         </div>
                                     )}
@@ -766,7 +765,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                             ))}
 
                             {product.options.length === 0 && (
-                                <p className="text-gray-500 text-sm text-center py-4">
+                                <p className="text-gray-400 text-sm text-center py-4">
                                     No hay opciones añadidas aún. Haz clic en "Añadir Opción" para comenzar.
                                 </p>
                             )}
@@ -775,13 +774,15 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                         </DndContext>
                     </div>
 
-                    <button
+                    <ButtonComponent
+                        variant="primary"
+                        size="lg"
                         onClick={saveProduct}
-                        disabled={saving}
-                        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-lg font-semibold"
+                        isLoading={saving}
+                        className="w-full"
                     >
-                        {saving ? "Guardando..." : isEditing ? "Guardar Cambios" : "Crear Producto"}
-                    </button>
+                        {isEditing ? "Guardar Cambios" : "Crear Producto"}
+                    </ButtonComponent>
                 </div>
             </div>
         </div>

@@ -31,13 +31,16 @@ export default function AreaSociosIndex() {
     };
 
     return (
-        <main className="flex flex-col p-8 w-full md:w-[calc(100vw-16rem)]">
-            <h1 className="text-3xl font-bold mb-2">
-                ¡Hola, {user?.name}!
-            </h1>
-            <p className="text-gray-500 mb-8">
-                Bienvenido a tu espacio en Yambo. Aquí tienes un resumen de tu actividad.
-            </p>
+        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            {/* Playful greeting header */}
+            <div className="mb-8">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">
+                    ¡Hola, {user?.name}! 👋
+                </h1>
+                <p className="text-gray-400">
+                    Bienvenido a tu espacio en Yambo. Aquí tienes un resumen de tu actividad.
+                </p>
+            </div>
 
             {loading ? (
                 <div className="flex justify-center py-16">
@@ -47,20 +50,16 @@ export default function AreaSociosIndex() {
                 <ErrorMessage message={error} onRetry={refetch} />
             ) : (
                 <div className="space-y-8">
-                    {/* Quick action buttons */}
                     <QuickActions />
 
-                    {/* Personal summary cards */}
                     <SummaryCards
                         cards={PERSONAL_CARDS}
                         counts={personalCounts}
                         title="Mi resumen"
                     />
 
-                    {/* Recent orders */}
                     <RecentOrdersList orders={personal?.recentOrders ?? []} />
 
-                    {/* Admin section — only visible with admin permissions */}
                     {admin && <AdminStatsSection data={admin} reportSnapshot={reportSnapshot} />}
                 </div>
             )}

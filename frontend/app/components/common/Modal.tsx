@@ -28,20 +28,20 @@ export function Modal({
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-2"
+            className="fixed inset-0 bg-yambo-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div
-                className={`bg-white rounded-lg ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col`}
+                className={`bg-white rounded-3xl ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col shadow-2xl bounce-in`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 {title && (
-                    <div className="flex justify-between items-center p-6 border-b shrink-0">
-                        <h2 className="text-2xl font-bold">{title}</h2>
+                    <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
+                        <h2 className="text-2xl font-bold text-yambo-black">{title}</h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-yambo-coral hover:text-white text-lg leading-none transition-all duration-200"
                             aria-label="Cerrar"
                         >
                             ×
@@ -56,7 +56,7 @@ export function Modal({
 
                 {/* Footer */}
                 {footer && (
-                    <div className="flex justify-end gap-2 p-6 border-t shrink-0">
+                    <div className="flex justify-end gap-2 p-6 border-t border-gray-100 shrink-0">
                         {footer}
                     </div>
                 )}
