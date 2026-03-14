@@ -229,8 +229,8 @@ pipeline {
                     }
 
                     withCredentials([
-                        string(credentialsId: 'Username', variable: 'PROD_DB_USER'),
-                        string(credentialsId: 'Password', variable: 'PROD_DB_PASS')
+                        string(credentialsId: 'PROD_DB_USER', variable: 'PROD_DB_USER'),
+                        string(credentialsId: 'PROD_DB_PASS', variable: 'PROD_DB_PASS')
                     ]) {
                         sh """
                             export KUBECONFIG=/var/lib/jenkins/.kube/config
