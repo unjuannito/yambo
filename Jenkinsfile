@@ -228,46 +228,52 @@ pipeline {
                         """
                     }
 
-                    sh """
-                        export KUBECONFIG=/var/lib/jenkins/.kube/config
-                        : "\${PROD_DB_HOST:?Set PROD_DB_HOST in the Jenkins job environment}"
-                        : "\${PROD_DB_USER:?Set PROD_DB_USER in the Jenkins job environment}"
-                        : "\${PROD_DB_PASS:?Set PROD_DB_PASS in the Jenkins job environment}"
+                    withCredentials([
+                        string(credentialsId: 'db', variable: 'PROD_DB_HOST'),
+                        string(credentialsId: 'Username/password', variable: 'PROD_DB_USER'),
+                        string(credentialsId: 'Password', variable: 'PROD_DB_PASS')
+                    ]) {
+                        sh """
+                            export KUBECONFIG=/var/lib/jenkins/.kube/config
+                            : "\${PROD_DB_HOST:?Missing Jenkins credential: db}"
+                            : "\${PROD_DB_USER:?Missing Jenkins credential: Username}"
+                            : "\${PROD_DB_PASS:?Missing Jenkins credential: Password}"
 
-                        kubectl apply -f ${outDir}/namespace.yaml --validate=false
+                            kubectl apply -f ${outDir}/namespace.yaml --validate=false
 
-                        if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
-                            kubectl apply -f ${outDir}/secrets.yaml
-                        fi
+                            if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
+                                kubectl apply -f ${outDir}/secrets.yaml
+                            fi
 
-                        kubectl apply -f ${outDir}/database-deployment.yaml
-                        kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
+                            kubectl apply -f ${outDir}/database-deployment.yaml
+                            kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
 
-                        chmod +x scripts/anonymize-dump.sh
+                            chmod +x scripts/anonymize-dump.sh
 
-                        # Build a fresh anonymized bootstrap dump from production for this PR.
-                        ANONYMIZE_DUMP_MODE=database-bootstrap \
-                            ./scripts/anonymize-dump.sh ${outDir}/preview-seed.sql
+                            # Build a fresh anonymized bootstrap dump from production for this PR.
+                            ANONYMIZE_DUMP_MODE=database-bootstrap \
+                                ./scripts/anonymize-dump.sh ${outDir}/preview-seed.sql
 
-                        # Preview DB restore ConfigMap — created/updated from the generated SQL file.
-                        kubectl create configmap preview-seed-sql \
-                            -n ${previewNs} \
-                            --from-file=preview-seed.sql=${outDir}/preview-seed.sql \
-                            --dry-run=client -o yaml | kubectl apply -f -
+                            # Preview DB restore ConfigMap — created/updated from the generated SQL file.
+                            kubectl create configmap preview-seed-sql \
+                                -n ${previewNs} \
+                                --from-file=preview-seed.sql=${outDir}/preview-seed.sql \
+                                --dry-run=client -o yaml | kubectl apply -f -
 
-                        # Restore the preview DB before deploying the backend.
-                        kubectl delete job preview-seed-${prId} -n ${previewNs} --ignore-not-found
-                        kubectl wait --for=delete job/preview-seed-${prId} -n ${previewNs} --timeout=120s || true
-                        kubectl apply -f ${outDir}/seed-job.yaml
-                        kubectl wait --for=condition=complete job/preview-seed-${prId} -n ${previewNs} --timeout=600s
+                            # Restore the preview DB before deploying the backend.
+                            kubectl delete job preview-seed-${prId} -n ${previewNs} --ignore-not-found
+                            kubectl wait --for=delete job/preview-seed-${prId} -n ${previewNs} --timeout=120s || true
+                            kubectl apply -f ${outDir}/seed-job.yaml
+                            kubectl wait --for=condition=complete job/preview-seed-${prId} -n ${previewNs} --timeout=600s
 
-                        kubectl apply -f ${outDir}/backend-deployment.yaml
-                        kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s
+                            kubectl apply -f ${outDir}/backend-deployment.yaml
+                            kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s
 
-                        kubectl apply -f ${outDir}/frontend-deployment.yaml
-                        kubectl apply -f ${outDir}/ingress.yaml
-                        kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s
-                    """
+                            kubectl apply -f ${outDir}/frontend-deployment.yaml
+                            kubectl apply -f ${outDir}/ingress.yaml
+                            kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s
+                        """
+                    }
 
                     env.PREVIEW_URL = "http://pr-${prId}.yambo.cabrasky.net"
                 }
