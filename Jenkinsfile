@@ -140,7 +140,7 @@ pipeline {
             steps {
                 dir('frontend') {
                     sh '''
-                        npm ci
+                        npm install
                         npm run build
                     '''
                 }
