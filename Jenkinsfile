@@ -229,13 +229,13 @@ pipeline {
                     }
 
                     withCredentials([
-                        string(credentialsId: 'db', variable: 'PROD_DB_HOST'),
-                        string(credentialsId: 'Username/password', variable: 'PROD_DB_USER'),
+                        string(credentialsId: 'Username', variable: 'PROD_DB_USER'),
                         string(credentialsId: 'Password', variable: 'PROD_DB_PASS')
                     ]) {
                         sh """
                             export KUBECONFIG=/var/lib/jenkins/.kube/config
-                            : "\${PROD_DB_HOST:?Missing Jenkins credential: db}"
+                            export PROD_DB_HOST=db
+                            : "\${PROD_DB_HOST:?Missing fixed host value: db}"
                             : "\${PROD_DB_USER:?Missing Jenkins credential: Username}"
                             : "\${PROD_DB_PASS:?Missing Jenkins credential: Password}"
 
