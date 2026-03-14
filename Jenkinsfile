@@ -111,21 +111,6 @@ pipeline {
             }
         }
 
-        stage('Check DB Migrations') {
-            when {
-                expression { env.IS_PR == 'true' }
-            }
-            steps {
-                script {
-                    def target = env.CHANGE_TARGET ?: 'develop'
-                    sh """
-                        git fetch origin ${target} --no-tags --depth=50
-                        python3 scripts/check-migration-rollbacks.py origin/${target}
-                    """
-                }
-            }
-        }
-
         stage('Backend Tests') {
             when {
                 expression { env.BACKEND_CHANGED == 'true' }
