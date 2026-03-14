@@ -125,15 +125,10 @@ pipeline {
             }
             post {
                 always {
-                    jacoco(
-                        execPattern        : 'backend/target/jacoco.exec',
-                        classPattern       : 'backend/target/classes',
-                        sourcePattern      : 'backend/src/main/java',
-                        reportTitle        : 'Backend Coverage',
-                        changeBuildStatus  : false,
-                        minimumLineCoverage: '0',
-                        maximumLineCoverage: '100'
-                    )
+                    recordCoverage tools: [[
+                        parser : 'JACOCO',
+                        pattern: 'backend/target/jacoco-report/jacoco.xml'
+                    ]]
                 }
             }
         }
