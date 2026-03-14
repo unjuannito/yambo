@@ -2,15 +2,19 @@ pipeline {
     agent any
 
     environment {
-        REGISTRY = "192.168.1.11:5000"
+        REGISTRY       = "192.168.1.11:5000"
         FRONTEND_IMAGE = "${REGISTRY}/yambo-web-frontend"
         BACKEND_IMAGE  = "${REGISTRY}/yambo-web-backend"
-        KUBECONFIG = "/var/lib/jenkins/.kube/config"
-        NAMESPACE = "yambo"
-        FIXED_EMAIL = 'javiermateos149@gmail.com'
+        KUBECONFIG     = "/var/lib/jenkins/.kube/config"
+        NAMESPACE      = "yambo"
+        FIXED_EMAIL    = 'javiermateos149@gmail.com'
     }
 
     stages {
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 1 — Setup
+        // ─────────────────────────────────────────────────────────────────────
 
         stage('Checkout') {
             steps {
@@ -21,13 +25,11 @@ pipeline {
         stage('Read Versions') {
             steps {
                 script {
-                    // Read frontend version from package.json
                     env.FRONTEND_TAG = sh(
                         script: "grep '\"version\"' frontend/package.json | head -1 | sed 's/.*\"version\": \"\\(.*\\)\".*/\\1/'",
                         returnStdout: true
                     ).trim()
-                    
-                    // Read backend version from pom.xml (get project version, not parent)
+
                     env.BACKEND_TAG = sh(
                         script: "grep '<artifactId>web</artifactId>' backend/pom.xml -A 1 | grep '<version>' | sed 's/.*<version>\\(.*\\)<\\/version>.*/\\1/'",
                         returnStdout: true
@@ -51,7 +53,6 @@ pipeline {
                         }
                     }
 
-                    // ✅ DEPLOY ONLY FROM DEVELOP
                     if (!env.CHANGE_ID && env.BRANCH_NAME == 'develop') {
                         env.CAN_DEPLOY = 'true'
                         echo "🚀 Deploy enabled (develop branch)"
@@ -111,55 +112,93 @@ pipeline {
             }
         }
 
-        stage('Backend Tests') {
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 2 — Quality Gates (parallel)
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Quality Gates') {
             when {
-                expression { env.BACKEND_CHANGED == 'true' }
+                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
             }
-            steps {
-                dir('backend') {
-                    sh '''
-                        chmod +x mvnw
-                        ./mvnw test
-                    '''
+            parallel {
+                stage('Backend Tests') {
+                    when {
+                        expression { env.BACKEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        dir('backend') {
+                            sh '''
+                                chmod +x mvnw
+                                ./mvnw test
+                            '''
+                        }
+                    }
+                    post {
+                        always {
+                            recordCoverage tools: [[
+                                parser : 'JACOCO',
+                                pattern: 'backend/target/jacoco-report/jacoco.xml'
+                            ]]
+                        }
+                    }
                 }
-            }
-            post {
-                always {
-                    recordCoverage tools: [[
-                        parser : 'JACOCO',
-                        pattern: 'backend/target/jacoco-report/jacoco.xml'
-                    ]]
+                stage('Frontend Typecheck') {
+                    when {
+                        expression { env.FRONTEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        dir('frontend') {
+                            sh '''
+                                npm install
+                                npm run typecheck
+                            '''
+                        }
+                    }
                 }
             }
         }
 
-        stage('Build Frontend') {
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 3 — Build Artifacts (parallel)
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Build Artifacts') {
             when {
-                expression { env.FRONTEND_CHANGED == 'true' }
+                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
             }
-            steps {
-                dir('frontend') {
-                    sh '''
-                        npm install
-                        npm run build
-                    '''
+            parallel {
+                stage('Build Frontend') {
+                    when {
+                        expression { env.FRONTEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        dir('frontend') {
+                            sh '''
+                                npm install
+                                npm run build
+                            '''
+                        }
+                    }
+                }
+                stage('Build Backend') {
+                    when {
+                        expression { env.BACKEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        dir('backend') {
+                            sh '''
+                                chmod +x mvnw
+                                ./mvnw package -DskipTests
+                            '''
+                        }
+                    }
                 }
             }
         }
 
-        stage('Build Backend') {
-            when {
-                expression { env.BACKEND_CHANGED == 'true' }
-            }
-            steps {
-                dir('backend') {
-                    sh '''
-                        chmod +x mvnw
-                        ./mvnw package -DskipTests
-                    '''
-                }
-            }
-        }
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 4 — Docker
+        // ─────────────────────────────────────────────────────────────────────
 
         stage('Build Docker Images') {
             when {
@@ -193,19 +232,23 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 5a — Deploy Preview Environment (PRs only)
+        // ─────────────────────────────────────────────────────────────────────
+
         stage('Deploy Preview Environment') {
             when {
                 expression { env.IS_PR == 'true' }
             }
             steps {
                 script {
-                    def prId     = env.CHANGE_ID
+                    def prId      = env.CHANGE_ID
                     def previewNs = "yambo-pr-${prId}"
-                    def outDir   = "k8s/preview/rendered/${previewNs}"
+                    def outDir    = "k8s/preview/rendered/${previewNs}"
 
                     sh "mkdir -p ${outDir}"
 
-                    // Render templates by replacing all placeholders
+                    // ── Render K8s templates ────────────────────────────────
                     def templates = [
                         'namespace.yaml',
                         'secrets.yaml',
@@ -228,57 +271,130 @@ pipeline {
                         """
                     }
 
-                    withCredentials([
-                        string(credentialsId: 'PROD_DB_USER', variable: 'PROD_DB_USER'),
-                        string(credentialsId: 'PROD_DB_PASS', variable: 'PROD_DB_PASS')
-                    ]) {
+                    // ── Apply base resources ────────────────────────────────
+                    sh """
+                        export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+                        kubectl apply -f ${outDir}/namespace.yaml --validate=false
+
+                        if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
+                            kubectl apply -f ${outDir}/secrets.yaml
+                        fi
+
+                        kubectl apply -f ${outDir}/database-deployment.yaml
+                        kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
+                    """
+
+                    // ── Generate anonymized DB dump ─────────────────────────
+                    // Read prod DB credentials from the K8s secret (single
+                    // source of truth — no Jenkins credentials needed).
+                    def dbUser = sh(
+                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
+                        returnStdout: true
+                    ).trim()
+
+                    def dbPass = sh(
+                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d",
+                        returnStdout: true
+                    ).trim()
+
+                    // Port-forward the prod DB so the dump container can reach
+                    // it on localhost:15432 without needing cluster-internal
+                    // networking from the Jenkins agent.
+                    sh """
+                        export KUBECONFIG=/var/lib/jenkins/.kube/config
+                        kubectl port-forward svc/db 15432:5432 -n ${NAMESPACE} &
+                        echo \$! > /tmp/pf-pid-${prId}
+                        # Wait for the port-forward to become ready
+                        for i in \$(seq 1 30); do
+                            if nc -z localhost 15432 2>/dev/null; then break; fi
+                            sleep 1
+                        done
+                    """
+
+                    try {
+                        // Run anonymize-dump.sh inside a postgres:15-alpine
+                        // container that has psql/pg_dump available.  The
+                        // container starts its own local PG server (required
+                        // by the script for temp DB operations) and connects
+                        // to the real prod DB via the port-forward above.
                         sh """
-                            export KUBECONFIG=/var/lib/jenkins/.kube/config
-                            export PROD_DB_HOST=db
-                            : "\${PROD_DB_HOST:?Missing fixed host value: db}"
-                            : "\${PROD_DB_USER:?Missing Jenkins credential: Username}"
-                            : "\${PROD_DB_PASS:?Missing Jenkins credential: Password}"
-
-                            kubectl apply -f ${outDir}/namespace.yaml --validate=false
-
-                            if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
-                                kubectl apply -f ${outDir}/secrets.yaml
-                            fi
-
-                            kubectl apply -f ${outDir}/database-deployment.yaml
-                            kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
-
                             chmod +x scripts/anonymize-dump.sh
+                            mkdir -p ${outDir}
 
-                            # Build a fresh anonymized bootstrap dump from production for this PR.
-                            ANONYMIZE_DUMP_MODE=database-bootstrap \
-                                ./scripts/anonymize-dump.sh ${outDir}/preview-seed.sql
+                            docker run --rm --network host \
+                                -v "\$(pwd)/scripts:/scripts:ro" \
+                                -v "\$(pwd)/${outDir}:/output" \
+                                -e PROD_DB_HOST=localhost \
+                                -e PROD_DB_PORT=15432 \
+                                -e PROD_DB_USER='${dbUser}' \
+                                -e PROD_DB_PASS='${dbPass}' \
+                                -e ANONYMIZE_DUMP_MODE=database-bootstrap \
+                                postgres:15-alpine sh -c '
+                                    set -e
 
-                            # Preview DB restore ConfigMap — created/updated from the generated SQL file.
-                            kubectl create configmap preview-seed-sql \
-                                -n ${previewNs} \
-                                --from-file=preview-seed.sql=${outDir}/preview-seed.sql \
-                                --dry-run=client -o yaml | kubectl apply -f -
+                                    # Start a local PG server for temp DB operations
+                                    mkdir -p /var/lib/postgresql/data /run/postgresql
+                                    chown postgres:postgres /var/lib/postgresql/data /run/postgresql
+                                    su postgres -c "initdb -D /var/lib/postgresql/data --no-locale -E UTF8" >/dev/null 2>&1
+                                    su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /tmp/pg.log -o \"-k /run/postgresql\"" >/dev/null 2>&1
 
-                            # Restore the preview DB before deploying the backend.
-                            kubectl delete job preview-seed-${prId} -n ${previewNs} --ignore-not-found
-                            kubectl wait --for=delete job/preview-seed-${prId} -n ${previewNs} --timeout=120s || true
-                            kubectl apply -f ${outDir}/seed-job.yaml
-                            kubectl wait --for=condition=complete job/preview-seed-${prId} -n ${previewNs} --timeout=600s
+                                    # Wait for local PG to accept connections
+                                    until pg_isready -h /run/postgresql -U postgres; do sleep 1; done
 
-                            kubectl apply -f ${outDir}/backend-deployment.yaml
-                            kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s
+                                    # The script connects to the local PG via the Unix socket
+                                    export PGHOST=/run/postgresql
 
-                            kubectl apply -f ${outDir}/frontend-deployment.yaml
-                            kubectl apply -f ${outDir}/ingress.yaml
-                            kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s
+                                    /scripts/anonymize-dump.sh /output/preview-seed.sql
+
+                                    su postgres -c "pg_ctl stop -D /var/lib/postgresql/data" >/dev/null 2>&1
+                                '
+                        """
+                    } finally {
+                        // Always clean up the port-forward process
+                        sh """
+                            if [ -f /tmp/pf-pid-${prId} ]; then
+                                kill \$(cat /tmp/pf-pid-${prId}) 2>/dev/null || true
+                                rm -f /tmp/pf-pid-${prId}
+                            fi
                         """
                     }
+
+                    // ── Seed the preview database ───────────────────────────
+                    sh """
+                        export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+                        kubectl create configmap preview-seed-sql \
+                            -n ${previewNs} \
+                            --from-file=preview-seed.sql=${outDir}/preview-seed.sql \
+                            --dry-run=client -o yaml | kubectl apply -f -
+
+                        kubectl delete job preview-seed-${prId} -n ${previewNs} --ignore-not-found
+                        kubectl wait --for=delete job/preview-seed-${prId} -n ${previewNs} --timeout=120s || true
+                        kubectl apply -f ${outDir}/seed-job.yaml
+                        kubectl wait --for=condition=complete job/preview-seed-${prId} -n ${previewNs} --timeout=600s
+                    """
+
+                    // ── Deploy application ──────────────────────────────────
+                    sh """
+                        export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+                        kubectl apply -f ${outDir}/backend-deployment.yaml
+                        kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s
+
+                        kubectl apply -f ${outDir}/frontend-deployment.yaml
+                        kubectl apply -f ${outDir}/ingress.yaml
+                        kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s
+                    """
 
                     env.PREVIEW_URL = "http://pr-${prId}.yambo.cabrasky.net"
                 }
             }
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 5b — Deploy to Production (develop only)
+        // ─────────────────────────────────────────────────────────────────────
 
         stage('Deploy to Kubernetes') {
             when {
@@ -310,6 +426,10 @@ pipeline {
             }
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Post-build
+    // ─────────────────────────────────────────────────────────────────────────
 
     post {
         success {
@@ -369,7 +489,6 @@ Check the console output for details."""
             echo "❌ Pipeline failed"
         }
         cleanup {
-            // Remove rendered preview manifests from workspace after every run
             sh 'rm -rf k8s/preview/rendered || true'
         }
     }
