@@ -139,7 +139,10 @@ pipeline {
             }
             steps {
                 dir('frontend') {
-                    sh 'npm run build'
+                    sh '''
+                        npm ci
+                        npm run build
+                    '''
                 }
             }
         }
