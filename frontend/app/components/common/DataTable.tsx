@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge";
 
 export interface TableColumn<T = any> {
   key: string;
-  header: string;
+  header: React.ReactNode;
   render?: (item: T) => React.ReactNode;
   className?: string;
 }

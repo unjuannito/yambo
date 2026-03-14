@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { Route } from "./+types/settings";
+import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";

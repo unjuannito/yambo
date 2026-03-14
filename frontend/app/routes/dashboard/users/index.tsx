@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import type { Route } from "./+types/users";
+import type { Route } from "./+types/index";
 import type { User } from "~/types/userType";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";

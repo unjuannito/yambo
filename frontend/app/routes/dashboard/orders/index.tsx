@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import type { Route } from "./+types/orders";
+import type { Route } from "./+types/index";
 import type { Order } from "~/services/orderService";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
