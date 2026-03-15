@@ -326,6 +326,7 @@ pipeline {
                             ANONYMIZE_DUMP_MODE=database-bootstrap \
                             bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
 
+                        kubectl exec ${podName} -n ${previewNs} -- chmod 644 /tmp/preview-seed.sql
                         kubectl cp ${previewNs}/${podName}:/tmp/preview-seed.sql ${outDir}/preview-seed.sql
                     """
 
