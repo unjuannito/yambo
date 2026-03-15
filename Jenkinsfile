@@ -458,8 +458,5 @@ Check the console output for details."""
             }
             echo "❌ Pipeline failed"
         }
-        cleanup {
-            sh 'rm -rf k8s/preview/rendered || true'
-        }
     }
 }
