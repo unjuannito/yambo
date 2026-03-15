@@ -286,8 +286,10 @@ pipeline {
                     """
 
                     // ── Generate anonymized DB dump ─────────────────────────
-                    // Read prod DB credentials from the K8s secret (single
-                    // source of truth — no Jenkins credentials needed).
+                    // Run anonymize-dump.sh inside the preview postgres pod.
+                    // The pod already has a running PG server (for temp DB
+                    // operations) and can reach the prod DB via K8s internal
+                    // DNS — no port-forward or Docker needed.
                     def dbUser = sh(
                         script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
                         returnStdout: true
@@ -298,70 +300,33 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    // Port-forward the prod DB so the dump container can reach
-                    // it on localhost:15432 without needing cluster-internal
-                    // networking from the Jenkins agent.
+                    def podName = sh(
+                        script: "kubectl get pod -n ${previewNs} -l app=postgres -o jsonpath='{.items[0].metadata.name}'",
+                        returnStdout: true
+                    ).trim()
+
                     sh """
                         export KUBECONFIG=/var/lib/jenkins/.kube/config
-                        kubectl port-forward svc/db 15432:5432 -n ${NAMESPACE} &
-                        echo \$! > /tmp/pf-pid-${prId}
-                        # Wait for the port-forward to become ready
-                        for i in \$(seq 1 30); do
-                            if nc -z localhost 15432 2>/dev/null; then break; fi
-                            sleep 1
-                        done
+                        chmod +x scripts/anonymize-dump.sh
+                        mkdir -p ${outDir}
+
+                        kubectl cp scripts/anonymize-dump.sh ${previewNs}/${podName}:/tmp/anonymize-dump.sh
+
+                        kubectl exec ${podName} -n ${previewNs} -- sh -c '
+                            apk add --no-cache bash >/dev/null 2>&1
+                        '
+
+                        kubectl exec ${podName} -n ${previewNs} -- env \
+                            PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \
+                            PROD_DB_PORT=5432 \
+                            PROD_DB_USER='${dbUser}' \
+                            PROD_DB_PASS='${dbPass}' \
+                            PGHOST=/var/run/postgresql \
+                            ANONYMIZE_DUMP_MODE=database-bootstrap \
+                            bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
+
+                        kubectl cp ${previewNs}/${podName}:/tmp/preview-seed.sql ${outDir}/preview-seed.sql
                     """
-
-                    try {
-                        // Run anonymize-dump.sh inside a postgres:15-alpine
-                        // container that has psql/pg_dump available.  The
-                        // container starts its own local PG server (required
-                        // by the script for temp DB operations) and connects
-                        // to the real prod DB via the port-forward above.
-                        sh """
-                            chmod +x scripts/anonymize-dump.sh
-                            mkdir -p ${outDir}
-
-                            docker run --rm --network host \
-                                -v "\$(pwd)/scripts:/scripts:ro" \
-                                -v "\$(pwd)/${outDir}:/output" \
-                                -e PROD_DB_HOST=localhost \
-                                -e PROD_DB_PORT=15432 \
-                                -e PROD_DB_USER='${dbUser}' \
-                                -e PROD_DB_PASS='${dbPass}' \
-                                -e ANONYMIZE_DUMP_MODE=database-bootstrap \
-                                postgres:15-alpine sh -c '
-                                    set -e
-
-                                    # Start a local PG server for temp DB operations
-                                    mkdir -p /var/lib/postgresql/data /run/postgresql
-                                    chown postgres:postgres /var/lib/postgresql/data /run/postgresql
-                                    su postgres -c "initdb -D /var/lib/postgresql/data --no-locale -E UTF8" >/dev/null
-                                    sed -i "s|#unix_socket_directories.*|unix_socket_directories = '"'"'/run/postgresql'"'"'|" /var/lib/postgresql/data/postgresql.conf
-                                    su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /tmp/pg.log" >/dev/null
-                                    echo "Local PostgreSQL started"
-
-                                    # Wait for local PG to accept connections
-                                    until pg_isready -h /run/postgresql -U postgres >/dev/null 2>&1; do sleep 1; done
-                                    echo "Local PostgreSQL ready"
-
-                                    # The script connects to the local PG via the Unix socket
-                                    export PGHOST=/run/postgresql
-
-                                    /scripts/anonymize-dump.sh /output/preview-seed.sql
-
-                                    su postgres -c "pg_ctl stop -D /var/lib/postgresql/data" >/dev/null 2>&1
-                                '
-                        """
-                    } finally {
-                        // Always clean up the port-forward process
-                        sh """
-                            if [ -f /tmp/pf-pid-${prId} ]; then
-                                kill \$(cat /tmp/pf-pid-${prId}) 2>/dev/null || true
-                                rm -f /tmp/pf-pid-${prId}
-                            fi
-                        """
-                    }
 
                     // ── Seed the preview database ───────────────────────────
                     sh """
