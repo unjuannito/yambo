@@ -333,10 +333,10 @@ pipeline {
                     sh """
                         export KUBECONFIG=/var/lib/jenkins/.kube/config
 
+                        kubectl delete configmap preview-seed-sql -n ${previewNs} --ignore-not-found
                         kubectl create configmap preview-seed-sql \
                             -n ${previewNs} \
-                            --from-file=preview-seed.sql=${outDir}/preview-seed.sql \
-                            --dry-run=client -o yaml | kubectl apply -f -
+                            --from-file=preview-seed.sql=${outDir}/preview-seed.sql
 
                         kubectl delete job preview-seed-${prId} -n ${previewNs} --ignore-not-found
                         kubectl wait --for=delete job/preview-seed-${prId} -n ${previewNs} --timeout=120s || true

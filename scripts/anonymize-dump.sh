@@ -140,14 +140,14 @@ PGPASSWORD="${PROD_DB_PASS}" \
 # 5. Anonymize PII in the temp database
 # ---------------------------------------------------------------------------
 log "Anonymizing PII …"
-psql -q -d "${TEMP_DB}" <<ANON_SQL
+psql -q -d "${TEMP_DB}" -v preview_pass="${PREVIEW_PASS}" <<'ANON_SQL'
 -- ── users ──────────────────────────────────────────────────────────────────
 -- Replace real emails with deterministic preview addresses
 UPDATE public."user"
 SET
     email    = 'user-' || LOWER(id) || '@preview.invalid',
     name     = 'Preview User ' || LOWER(id),
-    password = '${PREVIEW_PASS}',
+    password = :'preview_pass',
     photo    = NULL,
     bio      = NULL,
     fun_fact = NULL,
@@ -161,8 +161,7 @@ WHERE system = false;
 UPDATE public.nominative_invitations
 SET
     email      = 'invited-' || id || '@preview.invalid',
-    token      = 'ANON-' || id || '-TOKEN',
-    invited_by = NULL;
+    token      = 'ANON-' || id || '-TOKEN';
 
 -- ── open invitations ───────────────────────────────────────────────────────
 UPDATE public.invitations
@@ -175,7 +174,12 @@ SET
 DELETE FROM public.invitation_registration;
 
 -- ── promotion_invitation_registration ─────────────────────────────────────
-DELETE FROM public.promotion_invitation_registration;
+DO $$
+BEGIN
+    DELETE FROM public.promotion_invitation_registration;
+EXCEPTION WHEN undefined_table THEN NULL;
+END
+$$;
 
 -- ── order product configurations with personal names ─────────────────────
 -- Strip free-text "Nombre" field from JSON configurations
@@ -190,9 +194,13 @@ UPDATE public.issue
 SET description = '[Preview] ' || LEFT(description, 80)
 WHERE description IS NOT NULL;
 
-UPDATE public.issue_comment
-SET content = '[Preview] ' || LEFT(content, 80)
-WHERE content IS NOT NULL;
+DO $$
+BEGIN
+    EXECUTE 'UPDATE public.issue_comment SET content = ''[Preview] '' || LEFT(content, 80) WHERE content IS NOT NULL';
+EXCEPTION WHEN undefined_column THEN
+    EXECUTE 'UPDATE public.issue_comment SET comment = ''[Preview] '' || LEFT(comment, 80) WHERE comment IS NOT NULL';
+END
+$$;
 
 -- ── liquibase metadata ────────────────────────────────────────────────────
 -- Ensure preview restores never start with a stale lock copied from prod.
