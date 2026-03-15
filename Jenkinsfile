@@ -358,6 +358,7 @@ pipeline {
                     """
 
                     env.PREVIEW_URL = "http://pr-${prId}.yambo.cabrasky.net"
+                    currentBuild.description = "<a href='${env.PREVIEW_URL}'>Preview: pr-${prId}.yambo.cabrasky.net</a>"
                 }
             }
         }
@@ -406,34 +407,45 @@ pipeline {
             script {
                 if (env.IS_PR == 'true') {
                     echo "✅ PR #${env.CHANGE_ID} build successful"
+                    if (env.PREVIEW_URL) {
+                        echo "🌐 Preview: ${env.PREVIEW_URL}"
+                    }
                     def previewMsg = env.PREVIEW_URL
                         ? "Preview environment is live at ${env.PREVIEW_URL}\nNamespace: yambo-pr-${env.CHANGE_ID}"
                         : ''
                     def prRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
-                    emailext(
-                        to: prRecipients,
-                        subject: "[yambo] ✅ PR #${env.CHANGE_ID} — build passed",
-                        body: """PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET}) built successfully.
+                    try {
+                        emailext(
+                            to: prRecipients,
+                            subject: "[yambo] ✅ PR #${env.CHANGE_ID} — build passed",
+                            body: """PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET}) built successfully.
 
 ${previewMsg}
 
 Job:    ${env.JOB_NAME} #${env.BUILD_NUMBER}
 Branch: ${env.CHANGE_BRANCH}
 URL:    ${env.BUILD_URL}"""
-                    )
+                        )
+                    } catch (e) {
+                        echo "⚠️ Email notification failed: ${e.message}"
+                    }
                 } else if (env.CAN_DEPLOY == 'true') {
                     echo "🚀 Develop deployed successfully"
-                    emailext(
-                        to: env.FIXED_EMAIL,
-                        subject: "[yambo] 🚀 develop deployed successfully",
-                        body: """The develop branch was deployed to the yambo namespace.
+                    try {
+                        emailext(
+                            to: env.FIXED_EMAIL,
+                            subject: "[yambo] 🚀 develop deployed successfully",
+                            body: """The develop branch was deployed to the yambo namespace.
 
 Frontend: ${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}
 Backend:  ${env.BACKEND_IMAGE}:${env.BACKEND_TAG}
 
 Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
 URL: ${env.BUILD_URL}"""
-                    )
+                        )
+                    } catch (e) {
+                        echo "⚠️ Email notification failed: ${e.message}"
+                    }
                 } else {
                     echo "✅ Build successful (no deploy)"
                 }
@@ -445,16 +457,20 @@ URL: ${env.BUILD_URL}"""
                     ? "PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
                     : "branch ${env.BRANCH_NAME}"
                 def failRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
-                emailext(
-                    to: failRecipients,
-                    subject: "[yambo] ❌ Build failed — ${context}",
-                    body: """The pipeline failed for ${context}.
+                try {
+                    emailext(
+                        to: failRecipients,
+                        subject: "[yambo] ❌ Build failed — ${context}",
+                        body: """The pipeline failed for ${context}.
 
 Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
 URL: ${env.BUILD_URL}
 
 Check the console output for details."""
-                )
+                    )
+                } catch (e) {
+                    echo "⚠️ Email notification failed: ${e.message}"
+                }
             }
             echo "❌ Pipeline failed"
         }
