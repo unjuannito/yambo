@@ -337,7 +337,8 @@ pipeline {
                                     mkdir -p /var/lib/postgresql/data /run/postgresql
                                     chown postgres:postgres /var/lib/postgresql/data /run/postgresql
                                     su postgres -c "initdb -D /var/lib/postgresql/data --no-locale -E UTF8" >/dev/null
-                                    su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /tmp/pg.log -o \"-k /run/postgresql\"" >/dev/null
+                                    sed -i "s|#unix_socket_directories.*|unix_socket_directories = '"'"'/run/postgresql'"'"'|" /var/lib/postgresql/data/postgresql.conf
+                                    su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /tmp/pg.log" >/dev/null
                                     echo "Local PostgreSQL started"
 
                                     # Wait for local PG to accept connections
