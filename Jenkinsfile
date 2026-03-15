@@ -336,11 +336,13 @@ pipeline {
                                     # Start a local PG server for temp DB operations
                                     mkdir -p /var/lib/postgresql/data /run/postgresql
                                     chown postgres:postgres /var/lib/postgresql/data /run/postgresql
-                                    su postgres -c "initdb -D /var/lib/postgresql/data --no-locale -E UTF8" >/dev/null 2>&1
-                                    su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /tmp/pg.log -o \"-k /run/postgresql\"" >/dev/null 2>&1
+                                    su postgres -c "initdb -D /var/lib/postgresql/data --no-locale -E UTF8" >/dev/null
+                                    su postgres -c "pg_ctl start -D /var/lib/postgresql/data -l /tmp/pg.log -o \"-k /run/postgresql\"" >/dev/null
+                                    echo "Local PostgreSQL started"
 
                                     # Wait for local PG to accept connections
-                                    until pg_isready -h /run/postgresql -U postgres; do sleep 1; done
+                                    until pg_isready -h /run/postgresql -U postgres >/dev/null 2>&1; do sleep 1; done
+                                    echo "Local PostgreSQL ready"
 
                                     # The script connects to the local PG via the Unix socket
                                     export PGHOST=/run/postgresql
