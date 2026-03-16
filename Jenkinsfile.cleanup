@@ -1,0 +1,96 @@
+// Triggered by GitHub webhook when a PR is closed/merged.
+// Requires the "Generic Webhook Trigger" Jenkins plugin.
+//
+// Webhook setup (GitHub repo → Settings → Webhooks):
+//   URL:          http://<jenkins>/generic-webhook-trigger/invoke?token=yambo-pr-cleanup
+//   Content type: application/json
+//   Events:       Pull requests
+//
+// Generic Webhook Trigger configuration in this job:
+//   Post content parameter:  PR_NUMBER  →  JSONPath: $.number
+//   Optional filter:         $.action   →  regex: ^closed$
+
+pipeline {
+    agent any
+
+    environment {
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
+        FIXED_EMAIL = 'javiermateos149@gmail.com'
+    }
+
+    triggers {
+        GenericTrigger(
+            genericVariables: [
+                [key: 'PR_NUMBER',      value: '$.number'],
+                [key: 'PR_ACTION',      value: '$.action'],
+                // GitHub exposes the author's public email here (may be empty if hidden)
+                [key: 'PR_AUTHOR_EMAIL', value: '$.pull_request.user.email']
+            ],
+            token: 'yambo-pr-cleanup',
+            causeString: 'PR #$PR_NUMBER $PR_ACTION on GitHub',
+            printContributedVariables: true,
+            printPostContent: false,
+            // Only run when the PR action is "closed" (covers both merge and discard)
+            regexpFilterText: '$PR_ACTION',
+            regexpFilterExpression: '^closed$'
+        )
+    }
+
+    stages {
+        stage('Delete Preview Namespace') {
+            steps {
+                script {
+                    if (!env.PR_NUMBER?.trim()) {
+                        error "PR_NUMBER is empty — webhook payload missing or filter failed"
+                    }
+
+                    def previewNs = "yambo-pr-${env.PR_NUMBER}"
+                    echo "🗑️  Deleting preview namespace: ${previewNs}"
+
+                    sh """
+                        export KUBECONFIG=/var/lib/jenkins/.kube/config
+                        kubectl delete namespace ${previewNs} --ignore-not-found --timeout=120s
+                    """
+
+                    echo "✅ Namespace ${previewNs} deleted (or did not exist)"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                echo "🧹 Preview environment for PR #${env.PR_NUMBER} cleaned up"
+                def recipients = [env.FIXED_EMAIL, env.PR_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
+                emailext(
+                    to: recipients,
+                    subject: "[yambo] 🧹 Preview PR #${env.PR_NUMBER} deleted",
+                    body: """The preview environment for PR #${env.PR_NUMBER} has been cleaned up.
+
+Namespace yambo-pr-${env.PR_NUMBER} has been deleted from the cluster.
+
+Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}"""
+                )
+            }
+        }
+        failure {
+            script {
+                echo "❌ Cleanup failed for PR #${env.PR_NUMBER}"
+                def recipients = [env.FIXED_EMAIL, env.PR_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
+                emailext(
+                    to: recipients,
+                    subject: "[yambo] ❌ Preview cleanup failed — PR #${env.PR_NUMBER}",
+                    body: """Failed to delete the preview namespace yambo-pr-${env.PR_NUMBER}.
+
+The namespace may still exist in the cluster and require manual cleanup:
+  kubectl delete namespace yambo-pr-${env.PR_NUMBER}
+
+Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}"""
+                )
+            }
+        }
+    }
+}
