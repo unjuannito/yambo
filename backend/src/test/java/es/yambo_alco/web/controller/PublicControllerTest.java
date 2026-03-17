@@ -1,8 +1,11 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
+import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.SeoMetadata;
+import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.model.enums.SeoEntityType;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
@@ -18,8 +21,11 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -146,5 +152,62 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("PRJ001"))
                 .andExpect(jsonPath("$.seo").doesNotExist());
+    }
+
+    // ── GET /public/activities ──────────────────────────────────────────
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivities_ShouldReturnActivitiesWithEndDate() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User manager = User.builder().id("U0001").name("Monitor")
+                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+
+        Activity singleDay = Activity.builder()
+                .id("ACT001").name("Taller").description("Un taller")
+                .date(LocalDateTime.of(2026, 3, 20, 10, 0))
+                .status(ActivityStatus.PLANNED).isPublic(true)
+                .project(project).manager(manager)
+                .build();
+
+        Activity multiDay = Activity.builder()
+                .id("ACT002").name("Los Juegos de Yambo").description("Campamento")
+                .date(LocalDateTime.of(2026, 3, 16, 10, 0))
+                .endDate(LocalDateTime.of(2026, 3, 18, 18, 0))
+                .status(ActivityStatus.OPEN_REGISTRATION).isPublic(true)
+                .project(project).manager(manager)
+                .build();
+
+        when(activityRepository.findByIsPublicTrueOrderByDateAsc())
+                .thenReturn(List.of(singleDay, multiDay));
+
+        // When / Then
+        mockMvc.perform(get("/public/activities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value("ACT001"))
+                .andExpect(jsonPath("$[0].name").value("Taller"))
+                .andExpect(jsonPath("$[0].endDate").isEmpty())
+                .andExpect(jsonPath("$[0].status.value").value("PLANNED"))
+                .andExpect(jsonPath("$[0].project.id").value("PRJ001"))
+                .andExpect(jsonPath("$[0].manager.name").value("Monitor"))
+                .andExpect(jsonPath("$[1].id").value("ACT002"))
+                .andExpect(jsonPath("$[1].name").value("Los Juegos de Yambo"))
+                .andExpect(jsonPath("$[1].date").value("2026-03-16T10:00:00"))
+                .andExpect(jsonPath("$[1].endDate").value("2026-03-18T18:00:00"))
+                .andExpect(jsonPath("$[1].status.value").value("OPEN_REGISTRATION"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivities_WhenEmpty_ShouldReturnEmptyList() throws Exception {
+        // Given
+        when(activityRepository.findByIsPublicTrueOrderByDateAsc()).thenReturn(List.of());
+
+        // When / Then
+        mockMvc.perform(get("/public/activities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 }

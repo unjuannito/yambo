@@ -28,6 +28,7 @@ export default function ActivitiesAdminPage() {
         name: "",
         description: "",
         date: "",
+        endDate: "",
         status: "",
         public: false,
         projectId: "",
@@ -52,6 +53,7 @@ export default function ActivitiesAdminPage() {
             const { content } = await adminUserService.listUsers({
                 page: 0,
                 size: 50,
+                role: "ANY",
             });
             setManagerOptions(
                 content.map((u: any) => ({ value: u.id, label: u.name })),
@@ -84,6 +86,9 @@ export default function ActivitiesAdminPage() {
             render: (a: Activity) => (
                 <span className="text-gray-500">
                     {a.date ? new Date(a.date).toLocaleDateString() : "-"}
+                    {a.endDate && (
+                        <> — {new Date(a.endDate).toLocaleDateString()}</>
+                    )}
                 </span>
             ),
         },
@@ -223,6 +228,7 @@ export default function ActivitiesAdminPage() {
             name: activity.name,
             description: activity.description || "",
             date: activity.date || "",
+            endDate: activity.endDate || "",
             status: activity.status?.value || "",
             public: activity.public,
             projectId: activity.project?.id || "",
@@ -238,6 +244,7 @@ export default function ActivitiesAdminPage() {
             name: "",
             description: "",
             date: "",
+            endDate: "",
             status: "",
             public: false,
             projectId: "",
@@ -298,6 +305,9 @@ export default function ActivitiesAdminPage() {
                                           selectedActivity.date,
                                       ).toLocaleString()
                                     : "-"}
+                                {selectedActivity.endDate && (
+                                    <> — {new Date(selectedActivity.endDate).toLocaleString()}</>
+                                )}
                             </span>
                         </LabelComponent>
                         <LabelComponent label="Responsable">

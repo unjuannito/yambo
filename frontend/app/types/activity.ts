@@ -36,6 +36,7 @@ export interface Activity {
     name: string;
     description: string | null;
     date: string | null;
+    endDate: string | null;
     status: ActivityStatusInfo | null;
     public: boolean;
     project: ActivityProject | null;

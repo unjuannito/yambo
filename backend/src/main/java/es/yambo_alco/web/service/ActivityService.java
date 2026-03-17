@@ -54,7 +54,7 @@ public class ActivityService {
     }
 
     public Activity createActivity(@NonNull String name, String description, LocalDateTime date,
-                                   ActivityStatus status, Boolean isPublic,
+                                   LocalDateTime endDate, ActivityStatus status, Boolean isPublic,
                                    @NonNull String projectId, String managerId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
@@ -70,6 +70,7 @@ public class ActivityService {
                 .name(name)
                 .description(description)
                 .date(date)
+                .endDate(endDate)
                 .status(status)
                 .isPublic(isPublic != null ? isPublic : false)
                 .project(project)
@@ -80,7 +81,7 @@ public class ActivityService {
     }
 
     public Activity updateActivity(@NonNull String id, String name, String description, LocalDateTime date,
-                                   ActivityStatus status, Boolean isPublic,
+                                   LocalDateTime endDate, ActivityStatus status, Boolean isPublic,
                                    String projectId, String managerId) {
         Activity activity = getActivityById(id);
 
@@ -92,6 +93,9 @@ public class ActivityService {
         }
         if (date != null) {
             activity.setDate(date);
+        }
+        if (endDate != null) {
+            activity.setEndDate(endDate);
         }
         if (status != null) {
             activity.setStatus(status);

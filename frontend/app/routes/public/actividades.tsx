@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 import { getPublicActivities } from "~/services/publicService.server";
 import type { Activity } from "~/types/activity";
+import { ActivityStatus } from "~/types/activity";
 import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -12,6 +13,8 @@ import {
     faMapPin,
     faUserTie,
     faClock,
+    faMoon,
+    faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
@@ -42,6 +45,60 @@ export function meta({ data }: Route.MetaArgs) {
     ];
 }
 
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+const UPCOMING_STATUSES = new Set([
+    ActivityStatus.PLANNED,
+    ActivityStatus.OPEN_REGISTRATION,
+    ActivityStatus.REGISTRATION_CLOSED,
+]);
+
+function stripMarkdown(md: string): string {
+    return md
+        .replace(/[#*_~`>\[\]()!|-]/g, "")
+        .replace(/\n+/g, " ")
+        .trim();
+}
+
+function formatDateShort(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
+
+function formatDateRange(activity: Activity) {
+    if (!activity.date) return null;
+    const start = new Date(activity.date);
+    const startStr = start.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+    const startTime = start.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+    if (!activity.endDate) {
+        return { label: `${startStr} · ${startTime}`, nights: 0 };
+    }
+
+    const end = new Date(activity.endDate);
+    const endStr = end.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+    const diffMs = end.getTime() - start.getTime();
+    const nights = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    return {
+        label: `${formatDateShort(activity.date)} – ${endStr}`,
+        nights,
+    };
+}
+
+function getActivityDays(activity: Activity): Date[] {
+    if (!activity.date) return [];
+    const start = new Date(activity.date);
+    if (!activity.endDate) return [start];
+    const end = new Date(activity.endDate);
+    const days: Date[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+        days.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+    }
+    return days;
+}
+
 // ── Calendar helpers ────────────────────────────────────────────────────
 
 const MONTH_NAMES = [
@@ -64,6 +121,44 @@ function isSameDay(d1: Date, d2: Date) {
         d1.getFullYear() === d2.getFullYear() &&
         d1.getMonth() === d2.getMonth() &&
         d1.getDate() === d2.getDate()
+    );
+}
+
+function isDateInRange(date: Date, activity: Activity) {
+    if (!activity.date) return false;
+    const start = new Date(activity.date);
+    start.setHours(0, 0, 0, 0);
+    const check = new Date(date);
+    check.setHours(0, 0, 0, 0);
+    if (!activity.endDate) return isSameDay(check, start);
+    const end = new Date(activity.endDate);
+    end.setHours(23, 59, 59, 999);
+    return check >= start && check <= end;
+}
+
+// ── Skeleton ────────────────────────────────────────────────────────────
+
+function ActivityCardSkeleton() {
+    return (
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+            <div className="h-1.5 bg-gray-200" />
+            <div className="p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="h-6 bg-gray-200 rounded-full w-28" />
+                    <div className="h-4 bg-gray-100 rounded-full w-32" />
+                </div>
+                <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-2" />
+                <div className="h-4 bg-gray-100 rounded-lg w-1/3 mb-4" />
+                <div className="space-y-2 mb-4">
+                    <div className="h-3 bg-gray-100 rounded w-full" />
+                    <div className="h-3 bg-gray-100 rounded w-5/6" />
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 bg-gray-200 rounded-full" />
+                    <div className="h-4 bg-gray-100 rounded w-20" />
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -92,11 +187,13 @@ function ActivityCalendar({
     const activityMap = useMemo(() => {
         const map = new Map<string, Activity[]>();
         for (const a of activities) {
-            if (!a.date) continue;
-            const d = new Date(a.date);
-            const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-            if (!map.has(key)) map.set(key, []);
-            map.get(key)!.push(a);
+            const days = getActivityDays(a);
+            for (const d of days) {
+                const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+                if (!map.has(key)) map.set(key, []);
+                const existing = map.get(key)!;
+                if (!existing.some(e => e.id === a.id)) existing.push(a);
+            }
         }
         return map;
     }, [activities]);
@@ -115,7 +212,7 @@ function ActivityCalendar({
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
     return (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <button onClick={prev} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
@@ -218,44 +315,54 @@ function ActivityCalendar({
 // ── Activity card ───────────────────────────────────────────────────────
 
 function ActivityCard({ activity, expanded, onToggle }: { activity: Activity; expanded: boolean; onToggle: () => void }) {
-    const dateObj = activity.date ? new Date(activity.date) : null;
+    const dateRange = formatDateRange(activity);
+    const descriptionPreview = activity.description
+        ? stripMarkdown(activity.description).slice(0, 140)
+        : null;
+    const hasMore = activity.description && stripMarkdown(activity.description).length > 140;
 
     return (
         <article
-            className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer hover-lift"
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer hover-lift group"
             onClick={onToggle}
         >
             {/* Color accent bar */}
             <div
-                className="h-1.5 rounded-t-full"
+                className="h-2"
                 style={{ backgroundColor: activity.status?.color || "#e5e7eb" }}
             />
 
-            <div className="p-6">
-                {/* Top row */}
-                <div className="flex items-center justify-between mb-3">
+            <div className="p-5 sm:p-6">
+                {/* Top row: status + date */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     {activity.status && (
                         <span
-                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white"
+                            className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold text-white tracking-wide uppercase"
                             style={{ backgroundColor: activity.status.color }}
                         >
                             {activity.status.label}
                         </span>
                     )}
-                    {dateObj && (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                    {dateRange && (
+                        <span className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
                             <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
-                            {dateObj.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-                            {" · "}
-                            {dateObj.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                            {dateRange.label}
+                            {dateRange.nights > 0 && (
+                                <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 bg-yambo-purple-50 text-yambo-purple-600 rounded-full text-xs font-semibold">
+                                    <FontAwesomeIcon icon={faMoon} className="w-2.5 h-2.5" />
+                                    {dateRange.nights} noche{dateRange.nights !== 1 ? "s" : ""}
+                                </span>
+                            )}
                         </span>
                     )}
                 </div>
 
-                <h3 className="text-lg font-bold text-yambo-black mb-1">
+                {/* Title */}
+                <h3 className="text-xl font-bold text-yambo-black mb-2 group-hover:text-yambo-green-700 transition-colors">
                     {activity.name}
                 </h3>
 
+                {/* Project */}
                 {activity.project && (
                     <p className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
                         <FontAwesomeIcon icon={faMapPin} className="w-3 h-3 text-yambo-green-400" />
@@ -263,39 +370,106 @@ function ActivityCard({ activity, expanded, onToggle }: { activity: Activity; ex
                     </p>
                 )}
 
-                {activity.manager && (
-                    <div className="flex items-center gap-2 mb-3">
-                        {activity.manager.photo ? (
-                            <img
-                                src={activity.manager.photo}
-                                alt={activity.manager.name}
-                                className="h-8 w-8 rounded-full object-cover ring-2 ring-yambo-green-100 shadow-sm"
-                            />
-                        ) : (
-                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-yambo-green-200 to-yambo-purple-200 flex items-center justify-center text-xs font-bold text-yambo-black ring-2 ring-white shadow-sm">
-                                {activity.manager.name.charAt(0)}
-                            </div>
-                        )}
-                        <span className="text-sm text-gray-600 flex items-center gap-1">
-                            <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-gray-400" />
-                            {activity.manager.name}
-                        </span>
-                    </div>
+                {/* Description preview */}
+                {!expanded && descriptionPreview && (
+                    <p className="text-sm text-gray-500 mb-3 leading-relaxed line-clamp-2">
+                        {descriptionPreview}{hasMore ? "…" : ""}
+                    </p>
                 )}
 
+                {/* Expanded description */}
                 {expanded && activity.description && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="mb-4 pt-2 border-t border-gray-100">
                         <MarkdownEditor value={activity.description} readOnly />
                     </div>
                 )}
 
-                {activity.description && (
-                    <p className="text-xs text-yambo-green-600 mt-2 font-medium">
-                        {expanded ? "Haz clic para cerrar" : "Haz clic para ver más"}
-                    </p>
-                )}
+                {/* Footer: manager + expand hint */}
+                <div className="flex items-center justify-between mt-2">
+                    {activity.manager ? (
+                        <div className="flex items-center gap-2">
+                            {activity.manager.photo ? (
+                                <img
+                                    src={activity.manager.photo}
+                                    alt={activity.manager.name}
+                                    className="h-8 w-8 rounded-full object-cover ring-2 ring-yambo-green-100 shadow-sm"
+                                />
+                            ) : (
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-yambo-green-200 to-yambo-purple-200 flex items-center justify-center text-xs font-bold text-yambo-black ring-2 ring-white shadow-sm">
+                                    {activity.manager.name.charAt(0)}
+                                </div>
+                            )}
+                            <span className="text-sm text-gray-600 flex items-center gap-1">
+                                <FontAwesomeIcon icon={faUserTie} className="w-3 h-3 text-gray-400" />
+                                {activity.manager.name}
+                            </span>
+                        </div>
+                    ) : <div />}
+
+                    {activity.description && (
+                        <span className="flex items-center gap-1 text-xs text-yambo-green-600 font-medium">
+                            {expanded ? "Cerrar" : "Ver más"}
+                            <FontAwesomeIcon
+                                icon={faChevronDown}
+                                className={`w-3 h-3 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
+                            />
+                        </span>
+                    )}
+                </div>
             </div>
         </article>
+    );
+}
+
+// ── Section component ───────────────────────────────────────────────────
+
+function ActivitySection({
+    title,
+    activities,
+    expandedId,
+    onToggle,
+    defaultCollapsed = false,
+}: {
+    title: string;
+    activities: Activity[];
+    expandedId: string | null;
+    onToggle: (id: string) => void;
+    defaultCollapsed?: boolean;
+}) {
+    const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+    if (activities.length === 0) return null;
+
+    return (
+        <div className="fade-up">
+            <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="flex items-center gap-3 mb-4 group/section w-full text-left"
+            >
+                <h2 className="text-2xl font-bold text-yambo-black font-display">
+                    {title}
+                </h2>
+                <span className="text-sm text-gray-400 font-medium bg-gray-100 px-2.5 py-0.5 rounded-full">
+                    {activities.length}
+                </span>
+                <FontAwesomeIcon
+                    icon={faChevronDown}
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${collapsed ? "" : "rotate-180"}`}
+                />
+            </button>
+            {!collapsed && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 stagger mb-10">
+                    {activities.map((a) => (
+                        <ActivityCard
+                            key={a.id}
+                            activity={a}
+                            expanded={expandedId === a.id}
+                            onToggle={() => onToggle(a.id)}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -314,12 +488,11 @@ export default function PublicActivities() {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
+    const toggleExpanded = (id: string) => setExpandedId(expandedId === id ? null : id);
+
     const filteredActivities = useMemo(() => {
         if (!selectedDate) return activities;
-        return activities.filter((a) => {
-            if (!a.date) return false;
-            return isSameDay(new Date(a.date), selectedDate);
-        });
+        return activities.filter((a) => isDateInRange(selectedDate, a));
     }, [activities, selectedDate]);
 
     const sortedActivities = useMemo(() => {
@@ -329,6 +502,19 @@ export default function PublicActivities() {
             return new Date(a.date).getTime() - new Date(b.date).getTime();
         });
     }, [filteredActivities]);
+
+    const { upcoming, past } = useMemo(() => {
+        const upcoming: Activity[] = [];
+        const past: Activity[] = [];
+        for (const a of sortedActivities) {
+            if (a.status && UPCOMING_STATUSES.has(a.status.value as ActivityStatus)) {
+                upcoming.push(a);
+            } else {
+                past.push(a);
+            }
+        }
+        return { upcoming, past };
+    }, [sortedActivities]);
 
     return (
         <section className="w-full bg-gradient-to-b from-yambo-green-50/30 to-yambo-white min-h-screen pt-24 pb-16">
@@ -341,11 +527,11 @@ export default function PublicActivities() {
                 </div>
 
                 {activities.length > 0 && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6 fade-up" style={{ animationDelay: "0.1s" }}>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-8 fade-up" style={{ animationDelay: "0.1s" }}>
                         <div className="flex bg-gray-100 rounded-full p-1">
                             <button
                                 onClick={() => { setView("list"); setSelectedDate(null); }}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                                     view === "list"
                                         ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white shadow-sm"
                                         : "text-gray-600 hover:bg-gray-200"
@@ -356,7 +542,7 @@ export default function PublicActivities() {
                             </button>
                             <button
                                 onClick={() => setView("calendar")}
-                                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                                     view === "calendar"
                                         ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white shadow-sm"
                                         : "text-gray-600 hover:bg-gray-200"
@@ -376,10 +562,13 @@ export default function PublicActivities() {
                 )}
 
                 {activities.length === 0 ? (
-                    <div className="text-center py-20">
-                        <p className="text-6xl mb-4">📅</p>
-                        <p className="text-gray-400 text-lg">
-                            No hay actividades públicas disponibles.
+                    <div className="text-center py-24 fade-up">
+                        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-yambo-green-50 mb-6">
+                            <FontAwesomeIcon icon={faCalendarDays} className="w-10 h-10 text-yambo-green-300" />
+                        </div>
+                        <h2 className="text-xl font-bold text-yambo-black mb-2">No hay actividades públicas</h2>
+                        <p className="text-gray-400 max-w-md mx-auto">
+                            Cuando se publiquen nuevas actividades, las verás aquí. ¡Vuelve pronto!
                         </p>
                     </div>
                 ) : view === "calendar" ? (
@@ -389,7 +578,7 @@ export default function PublicActivities() {
                             selectedDate={selectedDate}
                             onSelectDate={setSelectedDate}
                         />
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                             {selectedDate && (
                                 <h2 className="text-lg font-bold text-yambo-black capitalize">
                                     {selectedDate.toLocaleDateString("es-ES", {
@@ -401,31 +590,39 @@ export default function PublicActivities() {
                                 </h2>
                             )}
                             {sortedActivities.length === 0 ? (
-                                <p className="text-gray-400 text-sm py-8 text-center">
-                                    No hay actividades para esta fecha.
-                                </p>
+                                <div className="text-center py-12">
+                                    <FontAwesomeIcon icon={faCalendarDays} className="w-8 h-8 text-gray-200 mb-3" />
+                                    <p className="text-gray-400 text-sm">
+                                        No hay actividades para esta fecha.
+                                    </p>
+                                </div>
                             ) : (
                                 sortedActivities.map((a) => (
                                     <ActivityCard
                                         key={a.id}
                                         activity={a}
                                         expanded={expandedId === a.id}
-                                        onToggle={() => setExpandedId(expandedId === a.id ? null : a.id)}
+                                        onToggle={() => toggleExpanded(a.id)}
                                     />
                                 ))
                             )}
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger">
-                        {sortedActivities.map((a) => (
-                            <ActivityCard
-                                key={a.id}
-                                activity={a}
-                                expanded={expandedId === a.id}
-                                onToggle={() => setExpandedId(expandedId === a.id ? null : a.id)}
-                            />
-                        ))}
+                    <div className="space-y-6">
+                        <ActivitySection
+                            title="Próximas"
+                            activities={upcoming}
+                            expandedId={expandedId}
+                            onToggle={toggleExpanded}
+                        />
+                        <ActivitySection
+                            title="Pasadas"
+                            activities={past}
+                            expandedId={expandedId}
+                            onToggle={toggleExpanded}
+                            defaultCollapsed={upcoming.length > 0}
+                        />
                     </div>
                 )}
             </div>

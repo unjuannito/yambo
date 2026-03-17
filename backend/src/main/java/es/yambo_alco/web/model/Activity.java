@@ -31,6 +31,9 @@ public class Activity {
     @Column
     private LocalDateTime date;
 
+    @Column(name = "end_date")
+    private LocalDateTime endDate;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private ActivityStatus status;

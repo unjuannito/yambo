@@ -1,5 +1,26 @@
 import React from "react";
 import type { Activity } from "~/types/activity";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMoon } from "@fortawesome/free-solid-svg-icons";
+
+function formatActivityDate(act: Activity) {
+  if (!act.date) return "";
+  const start = new Date(act.date);
+  const startStr = start.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  const startTime = start.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+  if (!act.endDate) return `${startStr} · ${startTime}`;
+
+  const end = new Date(act.endDate);
+  const endStr = end.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  return `${startStr} – ${endStr}`;
+}
+
+function getNights(act: Activity): number {
+  if (!act.date || !act.endDate) return 0;
+  const diffMs = new Date(act.endDate).getTime() - new Date(act.date).getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
 
 interface ActivitiesPreviewProps {
   title?: string;
@@ -64,11 +85,7 @@ export default function ActivitiesPreview({ title, activities, loading }: Activi
 
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs text-gray-400 font-medium">
-                  {act.date
-                    ? new Date(act.date).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) +
-                      " · " +
-                      new Date(act.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
-                    : ""}
+                  {formatActivityDate(act)}
                 </span>
                 {act.status && (
                   <span
@@ -79,6 +96,12 @@ export default function ActivitiesPreview({ title, activities, loading }: Activi
                   </span>
                 )}
               </div>
+              {getNights(act) > 0 && (
+                <span className="inline-flex items-center gap-1 mb-2 px-2 py-0.5 bg-yambo-purple-50 text-yambo-purple-600 rounded-full text-xs font-semibold w-fit">
+                  <FontAwesomeIcon icon={faMoon} className="w-2.5 h-2.5" />
+                  {getNights(act)} noche{getNights(act) !== 1 ? "s" : ""}
+                </span>
+              )}
               <h3 className="font-bold text-lg mb-1 text-yambo-black">{act.name}</h3>
               {act.project && (
                 <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium">{act.project.name}</p>

@@ -83,7 +83,7 @@ class ActivityControllerTest {
         // Given
         Activity activity = createTestActivity();
         when(activityService.createActivity(
-                anyString(), anyString(), any(), any(), any(), anyString(), anyString()))
+                anyString(), anyString(), any(), any(), any(), any(), anyString(), anyString()))
                 .thenReturn(activity);
 
         String json = """
@@ -106,6 +106,7 @@ class ActivityControllerTest {
                 .andExpect(jsonPath("$.id").value("ACT00001"))
                 .andExpect(jsonPath("$.name").value("Workshop"))
                 .andExpect(jsonPath("$.description").value("A great workshop"))
+                .andExpect(jsonPath("$.endDate").isEmpty())
                 .andExpect(jsonPath("$.status.value").value("PLANNED"))
                 .andExpect(jsonPath("$.status.label").value("Planificada"))
                 .andExpect(jsonPath("$.status.color").value("#3b82f6"))
@@ -123,7 +124,7 @@ class ActivityControllerTest {
         Activity activity = createTestActivity();
         activity.setStatus(null);
         when(activityService.createActivity(
-                anyString(), any(), any(), isNull(), any(), anyString(), any()))
+                anyString(), any(), any(), any(), isNull(), any(), anyString(), any()))
                 .thenReturn(activity);
 
         String json = """
@@ -227,7 +228,7 @@ class ActivityControllerTest {
         updated.setName("Updated Workshop");
         updated.setStatus(ActivityStatus.CLOSED);
         when(activityService.updateActivity(
-                eq("ACT00001"), anyString(), any(), any(), any(), any(), any(), any()))
+                eq("ACT00001"), anyString(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(updated);
 
         String json = """
@@ -283,6 +284,39 @@ class ActivityControllerTest {
                 .andExpect(jsonPath("$[0].id").value("U0000001"))
                 .andExpect(jsonPath("$[0].name").value("Monitor User"))
                 .andExpect(jsonPath("$[0].photo").value("/uploads/photo.jpg"));
+    }
+
+    // ── Multi-day event ───────────────────────────────────────────────
+
+    @Test
+    @WithMockUser
+    void createActivity_WithEndDate_ShouldReturnCreatedWithEndDate() throws Exception {
+        // Given
+        Activity activity = createTestActivity();
+        activity.setEndDate(LocalDateTime.of(2026, 3, 18, 18, 0));
+        when(activityService.createActivity(
+                anyString(), anyString(), any(), any(), any(), any(), anyString(), any()))
+                .thenReturn(activity);
+
+        String json = """
+                {
+                    "name": "Workshop",
+                    "description": "A great workshop",
+                    "date": "2026-03-15T10:00:00",
+                    "endDate": "2026-03-18T18:00:00",
+                    "status": "PLANNED",
+                    "public": true,
+                    "projectId": "PRJ00001"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(post("/activities")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("ACT00001"))
+                .andExpect(jsonPath("$.endDate").value("2026-03-18T18:00:00"));
     }
 
     // ── Security ────────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ public class ActivityController {
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'create')")
     public ResponseEntity<ActivityResponse> createActivity(@Valid @RequestBody CreateActivityRequest request) {
         Activity activity = activityService.createActivity(
-                request.getName(), request.getDescription(), request.getDate(),
+                request.getName(), request.getDescription(), request.getDate(), request.getEndDate(),
                 request.getStatus(), request.getIsPublic(),
                 request.getProjectId(), request.getManagerId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ActivityResponse(activity));
@@ -65,7 +65,7 @@ public class ActivityController {
             @PathVariable String id,
             @Valid @RequestBody UpdateActivityRequest request) {
         Activity activity = activityService.updateActivity(
-                id, request.getName(), request.getDescription(), request.getDate(),
+                id, request.getName(), request.getDescription(), request.getDate(), request.getEndDate(),
                 request.getStatus(), request.getIsPublic(),
                 request.getProjectId(), request.getManagerId());
         return ResponseEntity.ok(new ActivityResponse(activity));
@@ -97,6 +97,7 @@ public class ActivityController {
 
         private String description;
         private LocalDateTime date;
+        private LocalDateTime endDate;
         private ActivityStatus status;
         @JsonProperty("public")
         private Boolean isPublic;
@@ -112,6 +113,7 @@ public class ActivityController {
         private String name;
         private String description;
         private LocalDateTime date;
+        private LocalDateTime endDate;
         private ActivityStatus status;
         @JsonProperty("public")
         private Boolean isPublic;
@@ -125,6 +127,7 @@ public class ActivityController {
         private String name;
         private String description;
         private LocalDateTime date;
+        private LocalDateTime endDate;
         private StatusInfo status;
         @JsonProperty("public")
         private boolean isPublic;
@@ -136,6 +139,7 @@ public class ActivityController {
             this.name = activity.getName();
             this.description = activity.getDescription();
             this.date = activity.getDate();
+            this.endDate = activity.getEndDate();
             this.status = activity.getStatus() != null
                     ? new StatusInfo(activity.getStatus().name(), activity.getStatus().getLabel(), activity.getStatus().getColor())
                     : null;

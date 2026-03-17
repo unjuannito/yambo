@@ -243,6 +243,7 @@ public class PublicController {
         private String name;
         private String description;
         private java.time.LocalDateTime date;
+        private java.time.LocalDateTime endDate;
         private ActivityController.StatusInfo status;
         private ActivityProjectSummary project;
         private ActivityManagerSummary manager;
@@ -252,6 +253,7 @@ public class PublicController {
             this.name = activity.getName();
             this.description = activity.getDescription();
             this.date = activity.getDate();
+            this.endDate = activity.getEndDate();
             this.status = activity.getStatus() != null
                     ? new ActivityController.StatusInfo(activity.getStatus().name(), activity.getStatus().getLabel(), activity.getStatus().getColor())
                     : null;

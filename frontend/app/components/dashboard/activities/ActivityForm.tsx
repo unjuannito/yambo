@@ -45,11 +45,17 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             />
         </LabelComponent>
         <InputComponent
-            label="Fecha"
+            label="Fecha inicio"
             type="datetime-local"
             value={form.date}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange("date", e.target.value)}
             required
+        />
+        <InputComponent
+            label="Fecha fin"
+            type="datetime-local"
+            value={form.endDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange("endDate", e.target.value)}
         />
         <SelectComponent
             label="Estado"

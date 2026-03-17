@@ -39,6 +39,7 @@ export class ActivityService extends ApiService {
         name: string;
         description?: string;
         date?: string;
+        endDate?: string;
         status?: string;
         isPublic?: boolean;
         projectId: string;
@@ -51,6 +52,7 @@ export class ActivityService extends ApiService {
         name?: string;
         description?: string;
         date?: string;
+        endDate?: string;
         status?: string;
         isPublic?: boolean;
         projectId?: string;
