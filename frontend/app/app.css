@@ -381,6 +381,12 @@ body {
 .prose table td div[data-lexical-editor] { white-space: nowrap !important; word-break: normal !important; }
 .prose img { @apply max-w-full rounded-2xl shadow my-2; }
 [data-radix-portal] { z-index: 100; }
+
+/* MDXEditor dialog z-index overrides (must sit above modals z-50) */
+[class*="_dialogOverlay_"] { z-index: 200 !important; }
+[class*="_dialogContent_"],
+[class*="_largeDialogContent_"] { z-index: 201 !important; }
+
 .prose strong { @apply font-bold text-yambo-black; }
 .prose em { @apply italic text-gray-600; }
 
