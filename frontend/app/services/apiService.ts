@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { AxiosInstance, AxiosResponse } from "axios";
-import { ApiError, type ErrorResponse } from "~/types/error";
+import { ApiError, ErrorTypes, type ErrorResponse } from "~/types/error";
 
 export interface Filters {
     [key: string]: string | number | boolean | undefined | string[];
@@ -39,12 +39,24 @@ export class ApiService {
         this.axiosInstance.interceptors.response.use(
             (response) => response,
             (error) => {
+                // Network error — no response from server
+                if (!error.response) {
+                    return Promise.reject(new ApiError({
+                        id: "",
+                        timestamp: new Date().toISOString(),
+                        type: ErrorTypes.NETWORK_ERROR,
+                        message: "No se pudo conectar con el servidor",
+                        path: error.config?.url ?? "",
+                        status: 0,
+                    }));
+                }
+
                 if (error.response?.status === 401) {
                     const errorData = error.response?.data as
                         | ErrorResponse
                         | undefined;
-                    const isTokenExpired = errorData?.type === "TOKEN_EXPIRED";
-                    const isInvalidToken = errorData?.type === "INVALID_TOKEN";
+                    const isTokenExpired = errorData?.type === ErrorTypes.TOKEN_EXPIRED;
+                    const isInvalidToken = errorData?.type === ErrorTypes.INVALID_TOKEN;
 
                     if (isTokenExpired || isInvalidToken) {
                         ApiService.setToken(null);

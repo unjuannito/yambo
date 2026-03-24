@@ -105,7 +105,7 @@ export default function MainPageEditor() {
                 }
             }
         } catch (err) {
-            setError(getErrorMessage(err, "Error al cargar la configuración de la página principal"));
+            setError(getErrorMessage(err, "La página principal se nos resiste"));
         } finally {
             setLoading(false);
         }
@@ -150,7 +150,7 @@ export default function MainPageEditor() {
             });
             toast.success("Configuración de secciones guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar las secciones"));
+            toast.error(getErrorMessage(err, "¡Las secciones no quieren guardarse!"));
         } finally {
             setSaving(false);
         }
@@ -166,7 +166,7 @@ export default function MainPageEditor() {
             });
             toast.success("Sección Hero guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la sección Hero"));
+            toast.error(getErrorMessage(err, "¡El Hero se resiste a guardarse!"));
         } finally {
             setSaving(false);
         }
@@ -183,7 +183,7 @@ export default function MainPageEditor() {
             });
             toast.success("Sección Sobre Nosotros guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la sección Sobre Nosotros"));
+            toast.error(getErrorMessage(err, "¡La sección Sobre Nosotros no coopera!"));
         } finally {
             setSaving(false);
         }

@@ -62,10 +62,20 @@ export function useApiMutation<TData = any, TVariables = void>({
             } catch (err) {
                 const apiError = err instanceof ApiError ? err : null;
 
-                const errorMsg = getErrorMessage(err, "Error en la operación");
+                const errorMsg = getErrorMessage(err, "¡Algo salió mal!");
                 setError(errorMsg);
 
+                // Token errors are handled globally by the interceptor (auto-logout)
+                if (apiError?.isTokenError()) {
+                    if (onError) {
+                        onError(apiError, variables);
+                    }
+                    throw err;
+                }
+
                 let toastMessage: string;
+                let toastDuration = 4000;
+
                 if (errorMessage) {
                     toastMessage =
                         typeof errorMessage === "function"
@@ -76,13 +86,17 @@ export function useApiMutation<TData = any, TVariables = void>({
                             : errorMessage;
                 } else if (apiError?.isValidationError() && apiError.details) {
                     toastMessage = `Error de validación:\n${apiError.details}`;
-                    toast.error(toastMessage, { duration: 6000 });
-                    return; // Early return to avoid double toast
+                    toastDuration = 6000;
+                } else if (apiError?.isForbiddenError()) {
+                    toastMessage = "¡Acceso denegado! No tienes permisos para esto";
+                } else if (apiError?.isServerError()) {
+                    toastMessage = "Nuestro servidor necesita un respiro. Vuelve en un ratito";
+                    toastDuration = 5000;
                 } else {
                     toastMessage = errorMsg;
                 }
 
-                toast.error(toastMessage);
+                toast.error(toastMessage, { duration: toastDuration });
 
                 if (onError) {
                     onError(

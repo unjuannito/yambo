@@ -119,7 +119,7 @@ export default function SeoAdmin() {
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "Error al actualizar los metadatos SEO"),
+                getErrorMessage(err, "¡Los metadatos SEO se nos resisten!"),
             );
         } finally {
             setSaving(false);
@@ -143,7 +143,7 @@ export default function SeoAdmin() {
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "Error al eliminar los metadatos SEO"),
+                getErrorMessage(err, "¡Los metadatos SEO se aferran a la vida!"),
             );
         } finally {
             setActionLoading(false);
@@ -172,7 +172,7 @@ export default function SeoAdmin() {
             setTimeout(() => setRefreshKey((prev) => prev + 1), 3000);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "Error al regenerar los metadatos SEO"),
+                getErrorMessage(err, "¡Los metadatos SEO no quieren regenerarse!"),
             );
         } finally {
             setActionLoading(false);
@@ -191,7 +191,7 @@ export default function SeoAdmin() {
             toast.error(
                 getErrorMessage(
                     err,
-                    "Error al iniciar la generación masiva SEO",
+                    "¡La generación masiva SEO no quiere arrancar!",
                 ),
             );
         } finally {

@@ -45,7 +45,7 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
                 nextStatus !== currentStatus;
 
             if (!trimmedText) {
-                setError("El comentario es obligatorio");
+                setError("¡No nos dejes en ascuas! Escribe algo en el comentario");
                 setLoading(false);
                 return;
             }

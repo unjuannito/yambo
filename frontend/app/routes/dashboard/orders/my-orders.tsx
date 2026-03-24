@@ -95,7 +95,7 @@ export default function MyOrdersPage() {
 
       await loadIssuesForOrders(ordersResponse.content);
     } catch (err) {
-      setError(getErrorMessage(err, "Error al cargar los pedidos"));
+      setError(getErrorMessage(err, "¡Los pedidos no aparecen!"));
     } finally {
       setIsLoading(false);
     }
@@ -136,7 +136,7 @@ export default function MyOrdersPage() {
         setOrderDetail(updated);
       }
     } catch (err) {
-      setError(getErrorMessage(err, "Error al cancelar el pedido"));
+      setError(getErrorMessage(err, "¡El pedido no quiere ser cancelado!"));
     } finally {
       setCancelingOrderId(null);
       setOrderToCancel(null);
@@ -155,7 +155,7 @@ export default function MyOrdersPage() {
       toast.success("Justificante subido correctamente. Estamos verificando tu pago.");
       setUploadReceiptOrder(null);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Error al subir el justificante"));
+      toast.error(getErrorMessage(err, "¡El justificante se nos resiste!"));
     } finally {
       setIsUploadingReceipt(false);
     }

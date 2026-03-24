@@ -83,7 +83,7 @@ export default function Crew() {
                 }
                 setGroupOptions(allOptions);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al cargar los grupos"));
+                toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
             }
         };
         fetchGroups();
@@ -111,7 +111,7 @@ export default function Crew() {
                 });
                 setAllCrew(res.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al cargar el equipo"));
+                toast.error(getErrorMessage(err, "¡El equipo se nos esconde!"));
             } finally {
                 setLoadingGrouped(false);
             }
@@ -174,7 +174,7 @@ export default function Crew() {
 
     const handleEditSave = async () => {
         if (editForm.groupRoles.length === 0) {
-            toast.error("Debe tener al menos un rol asignado");
+            toast.error("¡Al menos un rol tiene que tener!");
             return;
         }
         try {
@@ -209,7 +209,7 @@ export default function Crew() {
             resetEdit();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al actualizar el miembro"));
+            toast.error(getErrorMessage(err, "¡El miembro no coopera con la actualización!"));
         } finally {
             setSaving(false);
         }
@@ -240,7 +240,7 @@ export default function Crew() {
                 });
                 setSearchResults(res.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al buscar usuarios"));
+                toast.error(getErrorMessage(err, "¡Los usuarios se nos esconden!"));
             } finally {
                 setSearching(false);
             }
@@ -250,7 +250,7 @@ export default function Crew() {
 
     const handleAddSave = async () => {
         if (!selectedUser || !addGroupId) {
-            toast.error("Seleccione un usuario y un grupo");
+            toast.error("¡Falta seleccionar un usuario y un grupo!");
             return;
         }
         try {
@@ -260,7 +260,7 @@ export default function Crew() {
             resetAdd();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al añadir al equipo"));
+            toast.error(getErrorMessage(err, "¡No pudimos añadir al equipo!"));
         } finally {
             setSaving(false);
         }

@@ -75,19 +75,19 @@ export default function Index() {
                     if (err instanceof ApiError) {
                         switch (err.message) {
                             case "Invitation not found":
-                                toast.error("El token de invitación no es válido.");
+                                toast.error("¡Ese token de invitación no nos suena! Revisa el enlace");
                                 break;
                             case "Invitation expired":
-                                toast.error("El token de invitación ha expirado.");
+                                toast.error("¡Llegaste tarde! El token de invitación ha caducado");
                                 break;
                             case "Invitation not active yet":
-                                toast.error("La invitación aún no está activa.");
+                                toast.error("¡Calma, calma! La invitación aún no está activa");
                                 break;
                             default:
-                                toast.error("No se pudo aplicar la invitación.");
+                                toast.error("¡Vaya! La invitación se nos resiste");
                         }
                     } else {
-                        toast.error("No se pudo aplicar la invitación.");
+                        toast.error("¡Vaya! La invitación se nos resiste");
                     }
                 }
             }
@@ -110,16 +110,16 @@ export default function Index() {
                 }
             } else if (err instanceof ApiError) {
                 if (err.isType("AUTHENTICATION_FAILED") || err.status === 401) {
-                    toast.error("Usuario o contraseña incorrectos.");
-                } else if (err.status >= 500) {
-                    toast.error("Error del servidor. Por favor, inténtalo más tarde.");
+                    toast.error("¡Nope! Usuario o contraseña incorrectos. ¿Lo intentamos otra vez?");
+                } else if (err.isType("NETWORK_ERROR")) {
+                    toast.error("Parece que internet se fue de vacaciones. ¡Revisa tu conexión!");
+                } else if (err.isServerError()) {
+                    toast.error("Nuestro servidor necesita un respiro. Vuelve en un ratito");
                 } else {
-                    toast.error("Error al iniciar sesión. Por favor, verifica tus credenciales.");
+                    toast.error("¡Ups! No pudimos iniciar sesión. Revisa tus credenciales");
                 }
-            } else if (err instanceof Error && err.message === "Network Error") {
-                toast.error("Error de conexión. Comprueba tu conexión a internet.");
             } else {
-                toast.error("Error al iniciar sesión. Por favor, verifica tus credenciales.");
+                toast.error("¡Ups! No pudimos iniciar sesión. Revisa tus credenciales");
             }
         } finally {
             setLoading(false);

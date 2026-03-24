@@ -77,7 +77,7 @@ export default function Orders() {
                 setProducts(productsResponse.content);
                 setDrops(dropsResponse.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al cargar productos y drops"));
+                toast.error(getErrorMessage(err, "Los productos y drops no quieren salir"));
             }
         };
 
@@ -91,7 +91,7 @@ export default function Orders() {
                     const issues = await issueService.getIssuesByOrder(selectedOrder.id);
                     setSelectedOrderIssues(issues);
                 } catch (err) {
-                    toast.error(getErrorMessage(err, "Error al cargar las incidencias"));
+                    toast.error(getErrorMessage(err, "Las incidencias se nos esconden"));
                     setSelectedOrderIssues([]);
                 }
 
@@ -151,7 +151,7 @@ export default function Orders() {
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "Error al actualizar el estado"),
+                getErrorMessage(err, "¡El estado se nos resiste!"),
             );
         }
     };
@@ -167,7 +167,7 @@ export default function Orders() {
                 setSelectedOrder(null);
             }
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al cancelar el pedido"));
+            toast.error(getErrorMessage(err, "¡El pedido no quiere ser cancelado!"));
         } finally {
             setIsCanceling(false);
             setOrderToCancel(null);
@@ -186,7 +186,7 @@ export default function Orders() {
             setUploadReceiptOrder(null);
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al subir el justificante"));
+            toast.error(getErrorMessage(err, "¡El justificante se nos resiste!"));
         } finally {
             setIsUploadingReceipt(false);
         }
@@ -194,11 +194,11 @@ export default function Orders() {
 
     const handleBulkStatusUpdate = async () => {
         if (selectedOrders.length === 0) {
-            toast.error("Selecciona al menos un pedido");
+            toast.error("¡Elige al menos un pedido primero!");
             return;
         }
         if (!bulkStatus) {
-            toast.error("Selecciona un estado");
+            toast.error("¡Falta elegir un estado!");
             return;
         }
 
@@ -213,7 +213,7 @@ export default function Orders() {
             setBulkStatus("");
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al actualizar los pedidos"));
+            toast.error(getErrorMessage(err, "¡Los pedidos no cooperan con la actualización!"));
         }
     };
 
@@ -244,7 +244,7 @@ export default function Orders() {
             );
             setIsExportModalOpen(false);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al exportar a Excel"));
+            toast.error(getErrorMessage(err, "¡El Excel se nos atragantó!"));
         } finally {
             setIsExporting(false);
         }

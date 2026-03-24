@@ -56,7 +56,7 @@ export default function ProductPage() {
                     }
                 }
             } catch (err) {
-                setError(getErrorMessage(err, "Error al cargar el producto"));
+                setError(getErrorMessage(err, "¡El producto se nos esconde!"));
             } finally {
                 setLoading(false);
             }
@@ -126,7 +126,7 @@ export default function ProductPage() {
         );
 
         if (missingRequired.length > 0) {
-            toast.error(`Por favor, selecciona: ${missingRequired.map(o => o.name).join(", ")}`);
+            toast.error(`¡Te falta elegir: ${missingRequired.map(o => o.name).join(", ")}!`);
             return;
         }
 

@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Token expired, logging out user");
         setUser(null);
         toast.error(
-            "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.",
+            "¡Tu sesión ha caducado! Vuelve a iniciar sesión",
         );
         if (typeof window !== "undefined") {
             window.location.href = "/";
@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     ): boolean => {
         if (!user?.permissions) {
             if (showToast) {
-                toast.error("No tienes permisos para realizar esta acción");
+                toast.error("¡Acceso denegado! No tienes permisos para esto");
             }
             return false;
         }
@@ -165,7 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (!hasAccess && showToast) {
             toast.error(
-                "No tienes los permisos necesarios para realizar esta acción",
+                "¡Acceso denegado! Te faltan permisos para esta acción",
             );
         }
 

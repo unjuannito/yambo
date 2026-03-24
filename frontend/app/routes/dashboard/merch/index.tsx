@@ -47,7 +47,7 @@ export default function Merch() {
                 setProducts(productsResponse.content);
                 setDrops(dropsResponse.content);
             } catch (err) {
-                setError(getErrorMessage(err, "Error al cargar los artículos"));
+                setError(getErrorMessage(err, "¡Los artículos no quieren salir!"));
             } finally {
                 setLoading(false);
             }

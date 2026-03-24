@@ -32,7 +32,7 @@ export function RequirePermission({
       !toastShown.current
     ) {
       toastShown.current = true;
-      toast.error("No tienes permiso para acceder a esta sección");
+      toast.error("¡Zona restringida! No tienes permiso para entrar aquí");
     }
   }, [redirect, loading, hasPermission, permission]);
 

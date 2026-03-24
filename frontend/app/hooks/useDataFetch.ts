@@ -11,6 +11,7 @@ interface UseDataFetchResult<T> {
     data: T | null;
     loading: boolean;
     error: string | null;
+    notFound: boolean;
     refetch: () => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ export function useDataFetch<T>({
     const [data, setData] = useState<T | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [notFound, setNotFound] = useState(false);
 
     const fetchData = useCallback(async () => {
         if (!enabled) return;
@@ -35,10 +37,15 @@ export function useDataFetch<T>({
         try {
             setLoading(true);
             setError(null);
+            setNotFound(false);
             const result = await fetchFn();
             setData(result);
         } catch (err) {
             const errorMessage = getErrorMessage(err, "Error al cargar datos");
+
+            if (err instanceof ApiError && err.isNotFoundError()) {
+                setNotFound(true);
+            }
 
             setError(errorMessage);
 
@@ -58,6 +65,7 @@ export function useDataFetch<T>({
         data,
         loading,
         error,
+        notFound,
         refetch: fetchData,
     };
 }

@@ -54,7 +54,7 @@ export default function Profiles() {
             const permissionsData = await profileService.getAllPermissions();
             setAllPermissions(permissionsData);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al cargar los permisos"));
+            toast.error(getErrorMessage(err, "Los permisos no quieren cooperar"));
         } finally {
             setLoading(false);
         }
@@ -95,7 +95,7 @@ export default function Profiles() {
 
     const handleSave = async () => {
         if (!form.name.trim()) {
-            toast.error("El nombre del perfil es obligatorio");
+            toast.error("¡El perfil necesita un nombre!");
             return;
         }
 
@@ -118,7 +118,7 @@ export default function Profiles() {
             resetForm();
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "Error al guardar el perfil"),
+                getErrorMessage(err, "¡El perfil se resiste! No pudimos guardarlo"),
             );
         } finally {
             setSaving(false);
@@ -135,7 +135,7 @@ export default function Profiles() {
             toast.success("Perfil eliminado correctamente");
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "Error al eliminar el perfil"),
+                getErrorMessage(err, "¡El perfil se aferra a la vida!"),
             );
         }
     };

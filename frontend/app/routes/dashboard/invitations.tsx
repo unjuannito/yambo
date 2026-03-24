@@ -55,7 +55,7 @@ export default function Invitations() {
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
         } catch (err) {
-            setError(getErrorMessage(err, "No se pudieron cargar los perfiles"));
+            setError(getErrorMessage(err, "¡Los perfiles se esconden!"));
         } finally {
             setLoading(false);
         }
@@ -90,7 +90,7 @@ export default function Invitations() {
 
     const handleCreate = async () => {
         if (selectedProfiles.length === 0) {
-            toast.error("Selecciona al menos un perfil");
+            toast.error("¡Elige al menos un perfil primero!");
             return;
         }
 
@@ -113,7 +113,7 @@ export default function Invitations() {
                 await invitationService.listInvitations(startDate);
             setInvitations(updated);
         } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo crear la invitación"));
+            toast.error(getErrorMessage(err, "¡La invitación no quiere nacer!"));
         } finally {
             setCreating(false);
         }
@@ -152,7 +152,7 @@ export default function Invitations() {
                                         "Link copiado al portapapeles",
                                     );
                                 } catch (err) {
-                                    toast.error("No se pudo copiar el link");
+                                    toast.error("¡El link se nos escapa!");
                                 }
                             }}
                         >
@@ -250,7 +250,7 @@ export default function Invitations() {
                                 toast.success("Invitación deshabilitada");
                             } catch (err) {
                                 toast.error(
-                                    getErrorMessage(err, "No se pudo deshabilitar la invitación"),
+                                getErrorMessage(err, "¡La invitación se niega a desactivarse!"),
                                 );
                             }
                         }}
@@ -376,7 +376,7 @@ export default function Invitations() {
                                         );
                                     } catch (err) {
                                         toast.error(
-                                            "No se pudo copiar el link",
+                                            "¡El link se nos escapa!",
                                         );
                                     }
                                 }}

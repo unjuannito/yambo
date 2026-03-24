@@ -41,7 +41,7 @@ export default function Register() {
     useEffect(() => {
         if (!invitationToken && !inviteToken && !hasRedirected.current) {
             hasRedirected.current = true;
-            toast.error("No se proporcionó un token de invitación válido.");
+            toast.error("¡Alto ahí! No tenemos un token de invitación válido");
             navigate("/login", { replace: true });
         }
     }, [invitationToken, inviteToken, navigate]);
@@ -63,16 +63,16 @@ export default function Register() {
                 if (err instanceof ApiError) {
                     switch (err.message) {
                         case "Invitation not found":
-                            toast.error("El token de invitación no es válido.");
+                            toast.error("¡Ese token de invitación no nos suena!");
                             break;
                         case "Invitation expired":
-                            toast.error("El token de invitación ha expirado.");
+                            toast.error("¡Llegaste tarde! El token ha caducado");
                             break;
                         default:
-                            toast.error("Error al aplicar la invitación.");
+                            toast.error("¡Vaya! La invitación se nos resiste");
                     }
                 } else {
-                    toast.error("Error al aplicar la invitación.");
+                    toast.error("¡Vaya! La invitación se nos resiste");
                 }
             } finally {
                 setLoading(false);
@@ -86,27 +86,27 @@ export default function Register() {
         e.preventDefault();
 
         if (!formData.name.trim()) {
-            toast.error("Por favor, ingresa tu nombre completo.");
+            toast.error("¡Oye, necesitamos saber cómo te llamas!");
             return;
         }
 
         if (isInvite && !formData.email.trim()) {
-            toast.error("Por favor, ingresa tu correo electrónico.");
+            toast.error("Sin email no hay paraíso... ¡escríbelo!");
             return;
         }
 
         if (!formData.password.trim()) {
-            toast.error("Por favor, ingresa una contraseña.");
+            toast.error("¡La contraseña no se va a escribir sola!");
             return;
         }
 
         if (formData.password.length < 6) {
-            toast.error("La contraseña debe tener al menos 6 caracteres.");
+            toast.error("Tu contraseña es muy cortita, ¡ponle al menos 6 caracteres!");
             return;
         }
 
         if (formData.password !== formData.passwordConfirm) {
-            toast.error("Las contraseñas no coinciden.");
+            toast.error("¡Las contraseñas no se ponen de acuerdo! Deben coincidir");
             return;
         }
 
@@ -140,22 +140,22 @@ export default function Register() {
             if (err instanceof ApiError) {
                 switch (err.message) {
                     case "Invitation already used":
-                        toast.error("El token de invitación ya fue utilizado.");
+                        toast.error("¡Ese token ya dio su último baile! Ya fue utilizado");
                         break;
                     case "Invitation expired":
-                        toast.error("El token de invitación ha expirado.");
+                        toast.error("¡Llegaste tarde! El token ha caducado");
                         break;
                     case "Email already registered":
-                        toast.error("El correo electrónico ya está registrado.");
+                        toast.error("Ese email ya tiene dueño. ¿Ya tienes cuenta?");
                         break;
                     case "Invitation not found":
-                        toast.error("El token de invitación no es válido.");
+                        toast.error("¡Ese token de invitación no nos suena!");
                         break;
                     default:
-                        toast.error("Error al registrar el usuario.");
+                        toast.error("¡Vaya! El registro se nos complicó");
                 }
             } else {
-                toast.error("Error al registrar el usuario.");
+                toast.error("¡Vaya! El registro se nos complicó");
             }
         } finally {
             setLoading(false);

@@ -118,7 +118,7 @@ export default function Settings() {
             setUploadConfig(uploadConfigValue);
             setOllamaConfig(ollamaConfigValue);
         } catch (err) {
-            setError(getErrorMessage(err, "Error al cargar la configuración"));
+            setError(getErrorMessage(err, "La configuración se nos resiste"));
         } finally {
             setLoading(false);
         }
@@ -133,7 +133,7 @@ export default function Settings() {
             });
             toast.success("Configuración de la organización guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración de la organización"));
+            toast.error(getErrorMessage(err, "¡La organización no quiere guardar sus datos!"));
         } finally {
             setSavingTab(null);
         }
@@ -144,7 +144,7 @@ export default function Settings() {
             setSavingTab("application");
             const parsedIssueCreationWindowDays = Number(issueCreationWindowDays);
             if (!Number.isInteger(parsedIssueCreationWindowDays) || parsedIssueCreationWindowDays < 0) {
-                toast.error("Los días para crear incidencias deben ser un número entero mayor o igual a 0");
+                toast.error("¡Los días deben ser un número entero de 0 en adelante!");
                 return;
             }
 
@@ -154,7 +154,7 @@ export default function Settings() {
             ]);
             toast.success("Configuración de la aplicación guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración de la aplicación"));
+            toast.error(getErrorMessage(err, "¡La app se resiste a guardar su config!"));
         } finally {
             setSavingTab(null);
         }
@@ -166,7 +166,7 @@ export default function Settings() {
             await settingsService.setIban(iban);
             toast.success("Configuración bancaria guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración bancaria"));
+            toast.error(getErrorMessage(err, "¡Los datos bancarios no quieren guardarse!"));
         } finally {
             setSavingTab(null);
         }
@@ -181,7 +181,7 @@ export default function Settings() {
             ]);
             toast.success("Configuración de email guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración de email"));
+            toast.error(getErrorMessage(err, "¡El email no quiere guardar su config!"));
         } finally {
             setSavingTab(null);
         }
@@ -197,7 +197,7 @@ export default function Settings() {
             });
             toast.success("Configuración de contacto guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración de contacto"));
+            toast.error(getErrorMessage(err, "¡Los datos de contacto se resisten!"));
         } finally {
             setSavingTab(null);
         }
@@ -207,13 +207,13 @@ export default function Settings() {
         try {
             setSavingTab("upload");
             if (uploadConfig.maxFileSizeMb < 1) {
-                toast.error("El tamaño máximo debe ser al menos 1 MB");
+                toast.error("¡Mínimo 1 MB de tamaño, que si no no cabe nada!");
                 return;
             }
             await settingsService.updateUploadConfig(uploadConfig);
             toast.success("Configuración de archivos guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración de archivos"));
+            toast.error(getErrorMessage(err, "¡Los archivos no quieren guardar su config!"));
         } finally {
             setSavingTab(null);
         }
@@ -225,7 +225,7 @@ export default function Settings() {
             await settingsService.updateOllamaConfig(ollamaConfig);
             toast.success("Configuración de IA guardada correctamente");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar la configuración de IA"));
+            toast.error(getErrorMessage(err, "¡La IA no quiere guardar su config!"));
         } finally {
             setSavingTab(null);
         }

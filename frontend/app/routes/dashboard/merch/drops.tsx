@@ -62,7 +62,7 @@ export default function MerchFamilies() {
             setDrops(dropsResponse.content);
             setProjects(projectsResponse.content);
         } catch (err) {
-            setError(getErrorMessage(err, "Error al cargar los drops de productos"));
+            setError(getErrorMessage(err, "¡Los drops se hacen de rogar!"));
         } finally {
             setLoading(false);
         }
@@ -87,15 +87,15 @@ export default function MerchFamilies() {
 
     const handleSave = async () => {
         if (!form.name.trim()) {
-            toast.error("El nombre es obligatorio");
+            toast.error("¡El nombre no puede estar vacío!");
             return;
         }
         if (!form.endTms) {
-            toast.error("La fecha de fin es obligatoria");
+            toast.error("¡La fecha de fin no puede faltar!");
             return;
         }
         if (!form.startTms) {
-            toast.error("La fecha de inicio es obligatoria");
+            toast.error("¡La fecha de inicio no puede faltar!");
             return;
         }
 
@@ -121,7 +121,7 @@ export default function MerchFamilies() {
             resetForm();
             await loadData();
         } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo guardar el drop"));
+            toast.error(getErrorMessage(err, "¡El drop se nos escapa! No pudimos guardarlo"));
         } finally {
             setSaving(false);
         }
@@ -145,7 +145,7 @@ export default function MerchFamilies() {
             toast.success("Drop eliminado correctamente");
             await loadData();
         } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo eliminar el drop"));
+            toast.error(getErrorMessage(err, "¡El drop se aferra a la vida!"));
         }
     };
 
@@ -155,7 +155,7 @@ export default function MerchFamilies() {
             toast.success("Estado del drop actualizado");
             await loadData();
         } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo actualizar el estado"));
+            toast.error(getErrorMessage(err, "¡El estado no quiere cambiar!"));
         }
     };
 

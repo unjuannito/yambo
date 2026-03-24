@@ -34,7 +34,7 @@ export default function ResetPassword() {
 
     useEffect(() => {
         if (!token) {
-            setError("No se ha proporcionado un token válido.");
+            setError("¡Aquí falta algo! No encontramos un token válido");
         }
     }, [token]);
 
@@ -44,12 +44,12 @@ export default function ResetPassword() {
         const confirm = confirmRef.current?.value ?? "";
 
         if (password.length < 6) {
-            toast.error("La contraseña debe tener al menos 6 caracteres.");
+            toast.error("Tu contraseña es muy cortita, ¡ponle al menos 6 caracteres!");
             return;
         }
 
         if (password !== confirm) {
-            toast.error("Las contraseñas no coinciden.");
+            toast.error("¡Las contraseñas no se ponen de acuerdo! Deben coincidir");
             return;
         }
 
@@ -61,21 +61,21 @@ export default function ResetPassword() {
         } catch (err) {
             if (err instanceof ApiError) {
                 const msg = err.message;
-                if (msg.includes("expirado")) {
-                    setError("El enlace ha expirado. Solicita uno nuevo.");
+                if (err.isType("NETWORK_ERROR")) {
+                    toast.error("Parece que internet se fue de vacaciones. ¡Revisa tu conexión!");
+                } else if (msg.includes("expirado")) {
+                    setError("¡El enlace se nos caducó! Solicita uno nuevecito");
                 } else if (msg.includes("utilizado")) {
-                    setError("Este enlace ya fue utilizado. Solicita uno nuevo.");
+                    setError("Este enlace ya cumplió su misión. Pide uno nuevo");
                 } else if (msg.includes("inválido") || msg.includes("Token")) {
-                    setError("El enlace no es válido. Solicita uno nuevo.");
-                } else if (err.status >= 500) {
-                    toast.error("Error del servidor. Por favor, inténtalo más tarde.");
+                    setError("¡Ese enlace no nos convence! Solicita uno nuevo");
+                } else if (err.isServerError()) {
+                    toast.error("Nuestro servidor necesita un respiro. Vuelve en un ratito");
                 } else {
-                    toast.error(msg || "Error al restablecer la contraseña.");
+                    toast.error(msg || "¡Vaya! No pudimos restablecer la contraseña");
                 }
-            } else if (err instanceof Error && err.message === "Network Error") {
-                toast.error("Error de conexión. Comprueba tu conexión a internet.");
             } else {
-                toast.error("Error al restablecer la contraseña.");
+                toast.error("¡Vaya! No pudimos restablecer la contraseña");
             }
         } finally {
             setLoading(false);

@@ -61,7 +61,7 @@ export default function Projects() {
             const response = await projectService.listProjects(0, 200);
             setProjects(response.content);
         } catch (err) {
-            setError(getErrorMessage(err, "Error al cargar los proyectos"));
+            setError(getErrorMessage(err, "¡Los proyectos se hacen de rogar!"));
         } finally {
             setLoading(false);
         }
@@ -90,7 +90,7 @@ export default function Projects() {
 
     const handleSave = async () => {
         if (!form.name.trim()) {
-            toast.error("El nombre es obligatorio");
+            toast.error("¡El nombre no puede estar vacío!");
             return;
         }
         try {
@@ -121,7 +121,7 @@ export default function Projects() {
             resetForm();
             await loadProjects();
         } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo guardar el proyecto"));
+            toast.error(getErrorMessage(err, "¡El proyecto se nos rebeló! No pudimos guardarlo"));
         } finally {
             setSaving(false);
         }
@@ -147,7 +147,7 @@ export default function Projects() {
             const data = await projectService.listGroups(projectId);
             setGroups(data);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al cargar los grupos"));
+            toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
         }
     };
 
@@ -160,7 +160,7 @@ export default function Projects() {
             setNewGroupName("");
             toast.success("Grupo creado");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al crear el grupo"));
+            toast.error(getErrorMessage(err, "¡El grupo se nos complica!"));
         } finally {
             setSavingGroup(false);
         }
@@ -176,7 +176,7 @@ export default function Projects() {
             setEditingGroupName("");
             toast.success("Grupo actualizado");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al actualizar el grupo"));
+            toast.error(getErrorMessage(err, "¡El grupo no coopera con la actualización!"));
         } finally {
             setSavingGroup(false);
         }
@@ -190,7 +190,7 @@ export default function Projects() {
             setGroups((prev) => prev.filter((g) => g.id !== groupId));
             toast.success("Grupo eliminado");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al eliminar el grupo"));
+            toast.error(getErrorMessage(err, "¡El grupo se aferra a la vida!"));
         }
     };
 
@@ -201,7 +201,7 @@ export default function Projects() {
             toast.success("Proyecto eliminado correctamente");
             await loadProjects();
         } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo eliminar el proyecto"));
+            toast.error(getErrorMessage(err, "¡El proyecto se aferra a la vida!"));
         }
     };
 

@@ -35,7 +35,7 @@ export default function CartPage() {
         const response = await familyProductService.listFamilyProducts(0, 200);
         setDrops(response.content);
       } catch (err) {
-        toast.error(getErrorMessage(err, "Error al cargar los drops"));
+        toast.error(getErrorMessage(err, "¡Los drops se hacen de rogar!"));
       }
     };
 
@@ -73,7 +73,7 @@ export default function CartPage() {
 
   const handleSubmitOrder = async () => {
     if (!isAuthenticated()) {
-      toast.error("Error: Usuario no autenticado");
+      toast.error("¡Eh, que no has iniciado sesión!");
       return;
     }
 
@@ -106,7 +106,7 @@ export default function CartPage() {
 
       setShowPaymentInstructions(true);
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "Error al procesar el pedido");
+      const errorMessage = getErrorMessage(err, "¡El pedido se nos complica!");
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

@@ -218,7 +218,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 const response = await productService.getAllProducts(0, 100);
                 setSavedProducts(response.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al cargar el producto"));
+                toast.error(getErrorMessage(err, "¡El producto se nos esconde!"));
                 navigate("/mi-espacio/merch");
             } finally {
                 setLoading(false);
@@ -426,7 +426,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
             toast.success("Producto guardado exitosamente");
             navigate("/mi-espacio/merch");
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar el producto"));
+            toast.error(getErrorMessage(err, "¡El producto se resiste a guardarse!"));
         } finally {
             setSaving(false);
         }

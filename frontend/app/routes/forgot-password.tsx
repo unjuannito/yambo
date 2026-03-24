@@ -32,7 +32,7 @@ export default function ForgotPassword() {
         const email = emailRef.current?.value ?? "";
 
         if (!email) {
-            toast.error("Introduce tu correo electrónico.");
+            toast.error("¡Eh, que se te olvida el email!");
             return;
         }
 
@@ -42,10 +42,10 @@ export default function ForgotPassword() {
             setSent(true);
             toast.success("Si el email existe, recibirás un enlace para restablecer tu contraseña.");
         } catch (err) {
-            if (err instanceof ApiError && err.status >= 500) {
-                toast.error("Error del servidor. Por favor, inténtalo más tarde.");
-            } else if (err instanceof Error && err.message === "Network Error") {
-                toast.error("Error de conexión. Comprueba tu conexión a internet.");
+            if (err instanceof ApiError && err.isType("NETWORK_ERROR")) {
+                toast.error("Parece que internet se fue de vacaciones. ¡Revisa tu conexión!");
+            } else if (err instanceof ApiError && err.isServerError()) {
+                toast.error("Nuestro servidor necesita un respiro. Vuelve en un ratito");
             } else {
                 // Still show success to prevent user enumeration
                 setSent(true);

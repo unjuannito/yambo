@@ -47,19 +47,19 @@ export const IssueForm: React.FC<IssueFormProps> = ({
 
         try {
             if (!title.trim()) {
-                setError("El título es requerido");
+                setError("¡Dale un título a tu incidencia!");
                 setLoading(false);
                 return;
             }
 
             if (!description.trim()) {
-                setError("La descripción es requerida");
+                setError("¡Cuéntanos qué pasó! La descripción es necesaria");
                 setLoading(false);
                 return;
             }
 
             if (selectedOrderedProductIds.length === 0) {
-                setError("Selecciona al menos un producto");
+                setError("¡Selecciona al menos un producto, anda!");
                 setLoading(false);
                 return;
             }

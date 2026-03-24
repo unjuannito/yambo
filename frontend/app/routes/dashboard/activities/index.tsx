@@ -15,6 +15,8 @@ import { Modal } from "~/components/common/Modal";
 import { projectService } from "~/services/projectService";
 import { adminUserService } from "~/services/adminUserService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import toast from "react-hot-toast";
+import { getErrorMessage } from "~/types/error";
 
 export default function ActivitiesAdminPage() {
     const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
@@ -258,13 +260,17 @@ export default function ActivitiesAdminPage() {
     };
 
     const handleFormSubmit = async () => {
-        if (editing) {
-            await activityService.updateActivity(editing, form);
-        } else {
-            await activityService.createActivity(form);
+        try {
+            if (editing) {
+                await activityService.updateActivity(editing, form);
+            } else {
+                await activityService.createActivity(form);
+            }
+            setFormModalOpen(false);
+            window.location.reload();
+        } catch (err) {
+            toast.error(getErrorMessage(err, "¡La actividad no quiere guardarse!"));
         }
-        setFormModalOpen(false);
-        window.location.reload();
     };
 
     return (

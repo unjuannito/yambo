@@ -68,7 +68,7 @@ export default function Users() {
                 }));
                 setProfileOptions(options);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al cargar los perfiles"));
+                toast.error(getErrorMessage(err, "Los perfiles se esconden"));
             }
         };
         const fetchGroups = async () => {
@@ -93,7 +93,7 @@ export default function Users() {
                 }
                 setGroupOptions(allOptions);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al cargar los grupos"));
+                toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
             }
         };
         fetchProfiles();
@@ -135,7 +135,7 @@ export default function Users() {
 
     const handleSave = async () => {
         if (form.profileIds.length === 0) {
-            toast.error("Debe seleccionar al menos un perfil");
+            toast.error("¡Selecciona al menos un perfil, anda!");
             return;
         }
 
@@ -176,7 +176,7 @@ export default function Users() {
             resetForm();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al actualizar el usuario"));
+            toast.error(getErrorMessage(err, "¡El usuario no coopera con la actualización!"));
         } finally {
             setSaving(false);
         }
@@ -192,7 +192,7 @@ export default function Users() {
             toast.success("Usuario eliminado correctamente");
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al eliminar el usuario"));
+            toast.error(getErrorMessage(err, "¡El usuario se resiste a irse!"));
         }
     };
 

@@ -63,7 +63,7 @@ export default function NominativeInvitations() {
             }));
             setProfileOptions(options);
         } catch (err) {
-            setError(getErrorMessage(err, "Error al cargar los datos"));
+            setError(getErrorMessage(err, "¡Los datos se hacen de rogar!"));
         } finally {
             setLoading(false);
         }
@@ -91,14 +91,14 @@ export default function NominativeInvitations() {
                 setInvitations((prev) => prev.filter((inv) => inv.id !== id));
                 toast.success("Invitación eliminada correctamente");
             } catch (err) {
-                toast.error(getErrorMessage(err, "Error al eliminar la invitación"));
+                toast.error(getErrorMessage(err, "¡La invitación no quiere irse!"));
             }
         }
     };
 
     const handleSave = async () => {
         if (!form.email.trim()) {
-            toast.error("El email es obligatorio");
+            toast.error("¡Sin email no hay trato!");
             return;
         }
 
@@ -109,7 +109,7 @@ export default function NominativeInvitations() {
             toast.success("Invitación creada correctamente");
             resetForm();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al crear la invitación"));
+            toast.error(getErrorMessage(err, "¡La invitación se nos complica!"));
         } finally {
             setSaving(false);
         }
@@ -135,14 +135,14 @@ export default function NominativeInvitations() {
             .filter((e) => e.length > 0);
 
         if (emails.length === 0) {
-            toast.error("Introduce al menos un email");
+            toast.error("¡Introduce al menos un email, anda!");
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const invalid = emails.filter((e) => !emailRegex.test(e));
         if (invalid.length > 0) {
-            toast.error(`Emails inválidos: ${invalid.join(", ")}`);
+            toast.error(`¡Estos emails no nos convencen: ${invalid.join(", ")}!`);
             return;
         }
 
@@ -158,7 +158,7 @@ export default function NominativeInvitations() {
             );
             closeBatchModal();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al crear las invitaciones"));
+            toast.error(getErrorMessage(err, "¡Las invitaciones se nos rebelan!"));
         } finally {
             setBatchSaving(false);
         }
