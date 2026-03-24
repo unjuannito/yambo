@@ -6,7 +6,7 @@ Spring Boot backend application for the Yambo web platform.
 
 - Java 21+
 - Maven 3.8+
-- MySQL/PostgreSQL database
+- PostgreSQL database
 
 ## Configuration
 
@@ -16,9 +16,49 @@ The application can be configured through `src/main/resources/application.proper
 - JWT token configuration
 - Server port and context path
 
+### Profiles
+
+| Profile | Purpose | SQL Logging |
+|---------|---------|-------------|
+| (default) | Production / CI | Off |
+| `dev` | Local development | On |
+
+Activate the dev profile: `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run`
+
+## Quick Commands
+
+```bash
+# Dev with hot reload (DevTools auto-restart on code change)
+./mvnw spring-boot:run
+
+# Dev with profile (enables SQL logging)
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
+
+# Fast parallel build (skip tests)
+./mvnw -T 1C package -DskipTests
+
+# Run tests
+./mvnw test
+
+# Full build
+./mvnw clean package
+
+# Docker Compose — development (hot reload with volume mounts)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# Verify layered JAR (after build)
+java -Djarmode=layertools -jar target/*.jar list
+```
+
 ## Development
 
-To run the application in development mode:
+The backend includes **Spring Boot DevTools** for fast development iteration:
+
+- **Auto-restart**: Automatically restarts when class files change (~2s)
+- **LiveReload**: Browser auto-refresh on port 35729
+- **Dev profile**: Activate with `SPRING_PROFILES_ACTIVE=dev` for SQL logging
+
+To run in development mode:
 
 ```bash
 ./mvnw spring-boot:run
@@ -40,8 +80,19 @@ Create a production build:
 ./mvnw clean package
 ```
 
-The built JAR will be in `target/web-0.0.1-SNAPSHOT.jar`
+### Docker
+
+The Dockerfile uses **layered JARs** for fast rebuilds:
+
+1. **Dependencies layer** — cached, only re-downloads when `pom.xml` changes
+2. **Spring Boot loader layer** — rarely changes
+3. **Snapshot dependencies layer** — changes with snapshot updates
+4. **Application layer** — rebuilds on code changes (~30s)
+
+```bash
+docker build -t yambo-backend ./backend
+```
 
 ## Database Migrations
 
-Database migrations are managed with Flyway and located in `src/main/resources/db/migration/`.
+Database migrations are managed with Liquibase and located in `src/main/resources/db/changelog/`.

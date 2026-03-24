@@ -1,0 +1,17 @@
+# Development override — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
+    ports:
+      - "8080:8080"
+      - "5005:5005"    # Remote debug
+      - "35729:35729"  # LiveReload
+    volumes:
+      - ./backend/target/classes:/workspace/app/target/classes

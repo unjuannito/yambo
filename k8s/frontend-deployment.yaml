@@ -15,9 +15,19 @@ spec:
       labels:
         app: yambo-frontend
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: yambo-frontend
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: frontend
           image: 192.168.1.11:5000/yambo-web-frontend:latest
+          imagePullPolicy: Always
           env:
             - name: BACKEND_INTERNAL_URL
               value: "http://yambo-backend-service:8080/api"
