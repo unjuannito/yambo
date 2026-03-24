@@ -113,15 +113,15 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 2 — Quality Gates (parallel)
+        // Phase 2 — Test + Build (single invocation per stack, parallel)
         // ─────────────────────────────────────────────────────────────────────
 
-        stage('Quality Gates') {
+        stage('Test & Build') {
             when {
                 expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
             }
             parallel {
-                stage('Backend Tests') {
+                stage('Backend Test & Package') {
                     when {
                         expression { env.BACKEND_CHANGED == 'true' }
                     }
@@ -129,7 +129,7 @@ pipeline {
                         dir('backend') {
                             sh '''
                                 chmod +x mvnw
-                                ./mvnw test
+                                ./mvnw verify -T 1C -B
                             '''
                         }
                     }
@@ -142,7 +142,7 @@ pipeline {
                         }
                     }
                 }
-                stage('Frontend Typecheck') {
+                stage('Frontend Typecheck & Build') {
                     when {
                         expression { env.FRONTEND_CHANGED == 'true' }
                     }
@@ -151,81 +151,38 @@ pipeline {
                             sh '''
                                 npm install
                                 npm run typecheck
-                            '''
-                        }
-                    }
-                }
-            }
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // Phase 3 — Build Artifacts (parallel)
-        // ─────────────────────────────────────────────────────────────────────
-
-        stage('Build Artifacts') {
-            when {
-                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
-            }
-            parallel {
-                stage('Build Frontend') {
-                    when {
-                        expression { env.FRONTEND_CHANGED == 'true' }
-                    }
-                    steps {
-                        dir('frontend') {
-                            sh '''
-                                npm install
                                 npm run build
                             '''
                         }
                     }
                 }
-                stage('Build Backend') {
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 3 — Docker Build & Push (parallel)
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Docker Build & Push') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
+            }
+            parallel {
+                stage('Frontend Image') {
+                    when {
+                        expression { env.FRONTEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        sh "docker build -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend"
+                        sh "docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}"
+                    }
+                }
+                stage('Backend Image') {
                     when {
                         expression { env.BACKEND_CHANGED == 'true' }
                     }
                     steps {
-                        dir('backend') {
-                            sh '''
-                                chmod +x mvnw
-                                ./mvnw package -DskipTests
-                            '''
-                        }
-                    }
-                }
-            }
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // Phase 4 — Docker
-        // ─────────────────────────────────────────────────────────────────────
-
-        stage('Build Docker Images') {
-            when {
-                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
-            }
-            steps {
-                script {
-                    if (env.FRONTEND_CHANGED == 'true') {
-                        sh "docker build -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend"
-                    }
-                    if (env.BACKEND_CHANGED == 'true') {
                         sh "docker build -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend"
-                    }
-                }
-            }
-        }
-
-        stage('Push Images') {
-            when {
-                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
-            }
-            steps {
-                script {
-                    if (env.FRONTEND_CHANGED == 'true') {
-                        sh "docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}"
-                    }
-                    if (env.BACKEND_CHANGED == 'true') {
                         sh "docker push ${BACKEND_IMAGE}:${env.BACKEND_TAG}"
                     }
                 }
@@ -233,7 +190,7 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 5a — Deploy Preview Environment (PRs only)
+        // Phase 4a — Deploy Preview Environment (PRs only)
         // ─────────────────────────────────────────────────────────────────────
 
         stage('Deploy Preview Environment') {
@@ -345,16 +302,17 @@ pipeline {
                         kubectl wait --for=condition=complete job/preview-seed-${prId} -n ${previewNs} --timeout=600s
                     """
 
-                    // ── Deploy application ──────────────────────────────────
+                    // ── Deploy application (parallel rollout) ───────────────
                     sh """
                         export KUBECONFIG=/var/lib/jenkins/.kube/config
 
                         kubectl apply -f ${outDir}/backend-deployment.yaml
-                        kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s
-
                         kubectl apply -f ${outDir}/frontend-deployment.yaml
                         kubectl apply -f ${outDir}/ingress.yaml
-                        kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s
+
+                        kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s &
+                        kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s &
+                        wait
                     """
 
                     env.PREVIEW_URL = "http://pr-${prId}.yambo.cabrasky.net"
@@ -364,7 +322,7 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 5b — Deploy to Production (develop only)
+        // Phase 4b — Deploy to Production (develop only)
         // ─────────────────────────────────────────────────────────────────────
 
         stage('Deploy to Kubernetes') {
@@ -390,9 +348,12 @@ pipeline {
                     kubectl apply -f k8s/frontend-deployment.yaml
                     kubectl apply -f k8s/backend-deployment.yaml
                     kubectl apply -f k8s/ingress.yaml
+                    kubectl apply -f k8s/backend-pdb.yaml
+                    kubectl apply -f k8s/frontend-pdb.yaml
 
-                    kubectl rollout status deployment/yambo-frontend -n $NAMESPACE --timeout=300s
-                    kubectl rollout status deployment/yambo-backend -n $NAMESPACE --timeout=300s
+                    kubectl rollout status deployment/yambo-frontend -n $NAMESPACE --timeout=300s &
+                    kubectl rollout status deployment/yambo-backend -n $NAMESPACE --timeout=300s &
+                    wait
                 '''
             }
         }
