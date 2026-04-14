@@ -11,8 +11,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const project = await getProjectDetail(params.projectId!);
-  return { project, siteUrl: getSiteUrl() };
+  try {
+    const project = await getProjectDetail(params.projectId!);
+    return { project, siteUrl: getSiteUrl() };
+  } catch {
+    throw new Response(null, { status: 404, statusText: "Not Found" });
+  }
 }
 
 export function meta({ data }: Route.MetaArgs) {
@@ -33,6 +37,7 @@ export function meta({ data }: Route.MetaArgs) {
     { property: "og:description", content: seo?.ogDescription ?? description },
     { property: "og:url", content: pageUrl },
     { property: "og:type", content: "website" },
+    { name: "robots", content: "index, follow" },
     ...(project?.image ? [{ property: "og:image", content: project.image }] : []),
     ...(project ? [
       { "script:ld+json": projectJsonLd(project, siteUrl) },

@@ -7,15 +7,16 @@ import { getSiteUrl } from "~/utils/env.server";
  */
 export async function loader() {
     const siteUrl = getSiteUrl();
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
     // ── Static public pages ─────────────────────────────────────────────
+    // NOTE: paths must match the canonical URLs in each page's meta() export
+    // (no trailing slashes) to avoid canonical conflicts with Google.
     const staticPages: { loc: string; changefreq: string; priority: string }[] = [
-        { loc: "/",             changefreq: "weekly",  priority: "1.0" },
-        { loc: "/proyectos/",   changefreq: "weekly",  priority: "0.9" },
-        { loc: "/actividades/", changefreq: "weekly",  priority: "0.8" },
-        { loc: "/monitores/",   changefreq: "monthly", priority: "0.7" },
-        { loc: "/contacto/",    changefreq: "monthly", priority: "0.5" },
+        { loc: "/",            changefreq: "weekly",  priority: "1.0" },
+        { loc: "/proyectos",   changefreq: "weekly",  priority: "0.9" },
+        { loc: "/actividades", changefreq: "weekly",  priority: "0.8" },
+        { loc: "/monitores",   changefreq: "monthly", priority: "0.7" },
+        { loc: "/contacto",    changefreq: "monthly", priority: "0.5" },
     ];
 
     // ── Dynamic project pages ───────────────────────────────────────────
@@ -26,7 +27,6 @@ export async function loader() {
             (p) => `
   <url>
     <loc>${escapeXml(siteUrl)}/proyectos/${escapeXml(p.id)}</loc>
-    <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`,
@@ -42,7 +42,6 @@ ${staticPages
     .map(
         (p) => `  <url>
     <loc>${escapeXml(siteUrl)}${p.loc}</loc>
-    <lastmod>${today}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`,

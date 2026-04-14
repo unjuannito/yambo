@@ -153,7 +153,7 @@ export default function AboutUs({ title, intro, bulletsJson, image, loading }: A
                 </p>
               )}
               <a
-                href=""
+                href="/proyectos"
                 className="inline-flex items-center gap-1 text-yambo-green-600 text-sm font-semibold hover:text-yambo-green-700 mt-4 transition-colors"
               >
                 Lee más →
