@@ -1,0 +1,242 @@
+// ============================================================================
+// Jenkinsfile.dump — Anonymized DB Dump Job
+// ============================================================================
+// Manually-triggered pipeline that runs scripts/anonymize-dump.sh inside the
+// production postgres pod, archives the result as a downloadable artifact, and
+// emails a download link with local-restore instructions.
+//
+// Parameters:
+//   MODE     — seed-data (data-only, for an already-migrated DB)
+//              database-bootstrap (full schema+data for a clean restore)
+//   FILENAME — output filename (must end in .sql)
+// ============================================================================
+
+pipeline {
+    agent any
+
+    environment {
+        KUBECONFIG  = '/var/lib/jenkins/.kube/config'
+        NAMESPACE   = 'yambo'
+        FIXED_EMAIL = 'javiermateos149@gmail.com'
+    }
+
+    parameters {
+        choice(
+            name: 'MODE',
+            choices: ['seed-data', 'database-bootstrap'],
+            description: '''seed-data: data-only INSERT statements for an already-migrated database.
+database-bootstrap: full schema + data dump; use createdb + psql to restore from scratch.'''
+        )
+        string(
+            name: 'FILENAME',
+            defaultValue: 'yambo-anon-dump.sql',
+            description: 'Output filename. Must end with .sql'
+        )
+    }
+
+    stages {
+
+        // ─────────────────────────────────────────────────────────────────────
+        // 1 — Validate inputs
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Validate') {
+            steps {
+                script {
+                    if (!params.FILENAME.endsWith('.sql')) {
+                        error "FILENAME must end in .sql — got: '${params.FILENAME}'"
+                    }
+                    if (!params.FILENAME.matches('[\\w\\-\\.]+\\.sql')) {
+                        error "FILENAME contains invalid characters: '${params.FILENAME}'"
+                    }
+                    echo "Mode: ${params.MODE}"
+                    echo "Output file: ${params.FILENAME}"
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // 2 — Checkout (needed for scripts/anonymize-dump.sh)
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // 3 — Generate anonymized dump
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Generate Anonymized Dump') {
+            steps {
+                script {
+                    // Read DB credentials from the production secret
+                    def dbUser = sh(
+                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
+                        returnStdout: true
+                    ).trim()
+
+                    def dbPass = sh(
+                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d",
+                        returnStdout: true
+                    ).trim()
+
+                    // Resolve the live postgres pod name
+                    def podName = sh(
+                        script: "kubectl get pod -n ${NAMESPACE} -l app=postgres -o jsonpath='{.items[0].metadata.name}'",
+                        returnStdout: true
+                    ).trim()
+
+                    if (!podName) {
+                        error "Could not find a running postgres pod in namespace ${NAMESPACE} (label app=postgres)"
+                    }
+
+                    echo "Using pod: ${podName}"
+
+                    sh """
+                        chmod +x scripts/anonymize-dump.sh
+
+                        # Copy script into pod
+                        kubectl cp scripts/anonymize-dump.sh ${NAMESPACE}/${podName}:/tmp/anonymize-dump.sh
+
+                        # Ensure bash is available (alpine-based images may need it)
+                        kubectl exec ${podName} -n ${NAMESPACE} -- sh -c 'command -v bash >/dev/null 2>&1 || apk add --no-cache bash >/dev/null 2>&1' || true
+
+                        # Run the anonymization script inside the pod
+                        kubectl exec ${podName} -n ${NAMESPACE} -- env \
+                            PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \
+                            PROD_DB_PORT=5432 \
+                            PROD_DB_USER='${dbUser}' \
+                            PROD_DB_PASS='${dbPass}' \
+                            PGHOST=/var/run/postgresql \
+                            PGUSER='${dbUser}' \
+                            ANONYMIZE_DUMP_MODE=${params.MODE} \
+                            bash /tmp/anonymize-dump.sh /tmp/${params.FILENAME}
+
+                        # Copy result back to workspace
+                        kubectl cp ${NAMESPACE}/${podName}:/tmp/${params.FILENAME} ${WORKSPACE}/${params.FILENAME}
+
+                        # Clean up files from pod
+                        kubectl exec ${podName} -n ${NAMESPACE} -- rm -f /tmp/anonymize-dump.sh /tmp/${params.FILENAME}
+                    """
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // 4 — Archive artifact and print instructions
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('Archive & Publish') {
+            steps {
+                archiveArtifacts artifacts: params.FILENAME, fingerprint: true
+
+                script {
+                    def downloadUrl = "${env.BUILD_URL}artifact/${params.FILENAME}"
+
+                    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    echo "✅ Artifact archived:"
+                    echo "   ${downloadUrl}"
+                    echo ""
+                    echo "   Download with:"
+                    echo "   curl -u <user>:<api-token> -L -o ${params.FILENAME} '${downloadUrl}'"
+                    echo ""
+
+                    if (params.MODE == 'database-bootstrap') {
+                        echo "── Restore instructions (database-bootstrap) ──────"
+                        echo "   # Creates a fresh local DB from scratch:"
+                        echo "   createdb yambo_local"
+                        echo "   psql -d yambo_local < ${params.FILENAME}"
+                        echo ""
+                        echo "   # Then point your app at it:"
+                        echo "   export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/yambo_local"
+                    } else {
+                        echo "── Restore instructions (seed-data) ───────────────"
+                        echo "   # Requires an already-migrated DB. Run migrations first:"
+                        echo "   cd backend && ./mvnw spring-boot:run  # starts app → runs Liquibase"
+                        echo ""
+                        echo "   # Then load the seed data (truncate existing rows first):"
+                        echo "   psql -d yambo_local < ${params.FILENAME}"
+                    }
+
+                    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                    // Store for post block
+                    env.DOWNLOAD_URL  = downloadUrl
+                    env.DUMP_MODE     = params.MODE
+                    env.DUMP_FILENAME = params.FILENAME
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Post
+    // ─────────────────────────────────────────────────────────────────────────
+
+    post {
+        success {
+            script {
+                def restoreInstructions = (env.DUMP_MODE == 'database-bootstrap')
+                    ? """Restore (database-bootstrap — full schema + data):
+  createdb yambo_local
+  psql -d yambo_local < ${env.DUMP_FILENAME}"""
+                    : """Restore (seed-data — data only, migrations must already be applied):
+  psql -d yambo_local < ${env.DUMP_FILENAME}"""
+
+                try {
+                    emailext(
+                        to: env.FIXED_EMAIL,
+                        subject: "[yambo] ✅ Anonymized dump ready — ${env.DUMP_MODE}",
+                        body: """The anonymized database dump has been generated and archived.
+
+Mode:     ${env.DUMP_MODE}
+File:     ${env.DUMP_FILENAME}
+Download: ${env.DOWNLOAD_URL}
+
+  curl -u <user>:<api-token> -L -o ${env.DUMP_FILENAME} '${env.DOWNLOAD_URL}'
+
+${restoreInstructions}
+
+Note: preview passwords for all users are set to 'preview123'.
+
+Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}"""
+                    )
+                } catch (e) {
+                    echo "Warning: email notification failed: ${e.message}"
+                }
+            }
+        }
+
+        failure {
+            script {
+                try {
+                    emailext(
+                        to: env.FIXED_EMAIL,
+                        subject: "[yambo] ❌ Dump job failed — #${env.BUILD_NUMBER}",
+                        body: """The anonymized dump pipeline failed.
+
+Mode:  ${params.MODE}
+File:  ${params.FILENAME}
+
+Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}
+
+Check the console output for details."""
+                    )
+                } catch (e) {
+                    echo "Warning: email notification failed: ${e.message}"
+                }
+            }
+        }
+
+        cleanup {
+            // Remove the SQL file from the workspace after archiving to avoid
+            // accumulation across builds
+            sh "rm -f '${WORKSPACE}/${params.FILENAME}'"
+        }
+    }
+}
