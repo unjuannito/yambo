@@ -328,6 +328,9 @@ public class IssueService {
             return relatedProducts;
         }
 
+        if (!issueRepository.existsById(issueId)) {
+            throw new ResourceNotFoundException("Issue not found: " + issueId);
+        }
         throw new ResourceNotFoundException("No products found for issue: " + issueId);
     }
 
