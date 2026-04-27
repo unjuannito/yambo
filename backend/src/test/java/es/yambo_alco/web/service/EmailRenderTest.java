@@ -259,6 +259,35 @@ class EmailRenderTest {
         writePreview("issue-comment-no-status-change", html);
     }
 
+    // ── Issue watcher added ──────────────────────────────────────────────
+
+    @Test
+    void renderIssueWatcherAdded() throws IOException {
+        Context ctx = baseContext();
+        ctx.setVariable("userName",    USER_NAME);
+        ctx.setVariable("issueId",     ISSUE_ID);
+        ctx.setVariable("issueTitle",  ISSUE_TITLE);
+        ctx.setVariable("productName", PRODUCT);
+        ctx.setVariable("threadHtml",
+                "<p><strong>maria_perez</strong> (18/02/2026 09:15): La sudadera llegó en talla XL en lugar de M.</p>"
+                + "<p><strong>admin_juan</strong> (19/02/2026 11:45): Hemos verificado el error y procederemos a enviarte la talla correcta.</p>");
+        ctx.setVariable("sentAt",      LocalDateTime.of(2026, 2, 20, 10, 0));
+        ctx.setVariable("headerColor", "#2563eb");
+        ctx.setVariable("headerIcon",  EmailIcons.get("comments"));
+        ctx.setVariable("issueLink",   FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
+
+        String html = engine.process("emails/issue-watcher-added", ctx);
+
+        assertCommonStructure(html);
+        assertThat(html).contains(USER_NAME);
+        assertThat(html).contains(ISSUE_TITLE);
+        assertThat(html).contains(PRODUCT);
+        assertThat(html).contains("Hemos verificado el error");
+        assertThat(html).contains("Ver Incidencia");
+
+        writePreview("issue-watcher-added", html);
+    }
+
     // ── Issue status changed (all transitions) ──────────────────────────
 
     @ParameterizedTest(name = "issue status: OPEN -> {0}")
