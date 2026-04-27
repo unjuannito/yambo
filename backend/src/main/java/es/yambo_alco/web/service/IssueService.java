@@ -219,6 +219,11 @@ public class IssueService {
             Set<String> notifiedEmails = new HashSet<>();
             // Track the comment author email to skip it
             String authorEmail = user.getEmail() != null ? user.getEmail().toLowerCase() : null;
+            String customerEmail = customer.getEmail() != null ? customer.getEmail().toLowerCase() : null;
+
+            if (customerEmail != null) {
+                notifiedEmails.add(customerEmail);
+            }
 
             // Notify the customer (respecting their notification preferences)
             if (!userId.equals(customer.getId())) {
@@ -245,10 +250,7 @@ public class IssueService {
                             savedComment.getCreatedAt(),
                             hasStatusChange ? previousStatus : null,
                             hasStatusChange ? status : null);
-                    notifiedEmails.add(customer.getEmail().toLowerCase());
                 }
-            } else {
-                notifiedEmails.add(customer.getEmail().toLowerCase());
             }
 
             // Notify issue-level watchers
