@@ -7,6 +7,7 @@ import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.FamilyProductService;
+import es.yambo_alco.web.service.FamilyProductWatcherService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,9 @@ class FamilyProductControllerTest {
 
     @MockitoBean
     private BatchEmailService batchEmailService;
+
+    @MockitoBean
+    private FamilyProductWatcherService familyProductWatcherService;
 
     @BeforeEach
     void setUp() {

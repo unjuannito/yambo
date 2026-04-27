@@ -31,6 +31,9 @@ public interface MailService {
             String productName, IssueStatus oldStatus, IssueStatus newStatus,
             String changedBy, LocalDateTime changedAt);
 
+    void sendIssueWatcherAdded(String to, String userName, String issueId, String issueTitle,
+            String productName, String threadMarkdown, LocalDateTime sentAt);
+
     void sendPasswordResetEmail(String to, String resetLink, long expirationHours);
 
     default String generatePaymentReference(LocalDateTime orderDate, String orderId) {

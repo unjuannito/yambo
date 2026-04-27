@@ -242,6 +242,28 @@ public class HtmlMailService implements MailService {
                 buildStatusChangedPlainText(userName, issueId, issueTitle, oldStatus, newStatus, changedBy, changedAt));
     }
 
+            @Async("mailExecutor")
+            @Override
+            public void sendIssueWatcherAdded(String to, String userName, String issueId, String issueTitle,
+                String productName, String threadMarkdown, LocalDateTime sentAt) {
+
+            String subject = "Has sido añadido como seguidor de la incidencia #" + issueId + " - " + settingsService.getOrganizationName();
+            String threadHtml = markdownService.toSafeHtml(threadMarkdown);
+
+            send(to, subject, "emails/issue-watcher-added",
+                Map.ofEntries(
+                    Map.entry("userName", userName),
+                    Map.entry("issueId", issueId),
+                    Map.entry("issueTitle", issueTitle),
+                    Map.entry("productName", productName),
+                    Map.entry("threadHtml", threadHtml),
+                    Map.entry("sentAt", sentAt),
+                    Map.entry("headerColor", "#2563eb"),
+                    Map.entry("headerIcon", EmailIcons.get("comments")),
+                    Map.entry("issueLink", buildIssueLink(issueId))),
+                buildWatcherAddedPlainText(userName, issueId, issueTitle, threadMarkdown, sentAt));
+            }
+
     // ── Password Reset ───────────────────────────────────────────────────
 
     @Async("mailExecutor")
@@ -397,6 +419,20 @@ public class HtmlMailService implements MailService {
                 + oldStatus.getLabel() + " → " + newStatus.getLabel() + "\n"
                 + "Fecha: " + changedAt + "\n\n"
                 + "Puedes ver todos los detalles desde tu panel de control.\n\n"
+                + "¡Gracias!\n";
+    }
+
+    private String buildWatcherAddedPlainText(String userName, String issueId, String issueTitle,
+            String threadMarkdown, LocalDateTime sentAt) {
+        return "Hola " + userName + ",\n\n"
+                + "Has sido añadido como seguidor de una incidencia.\n\n"
+                + "Incidencia:\n"
+                + "ID: " + issueId + "\n"
+                + "Título: " + issueTitle + "\n"
+                + "Fecha de envío: " + sentAt + "\n\n"
+                + "Hilo actual:\n"
+                + markdownService.toPlainText(threadMarkdown) + "\n\n"
+                + "Ver incidencia: " + buildIssueLink(issueId) + "\n\n"
                 + "¡Gracias!\n";
     }
 }

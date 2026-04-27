@@ -379,7 +379,7 @@ class IssueServiceTest {
 
     @Test
     void getIssueByOrderedProductId_WhenFound_ShouldReturn() {
-        Issue issue = Issue.builder().id("ISS001").orderedProductId(orderedProductId).title("Test").build();
+        Issue issue = Issue.builder().id("ISS001").title("Test").build();
         when(issueRepository.findByOrderedProductId(orderedProductId)).thenReturn(Optional.of(issue));
 
         Issue result = issueService.getIssueByOrderedProductId(orderedProductId);
@@ -470,7 +470,7 @@ class IssueServiceTest {
         Issue issue = Issue.builder()
                 .id("ISS001")
                 .status(IssueStatus.OPEN)
-                .orderedProductId(orderedProductId)
+                
                 .build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
@@ -495,7 +495,7 @@ class IssueServiceTest {
         Issue issue = Issue.builder()
                 .id("ISS001")
                 .status(IssueStatus.OPEN)
-                .orderedProductId(orderedProductId)
+                
                 .build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
@@ -560,7 +560,7 @@ class IssueServiceTest {
         Issue issue = Issue.builder()
                 .id("ISS001")
                 .status(IssueStatus.IN_PROGRESS)
-                .orderedProductId(orderedProductId)
+                
                 .build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
@@ -583,7 +583,7 @@ class IssueServiceTest {
         Issue issue = Issue.builder()
                 .id("ISS001")
                 .status(IssueStatus.OPEN)
-                .orderedProductId(orderedProductId)
+                
                 .build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
@@ -603,7 +603,7 @@ class IssueServiceTest {
     // Valid transitions from OPEN
     @Test
     void statusTransition_OpenToInProgress_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -617,7 +617,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_OpenToResolved_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -630,7 +630,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_OpenToClosed_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -654,7 +654,7 @@ class IssueServiceTest {
     // Valid transitions from IN_PROGRESS
     @Test
     void statusTransition_InProgressToOpen_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -667,7 +667,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_InProgressToResolved_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -679,7 +679,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_InProgressToClosed_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -702,7 +702,7 @@ class IssueServiceTest {
     // Valid transitions from RESOLVED
     @Test
     void statusTransition_ResolvedToClosed_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -714,7 +714,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_ResolvedToReopened_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -747,7 +747,7 @@ class IssueServiceTest {
     // Valid transitions from REOPENED
     @Test
     void statusTransition_ReopenedToInProgress_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -759,7 +759,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_ReopenedToResolved_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -771,7 +771,7 @@ class IssueServiceTest {
 
     @Test
     void statusTransition_ReopenedToClosed_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -794,7 +794,7 @@ class IssueServiceTest {
     // Valid transitions from CLOSED
     @Test
     void statusTransition_ClosedToReopened_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).orderedProductId(orderedProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -841,7 +841,6 @@ class IssueServiceTest {
     @Test
     void getIssueProductsByIssueId_WhenIssueNotExists_ShouldThrowNotFound() {
         when(issueRepository.findOrderProductsByIssueId("MISSING")).thenReturn(List.of());
-        when(issueRepository.findById("MISSING")).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> issueService.getIssueProductsByIssueId("MISSING"));
@@ -860,27 +859,16 @@ class IssueServiceTest {
     }
 
     @Test
-    void getIssueProductsByIssueId_WhenNoRelatedProducts_ShouldFallbackToOrderedProductId() {
-        Issue issue = Issue.builder().id("ISS001").orderedProductId(orderedProductId).build();
-        OrderProduct fallbackProduct = OrderProduct.builder().id(orderedProductId).build();
-
+    void getIssueProductsByIssueId_WhenNoRelatedProducts_ShouldThrow() {
         when(issueRepository.findOrderProductsByIssueId("ISS001")).thenReturn(List.of());
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(orderProductRepository.findById(orderedProductId)).thenReturn(Optional.of(fallbackProduct));
 
-        List<OrderProduct> results = issueService.getIssueProductsByIssueId("ISS001");
-
-        assertEquals(1, results.size());
-        assertEquals(orderedProductId, results.get(0).getId());
+        assertThrows(ResourceNotFoundException.class,
+                () -> issueService.getIssueProductsByIssueId("ISS001"));
     }
 
     @Test
     void getIssueProductsByIssueId_WhenNoRelatedAndFallbackMissing_ShouldThrow() {
-        Issue issue = Issue.builder().id("ISS001").orderedProductId(orderedProductId).build();
-
         when(issueRepository.findOrderProductsByIssueId("ISS001")).thenReturn(List.of());
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(orderProductRepository.findById(orderedProductId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> issueService.getIssueProductsByIssueId("ISS001"));
@@ -944,7 +932,7 @@ class IssueServiceTest {
         Issue issue = Issue.builder()
                 .id("ISS001")
                 .status(IssueStatus.OPEN)
-                .orderedProductId(orderedProductId)
+                
                 .build();
 
         User commenter = User.builder().id("USR001").name("Commenter").build();

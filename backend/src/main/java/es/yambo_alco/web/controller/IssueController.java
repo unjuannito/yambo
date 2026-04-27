@@ -2,14 +2,15 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.exception.BadRequestException;
-import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Issue;
 import es.yambo_alco.web.model.IssueComment;
+import es.yambo_alco.web.model.IssueWatcher;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.IssueService;
+import es.yambo_alco.web.service.IssueWatcherService;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import jakarta.validation.Valid;
@@ -25,10 +26,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -40,6 +38,7 @@ public class IssueController {
     private final OrderService orderService;
     private final AuthService authService;
     private final PermissionCheckService permissionCheckService;
+    private final IssueWatcherService issueWatcherService;
 
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('issue', 'create')")
@@ -139,20 +138,24 @@ public class IssueController {
         return ResponseEntity.status(HttpStatus.CREATED).body(new IssueCommentResponse(comment));
     }
 
-    private void verifyAccessToIssue(Issue issue) {
-        User currentUser = authService.getCurrentUser(true);
-        if (issue.getOrderedProductId() == null) {
-            throw new ResourceNotFoundException("Issue has no related ordered products");
-        }
+    @PutMapping("/{issueId}/products")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'update')")
+    public ResponseEntity<IssueDetailResponse> updateIssueProducts(
+            @PathVariable String issueId,
+            @Valid @RequestBody UpdateIssueProductsRequest request) {
+        Issue issue = issueService.updateIssueProducts(issueId, request.getOrderedProductIds());
+        List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
+        List<IssueComment> comments = issueService.getIssueComments(issue.getId());
+        return ResponseEntity.ok(new IssueDetailResponse(issue, comments, relatedProducts));
+    }
 
+    private void verifyAccessToIssue(Issue issue) {
+        authService.getCurrentUser(true);
     }
 
     @Data
     public static class CreateIssueRequest {
         private List<UUID> orderedProductIds;
-
-        @Deprecated
-        private UUID orderedProductId;
 
         @NotBlank(message = "Title cannot be blank")
         private String title;
@@ -161,17 +164,10 @@ public class IssueController {
         private String description;
 
         public List<UUID> resolveOrderedProductIds() {
-            Set<UUID> ids = new LinkedHashSet<>();
-            if (orderedProductIds != null) {
-                ids.addAll(orderedProductIds.stream().filter(id -> id != null).toList());
-            }
-            if (orderedProductId != null) {
-                ids.add(orderedProductId);
-            }
-            if (ids.isEmpty()) {
+            if (orderedProductIds == null || orderedProductIds.stream().allMatch(id -> id == null)) {
                 throw new BadRequestException("At least one ordered product ID is required");
             }
-            return new ArrayList<>(ids);
+            return orderedProductIds.stream().filter(id -> id != null).distinct().toList();
         }
     }
 
@@ -182,9 +178,12 @@ public class IssueController {
     }
 
     @Data
+    public static class UpdateIssueProductsRequest {
+        private List<UUID> orderedProductIds;
+    }
+    @Data
     public static class IssueResponse {
         private String id;
-        private UUID orderedProductId;
         private List<UUID> orderedProductIds;
         private String title;
         private String description;
@@ -195,10 +194,7 @@ public class IssueController {
 
         public IssueResponse(Issue issue, List<OrderProduct> relatedProducts) {
             this.id = issue.getId();
-            this.orderedProductId = issue.getOrderedProductId();
-            this.orderedProductIds = relatedProducts.isEmpty()
-                    ? List.of(issue.getOrderedProductId())
-                    : relatedProducts.stream().map(OrderProduct::getId).toList();
+            this.orderedProductIds = relatedProducts.stream().map(OrderProduct::getId).toList();
             this.title = issue.getTitle();
             this.description = issue.getDescription();
             this.status = issue.getStatus();
@@ -211,7 +207,6 @@ public class IssueController {
     @Data
     public static class IssueDetailResponse {
         private String id;
-        private UUID orderedProductId;
         private List<UUID> orderedProductIds;
         private String title;
         private String description;
@@ -224,10 +219,7 @@ public class IssueController {
 
         public IssueDetailResponse(Issue issue, List<IssueComment> comments, List<OrderProduct> relatedProducts) {
             this.id = issue.getId();
-            this.orderedProductId = issue.getOrderedProductId();
-            this.orderedProductIds = relatedProducts.isEmpty()
-                    ? List.of(issue.getOrderedProductId())
-                    : relatedProducts.stream().map(OrderProduct::getId).toList();
+            this.orderedProductIds = relatedProducts.stream().map(OrderProduct::getId).toList();
             this.title = issue.getTitle();
             this.description = issue.getDescription();
             this.status = issue.getStatus();
@@ -291,7 +283,6 @@ public class IssueController {
     @Data
     public static class IssueListResponse {
         private String id;
-        private UUID orderedProductId;
         private List<UUID> orderedProductIds;
         private String title;
         private String description;
@@ -305,10 +296,7 @@ public class IssueController {
 
         public IssueListResponse(Issue issue, List<OrderProduct> relatedProducts) {
             this.id = issue.getId();
-            this.orderedProductId = issue.getOrderedProductId();
-            this.orderedProductIds = relatedProducts.isEmpty()
-                    ? List.of(issue.getOrderedProductId())
-                    : relatedProducts.stream().map(OrderProduct::getId).toList();
+            this.orderedProductIds = relatedProducts.stream().map(OrderProduct::getId).toList();
             this.title = issue.getTitle();
             this.description = issue.getDescription();
             this.status = issue.getStatus();
@@ -330,6 +318,65 @@ public class IssueController {
             if (issue.getCreatedByUser() != null) {
                 this.customerName = issue.getCreatedByUser().getName();
             }
+        }
+    }
+
+    // ─── Watcher endpoints ────────────────────────────────────────────────────
+
+    @GetMapping("/{issueId}/watchers")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'update')")
+    public ResponseEntity<List<WatcherResponse>> getWatchers(@PathVariable String issueId) {
+        List<IssueWatcher> watchers = issueWatcherService.getWatchers(issueId);
+        return ResponseEntity.ok(watchers.stream().map(WatcherResponse::new).toList());
+    }
+
+    @PostMapping("/{issueId}/watchers")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'update')")
+    public ResponseEntity<WatcherResponse> addWatcher(
+            @PathVariable String issueId,
+            @Valid @RequestBody AddWatcherRequest request) {
+        IssueWatcher watcher = issueWatcherService.addWatcher(issueId, request.getEmail(), request.getUserId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new WatcherResponse(watcher));
+    }
+
+    @DeleteMapping("/{issueId}/watchers")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'update')")
+    public ResponseEntity<Void> removeWatcher(
+            @PathVariable String issueId,
+            @Valid @RequestBody RemoveWatcherRequest request) {
+        issueWatcherService.removeWatcher(issueId, request.getEmail());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Data
+    public static class AddWatcherRequest {
+        @NotBlank(message = "Email is required")
+        private String email;
+        private String userId;
+    }
+
+    @Data
+    public static class RemoveWatcherRequest {
+        @NotBlank(message = "Email is required")
+        private String email;
+    }
+
+    @Data
+    public static class WatcherResponse {
+        private UUID id;
+        private String issueId;
+        private String email;
+        private String userId;
+        private String userName;
+        private String createdAt;
+
+        public WatcherResponse(IssueWatcher watcher) {
+            this.id = watcher.getId();
+            this.issueId = watcher.getIssueId();
+            this.email = watcher.getEmail();
+            this.userId = watcher.getUserId();
+            this.userName = watcher.getUser() != null ? watcher.getUser().getName() : null;
+            this.createdAt = watcher.getCreatedAt().toString();
         }
     }
 }

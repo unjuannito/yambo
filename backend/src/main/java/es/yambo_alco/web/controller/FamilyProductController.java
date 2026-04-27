@@ -1,11 +1,13 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductWatcher;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.FamilyProductService;
 import es.yambo_alco.web.service.FamilyProductService.FamilyProductUpdateResult;
+import es.yambo_alco.web.service.FamilyProductWatcherService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -24,6 +26,7 @@ import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.util.PermissionCheckService;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,6 +40,7 @@ public class FamilyProductController {
     private final AuthService authService;
     private final BatchEmailService batchEmailService;
     private final PermissionCheckService permissionCheck;
+    private final FamilyProductWatcherService familyProductWatcherService;
 
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('family_product', 'create')")
@@ -202,6 +206,65 @@ public class FamilyProductController {
                 this.active = familyProduct.getStatus() == FamilyProductStatus.OPEN
                     && (familyProduct.getStartTms() == null || !familyProduct.getStartTms().isAfter(now))
                     && familyProduct.getEndTms().isAfter(now);
+        }
+    }
+
+    // ─── Watcher endpoints ────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/watchers")
+    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
+    public ResponseEntity<List<DropWatcherResponse>> getDropWatchers(@PathVariable String id) {
+        List<FamilyProductWatcher> watchers = familyProductWatcherService.getWatchers(id);
+        return ResponseEntity.ok(watchers.stream().map(DropWatcherResponse::new).toList());
+    }
+
+    @PostMapping("/{id}/watchers")
+    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
+    public ResponseEntity<DropWatcherResponse> addDropWatcher(
+            @PathVariable String id,
+            @Valid @RequestBody AddDropWatcherRequest request) {
+        FamilyProductWatcher watcher = familyProductWatcherService.addWatcher(id, request.getEmail(), request.getUserId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new DropWatcherResponse(watcher));
+    }
+
+    @DeleteMapping("/{id}/watchers")
+    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
+    public ResponseEntity<Void> removeDropWatcher(
+            @PathVariable String id,
+            @Valid @RequestBody RemoveDropWatcherRequest request) {
+        familyProductWatcherService.removeWatcher(id, request.getEmail());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Data
+    public static class AddDropWatcherRequest {
+        @NotBlank(message = "Email is required")
+        private String email;
+        private String userId;
+    }
+
+    @Data
+    public static class RemoveDropWatcherRequest {
+        @NotBlank(message = "Email is required")
+        private String email;
+    }
+
+    @Data
+    public static class DropWatcherResponse {
+        private UUID id;
+        private String familyProductId;
+        private String email;
+        private String userId;
+        private String userName;
+        private String createdAt;
+
+        public DropWatcherResponse(FamilyProductWatcher watcher) {
+            this.id = watcher.getId();
+            this.familyProductId = watcher.getFamilyProductId();
+            this.email = watcher.getEmail();
+            this.userId = watcher.getUserId();
+            this.userName = watcher.getUser() != null ? watcher.getUser().getName() : null;
+            this.createdAt = watcher.getCreatedAt().toString();
         }
     }
 }
