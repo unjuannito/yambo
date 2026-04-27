@@ -101,6 +101,10 @@ export class OrderService extends ApiService {
         return await this.put<Order, Record<string, never>>(`/orders/my/${id}/cancel`, {});
     }
 
+    public async confirmProductDelivery(orderId: string, orderProductId: string): Promise<Order> {
+        return await this.put<Order, Record<string, never>>(`/orders/my/${orderId}/products/${orderProductId}/deliver`, {});
+    }
+
     public async uploadReceipt(id: string, fileId: string): Promise<Order> {
         return await this.put<Order, { fileId: string }>(`/orders/my/${id}/receipt`, { fileId });
     }

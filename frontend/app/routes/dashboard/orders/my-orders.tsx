@@ -14,7 +14,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import FileUploader from "~/components/common/FileUploader";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { Route } from "./+types/my-orders";
-import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
+import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS, ORDER_PRODUCT_STATUS_CONFIG, OrderProductStatus } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge, IssueForm } from "~/components/issues";
@@ -52,6 +52,7 @@ export default function MyOrdersPage() {
   const [orderDetail, setOrderDetail] = useState<Order | null>(null);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [confirmingDeliveryProductId, setConfirmingDeliveryProductId] = useState<string | null>(null);
   const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -174,6 +175,22 @@ export default function MyOrdersPage() {
       toast.error(getErrorMessage(err, "¡El justificante se nos resiste!"));
     } finally {
       setIsUploadingReceipt(false);
+    }
+  };
+
+  const handleConfirmDelivery = async (orderId: string, orderProductId: string) => {
+    setConfirmingDeliveryProductId(orderProductId);
+    try {
+      const updated = await orderService.confirmProductDelivery(orderId, orderProductId);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      if (orderDetail?.id === updated.id) {
+        setOrderDetail(updated);
+      }
+      toast.success("Entrega confirmada correctamente.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "No se pudo confirmar la entrega."));
+    } finally {
+      setConfirmingDeliveryProductId(null);
     }
   };
 
@@ -453,8 +470,23 @@ export default function MyOrdersPage() {
                           <span>Cantidad: {product.quantity}</span>
                           <span>•</span>
                           <span className="font-medium text-yambo-green-600">{product.price.toFixed(2)} € c/u</span>
+                          <span>•</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            ORDER_PRODUCT_STATUS_CONFIG[product.status as keyof typeof ORDER_PRODUCT_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
+                          }`}>
+                            {ORDER_PRODUCT_STATUS_CONFIG[product.status as keyof typeof ORDER_PRODUCT_STATUS_CONFIG]?.shortLabel || product.status}
+                          </span>
                         </div>
 
+                        {product.status === OrderProductStatus.TO_BE_DELIVERED && (
+                          <button
+                            onClick={() => handleConfirmDelivery(orderDetail.id, product.id)}
+                            disabled={confirmingDeliveryProductId === product.id}
+                            className="mt-3 text-sm text-yambo-green-600 hover:text-yambo-green-800 disabled:text-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-1"
+                          >
+                            {confirmingDeliveryProductId === product.id ? "Confirmando..." : "✓ Confirmar entrega"}
+                          </button>
+                        )}
                         {hasIssue ? (
                           <div className="mt-3 flex flex-col gap-1">
                             {productIssues.map(issue => (

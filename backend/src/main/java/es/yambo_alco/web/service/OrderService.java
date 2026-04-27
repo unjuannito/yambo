@@ -1,6 +1,7 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.IssueStatus;
@@ -29,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -514,8 +516,36 @@ public class OrderService {
         return savedOrder;
     }
 
-    public List<Order> getOrdersByCustomer(@NonNull String customerId) {
-        Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
+    @Transactional
+    public Order confirmOrderProductDelivery(@NonNull String orderId, @NonNull String orderProductId,
+            @NonNull String currentUserId) {
+        Order order = getOrderById(orderId);
+
+        if (!order.getCustomerId().equals(currentUserId)) {
+            throw new ForbiddenException("You do not have permission to update this order");
+        }
+
+        OrderProduct orderProduct = orderProductRepository.findById(UUID.fromString(orderProductId))
+                .orElseThrow(() -> new ResourceNotFoundException("Order product not found: " + orderProductId));
+
+        if (!orderProduct.getOrderId().equals(orderId)) {
+            throw new ResourceNotFoundException("Order product not found: " + orderProductId);
+        }
+
+        if (orderProduct.getStatus() != OrderProductStatus.TO_BE_DELIVERED) {
+            throw new BadRequestException(
+                    "Order product can only be confirmed as delivered when in TO_BE_DELIVERED status");
+        }
+
+        orderProduct.setStatus(OrderProductStatus.DELIVERED);
+        orderProductRepository.save(orderProduct);
+
+        checkAndCloseOrder(orderId);
+
+        return getOrderById(orderId);
+    }
+
+    public List<Order> getOrdersByCustomer(@NonNull String customerId) {        Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
         return orderRepository.findAll(spec);
     }
 

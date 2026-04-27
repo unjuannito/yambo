@@ -171,6 +171,17 @@ public class OrderController {
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
+    @PutMapping("/my/{id}/products/{orderProductId}/deliver")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<OrderResponse> confirmOrderProductDelivery(
+            @PathVariable String id,
+            @PathVariable String orderProductId) {
+        User user = authService.getCurrentUser(true);
+        Order order = orderService.confirmOrderProductDelivery(id, orderProductId, user.getId());
+        List<OrderProduct> products = orderService.getOrderProducts(id);
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
     @PutMapping("/{id}/receipt")
     @PreAuthorize("@permissionCheck.hasPermission('order', 'update')")
     public ResponseEntity<OrderResponse> adminUploadReceipt(
