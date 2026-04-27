@@ -64,11 +64,18 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
     }, [issueId]);
 
     useEffect(() => {
-        if (!isAdmin) return;
+        if (!isAdmin) {
+            setWatchers([]);
+            setWatchersLoading(false);
+            return;
+        }
+        setWatchers([]);
         setWatchersLoading(true);
         issueService.getWatchers(issueId)
             .then(setWatchers)
-            .catch(() => {})
+            .catch(() => {
+                setWatchers([]);
+            })
             .finally(() => setWatchersLoading(false));
     }, [issueId, isAdmin]);
 
