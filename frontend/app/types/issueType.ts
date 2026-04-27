@@ -18,8 +18,7 @@ export interface IssueComment {
 
 export interface Issue {
     id: string;
-    orderedProductId: string;
-    orderedProductIds?: string[];
+    orderedProductIds: string[];
     title: string;
     description: string;
     status: IssueStatus;
@@ -96,4 +95,23 @@ export const ISSUE_WORKFLOW_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
     [IssueStatus.REOPENED]: [IssueStatus.IN_PROGRESS, IssueStatus.RESOLVED, IssueStatus.CLOSED],
     [IssueStatus.CLOSED]: [IssueStatus.REOPENED],
 };
+
+export interface IssueWatcher {
+    id: string;
+    issueId: string;
+    email: string;
+    userId?: string;
+    userName?: string;
+    createdAt: string;
+}
+
+export interface DropWatcher {
+    id: string;
+    familyProductId: string;
+    email: string;
+    userId?: string;
+    userName?: string;
+    createdAt: string;
+}
+
 

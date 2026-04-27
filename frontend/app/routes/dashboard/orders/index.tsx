@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { Route } from "./+types/index";
 import type { Order } from "~/services/orderService";
 import { RequirePermission } from "~/components/common/RequirePermission";
@@ -25,7 +25,7 @@ import { exportService } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { IssueStatusBadge } from "~/components/issues";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExport, faXmark, faFileArrowDown, faUpload } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
@@ -42,6 +42,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Orders() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { activeTab, setActiveTab } = useViewTab("actual");
     const [refreshKey, setRefreshKey] = useState(0);
     const [isExporting, setIsExporting] = useState(false);
@@ -59,6 +60,8 @@ export default function Orders() {
     const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
     const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
     const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+    const deepLinkLookupRef = useRef<string | null>(null);
+    const suppressAutoOpenRef = useRef(false);
 
     const [statusOptions] = useState(
         Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
@@ -66,6 +69,25 @@ export default function Orders() {
             label: config.label,
         })),
     );
+
+    const closeOrderDetail = useCallback(() => {
+        suppressAutoOpenRef.current = true;
+        if (searchParams.get("orderId")) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.delete("orderId");
+            setSearchParams(nextParams, { replace: true });
+        }
+        setSelectedOrder(null);
+    }, [searchParams, setSearchParams]);
+
+    const openOrderDetail = useCallback((order: Order) => {
+        if (searchParams.get("orderId") !== order.id) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set("orderId", order.id);
+            setSearchParams(nextParams, { replace: true });
+        }
+        setSelectedOrder(order);
+    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -113,6 +135,44 @@ export default function Orders() {
 
         loadOrderIssues();
     }, [selectedOrder]);
+
+    useEffect(() => {
+        const orderId = searchParams.get("orderId");
+        if (!orderId || selectedOrder || suppressAutoOpenRef.current) {
+            return;
+        }
+
+        const order = allOrdersOnPage.find((item) => item.id === orderId);
+        if (order) {
+            setSelectedOrder(order);
+            return;
+        }
+
+        if (deepLinkLookupRef.current === orderId) {
+            return;
+        }
+
+        deepLinkLookupRef.current = orderId;
+
+        void orderService.getOrder(orderId)
+            .then((deepLinkedOrder) => {
+                if (deepLinkLookupRef.current !== orderId) {
+                    return;
+                }
+
+                setSelectedOrder(deepLinkedOrder);
+            })
+            .catch(() => {
+                // Keep the list usable even if deep-link lookup fails.
+            });
+    }, [allOrdersOnPage, searchParams, selectedOrder, setSearchParams]);
+
+    useEffect(() => {
+        if (!searchParams.get("orderId")) {
+            deepLinkLookupRef.current = null;
+            suppressAutoOpenRef.current = false;
+        }
+    }, [searchParams]);
 
     const fetchOrdersData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
@@ -164,7 +224,7 @@ export default function Orders() {
             toast.success(`Pedido #${orderToCancel.id} cancelado`);
             setRefreshKey((prev) => prev + 1);
             if (selectedOrder?.id === orderToCancel.id) {
-                setSelectedOrder(null);
+                closeOrderDetail();
             }
         } catch (err) {
             toast.error(getErrorMessage(err, "¡El pedido no quiere ser cancelado!"));
@@ -425,7 +485,7 @@ export default function Orders() {
                         );
                     })()}
                     <button
-                        onClick={() => setSelectedOrder(order)}
+                        onClick={() => openOrderDetail(order)}
                         className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
                         title="Ver detalles"
                     >
@@ -636,7 +696,7 @@ export default function Orders() {
             {selectedOrder && (
                 <div
                     className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-                    onClick={() => setSelectedOrder(null)}
+                    onClick={closeOrderDetail}
                 >
                     <div
                         className="bg-white rounded-3xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden bounce-in"
@@ -656,7 +716,7 @@ export default function Orders() {
                                 </p>
                             </div>
                             <button
-                                onClick={() => setSelectedOrder(null)}
+                                onClick={closeOrderDetail}
                                 className="text-gray-300 hover:text-gray-500 transition-colors"
                             >
                                 <FontAwesomeIcon icon={faXmark} className="w-6 h-6" />
@@ -786,7 +846,7 @@ export default function Orders() {
                                                     ? drops.find(drop => drop.id === productData.familyProductId)
                                                     : null;
 
-                                                const productIssue = selectedOrderIssues.find(
+                                                const productIssues = selectedOrderIssues.filter(
                                                     issue => getIssueOrderedProductIds(issue).includes(product.id)
                                                 );
 
@@ -829,18 +889,23 @@ export default function Orders() {
                                                                             )}
                                                                         </p>
                                                                     )}
-                                                                {productIssue && (
-                                                                    <div className="mt-2 flex items-center gap-2">
-                                                                        <IssueStatusBadge status={productIssue.status} />
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setSelectedOrder(null);
-                                                                                navigate(`/mi-espacio/incidencias/${productIssue.id}`);
-                                                                            }}
-                                                                            className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium transition-colors"
-                                                                        >
-                                                                            Ver incidencia
-                                                                        </button>
+                                                                {productIssues.length > 0 && (
+                                                                    <div className="mt-2 flex flex-col gap-1">
+                                                                        {productIssues.map(issue => (
+                                                                            <div key={issue.id} className="flex items-center gap-2">
+                                                                                <IssueStatusBadge status={issue.status} />
+                                                                                <span className="text-sm text-gray-700 flex-1 truncate">{issue.title}</span>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        closeOrderDetail();
+                                                                                        navigate(`/mi-espacio/incidencias/${issue.id}`);
+                                                                                    }}
+                                                                                    className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium transition-colors shrink-0"
+                                                                                >
+                                                                                    Ver incidencia
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
                                                                 )}
                                                         </div>
@@ -918,7 +983,7 @@ export default function Orders() {
                                 )}
                                 <ButtonComponent
                                     variant="secondary"
-                                    onClick={() => setSelectedOrder(null)}
+                                    onClick={closeOrderDetail}
                                 >
                                     Cerrar
                                 </ButtonComponent>

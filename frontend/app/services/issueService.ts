@@ -4,6 +4,7 @@ import type {
     Issue,
     IssueDetail,
     IssueComment,
+    IssueWatcher,
     CreateIssueRequest,
     AddCommentRequest,
 } from '~/types/issueType';
@@ -84,6 +85,28 @@ export class IssueService extends ApiService {
         }
         if (title) params.append('title', title);
         return this.get<PagedResponse<IssueListItem>>(`/issues/my?${params}`);
+    }
+
+    public async getWatchers(issueId: string): Promise<IssueWatcher[]> {
+        return this.get<IssueWatcher[]>(`/issues/${issueId}/watchers`);
+    }
+
+    public async addWatcher(issueId: string, email: string, userId?: string): Promise<IssueWatcher> {
+        return this.post<IssueWatcher, { email: string; userId?: string }>(
+            `/issues/${issueId}/watchers`,
+            { email, userId }
+        );
+    }
+
+    public async removeWatcher(issueId: string, email: string): Promise<void> {
+        return this.deleteWithBody(`/issues/${issueId}/watchers`, { email });
+    }
+
+    public async updateIssueProducts(issueId: string, orderedProductIds: string[]): Promise<IssueDetail> {
+        return this.put<IssueDetail, { orderedProductIds: string[] }>(
+            `/issues/${issueId}/products`,
+            { orderedProductIds }
+        );
     }
 }
 

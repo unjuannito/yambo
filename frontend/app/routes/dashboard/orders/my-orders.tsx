@@ -61,6 +61,24 @@ export default function MyOrdersPage() {
     label: config.label,
   }));
 
+  const closeOrderDetail = () => {
+    if (searchParams.get("orderId")) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("orderId");
+      setSearchParams(nextParams, { replace: true });
+    }
+    setOrderDetail(null);
+  };
+
+  const openOrderDetail = (order: Order) => {
+    if (searchParams.get("orderId") !== order.id) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("orderId", order.id);
+      setSearchParams(nextParams, { replace: true });
+    }
+    setOrderDetail(order);
+  };
+
   useEffect(() => {
     if (isAuthenticated()) {
       loadOrders();
@@ -73,8 +91,6 @@ export default function MyOrdersPage() {
       const order = orders.find((o) => o.id === orderId);
       if (order) {
         setOrderDetail(order);
-        searchParams.delete("orderId");
-        setSearchParams(searchParams, { replace: true });
       }
     }
   }, [orders, searchParams]);
@@ -322,7 +338,7 @@ export default function MyOrdersPage() {
                 <ButtonComponent
                   variant="primary"
                   size="sm"
-                  onClick={() => setOrderDetail(order)}
+                  onClick={() => openOrderDetail(order)}
                 >
                   Ver detalles
                 </ButtonComponent>
@@ -368,7 +384,7 @@ export default function MyOrdersPage() {
 
       <Modal
         isOpen={!!orderDetail}
-        onClose={() => setOrderDetail(null)}
+        onClose={closeOrderDetail}
         title={orderDetail ? `Pedido #${orderDetail.id}` : "Pedido"}
         size="lg"
       >
@@ -440,14 +456,19 @@ export default function MyOrdersPage() {
                         </div>
 
                         {hasIssue ? (
-                          <div className="mt-3 flex items-center gap-2">
-                            <IssueStatusBadge status={productIssues[0].status} />
-                            <button
-                              onClick={() => navigate(`/mi-espacio/incidencias/${productIssues[0].id}`)}
-                              className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium"
-                            >
-                              Ver incidencia
-                            </button>
+                          <div className="mt-3 flex flex-col gap-1">
+                            {productIssues.map(issue => (
+                              <div key={issue.id} className="flex items-center gap-2">
+                                <IssueStatusBadge status={issue.status} />
+                                <span className="text-sm text-gray-700 flex-1 truncate">{issue.title}</span>
+                                <button
+                                  onClick={() => navigate(`/mi-espacio/incidencias/${issue.id}`)}
+                                  className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium shrink-0"
+                                >
+                                  Ver incidencia
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <button

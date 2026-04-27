@@ -144,6 +144,12 @@ export class ApiService {
         return response.data;
     }
 
+    protected async deleteWithBody<T, D>(endpoint: string, data: D): Promise<T> {
+        const response: AxiosResponse<T> =
+            await this.axiosInstance.delete(endpoint, { data });
+        return response.data;
+    }
+
     protected buildQueryParams(params: Record<string, any>): URLSearchParams {
         const queryParams = new URLSearchParams();
         for (const [key, value] of Object.entries(params)) {
