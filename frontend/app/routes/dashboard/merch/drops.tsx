@@ -279,6 +279,7 @@ export default function MerchFamilies() {
                             size="sm"
                             onClick={() => openWatchers(drop)}
                             title="Gestionar seguidores"
+                            aria-label="Gestionar seguidores"
                         >
                             🔔
                         </ButtonComponent>
