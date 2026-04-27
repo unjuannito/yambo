@@ -1,36 +1,12 @@
 import { ApiService } from './apiService';
+import type { Order, OrderProduct, UserInfo } from '~/types/order';
+
+export type { Order, OrderProduct, UserInfo };
 
 export interface CreateOrderProduct {
     productId: string;
     quantity: number;
     configuration?: string;
-}
-
-export interface OrderProduct {
-    id: string;
-    productId: string;
-    productName?: string;
-    quantity: number;
-    price: number;
-    configuration: string;
-    status: string;
-}
-
-export interface UserInfo {
-    id: string;
-    name: string;
-    email: string;
-}
-
-export interface Order {
-    id: string;
-    user: UserInfo;
-    status: string;
-    createdAt: string;
-    closedAt?: string;
-    hasOpenIssues: boolean;
-    receiptFileId?: string;
-    products: OrderProduct[];
 }
 
 export interface CreateOrderRequest {

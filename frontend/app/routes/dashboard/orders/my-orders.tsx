@@ -21,6 +21,7 @@ import { IssueStatusBadge, IssueForm } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { ConfirmDeliveryButton } from "~/components/orders/ConfirmDeliveryButton";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClipboard, faTriangleExclamation, faUpload, faClock } from "@fortawesome/free-solid-svg-icons";
@@ -52,7 +53,6 @@ export default function MyOrdersPage() {
   const [orderDetail, setOrderDetail] = useState<Order | null>(null);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
-  const [confirmingDeliveryProductId, setConfirmingDeliveryProductId] = useState<string | null>(null);
   const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -178,21 +178,13 @@ export default function MyOrdersPage() {
     }
   };
 
-  const handleConfirmDelivery = async (orderId: string, orderProductId: string) => {
-    setConfirmingDeliveryProductId(orderProductId);
-    try {
-      const updated = await orderService.confirmProductDelivery(orderId, orderProductId);
-      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
-      if (orderDetail?.id === updated.id) {
-        setOrderDetail(updated);
-      }
-      toast.success("Entrega confirmada correctamente.");
-    } catch (err) {
-      toast.error(getErrorMessage(err, "No se pudo confirmar la entrega."));
-    } finally {
-      setConfirmingDeliveryProductId(null);
+  const handleOrderUpdated = (updated: Order) => {
+    setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    if (orderDetail?.id === updated.id) {
+      setOrderDetail(updated);
     }
   };
+
 
   const openIssueWindow = (order: Order, preselectedOrderedProductId?: string) => {
     const orderedProducts = order.products.map((product) => ({
@@ -479,13 +471,11 @@ export default function MyOrdersPage() {
                         </div>
 
                         {product.status === OrderProductStatus.TO_BE_DELIVERED && (
-                          <button
-                            onClick={() => handleConfirmDelivery(orderDetail.id, product.id)}
-                            disabled={confirmingDeliveryProductId === product.id}
-                            className="mt-3 text-sm text-yambo-green-600 hover:text-yambo-green-800 disabled:text-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-1"
-                          >
-                            {confirmingDeliveryProductId === product.id ? "Confirmando..." : "✓ Confirmar entrega"}
-                          </button>
+                          <ConfirmDeliveryButton
+                            orderId={orderDetail.id}
+                            orderProductId={product.id}
+                            onConfirmed={handleOrderUpdated}
+                          />
                         )}
                         {hasIssue ? (
                           <div className="mt-3 flex flex-col gap-1">

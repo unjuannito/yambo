@@ -18,8 +18,6 @@ import es.yambo_alco.web.repository.spec.OrderSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -51,10 +49,6 @@ public class OrderService {
     private final AuthService authService;
     private final MailService mailService;
     private final UserService userService;
-
-    @Lazy
-    @Autowired
-    private OrderService self;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -546,7 +540,7 @@ public class OrderService {
         orderProduct.setStatus(OrderProductStatus.DELIVERED);
         orderProductRepository.save(orderProduct);
 
-        self.checkAndCloseOrder(orderId);
+        checkAndCloseOrder(orderId);
 
         return getOrderById(orderId);
     }
@@ -618,11 +612,12 @@ public class OrderService {
             return;
         }
 
+        OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CLOSED);
         order.setClosedAt(LocalDateTime.now());
         orderRepository.save(order);
 
-        recordStatusChange(orderId, OrderStatus.PENDING_PRODUCTS, OrderStatus.CLOSED, null);
+        recordStatusChange(orderId, previousStatus, OrderStatus.CLOSED, null);
 
         try {
             sendOrderStatusUpdateEmail(order, OrderStatus.CLOSED);
