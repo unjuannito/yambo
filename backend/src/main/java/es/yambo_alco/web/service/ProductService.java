@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private static final String OPTION_TYPE_SELECT = "select";
+
     private final ProductRepository productRepository;
     private final FamilyProductRepository familyProductRepository;
     private final AuthService authService;
@@ -210,22 +212,7 @@ public class ProductService {
                 if (selectedValue == null) {
                     continue;
                 }
-
-                if (option.getPrice() != null) {
-                    totalPrice = totalPrice.add(option.getPrice());
-                }
-
-                if ("select".equals(option.getType()) && option.getValues() != null) {
-                    String selectedValueStr = selectedValue.toString();
-                    for (OptionValue value : option.getValues()) {
-                        if (value.getLabel().equals(selectedValueStr) || value.getId().equals(selectedValueStr)) {
-                            if (value.getPrice() != null) {
-                                totalPrice = totalPrice.add(value.getPrice());
-                            }
-                            break;
-                        }
-                    }
-                }
+                totalPrice = totalPrice.add(calculatePriceForOption(option, selectedValue));
             }
         } catch (Exception e) {
             // If parsing fails, just return base price
@@ -233,6 +220,22 @@ public class ProductService {
         }
 
         return totalPrice;
+    }
+
+    private BigDecimal calculatePriceForOption(ProductOption option, Object selectedValue) {
+        BigDecimal extra = option.getPrice() != null ? option.getPrice() : BigDecimal.ZERO;
+        if (OPTION_TYPE_SELECT.equals(option.getType()) && option.getValues() != null) {
+            String selectedValueStr = selectedValue.toString();
+            for (OptionValue value : option.getValues()) {
+                if (value.getLabel().equals(selectedValueStr) || value.getId().equals(selectedValueStr)) {
+                    if (value.getPrice() != null) {
+                        extra = extra.add(value.getPrice());
+                    }
+                    break;
+                }
+            }
+        }
+        return extra;
     }
 
     public String formatConfiguration(String configurationJson, Product product) {
@@ -250,7 +253,7 @@ public class ProductService {
 
             String formatted = config.entrySet().stream()
                     .filter(entry -> entry.getValue() != null)
-                    .filter(entry -> !(entry.getValue() instanceof String) || !((String) entry.getValue()).isBlank())
+                    .filter(entry -> !(entry.getValue() instanceof String s) || !s.isBlank())
                     .filter(entry -> isValidOption(entry.getKey(), entry.getValue(), product.getOptions()))
                     .map(entry -> formatOptionValue(entry.getKey(), entry.getValue(), product.getOptions()))
                     .collect(Collectors.joining(", "));
@@ -272,7 +275,7 @@ public class ProductService {
             return false;
         }
 
-        if ("select".equals(option.getType()) && option.getValues() != null) {
+        if (OPTION_TYPE_SELECT.equals(option.getType()) && option.getValues() != null) {
             String valueStr = value.toString();
             return option.getValues().stream()
                     .anyMatch(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr));
@@ -291,7 +294,7 @@ public class ProductService {
             return optionName + ": " + value;
         }
 
-        if ("select".equals(option.getType()) && option.getValues() != null) {
+        if (OPTION_TYPE_SELECT.equals(option.getType()) && option.getValues() != null) {
             String valueStr = value.toString();
             OptionValue optionValue = option.getValues().stream()
                     .filter(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr))
