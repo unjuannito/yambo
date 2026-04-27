@@ -174,13 +174,8 @@ pipeline {
                     }
                     steps {
                         withSonarQubeEnv('SonarQube') {
-                            script {
-                                def prArgs = env.IS_PR == 'true'
-                                    ? "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
-                                    : "-Dsonar.branch.name=${env.BRANCH_NAME}"
-                                dir('backend') {
-                                    sh "./mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend ${prArgs}"
-                                }
+                            dir('backend') {
+                                sh './mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend'
                             }
                         }
                     }
@@ -191,13 +186,8 @@ pipeline {
                     }
                     steps {
                         withSonarQubeEnv('SonarQube') {
-                            script {
-                                def prArgs = env.IS_PR == 'true'
-                                    ? "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
-                                    : "-Dsonar.branch.name=${env.BRANCH_NAME}"
-                                dir('frontend') {
-                                    sh "npx sonar-scanner ${prArgs}"
-                                }
+                            dir('frontend') {
+                                sh 'npx sonar-scanner'
                             }
                         }
                     }
