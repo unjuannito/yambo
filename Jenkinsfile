@@ -201,7 +201,7 @@ pipeline {
                     steps {
                         withSonarQubeEnv('SonarQube') {
                             dir('backend') {
-                                sh './mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend'
+                                sh './mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml'
                             }
                         }
                     }
@@ -213,6 +213,7 @@ pipeline {
                     steps {
                         withSonarQubeEnv('SonarQube') {
                             dir('frontend') {
+                                sh 'npm install && npm run test:coverage'
                                 sh 'npx sonar-scanner --define sonar.externalIssuesReportPaths=../api-check/api-mapping-issues.json'
                             }
                         }
