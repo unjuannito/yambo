@@ -18,8 +18,6 @@ import es.yambo_alco.web.repository.spec.OrderSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -31,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -51,10 +50,7 @@ public class OrderService {
     private final AuthService authService;
     private final MailService mailService;
     private final UserService userService;
-
-    @Autowired
-    @Lazy
-    private OrderService self;
+    private final ProductService productService;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -102,50 +98,7 @@ public class OrderService {
     }
 
     private BigDecimal calculatePrice(Product product, String configurationJson) {
-        BigDecimal totalPrice = product.getBasePrice();
-
-        if (configurationJson == null || configurationJson.trim().isEmpty()) {
-            return totalPrice;
-        }
-
-        try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> configuration = mapper.readValue(configurationJson, java.util.Map.class);
-
-            List<ProductOption> options = product.getOptions();
-            if (options == null || options.isEmpty()) {
-                return totalPrice;
-            }
-
-            for (ProductOption option : options) {
-                Object selectedValue = configuration.get(option.getName());
-                if (selectedValue == null) {
-                    continue;
-                }
-
-                if (option.getPrice() != null) {
-                    totalPrice = totalPrice.add(option.getPrice());
-                }
-
-                if ("select".equals(option.getType()) && option.getValues() != null) {
-                    String selectedValueStr = selectedValue.toString();
-                    for (OptionValue value : option.getValues()) {
-                        if (value.getLabel().equals(selectedValueStr) || value.getId().equals(selectedValueStr)) {
-                            if (value.getPrice() != null) {
-                                totalPrice = totalPrice.add(value.getPrice());
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // If parsing fails, just return base price
-            return totalPrice;
-        }
-
-        return totalPrice;
+        return productService.calculatePrice(product, configurationJson);
     }
 
     private void validateProductAccess(User user, Product product, LocalDateTime now) {
@@ -252,20 +205,11 @@ public class OrderService {
     }
 
     public void sendOrderStatusUpdateEmail(Order order, OrderStatus newStatus) {
-        User user = userRepository.findById(order.getCustomerId())
-                .orElse(null);
-
-        if (user == null) {
-            log.warn("Cannot send email notification for order {}: user {} not found", order.getId(),
-                    order.getCustomerId());
+        Optional<User> recipient = resolveEmailRecipient(order);
+        if (recipient.isEmpty()) {
             return;
         }
-
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            log.warn("Cannot send email notification for order {}: user {} has no email", order.getId(),
-                    order.getCustomerId());
-            return;
-        }
+        User user = recipient.get();
 
         NotificationPreferences prefs = userService.getNotificationPreferences(user.getId());
         if (!prefs.isOrderStatus()) {
@@ -275,50 +219,24 @@ public class OrderService {
         }
 
         List<OrderProduct> orderProducts = getOrderProducts(order.getId());
-        List<MailService.OrderProductInfo> productInfos = orderProducts.stream()
-                .map(op -> {
-                    Product product = productRepository.findById(op.getProductId()).orElse(null);
-                    String productName = product != null ? product.getName() : "Unknown Product";
-                    String configuration = formatConfiguration(op.getConfiguration(), product);
-                    return new MailService.OrderProductInfo(
-                            productName,
-                            op.getQuantity(),
-                            op.getPrice(),
-                            configuration);
-                })
-                .collect(Collectors.toList());
-
-        BigDecimal totalPrice = orderProducts.stream()
-                .map(op -> op.getPrice().multiply(new BigDecimal(op.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         mailService.sendOrderStatusUpdate(
                 user.getEmail(),
                 user.getName(),
                 order.getId(),
                 order.getCreatedAt(),
                 newStatus,
-                productInfos,
-                totalPrice);
+                buildProductInfos(orderProducts),
+                computeTotalPrice(orderProducts));
 
         log.info("Order status update email sent for order: {} to user: {}", order.getId(), user.getEmail());
     }
 
     private void sendOrderCancelEmail(Order order, boolean canceledByAdmin) {
-        User user = userRepository.findById(order.getCustomerId())
-                .orElse(null);
-
-        if (user == null) {
-            log.warn("Cannot send cancellation email for order {}: user {} not found", order.getId(),
-                    order.getCustomerId());
+        Optional<User> recipient = resolveEmailRecipient(order);
+        if (recipient.isEmpty()) {
             return;
         }
-
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            log.warn("Cannot send cancellation email for order {}: user {} has no email", order.getId(),
-                    order.getCustomerId());
-            return;
-        }
+        User user = recipient.get();
 
         NotificationPreferences prefs = userService.getNotificationPreferences(user.getId());
         if (!prefs.isOrderCancelled()) {
@@ -328,11 +246,40 @@ public class OrderService {
         }
 
         List<OrderProduct> orderProducts = getOrderProducts(order.getId());
-        List<MailService.OrderProductInfo> productInfos = orderProducts.stream()
+        mailService.sendOrderCanceled(
+                user.getEmail(),
+                user.getName(),
+                order.getId(),
+                order.getCreatedAt(),
+                buildProductInfos(orderProducts),
+                computeTotalPrice(orderProducts),
+                canceledByAdmin);
+
+        log.info("Order cancellation email sent for order: {} to user: {} (canceledByAdmin: {})",
+                order.getId(), user.getEmail(), canceledByAdmin);
+    }
+
+    private Optional<User> resolveEmailRecipient(Order order) {
+        User user = userRepository.findById(order.getCustomerId()).orElse(null);
+        if (user == null) {
+            log.warn("Cannot send email notification for order {}: user {} not found",
+                    order.getId(), order.getCustomerId());
+            return Optional.empty();
+        }
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            log.warn("Cannot send email notification for order {}: user {} has no email",
+                    order.getId(), order.getCustomerId());
+            return Optional.empty();
+        }
+        return Optional.of(user);
+    }
+
+    private List<MailService.OrderProductInfo> buildProductInfos(List<OrderProduct> orderProducts) {
+        return orderProducts.stream()
                 .map(op -> {
                     Product product = productRepository.findById(op.getProductId()).orElse(null);
                     String productName = product != null ? product.getName() : "Unknown Product";
-                    String configuration = formatConfiguration(op.getConfiguration(), product);
+                    String configuration = productService.formatConfiguration(op.getConfiguration(), product);
                     return new MailService.OrderProductInfo(
                             productName,
                             op.getQuantity(),
@@ -340,95 +287,12 @@ public class OrderService {
                             configuration);
                 })
                 .collect(Collectors.toList());
+    }
 
-        BigDecimal totalPrice = orderProducts.stream()
+    private BigDecimal computeTotalPrice(List<OrderProduct> orderProducts) {
+        return orderProducts.stream()
                 .map(op -> op.getPrice().multiply(new BigDecimal(op.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        mailService.sendOrderCanceled(
-                user.getEmail(),
-                user.getName(),
-                order.getId(),
-                order.getCreatedAt(),
-                productInfos,
-                totalPrice,
-                canceledByAdmin);
-
-        log.info("Order cancellation email sent for order: {} to user: {} (canceledByAdmin: {})",
-                order.getId(), user.getEmail(), canceledByAdmin);
-    }
-
-    private String formatConfiguration(String configurationJson, Product product) {
-        if (configurationJson == null || configurationJson.trim().isEmpty() || configurationJson.equals("{}")) {
-            return null;
-        }
-
-        try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Object> config = mapper.readValue(configurationJson, java.util.Map.class);
-
-            if (config.isEmpty() || product == null || product.getOptions() == null) {
-                return null;
-            }
-
-            String formatted = config.entrySet().stream()
-                    .filter(entry -> entry.getValue() != null)
-                    .filter(entry -> !(entry.getValue() instanceof String) || !((String) entry.getValue()).isBlank())
-                    .filter(entry -> isValidOption(entry.getKey(), entry.getValue(), product.getOptions()))
-                    .map(entry -> formatOptionValue(entry.getKey(), entry.getValue(), product.getOptions()))
-                    .collect(Collectors.joining(", "));
-
-            return formatted.isEmpty() ? null : formatted;
-        } catch (Exception e) {
-            // If parsing fails, return raw JSON
-            return configurationJson;
-        }
-    }
-
-    private boolean isValidOption(String optionName, Object value, List<ProductOption> options) {
-        ProductOption option = options.stream()
-                .filter(opt -> opt.getName().equals(optionName))
-                .findFirst()
-                .orElse(null);
-
-        if (option == null) {
-            return false; // Option doesn't exist in product
-        }
-
-        if ("select".equals(option.getType()) && option.getValues() != null) {
-            String valueStr = value.toString();
-            return option.getValues().stream()
-                    .anyMatch(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr));
-        }
-
-        // For other types (checkbox, text_input), just check it exists
-        return true;
-    }
-
-    private String formatOptionValue(String optionName, Object value, List<ProductOption> options) {
-        ProductOption option = options.stream()
-                .filter(opt -> opt.getName().equals(optionName))
-                .findFirst()
-                .orElse(null);
-
-        if (option == null) {
-            return optionName + ": " + value;
-        }
-
-        if ("select".equals(option.getType()) && option.getValues() != null) {
-            String valueStr = value.toString();
-            OptionValue optionValue = option.getValues().stream()
-                    .filter(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr))
-                    .findFirst()
-                    .orElse(null);
-
-            if (optionValue != null) {
-                return optionName + ": " + optionValue.getLabel();
-            }
-        }
-
-        return optionName + ": " + value;
     }
 
     @Transactional
@@ -546,12 +410,13 @@ public class OrderService {
         orderProduct.setStatus(OrderProductStatus.DELIVERED);
         orderProductRepository.save(orderProduct);
 
-        self.checkAndCloseOrder(orderId);
+        checkAndCloseOrder(orderId);
 
         return getOrderById(orderId);
     }
 
-    public List<Order> getOrdersByCustomer(@NonNull String customerId) {        Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
+    public List<Order> getOrdersByCustomer(@NonNull String customerId) {
+        Specification<Order> spec = OrderSpecifications.customerIdEquals(customerId);
         return orderRepository.findAll(spec);
     }
 
@@ -562,11 +427,7 @@ public class OrderService {
     }
 
     public boolean hasOpenIssues(@NonNull String orderId) {
-        List<Issue> issues = issueRepository.findByOrderId(orderId);
-        return issues.stream().anyMatch(issue -> {
-            IssueStatus is = issue.getStatus();
-            return is == IssueStatus.OPEN || is == IssueStatus.IN_PROGRESS || is == IssueStatus.REOPENED;
-        });
+        return issueRepository.findByOrderId(orderId).stream().anyMatch(this::isOpenIssue);
     }
 
     @Transactional
@@ -586,7 +447,6 @@ public class OrderService {
      * Check if an order should be auto-closed.
      * An order is closed when all products are delivered and no ordered product has an open issue.
      */
-    @Transactional
     public void checkAndCloseOrder(@NonNull String orderId) {
         Order order = getOrderById(orderId);
 
@@ -606,15 +466,7 @@ public class OrderService {
             return;
         }
 
-        // Check no open issues exist for any order product
-        List<Issue> issues = issueRepository.findByOrderId(orderId);
-        boolean hasOpenIssues = issues.stream()
-                .anyMatch(issue -> {
-                    IssueStatus is = issue.getStatus();
-                    return is == IssueStatus.OPEN || is == IssueStatus.IN_PROGRESS || is == IssueStatus.REOPENED;
-                });
-
-        if (hasOpenIssues) {
+        if (issueRepository.findByOrderId(orderId).stream().anyMatch(this::isOpenIssue)) {
             return;
         }
 
@@ -713,6 +565,11 @@ public class OrderService {
         }
 
         return pendingEmails;
+    }
+
+    private boolean isOpenIssue(Issue issue) {
+        IssueStatus status = issue.getStatus();
+        return status == IssueStatus.OPEN || status == IssueStatus.IN_PROGRESS || status == IssueStatus.REOPENED;
     }
 
     public record PendingOrderEmail(String orderId, OrderStatus newStatus) {}

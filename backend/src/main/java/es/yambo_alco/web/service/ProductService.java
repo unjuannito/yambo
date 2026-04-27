@@ -1,8 +1,10 @@
 package es.yambo_alco.web.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,7 @@ public class ProductService {
     private final FamilyProductRepository familyProductRepository;
     private final AuthService authService;
     private final PermissionCheckService permissionCheck;
+    private final ObjectMapper objectMapper;
 
     public Product getProductById(@NonNull String productId) {
         Product product = productRepository.findById(productId)
@@ -183,5 +187,122 @@ public class ProductService {
         if (!hasAccess) {
             throw new ResourceNotFoundException("Product not found");
         }
+    }
+
+    public BigDecimal calculatePrice(Product product, String configurationJson) {
+        BigDecimal totalPrice = product.getBasePrice();
+
+        if (configurationJson == null || configurationJson.trim().isEmpty()) {
+            return totalPrice;
+        }
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> configuration = objectMapper.readValue(configurationJson, Map.class);
+
+            List<ProductOption> options = product.getOptions();
+            if (options == null || options.isEmpty()) {
+                return totalPrice;
+            }
+
+            for (ProductOption option : options) {
+                Object selectedValue = configuration.get(option.getName());
+                if (selectedValue == null) {
+                    continue;
+                }
+
+                if (option.getPrice() != null) {
+                    totalPrice = totalPrice.add(option.getPrice());
+                }
+
+                if ("select".equals(option.getType()) && option.getValues() != null) {
+                    String selectedValueStr = selectedValue.toString();
+                    for (OptionValue value : option.getValues()) {
+                        if (value.getLabel().equals(selectedValueStr) || value.getId().equals(selectedValueStr)) {
+                            if (value.getPrice() != null) {
+                                totalPrice = totalPrice.add(value.getPrice());
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // If parsing fails, just return base price
+            return totalPrice;
+        }
+
+        return totalPrice;
+    }
+
+    public String formatConfiguration(String configurationJson, Product product) {
+        if (configurationJson == null || configurationJson.trim().isEmpty() || configurationJson.equals("{}")) {
+            return null;
+        }
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> config = objectMapper.readValue(configurationJson, Map.class);
+
+            if (config.isEmpty() || product == null || product.getOptions() == null) {
+                return null;
+            }
+
+            String formatted = config.entrySet().stream()
+                    .filter(entry -> entry.getValue() != null)
+                    .filter(entry -> !(entry.getValue() instanceof String) || !((String) entry.getValue()).isBlank())
+                    .filter(entry -> isValidOption(entry.getKey(), entry.getValue(), product.getOptions()))
+                    .map(entry -> formatOptionValue(entry.getKey(), entry.getValue(), product.getOptions()))
+                    .collect(Collectors.joining(", "));
+
+            return formatted.isEmpty() ? null : formatted;
+        } catch (Exception e) {
+            // If parsing fails, return raw JSON
+            return configurationJson;
+        }
+    }
+
+    private boolean isValidOption(String optionName, Object value, List<ProductOption> options) {
+        ProductOption option = options.stream()
+                .filter(opt -> opt.getName().equals(optionName))
+                .findFirst()
+                .orElse(null);
+
+        if (option == null) {
+            return false;
+        }
+
+        if ("select".equals(option.getType()) && option.getValues() != null) {
+            String valueStr = value.toString();
+            return option.getValues().stream()
+                    .anyMatch(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr));
+        }
+
+        return true;
+    }
+
+    private String formatOptionValue(String optionName, Object value, List<ProductOption> options) {
+        ProductOption option = options.stream()
+                .filter(opt -> opt.getName().equals(optionName))
+                .findFirst()
+                .orElse(null);
+
+        if (option == null) {
+            return optionName + ": " + value;
+        }
+
+        if ("select".equals(option.getType()) && option.getValues() != null) {
+            String valueStr = value.toString();
+            OptionValue optionValue = option.getValues().stream()
+                    .filter(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr))
+                    .findFirst()
+                    .orElse(null);
+
+            if (optionValue != null) {
+                return optionName + ": " + optionValue.getLabel();
+            }
+        }
+
+        return optionName + ": " + value;
     }
 }

@@ -21,7 +21,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -68,12 +67,15 @@ class OrderServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private ProductService productService;
+
     @InjectMocks
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(orderService, "self", orderService);
+        lenient().when(productService.calculatePrice(any(Product.class), any())).thenReturn(BigDecimal.TEN);
     }
 
     @Test
@@ -595,6 +597,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -632,6 +635,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -676,6 +680,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("30.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -732,6 +737,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("28.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -794,6 +800,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("32.50"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -831,6 +838,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -875,6 +883,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("30.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -1076,6 +1085,7 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Size: XL");
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1227,6 +1237,7 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Color: Red");
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1318,6 +1329,7 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Size: Extra Large\nColor: Ocean Blue\nCustomText: My Name");
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -2626,8 +2638,9 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
 
+        String productIdStr = productUuid.toString();
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.confirmOrderProductDelivery("ORD001", productUuid.toString(), "USER001"));
+                () -> orderService.confirmOrderProductDelivery("ORD001", productIdStr, "USER001"));
         assertEquals("Order product can only be confirmed as delivered when in TO_BE_DELIVERED status",
                 exception.getMessage());
         verify(orderProductRepository, never()).save(any());
