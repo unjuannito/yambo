@@ -18,6 +18,8 @@ import es.yambo_alco.web.repository.spec.OrderSpecifications;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -49,6 +51,10 @@ public class OrderService {
     private final AuthService authService;
     private final MailService mailService;
     private final UserService userService;
+
+    @Autowired
+    @Lazy
+    private OrderService self;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -540,7 +546,7 @@ public class OrderService {
         orderProduct.setStatus(OrderProductStatus.DELIVERED);
         orderProductRepository.save(orderProduct);
 
-        checkAndCloseOrder(orderId);
+        self.checkAndCloseOrder(orderId);
 
         return getOrderById(orderId);
     }

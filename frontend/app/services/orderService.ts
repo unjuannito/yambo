@@ -1,7 +1,7 @@
 import { ApiService } from './apiService';
 import type { Order, OrderProduct, UserInfo } from '~/types/order';
 
-export type { Order, OrderProduct, UserInfo };
+export type { Order, OrderProduct, UserInfo } from '~/types/order';
 
 export interface CreateOrderProduct {
     productId: string;

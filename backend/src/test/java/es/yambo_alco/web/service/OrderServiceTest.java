@@ -13,6 +13,7 @@ import es.yambo_alco.web.repository.OrderStatusHistoryRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UploadedFileRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -20,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -68,6 +70,11 @@ class OrderServiceTest {
 
     @InjectMocks
     private OrderService orderService;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(orderService, "self", orderService);
+    }
 
     @Test
     void createOrder_WhenNoProducts_ShouldThrowException() {
@@ -2646,9 +2653,10 @@ class OrderServiceTest {
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
 
+        String productIdStr = productUuid.toString();
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                () -> orderService.confirmOrderProductDelivery("ORD001", productUuid.toString(), "USER001"));
-        assertTrue(exception.getMessage().contains(productUuid.toString()));
+                () -> orderService.confirmOrderProductDelivery("ORD001", productIdStr, "USER001"));
+        assertTrue(exception.getMessage().contains(productIdStr));
         verify(orderProductRepository, never()).save(any());
     }
 

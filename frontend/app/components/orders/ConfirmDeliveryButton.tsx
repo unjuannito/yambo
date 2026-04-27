@@ -5,9 +5,9 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
 interface ConfirmDeliveryButtonProps {
-    orderId: string;
-    orderProductId: string;
-    onConfirmed: (updated: Order) => void;
+    readonly orderId: string;
+    readonly orderProductId: string;
+    readonly onConfirmed: (updated: Order) => void;
 }
 
 export function ConfirmDeliveryButton({ orderId, orderProductId, onConfirmed }: ConfirmDeliveryButtonProps) {
