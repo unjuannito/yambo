@@ -134,7 +134,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                 <ul className="space-y-2">
                     {watchers.map((w) => (
                         <li
-                            key={w.email}
+                            key={w.id}
                             className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 border border-gray-100 px-3 py-2"
                         >
                             <div className="flex items-center gap-2 min-w-0">
