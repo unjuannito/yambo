@@ -10,6 +10,7 @@ import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.IssueService;
+import es.yambo_alco.web.service.IssueWatcherService;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,9 @@ class IssueControllerTest {
     private AuthService authService;
 
     @MockitoBean
+    private IssueWatcherService issueWatcherService;
+
+    @MockitoBean
     private PermissionCheckService permissionCheckService;
 
     private User currentUser;
@@ -78,7 +82,6 @@ class IssueControllerTest {
     void createIssue_WithValidRequest_ShouldReturnCreated() throws Exception {
         Issue issue = Issue.builder()
                 .id("ISS00001")
-                .orderedProductId(orderedProductId)
                 .title("Problema de talla")
                 .description("La talla no coincide")
                 .status(IssueStatus.OPEN)
@@ -112,7 +115,6 @@ class IssueControllerTest {
                         .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("ISS00001"))
-                .andExpect(jsonPath("$.orderedProductId").value("11111111-1111-1111-1111-111111111111"))
                 .andExpect(jsonPath("$.orderedProductIds[0]").value("11111111-1111-1111-1111-111111111111"))
                 .andExpect(jsonPath("$.status").value("OPEN"));
     }
@@ -141,7 +143,6 @@ class IssueControllerTest {
         LocalDateTime now = LocalDateTime.now();
         Issue issue = Issue.builder()
                 .id("ISS00001")
-                .orderedProductId(orderedProductId)
                 .title("Problema")
                 .description("Detalle")
                 .status(IssueStatus.OPEN)
@@ -180,7 +181,6 @@ class IssueControllerTest {
     void getIssuesByOrder_ShouldReturnIssuesList() throws Exception {
         Issue issue = Issue.builder()
                 .id("ISS00001")
-                .orderedProductId(orderedProductId)
                 .title("Problema")
                 .description("Detalle")
                 .status(IssueStatus.OPEN)
@@ -216,7 +216,6 @@ class IssueControllerTest {
         void addComment_WithStatusButWithoutUpdatePermission_ShouldReturnForbidden() throws Exception {
         Issue issue = Issue.builder()
                 .id("ISS00001")
-                .orderedProductId(orderedProductId)
                 .build();
 
         when(issueService.getIssueWithComments("ISS00001")).thenReturn(issue);
@@ -245,7 +244,6 @@ class IssueControllerTest {
         LocalDateTime now = LocalDateTime.now();
         Issue issue = Issue.builder()
                 .id("ISS00001")
-                .orderedProductId(orderedProductId)
                 .build();
 
         IssueComment createdComment = IssueComment.builder()

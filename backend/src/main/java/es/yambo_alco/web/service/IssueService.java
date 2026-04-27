@@ -4,8 +4,12 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.model.FamilyProductWatcher;
+import es.yambo_alco.web.model.IssueWatcher;
+import es.yambo_alco.web.repository.FamilyProductWatcherRepository;
 import es.yambo_alco.web.repository.IssueCommentRepository;
 import es.yambo_alco.web.repository.IssueRepository;
+import es.yambo_alco.web.repository.IssueWatcherRepository;
 import es.yambo_alco.web.repository.OrderRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -22,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.EnumSet;
 import java.util.ArrayList;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +47,8 @@ public class IssueService {
     private final UserRepository userRepository;
     private final MailService mailService;
     private final UserService userService;
+    private final IssueWatcherRepository issueWatcherRepository;
+    private final FamilyProductWatcherRepository familyProductWatcherRepository;
 
     @Transactional
     public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy) {
@@ -76,10 +83,7 @@ public class IssueService {
             throw new BadRequestException("Issue description cannot be empty");
         }
 
-        UUID primaryOrderedProductId = orderedProducts.get(0).getId();
-
         Issue issue = Issue.builder()
-                .orderedProductId(primaryOrderedProductId)
                 .title(title.trim())
                 .description(description.trim())
                 .status(IssueStatus.OPEN)
@@ -94,12 +98,12 @@ public class IssueService {
         try {
             User customer = userRepository.findById(order.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+            String productName = buildProductNames(orderedProducts);
             NotificationPreferences prefs = userService.getNotificationPreferences(customer.getId());
             if (!prefs.isIssueCreated()) {
                 log.info("Skipping issue created email for issue {}: user {} has disabled issue created notifications",
                         savedIssue.getId(), customer.getId());
             } else {
-                String productName = buildProductNames(orderedProducts);
                 mailService.sendIssueCreated(
                         customer.getEmail(),
                         customer.getName(),
@@ -111,9 +115,37 @@ public class IssueService {
                         savedIssue.getCreatedAt(),
                         savedIssue.getDescription());
             }
+
+            // Notify drop-level watchers (exclude customer to avoid duplicates)
+            Set<String> dropIds = new HashSet<>();
+            for (OrderProduct op : orderedProducts) {
+                if (op.getProduct() != null && op.getProduct().getFamilyProduct() != null) {
+                    dropIds.add(op.getProduct().getFamilyProduct().getId());
+                }
+            }
+            Set<String> notifiedEmails = new HashSet<>();
+            notifiedEmails.add(customer.getEmail().toLowerCase());
+
+            for (String dropId : dropIds) {
+                List<FamilyProductWatcher> dropWatchers = familyProductWatcherRepository.findByFamilyProductId(dropId);
+                for (FamilyProductWatcher watcher : dropWatchers) {
+                    if (notifiedEmails.add(watcher.getEmail())) {
+                        String watcherName = watcher.getUser() != null ? watcher.getUser().getName() : watcher.getEmail();
+                        mailService.sendIssueCreated(
+                                watcher.getEmail(),
+                                watcherName,
+                                savedIssue.getId(),
+                                savedIssue.getTitle(),
+                                productName,
+                                order.getId(),
+                                user.getName(),
+                                savedIssue.getCreatedAt(),
+                                savedIssue.getDescription());
+                    }
+                }
+            }
         } catch (Exception e) {
             log.error("Failed to send issue created email for issue: {}", savedIssue.getId(), e);
-            // Don't fail the request if email fails
         }
 
         return savedIssue;
@@ -181,11 +213,21 @@ public class IssueService {
             User customer = userRepository.findById(order.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
             String productName = buildProductNames(issueProducts);
+            boolean hasStatusChange = status != null && previousStatus != status;
 
-            // Don't send email to the comment author
+            // Track already-notified emails to avoid duplicates
+            Set<String> notifiedEmails = new HashSet<>();
+            // Track the comment author email to skip it
+            String authorEmail = user.getEmail() != null ? user.getEmail().toLowerCase() : null;
+            String customerEmail = customer.getEmail() != null ? customer.getEmail().toLowerCase() : null;
+
+            if (customerEmail != null) {
+                notifiedEmails.add(customerEmail);
+            }
+
+            // Notify the customer (respecting their notification preferences)
             if (!userId.equals(customer.getId())) {
                 NotificationPreferences prefs = userService.getNotificationPreferences(customer.getId());
-                boolean hasStatusChange = status != null && previousStatus != status;
 
                 if (hasStatusChange && !prefs.isIssueStatus()) {
                     log.info("Skipping issue status change email for issue {}: user {} has disabled issue status notifications",
@@ -210,9 +252,54 @@ public class IssueService {
                             hasStatusChange ? status : null);
                 }
             }
+
+            // Notify issue-level watchers
+            List<IssueWatcher> issueWatchers = issueWatcherRepository.findByIssueId(issueId);
+            for (IssueWatcher watcher : issueWatchers) {
+                if (watcher.getEmail().equals(authorEmail)) continue;
+                if (!notifiedEmails.add(watcher.getEmail())) continue;
+                String watcherName = watcher.getUser() != null ? watcher.getUser().getName() : watcher.getEmail();
+                mailService.sendIssueCommentAdded(
+                        watcher.getEmail(),
+                        watcherName,
+                        issue.getId(),
+                        issue.getTitle(),
+                        productName,
+                        user.getName(),
+                        savedComment.getText(),
+                        savedComment.getCreatedAt(),
+                        hasStatusChange ? previousStatus : null,
+                        hasStatusChange ? status : null);
+            }
+
+            // Notify drop-level watchers
+            Set<String> dropIds = new HashSet<>();
+            for (OrderProduct op : issueProducts) {
+                if (op.getProduct() != null && op.getProduct().getFamilyProduct() != null) {
+                    dropIds.add(op.getProduct().getFamilyProduct().getId());
+                }
+            }
+            for (String dropId : dropIds) {
+                List<FamilyProductWatcher> dropWatchers = familyProductWatcherRepository.findByFamilyProductId(dropId);
+                for (FamilyProductWatcher watcher : dropWatchers) {
+                    if (watcher.getEmail().equals(authorEmail)) continue;
+                    if (!notifiedEmails.add(watcher.getEmail())) continue;
+                    String watcherName = watcher.getUser() != null ? watcher.getUser().getName() : watcher.getEmail();
+                    mailService.sendIssueCommentAdded(
+                            watcher.getEmail(),
+                            watcherName,
+                            issue.getId(),
+                            issue.getTitle(),
+                            productName,
+                            user.getName(),
+                            savedComment.getText(),
+                            savedComment.getCreatedAt(),
+                            hasStatusChange ? previousStatus : null,
+                            hasStatusChange ? status : null);
+                }
+            }
         } catch (Exception e) {
             log.error("Failed to send issue comment email for issue: {}", issueId, e);
-            // Don't fail the request if email fails
         }
 
         return savedComment;
@@ -243,12 +330,10 @@ public class IssueService {
             return relatedProducts;
         }
 
-        Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new ResourceNotFoundException("Issue not found: " + issueId));
-
-        OrderProduct fallback = orderProductRepository.findById(issue.getOrderedProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Ordered product not found"));
-        return List.of(fallback);
+        if (!issueRepository.existsById(issueId)) {
+            throw new ResourceNotFoundException("Issue not found: " + issueId);
+        }
+        throw new ResourceNotFoundException("No products found for issue: " + issueId);
     }
 
     private void validateStatusTransition(IssueStatus currentStatus, IssueStatus newStatus) {
@@ -272,6 +357,33 @@ public class IssueService {
 
     private List<OrderProduct> getIssueProducts(Issue issue) {
         return getIssueProductsByIssueId(issue.getId());
+    }
+
+    @Transactional
+    public Issue updateIssueProducts(String issueId, List<UUID> orderedProductIds) {
+        if (orderedProductIds == null || orderedProductIds.isEmpty()) {
+            throw new BadRequestException("At least one ordered product is required");
+        }
+
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResourceNotFoundException("Issue not found: " + issueId));
+
+        Set<UUID> uniqueOrderedProductIds = new LinkedHashSet<>(orderedProductIds);
+        List<OrderProduct> orderedProducts = new ArrayList<>(
+                orderProductRepository.findAllById(uniqueOrderedProductIds));
+        if (orderedProducts.size() != uniqueOrderedProductIds.size()) {
+            throw new ResourceNotFoundException("One or more ordered products were not found");
+        }
+
+        String orderId = orderedProducts.get(0).getOrderId();
+        boolean allBelongToSameOrder = orderedProducts.stream().allMatch(op -> orderId.equals(op.getOrderId()));
+        if (!allBelongToSameOrder) {
+            throw new BadRequestException("All ordered products in an issue must belong to the same order");
+        }
+
+        issue.setOrderProducts(new LinkedHashSet<>(orderedProducts));
+        issue.setUpdatedAt(LocalDateTime.now());
+        return issueRepository.save(issue);
     }
 
     private void validateIssueCreationWindow(Order order) {

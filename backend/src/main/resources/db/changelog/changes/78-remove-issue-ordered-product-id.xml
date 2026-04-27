@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="78-migrate-issue-ordered-product-id-to-join-table" author="yambo">
+        <comment>Ensure every issue's ordered_product_id exists in issue_order_product before dropping the column</comment>
+        <sql>
+            INSERT INTO public.issue_order_product (issue_id, order_product_id)
+            SELECT i.id, i.ordered_product_id
+            FROM public.issue i
+            WHERE i.ordered_product_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM public.issue_order_product iop
+                  WHERE iop.issue_id = i.id AND iop.order_product_id = i.ordered_product_id
+              );
+        </sql>
+    </changeSet>
+
+    <changeSet id="78-drop-issue-ordered-product-id-column" author="yambo">
+        <comment>Drop the legacy ordered_product_id column; all product links now live in issue_order_product</comment>
+        <dropColumn tableName="issue" schemaName="public" columnName="ordered_product_id"/>
+    </changeSet>
+
+</databaseChangeLog>

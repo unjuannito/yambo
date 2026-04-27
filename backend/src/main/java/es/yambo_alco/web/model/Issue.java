@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -27,9 +26,6 @@ public class Issue {
     @CustomId
     @EqualsAndHashCode.Include
     private String id;
-
-    @Column(name = "ordered_product_id", nullable = false, unique = true)
-    private UUID orderedProductId;
 
     @Column(nullable = false)
     private String title;
@@ -51,10 +47,6 @@ public class Issue {
     @Builder.Default
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ordered_product_id", insertable = false, updatable = false)
-    private OrderProduct orderedProduct;
 
     @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)

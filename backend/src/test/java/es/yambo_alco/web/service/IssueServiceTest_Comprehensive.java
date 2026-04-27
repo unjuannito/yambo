@@ -128,7 +128,6 @@ class IssueServiceTest_Comprehensive {
         assertNotNull(result);
         assertEquals("ISS001", result.getId());
         assertEquals("Test Issue", result.getTitle());
-        assertEquals(testProductId, result.getOrderedProductId());
         assertEquals(IssueStatus.OPEN, result.getStatus());
         verify(issueRepository).save(any(Issue.class));
     }
@@ -335,7 +334,7 @@ class IssueServiceTest_Comprehensive {
     @Test
     @DisplayName("Should retrieve issue by ordered product ID")
     void getIssueByOrderedProductId_Found() {
-        Issue issue = Issue.builder().id("ISS001").orderedProductId(testProductId).title("Test").build();
+        Issue issue = Issue.builder().id("ISS001").title("Test").build();
         when(issueRepository.findByOrderedProductId(testProductId)).thenReturn(Optional.of(issue));
 
         Issue result = issueService.getIssueByOrderedProductId(testProductId);
@@ -357,8 +356,8 @@ class IssueServiceTest_Comprehensive {
     @Test
     @DisplayName("Should retrieve all issues for order")
     void getIssuesByOrderId_Success() {
-        Issue issue1 = Issue.builder().id("ISS001").orderedProductId(testProductId).build();
-        Issue issue2 = Issue.builder().id("ISS002").orderedProductId(UUID.randomUUID()).build();
+        Issue issue1 = Issue.builder().id("ISS001").build();
+        Issue issue2 = Issue.builder().id("ISS002").build();
 
         when(issueRepository.findByOrderId(testOrderId)).thenReturn(List.of(issue1, issue2));
 
@@ -406,7 +405,7 @@ class IssueServiceTest_Comprehensive {
     @Test
     @DisplayName("Should add comment without status change")
     void addComment_NoStatusChange() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).orderedProductId(testProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         User commenter = User.builder().id("COMMENTER01").name("Commenter").build();
         IssueComment savedComment = IssueComment.builder()
                 .id(UUID.randomUUID())
@@ -431,7 +430,6 @@ class IssueServiceTest_Comprehensive {
         Issue issue = Issue.builder()
                 .id("ISS001")
                 .status(IssueStatus.OPEN)
-                .orderedProductId(testProductId)
                 .build();
         User commenter = User.builder().id("COMMENTER01").name("Commenter").build();
         IssueComment savedComment = IssueComment.builder()
@@ -518,7 +516,7 @@ class IssueServiceTest_Comprehensive {
     @Test
     @DisplayName("Should allow transition from OPEN to IN_PROGRESS")
     void statusTransition_OpenToProgress_Success() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).orderedProductId(testProductId).build();
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         User commenter = User.builder().id("COMMENTER01").build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
