@@ -4,6 +4,7 @@ import { useAuth } from "~/hooks/useAuth";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
+import { WatcherManager } from "~/components/common/WatcherManager";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -12,6 +13,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { projectService, type Project } from "~/services/projectService";
 import { getErrorMessage } from "~/types/error";
+import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import toast from "react-hot-toast";
@@ -50,6 +52,29 @@ export default function MerchFamilies() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form, setForm] = useState<DropForm>({ ...EMPTY_FORM });
     const [editing, setEditing] = useState<string | null>(null);
+
+    // Watchers modal state
+    const [watchersDrop, setWatchersDrop] = useState<FamilyProduct | null>(null);
+    const [watchers, setWatchers] = useState<DropWatcher[]>([]);
+    const [watchersLoading, setWatchersLoading] = useState(false);
+
+    const openWatchers = async (drop: FamilyProduct) => {
+        setWatchersDrop(drop);
+        setWatchersLoading(true);
+        try {
+            const list = await familyProductService.getDropWatchers(drop.id);
+            setWatchers(list);
+        } catch {
+            setWatchers([]);
+        } finally {
+            setWatchersLoading(false);
+        }
+    };
+
+    const closeWatchers = () => {
+        setWatchersDrop(null);
+        setWatchers([]);
+    };
 
     const loadData = useCallback(async () => {
         try {
@@ -250,6 +275,17 @@ export default function MerchFamilies() {
                 <div className="flex gap-2">
                     {canUpdate && (
                         <ButtonComponent
+                            variant="neutral"
+                            size="sm"
+                            onClick={() => openWatchers(drop)}
+                            title="Gestionar seguidores"
+                            aria-label="Gestionar seguidores"
+                        >
+                            🔔
+                        </ButtonComponent>
+                    )}
+                    {canUpdate && (
+                        <ButtonComponent
                             variant="primary"
                             size="sm"
                             onClick={() => startEdit(drop)}
@@ -383,6 +419,29 @@ export default function MerchFamilies() {
                             />
                         </div>
                     </div>
+                </Modal>
+
+                {/* Watchers modal */}
+                <Modal
+                    isOpen={!!watchersDrop}
+                    onClose={closeWatchers}
+                    title={watchersDrop ? `Seguidores — ${watchersDrop.name}` : "Seguidores"}
+                    size="sm"
+                >
+                    {watchersDrop && (
+                        <WatcherManager
+                            watchers={watchers}
+                            loading={watchersLoading}
+                            onAdd={async (email, userId) => {
+                                const created = await familyProductService.addDropWatcher(watchersDrop.id, email, userId);
+                                setWatchers((prev) => [...prev, created]);
+                            }}
+                            onRemove={async (email) => {
+                                await familyProductService.removeDropWatcher(watchersDrop.id, email);
+                                setWatchers((prev) => prev.filter((w) => w.email !== email));
+                            }}
+                        />
+                    )}
                 </Modal>
             </main>
         </RequirePermission>

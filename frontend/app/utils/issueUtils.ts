@@ -2,11 +2,7 @@ import type { Issue, IssueDetail } from '~/types/issueType';
 import type { Order, OrderProduct } from '~/services/orderService';
 
 export function getIssueOrderedProductIds(issue: Issue | IssueDetail): string[] {
-    if (issue.orderedProductIds && issue.orderedProductIds.length > 0) {
-        return issue.orderedProductIds;
-    }
-
-    return issue.orderedProductId ? [issue.orderedProductId] : [];
+    return issue.orderedProductIds ?? [];
 }
 
 export function getProductName(product?: OrderProduct): string {

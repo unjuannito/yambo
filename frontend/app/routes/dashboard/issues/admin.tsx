@@ -174,52 +174,76 @@ function AdminIssuesContent() {
     );
 
     return (
-        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-            <div className="mb-6 rounded-2xl bg-white shadow-sm border border-gray-100 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                    <div>
-                        <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Administrador de Incidencias</h1>
-                        <p className="text-gray-400">Gestiona incidencias con workflow estilo Jira</p>
+        <main className="flex flex-col gap-6 p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <section className="rounded-[2rem] border border-gray-100 bg-white shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-50 via-white to-yambo-green-50/40 px-6 py-5 md:px-8 border-b border-gray-100">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mb-2">Issue navigator</p>
+                            <h1 className="text-3xl md:text-4xl font-extrabold font-display text-yambo-black mb-2">Administrador de incidencias</h1>
+                            <p className="text-gray-500 max-w-3xl">Vista centralizada para revisar tickets, filtrar el histórico reciente y entrar al detalle con una composición más cercana a un tracker operativo.</p>
+                        </div>
+                        <ButtonComponent
+                            onClick={() => setRefreshKey((prev) => prev + 1)}
+                            variant="neutral"
+                        >
+                            Recargar
+                        </ButtonComponent>
                     </div>
-                    <ButtonComponent
-                        onClick={() => setRefreshKey((prev) => prev + 1)}
-                        variant="neutral"
-                    >
-                        Recargar
-                    </ButtonComponent>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                    <StatCard label="Total" value={stats.total} className="bg-gray-50 rounded-2xl" />
-                    <StatCard label="Abiertas" value={stats.open} className="bg-red-50 rounded-2xl" />
-                    <StatCard label="En progreso" value={stats.inProgress} className="bg-orange-50 rounded-2xl" />
-                    <StatCard label="Resueltas" value={stats.resolved} className="bg-yambo-green-50 rounded-2xl" />
-                    <StatCard label="Cerradas" value={stats.closed} className="bg-slate-100 rounded-2xl" />
-                    <StatCard label="Reabiertas" value={stats.reopened} className="bg-yambo-purple-50 rounded-2xl" />
+                <div className="px-6 py-6 md:px-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                        <StatCard label="Total" value={stats.total} className="bg-slate-50 rounded-2xl" />
+                        <StatCard label="Abiertas" value={stats.open} className="bg-red-50 rounded-2xl" />
+                        <StatCard label="En progreso" value={stats.inProgress} className="bg-orange-50 rounded-2xl" />
+                        <StatCard label="Resueltas" value={stats.resolved} className="bg-yambo-green-50 rounded-2xl" />
+                        <StatCard label="Cerradas" value={stats.closed} className="bg-slate-100 rounded-2xl" />
+                        <StatCard label="Reabiertas" value={stats.reopened} className="bg-yambo-purple-50 rounded-2xl" />
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <StatusWorkflow
-                title="Flujo de trabajo de incidencias"
-                config={ISSUE_STATUS_CONFIG}
-                transitions={ISSUE_WORKFLOW_TRANSITIONS}
-            />
+            <section className="rounded-[2rem] border border-gray-100 bg-white shadow-sm p-6 md:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mb-1">Workflow</p>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Flujo de trabajo</h2>
+                    </div>
+                    <span className="text-sm text-gray-400">Estados disponibles para soporte y administración</span>
+                </div>
+                <StatusWorkflow
+                    title="Flujo de trabajo de incidencias"
+                    config={ISSUE_STATUS_CONFIG}
+                    transitions={ISSUE_WORKFLOW_TRANSITIONS}
+                />
+            </section>
 
-            <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
+            <section className="rounded-[2rem] border border-gray-100 bg-white shadow-sm p-6 md:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mb-1">Queue</p>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Cola de incidencias</h2>
+                    </div>
+                    <span className="text-sm text-gray-400">Filtra por estado, fecha y título sin cambiar la paginación actual</span>
+                </div>
 
-            <FilterableTable<AdminIssueRow>
-                keyField="id"
-                columns={columns}
-                display={{
-                    emptyMessage: "No hay incidencias que coincidan con los filtros",
-                    loadingMessage: "Cargando incidencias...",
-                }}
-                features={{
-                    enableFilters: true,
-                    enablePagination: true,
-                }}
-                serverSide={{ fetchData: fetchIssuesData }}
-            />
+                <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
+
+                <FilterableTable<AdminIssueRow>
+                    keyField="id"
+                    columns={columns}
+                    display={{
+                        emptyMessage: "No hay incidencias que coincidan con los filtros",
+                        loadingMessage: "Cargando incidencias...",
+                    }}
+                    features={{
+                        enableFilters: true,
+                        enablePagination: true,
+                    }}
+                    serverSide={{ fetchData: fetchIssuesData }}
+                />
+            </section>
         </main>
     );
 }

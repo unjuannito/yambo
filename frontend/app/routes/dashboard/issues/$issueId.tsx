@@ -1,11 +1,9 @@
-import { useParams, useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import { IssueDetailComponent } from '~/components/issues';
-import ButtonComponent from '~/components/common/forms/ButtonComponent';
 import { useAuth } from '~/hooks/useAuth';
 
 export default function IssueDetailPage() {
     const { issueId } = useParams<{ issueId: string }>();
-    const navigate = useNavigate();
     const { user } = useAuth();
 
     const isAdmin = user?.permissions?.some(
@@ -21,20 +19,10 @@ export default function IssueDetailPage() {
     }
 
     return (
-        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-            <div className="mb-4">
-                <ButtonComponent
-                    onClick={() => navigate(-1)}
-                    variant="neutral"
-                    size="sm"
-                >
-                    ← Volver
-                </ButtonComponent>
-            </div>
+        <main className="flex flex-col p-4 md:p-5 w-full md:w-[calc(100vw-16rem)]">
             <IssueDetailComponent
                 issueId={issueId}
                 isAdmin={isAdmin}
-                onClose={() => navigate(-1)}
             />
         </main>
     );

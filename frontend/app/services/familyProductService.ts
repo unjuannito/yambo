@@ -1,4 +1,5 @@
 import { ApiService } from './apiService';
+import type { DropWatcher } from '~/types/issueType';
 
 export interface FamilyProduct {
   id: string;
@@ -66,6 +67,21 @@ export class FamilyProductService extends ApiService {
 
   public async updateFamilyProductStatus(id: string, status: string): Promise<FamilyProduct> {
     return await this.put(`/family-products/${id}/status`, { status });
+  }
+
+  public async getDropWatchers(familyProductId: string): Promise<DropWatcher[]> {
+    return await this.get<DropWatcher[]>(`/family-products/${familyProductId}/watchers`);
+  }
+
+  public async addDropWatcher(familyProductId: string, email: string, userId?: string): Promise<DropWatcher> {
+    return await this.post<DropWatcher, { email: string; userId?: string }>(
+      `/family-products/${familyProductId}/watchers`,
+      { email, userId }
+    );
+  }
+
+  public async removeDropWatcher(familyProductId: string, email: string): Promise<void> {
+    return await this.deleteWithBody(`/family-products/${familyProductId}/watchers`, { email });
   }
 }
 
