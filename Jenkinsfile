@@ -160,7 +160,64 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 3 — Docker Build & Push (parallel)
+        // Phase 3 — SonarQube Analysis + Quality Gate
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('SonarQube Analysis') {
+            when {
+                expression { env.BACKEND_CHANGED == 'true' || env.FRONTEND_CHANGED == 'true' }
+            }
+            parallel {
+                stage('Backend Analysis') {
+                    when {
+                        expression { env.BACKEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        withSonarQubeEnv('SonarQube') {
+                            script {
+                                def prArgs = env.IS_PR == 'true'
+                                    ? "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
+                                    : "-Dsonar.branch.name=${env.BRANCH_NAME}"
+                                dir('backend') {
+                                    sh "./mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend ${prArgs}"
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Frontend Analysis') {
+                    when {
+                        expression { env.FRONTEND_CHANGED == 'true' }
+                    }
+                    steps {
+                        withSonarQubeEnv('SonarQube') {
+                            script {
+                                def prArgs = env.IS_PR == 'true'
+                                    ? "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
+                                    : "-Dsonar.branch.name=${env.BRANCH_NAME}"
+                                dir('frontend') {
+                                    sh "npx sonar-scanner ${prArgs}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            when {
+                expression { env.BACKEND_CHANGED == 'true' || env.FRONTEND_CHANGED == 'true' }
+            }
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Phase 4 — Docker Build & Push (parallel)
         // ─────────────────────────────────────────────────────────────────────
 
         stage('Docker Build & Push') {
