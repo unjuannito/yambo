@@ -160,6 +160,32 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // Phase 2b — API Contract Check
+        // ─────────────────────────────────────────────────────────────────────
+
+        stage('API Contract Check') {
+            when {
+                expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
+            }
+            steps {
+                sh 'node scripts/check-api-mapping.js --output-dir=api-check'
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing      : true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll           : true,
+                        reportDir         : 'api-check',
+                        reportFiles       : 'api-mapping-report.html',
+                        reportName        : 'API Mapping Report',
+                    ])
+                    archiveArtifacts artifacts: 'api-check/api-mapping-issues.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // Phase 3 — SonarQube Analysis + Quality Gate
         // ─────────────────────────────────────────────────────────────────────
 
@@ -187,7 +213,7 @@ pipeline {
                     steps {
                         withSonarQubeEnv('SonarQube') {
                             dir('frontend') {
-                                sh 'npx sonar-scanner'
+                                sh 'npx sonar-scanner --define sonar.externalIssuesReportPaths=../api-check/api-mapping-issues.json'
                             }
                         }
                     }
