@@ -20,4 +20,13 @@ export default defineConfig({
       clientPort: 80,
     },
   },
+  test: {
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['lcov', 'text'],
+      reportsDirectory: 'coverage',
+      include: ['app/**'],
+    },
+  },
 });
