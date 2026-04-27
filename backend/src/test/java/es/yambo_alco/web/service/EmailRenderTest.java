@@ -279,11 +279,12 @@ class EmailRenderTest {
         String html = engine.process("emails/issue-watcher-added", ctx);
 
         assertCommonStructure(html);
-        assertThat(html).contains(USER_NAME);
-        assertThat(html).contains(ISSUE_TITLE);
-        assertThat(html).contains(PRODUCT);
-        assertThat(html).contains("Hemos verificado el error");
-        assertThat(html).contains("Ver Incidencia");
+        assertThat(html)
+                .contains(USER_NAME)
+                .contains(ISSUE_TITLE)
+                .contains(PRODUCT)
+                .contains("Hemos verificado el error")
+                .contains("Ver Incidencia");
 
         writePreview("issue-watcher-added", html);
     }
