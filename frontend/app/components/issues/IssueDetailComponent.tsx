@@ -186,7 +186,9 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                         </div>
                         <div className="rounded-xl border border-gray-100 bg-slate-50 px-3 py-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Seguimiento</p>
-                            <p className="text-xs font-semibold text-yambo-black">{watchers.length} seguidores</p>
+                            <p className="text-xs font-semibold text-yambo-black">
+                                {isAdmin ? `${watchers.length} seguidores` : "No disponible"}
+                            </p>
                         </div>
                         <div className="rounded-xl border border-gray-100 bg-slate-50 px-3 py-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-0.5">Creación</p>
