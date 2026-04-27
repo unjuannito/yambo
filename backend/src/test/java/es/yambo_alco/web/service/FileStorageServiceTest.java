@@ -168,8 +168,9 @@ public class FileStorageServiceTest {
 
     @Test
     public void delete_NonExistingFile_ShouldNotThrow() {
-        // When & Then - should not throw
+        // When & Then - should not throw, and file still does not exist
         fileStorageService.delete("nonexistent.jpg");
+        assertThat(Files.exists(tempDir.resolve("nonexistent.jpg"))).isFalse();
     }
 
     @Test
