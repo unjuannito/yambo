@@ -12,8 +12,10 @@ vi.mock('~/services/adminUserService', () => ({
 
 const mockWatcher: IssueWatcher = {
     id: 'W001',
+    issueId: 'ISS001',
     email: 'watcher@example.com',
     userName: 'Test Watcher',
+    createdAt: '2024-01-01T00:00:00Z',
 };
 
 describe('WatcherManager', () => {
