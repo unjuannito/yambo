@@ -16,6 +16,9 @@ import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -628,30 +632,17 @@ class ProductServiceTest {
         assertEquals(new BigDecimal("30.00"), productService.calculatePrice(product, "{\"Color\":\"red\"}"));
     }
 
-    @Test
-    void calculatePrice_WithSelectOptionMatchingById_ShouldAddValuePrice() throws Exception {
-        OptionValue xlValue = OptionValue.builder()
-                .id("xl")
-                .label("Extra Large")
-                .price(new BigDecimal("3.00"))
-                .build();
-        ProductOption sizeOption = ProductOption.builder()
-                .name("Size")
-                .type("select")
-                .values(List.of(xlValue))
-                .price(null)
-                .build();
-        Product product = Product.builder()
-                .basePrice(new BigDecimal("25.00"))
-                .options(List.of(sizeOption))
-                .build();
-        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
-                .thenReturn(java.util.Map.of("Size", "xl"));
-        assertEquals(new BigDecimal("28.00"), productService.calculatePrice(product, "{\"Size\":\"xl\"}"));
+    static Stream<Arguments> selectOptionPriceProvider() {
+        return Stream.of(
+                Arguments.of("xl", new BigDecimal("28.00")),
+                Arguments.of("Extra Large", new BigDecimal("28.00")),
+                Arguments.of("xxl", new BigDecimal("25.00"))
+        );
     }
 
-    @Test
-    void calculatePrice_WithSelectOptionMatchingByLabel_ShouldAddValuePrice() throws Exception {
+    @ParameterizedTest(name = "selectedValue={0} => expectedTotal={1}")
+    @MethodSource("selectOptionPriceProvider")
+    void calculatePrice_WithSelectOption_ShouldComputePrice(String selectedValue, BigDecimal expectedTotal) throws Exception {
         OptionValue xlValue = OptionValue.builder()
                 .id("xl")
                 .label("Extra Large")
@@ -668,30 +659,8 @@ class ProductServiceTest {
                 .options(List.of(sizeOption))
                 .build();
         when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
-                .thenReturn(java.util.Map.of("Size", "Extra Large"));
-        assertEquals(new BigDecimal("28.00"), productService.calculatePrice(product, "{\"Size\":\"Extra Large\"}"));
-    }
-
-    @Test
-    void calculatePrice_WithSelectOptionNoMatchingValue_ShouldNotAddValuePrice() throws Exception {
-        OptionValue xlValue = OptionValue.builder()
-                .id("xl")
-                .label("Extra Large")
-                .price(new BigDecimal("3.00"))
-                .build();
-        ProductOption sizeOption = ProductOption.builder()
-                .name("Size")
-                .type("select")
-                .values(List.of(xlValue))
-                .price(null)
-                .build();
-        Product product = Product.builder()
-                .basePrice(new BigDecimal("25.00"))
-                .options(List.of(sizeOption))
-                .build();
-        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
-                .thenReturn(java.util.Map.of("Size", "xxl"));
-        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Size\":\"xxl\"}"));
+                .thenReturn(java.util.Map.of("Size", selectedValue));
+        assertEquals(expectedTotal, productService.calculatePrice(product, "{\"Size\":\"" + selectedValue + "\"}"));
     }
 
     @Test
@@ -734,22 +703,19 @@ class ProductServiceTest {
 
     // ── formatConfiguration tests ─────────────────────────────────────────────
 
-    @Test
-    void formatConfiguration_WithNullJson_ShouldReturnNull() {
-        Product product = Product.builder().options(List.of()).build();
-        assertNull(productService.formatConfiguration(null, product));
+    static Stream<Arguments> nullOrBlankOrEmptyJsonProvider() {
+        return Stream.of(
+                Arguments.of((Object) null),
+                Arguments.of("  "),
+                Arguments.of("{}")
+        );
     }
 
-    @Test
-    void formatConfiguration_WithBlankJson_ShouldReturnNull() {
+    @ParameterizedTest(name = "json={0}")
+    @MethodSource("nullOrBlankOrEmptyJsonProvider")
+    void formatConfiguration_WithNullOrBlankOrEmptyJson_ShouldReturnNull(String json) {
         Product product = Product.builder().options(List.of()).build();
-        assertNull(productService.formatConfiguration("  ", product));
-    }
-
-    @Test
-    void formatConfiguration_WithEmptyObjectJson_ShouldReturnNull() {
-        Product product = Product.builder().options(List.of()).build();
-        assertNull(productService.formatConfiguration("{}", product));
+        assertNull(productService.formatConfiguration(json, product));
     }
 
     @Test
@@ -851,24 +817,13 @@ class ProductServiceTest {
 
     @Test
     void formatConfiguration_WithSelectOptionNoMatchFallsBackToRaw() throws Exception {
-        // formatOptionValue: select type but no matching value → falls back to raw value
-        OptionValue xlValue = OptionValue.builder().id("xl").label("Extra Large").build();
-        ProductOption sizeOption = ProductOption.builder()
-                .name("Size")
-                .type("select")
-                .values(List.of(xlValue))
-                .build();
-        Product product = Product.builder().options(List.of(sizeOption)).build();
-        // We need isValidOption to pass for "xxl" to reach formatOptionValue — but it won't
-        // because isValidOption filters it out. So we use a non-select type to hit the fallback
-        // in formatOptionValue when option is null:
         ProductOption unknownOption = ProductOption.builder()
                 .name("Custom")
                 .type("text_input")
                 .build();
-        Product product2 = Product.builder().options(List.of(unknownOption)).build();
+        Product product = Product.builder().options(List.of(unknownOption)).build();
         when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
                 .thenReturn(java.util.Map.of("Custom", "hello"));
-        assertEquals("Custom: hello", productService.formatConfiguration("{\"Custom\":\"hello\"}", product2));
+        assertEquals("Custom: hello", productService.formatConfiguration("{\"Custom\":\"hello\"}", product));
     }
 }
