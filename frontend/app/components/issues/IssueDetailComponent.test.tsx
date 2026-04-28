@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router';
 import { IssueDetailComponent } from './IssueDetailComponent';
 import { issueService } from '~/services/issueService';
-import { orderService } from '~/services/orderService';
 
 vi.mock('~/services/issueService', () => ({
     issueService: {

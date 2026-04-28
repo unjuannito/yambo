@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WatcherManager } from './WatcherManager';
-import { adminUserService } from '~/services/adminUserService';
 import type { IssueWatcher } from '~/types/issueType';
 
 vi.mock('~/services/adminUserService', () => ({
