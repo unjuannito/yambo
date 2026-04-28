@@ -13,6 +13,7 @@ import es.yambo_alco.web.repository.OrderStatusHistoryRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UploadedFileRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -66,8 +67,16 @@ class OrderServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private ProductService productService;
+
     @InjectMocks
     private OrderService orderService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(productService.calculatePrice(any(Product.class), any())).thenReturn(BigDecimal.TEN);
+    }
 
     @Test
     void createOrder_WhenNoProducts_ShouldThrowException() {
@@ -588,6 +597,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -625,6 +635,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -669,6 +680,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("30.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -725,6 +737,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("28.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -787,6 +800,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("32.50"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -824,6 +838,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -868,6 +883,7 @@ class OrderServiceTest {
             saved.setId("ORD001");
             return saved;
         });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("30.00"));
 
         orderService.createOrder("USER001", List.of(orderProduct));
 
@@ -1069,6 +1085,7 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Size: XL");
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1220,6 +1237,7 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Color: Red");
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -1311,6 +1329,7 @@ class OrderServiceTest {
         when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Size: Extra Large\nColor: Ocean Blue\nCustomText: My Name");
 
         orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
 
@@ -2538,5 +2557,161 @@ class OrderServiceTest {
         assertEquals(OrderStatus.CANCELED, result.getStatus());
         verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
     }
+
+    // ── confirmOrderProductDelivery ──
+
+    @Test
+    void confirmOrderProductDelivery_WhenValid_ShouldSetDelivered() {
+        java.util.UUID productUuid = java.util.UUID.randomUUID();
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .build();
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+        orderProduct.setId(productUuid);
+        orderProduct.setOrderId("ORD001");
+        orderProduct.setStatus(OrderProductStatus.TO_BE_DELIVERED);
+
+        OrderProduct deliveredProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+        deliveredProduct.setId(productUuid);
+        deliveredProduct.setOrderId("ORD001");
+        deliveredProduct.setStatus(OrderProductStatus.DELIVERED);
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(deliveredProduct));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+
+        Order result = orderService.confirmOrderProductDelivery("ORD001", productUuid.toString(), "USER001");
+
+        assertNotNull(result);
+        verify(orderProductRepository).save(argThat(op -> op.getStatus() == OrderProductStatus.DELIVERED));
+    }
+
+    @Test
+    void confirmOrderProductDelivery_WhenWrongUser_ShouldThrowForbidden() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("OWNER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        es.yambo_alco.web.exception.ForbiddenException exception = assertThrows(
+                es.yambo_alco.web.exception.ForbiddenException.class,
+                () -> orderService.confirmOrderProductDelivery("ORD001",
+                        java.util.UUID.randomUUID().toString(), "OTHER_USER"));
+        assertEquals("You do not have permission to update this order", exception.getMessage());
+        verify(orderProductRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrderProductDelivery_WhenWrongStatus_ShouldThrowBadRequest() {
+        java.util.UUID productUuid = java.util.UUID.randomUUID();
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .build();
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+        orderProduct.setId(productUuid);
+        orderProduct.setOrderId("ORD001");
+        orderProduct.setStatus(OrderProductStatus.PENDING_FABRICATION);
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
+
+        String productIdStr = productUuid.toString();
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.confirmOrderProductDelivery("ORD001", productIdStr, "USER001"));
+        assertEquals("Order product can only be confirmed as delivered when in TO_BE_DELIVERED status",
+                exception.getMessage());
+        verify(orderProductRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrderProductDelivery_WhenProductNotInOrder_ShouldThrowNotFound() {
+        java.util.UUID productUuid = java.util.UUID.randomUUID();
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .build();
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+        orderProduct.setId(productUuid);
+        orderProduct.setOrderId("OTHER_ORDER");
+        orderProduct.setStatus(OrderProductStatus.TO_BE_DELIVERED);
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
+
+        String productIdStr = productUuid.toString();
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.confirmOrderProductDelivery("ORD001", productIdStr, "USER001"));
+        assertTrue(exception.getMessage().contains(productIdStr));
+        verify(orderProductRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrderProductDelivery_WhenLastProduct_ShouldCloseOrder() {
+        java.util.UUID productUuid = java.util.UUID.randomUUID();
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .build();
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+        orderProduct.setId(productUuid);
+        orderProduct.setOrderId("ORD001");
+        orderProduct.setStatus(OrderProductStatus.TO_BE_DELIVERED);
+
+        OrderProduct deliveredProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+        deliveredProduct.setId(productUuid);
+        deliveredProduct.setOrderId("ORD001");
+        deliveredProduct.setStatus(OrderProductStatus.DELIVERED);
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(deliveredProduct));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+
+        orderService.confirmOrderProductDelivery("ORD001", productUuid.toString(), "USER001");
+
+        verify(orderRepository).save(argThat(o -> o.getStatus() == OrderStatus.CLOSED));
+    }
 }
+
 

@@ -14,13 +14,14 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import FileUploader from "~/components/common/FileUploader";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { Route } from "./+types/my-orders";
-import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
+import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS, ORDER_PRODUCT_STATUS_CONFIG, OrderProductStatus } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge, IssueForm } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { ConfirmDeliveryButton } from "~/components/orders/ConfirmDeliveryButton";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClipboard, faTriangleExclamation, faUpload, faClock } from "@fortawesome/free-solid-svg-icons";
@@ -176,6 +177,14 @@ export default function MyOrdersPage() {
       setIsUploadingReceipt(false);
     }
   };
+
+  const handleOrderUpdated = (updated: Order) => {
+    setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    if (orderDetail?.id === updated.id) {
+      setOrderDetail(updated);
+    }
+  };
+
 
   const openIssueWindow = (order: Order, preselectedOrderedProductId?: string) => {
     const orderedProducts = order.products.map((product) => ({
@@ -453,8 +462,21 @@ export default function MyOrdersPage() {
                           <span>Cantidad: {product.quantity}</span>
                           <span>•</span>
                           <span className="font-medium text-yambo-green-600">{product.price.toFixed(2)} € c/u</span>
+                          <span>•</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            ORDER_PRODUCT_STATUS_CONFIG[product.status as keyof typeof ORDER_PRODUCT_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
+                          }`}>
+                            {ORDER_PRODUCT_STATUS_CONFIG[product.status as keyof typeof ORDER_PRODUCT_STATUS_CONFIG]?.shortLabel || product.status}
+                          </span>
                         </div>
 
+                        {product.status === OrderProductStatus.TO_BE_DELIVERED && (
+                          <ConfirmDeliveryButton
+                            orderId={orderDetail.id}
+                            orderProductId={product.id}
+                            onConfirmed={handleOrderUpdated}
+                          />
+                        )}
                         {hasIssue ? (
                           <div className="mt-3 flex flex-col gap-1">
                             {productIssues.map(issue => (

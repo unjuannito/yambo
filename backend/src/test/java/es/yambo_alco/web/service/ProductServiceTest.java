@@ -1,17 +1,24 @@
 package es.yambo_alco.web.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
+import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -26,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -39,10 +47,16 @@ class ProductServiceTest {
     private ProductRepository productRepository;
 
     @Mock
+    private FamilyProductRepository familyProductRepository;
+
+    @Mock
     private AuthService authService;
 
     @Mock
     private PermissionCheckService permissionCheck;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private ProductService productService;
@@ -565,4 +579,251 @@ class ProductServiceTest {
                 assertEquals(expectedPage, result);
                 verify(productRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Product>>any(), eq(pageable));
         }
+
+    // ── calculatePrice tests ──────────────────────────────────────────────────
+
+    @Test
+    void calculatePrice_WithNullConfiguration_ShouldReturnBasePrice() {
+        Product product = Product.builder().basePrice(new BigDecimal("25.00")).build();
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, null));
+    }
+
+    @Test
+    void calculatePrice_WithBlankConfiguration_ShouldReturnBasePrice() {
+        Product product = Product.builder().basePrice(new BigDecimal("25.00")).build();
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "   "));
+    }
+
+    @Test
+    void calculatePrice_WithInvalidJson_ShouldReturnBasePrice() throws Exception {
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of())
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("bad") {});
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{bad"));
+    }
+
+    @Test
+    void calculatePrice_WithNoOptions_ShouldReturnBasePrice() throws Exception {
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of())
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Color", "red"));
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Color\":\"red\"}"));
+    }
+
+    @Test
+    void calculatePrice_WithOptionPrice_ShouldAddOptionPrice() throws Exception {
+        ProductOption colorOption = ProductOption.builder()
+                .name("Color")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(colorOption))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Color", "red"));
+        assertEquals(new BigDecimal("30.00"), productService.calculatePrice(product, "{\"Color\":\"red\"}"));
+    }
+
+    static Stream<Arguments> selectOptionPriceProvider() {
+        return Stream.of(
+                Arguments.of("xl", new BigDecimal("28.00")),
+                Arguments.of("Extra Large", new BigDecimal("28.00")),
+                Arguments.of("xxl", new BigDecimal("25.00"))
+        );
+    }
+
+    @ParameterizedTest(name = "selectedValue={0} => expectedTotal={1}")
+    @MethodSource("selectOptionPriceProvider")
+    void calculatePrice_WithSelectOption_ShouldComputePrice(String selectedValue, BigDecimal expectedTotal) throws Exception {
+        OptionValue xlValue = OptionValue.builder()
+                .id("xl")
+                .label("Extra Large")
+                .price(new BigDecimal("3.00"))
+                .build();
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(xlValue))
+                .price(null)
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(sizeOption))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Size", selectedValue));
+        assertEquals(expectedTotal, productService.calculatePrice(product, "{\"Size\":\"" + selectedValue + "\"}"));
+    }
+
+    @Test
+    void calculatePrice_WithSelectOptionNullValuePrice_ShouldNotAddValuePrice() throws Exception {
+        OptionValue xlValue = OptionValue.builder()
+                .id("xl")
+                .label("Extra Large")
+                .price(null)
+                .build();
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(xlValue))
+                .price(null)
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(sizeOption))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Size", "xl"));
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Size\":\"xl\"}"));
+    }
+
+    @Test
+    void calculatePrice_WithOptionNotInConfig_ShouldSkipIt() throws Exception {
+        ProductOption colorOption = ProductOption.builder()
+                .name("Color")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(colorOption))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Size", "xl"));
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Size\":\"xl\"}"));
+    }
+
+    // ── formatConfiguration tests ─────────────────────────────────────────────
+
+    static Stream<Arguments> nullOrBlankOrEmptyJsonProvider() {
+        return Stream.of(
+                Arguments.of((Object) null),
+                Arguments.of("  "),
+                Arguments.of("{}")
+        );
+    }
+
+    @ParameterizedTest(name = "json={0}")
+    @MethodSource("nullOrBlankOrEmptyJsonProvider")
+    void formatConfiguration_WithNullOrBlankOrEmptyJson_ShouldReturnNull(String json) {
+        Product product = Product.builder().options(List.of()).build();
+        assertNull(productService.formatConfiguration(json, product));
+    }
+
+    @Test
+    void formatConfiguration_WithInvalidJson_ShouldReturnRawJson() throws Exception {
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("bad") {});
+        Product product = Product.builder().options(List.of()).build();
+        assertEquals("{bad", productService.formatConfiguration("{bad", product));
+    }
+
+    @Test
+    void formatConfiguration_WithNullProduct_ShouldReturnNull() throws Exception {
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Color", "red"));
+        assertNull(productService.formatConfiguration("{\"Color\":\"red\"}", null));
+    }
+
+    @Test
+    void formatConfiguration_WithEmptyConfig_ShouldReturnNull() throws Exception {
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of());
+        Product product = Product.builder().options(List.of()).build();
+        assertNull(productService.formatConfiguration("{\"x\":\"y\"}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithTextOption_ShouldReturnFormattedString() throws Exception {
+        ProductOption notesOption = ProductOption.builder()
+                .name("Notes")
+                .type("text_input")
+                .build();
+        Product product = Product.builder().options(List.of(notesOption)).build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Notes", "My Note"));
+        assertEquals("Notes: My Note", productService.formatConfiguration("{\"Notes\":\"My Note\"}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithBlankTextValue_ShouldFilterOut() throws Exception {
+        ProductOption notesOption = ProductOption.builder()
+                .name("Notes")
+                .type("text_input")
+                .build();
+        Product product = Product.builder().options(List.of(notesOption)).build();
+        java.util.Map<String, Object> config = new java.util.LinkedHashMap<>();
+        config.put("Notes", "");
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class))).thenReturn(config);
+        assertNull(productService.formatConfiguration("{\"Notes\":\"\"}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithSelectOption_ShouldShowLabel() throws Exception {
+        OptionValue xlValue = OptionValue.builder().id("xl").label("Extra Large").build();
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(xlValue))
+                .build();
+        Product product = Product.builder().options(List.of(sizeOption)).build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Size", "xl"));
+        assertEquals("Size: Extra Large", productService.formatConfiguration("{\"Size\":\"xl\"}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithSelectOptionInvalidValue_ShouldFilterOut() throws Exception {
+        OptionValue xlValue = OptionValue.builder().id("xl").label("Extra Large").build();
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(xlValue))
+                .build();
+        Product product = Product.builder().options(List.of(sizeOption)).build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Size", "xxl"));
+        assertNull(productService.formatConfiguration("{\"Size\":\"xxl\"}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithUnknownOption_ShouldFilterOut() throws Exception {
+        Product product = Product.builder().options(List.of()).build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("FakeOption", "value"));
+        assertNull(productService.formatConfiguration("{\"FakeOption\":\"value\"}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithNullValue_ShouldFilterOut() throws Exception {
+        ProductOption notesOption = ProductOption.builder()
+                .name("Notes")
+                .type("text_input")
+                .build();
+        Product product = Product.builder().options(List.of(notesOption)).build();
+        java.util.Map<String, Object> config = new java.util.LinkedHashMap<>();
+        config.put("Notes", null);
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class))).thenReturn(config);
+        assertNull(productService.formatConfiguration("{\"Notes\":null}", product));
+    }
+
+    @Test
+    void formatConfiguration_WithSelectOptionNoMatchFallsBackToRaw() throws Exception {
+        ProductOption unknownOption = ProductOption.builder()
+                .name("Custom")
+                .type("text_input")
+                .build();
+        Product product = Product.builder().options(List.of(unknownOption)).build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Custom", "hello"));
+        assertEquals("Custom: hello", productService.formatConfiguration("{\"Custom\":\"hello\"}", product));
+    }
 }

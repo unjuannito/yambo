@@ -1,36 +1,12 @@
 import { ApiService } from './apiService';
+import type { Order, OrderProduct, UserInfo } from '~/types/order';
+
+export type { Order, OrderProduct, UserInfo } from '~/types/order';
 
 export interface CreateOrderProduct {
     productId: string;
     quantity: number;
     configuration?: string;
-}
-
-export interface OrderProduct {
-    id: string;
-    productId: string;
-    productName?: string;
-    quantity: number;
-    price: number;
-    configuration: string;
-    status: string;
-}
-
-export interface UserInfo {
-    id: string;
-    name: string;
-    email: string;
-}
-
-export interface Order {
-    id: string;
-    user: UserInfo;
-    status: string;
-    createdAt: string;
-    closedAt?: string;
-    hasOpenIssues: boolean;
-    receiptFileId?: string;
-    products: OrderProduct[];
 }
 
 export interface CreateOrderRequest {
@@ -99,6 +75,10 @@ export class OrderService extends ApiService {
 
     public async cancelMyOrder(id: string): Promise<Order> {
         return await this.put<Order, Record<string, never>>(`/orders/my/${id}/cancel`, {});
+    }
+
+    public async confirmProductDelivery(orderId: string, orderProductId: string): Promise<Order> {
+        return await this.put<Order, Record<string, never>>(`/orders/my/${orderId}/products/${orderProductId}/deliver`, {});
     }
 
     public async uploadReceipt(id: string, fileId: string): Promise<Order> {

@@ -345,4 +345,32 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.status").value("CONFIRMING_PAYMENT"))
                 .andExpect(jsonPath("$.receiptFileId").value("FL000001"));
     }
+
+    @Test
+    @WithMockUser
+    void confirmOrderProductDelivery_AsOwner_ShouldReturnUpdatedOrder() throws Exception {
+        String orderProductId = java.util.UUID.randomUUID().toString();
+        User user = User.builder().id("USER001").build();
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(orderService.confirmOrderProductDelivery("ORD001", orderProductId, "USER001")).thenReturn(order);
+        when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
+
+        mockMvc.perform(put("/orders/my/ORD001/products/" + orderProductId + "/deliver"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ORD001"))
+                .andExpect(jsonPath("$.status").value("PENDING_PRODUCTS"));
+    }
+
+    @Test
+    void confirmOrderProductDelivery_WithoutAuth_ShouldReturn403() throws Exception {
+        mockMvc.perform(put("/orders/my/ORD001/products/" + java.util.UUID.randomUUID() + "/deliver"))
+                .andExpect(status().isForbidden());
+    }
 }
