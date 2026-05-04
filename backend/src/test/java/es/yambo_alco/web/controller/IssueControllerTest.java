@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -98,7 +99,7 @@ class IssueControllerTest {
                 .quantity(1)
                 .build();
 
-        when(issueService.createIssue(anyList(), eq("Problema de talla"), eq("La talla no coincide"), eq("USR001")))
+        when(issueService.createIssue(anyList(), eq("Problema de talla"), eq("La talla no coincide"), eq("USR001"), eq(true)))
                 .thenReturn(issue);
         when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
 
@@ -134,7 +135,7 @@ class IssueControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest());
 
-        verify(issueService, never()).createIssue(anyList(), anyString(), anyString(), anyString());
+        verify(issueService, never()).createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean());
     }
 
     @Test
@@ -212,8 +213,92 @@ class IssueControllerTest {
     }
 
     @Test
-        @WithMockUser
-        void addComment_WithStatusButWithoutUpdatePermission_ShouldReturnForbidden() throws Exception {
+    @WithMockUser
+    void createIssue_WhenMerchAdmin_ShouldCallServiceWithBypassTrue() throws Exception {
+        Issue issue = Issue.builder()
+                .id("ISS00001")
+                .title("Admin Issue")
+                .description("Created by merch admin")
+                .status(IssueStatus.OPEN)
+                .createdBy("USR001")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        OrderProduct related = OrderProduct.builder()
+                .id(orderedProductId)
+                .orderId("ORD00001")
+                .productId("PROD0001")
+                .price(new BigDecimal("10.00"))
+                .quantity(1)
+                .build();
+
+        when(permissionCheckService.hasPermission(eq("issue"), eq("update"))).thenReturn(true);
+        when(issueService.createIssue(anyList(), anyString(), anyString(), eq("USR001"), eq(true)))
+                .thenReturn(issue);
+        when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
+
+        String requestBody = """
+                {
+                  "orderedProductIds": ["11111111-1111-1111-1111-111111111111"],
+                  "title": "Admin Issue",
+                  "description": "Created by merch admin"
+                }
+                """;
+
+        mockMvc.perform(post("/issues")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        verify(issueService).createIssue(anyList(), anyString(), anyString(), eq("USR001"), eq(true));
+    }
+
+    @Test
+    @WithMockUser
+    void createIssue_WhenRegularUser_ShouldCallServiceWithBypassFalse() throws Exception {
+        Issue issue = Issue.builder()
+                .id("ISS00001")
+                .title("User Issue")
+                .description("Created by regular user")
+                .status(IssueStatus.OPEN)
+                .createdBy("USR001")
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        OrderProduct related = OrderProduct.builder()
+                .id(orderedProductId)
+                .orderId("ORD00001")
+                .productId("PROD0001")
+                .price(new BigDecimal("10.00"))
+                .quantity(1)
+                .build();
+
+        when(permissionCheckService.hasPermission(eq("issue"), eq("update"))).thenReturn(false);
+        when(issueService.createIssue(anyList(), anyString(), anyString(), eq("USR001"), eq(false)))
+                .thenReturn(issue);
+        when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
+
+        String requestBody = """
+                {
+                  "orderedProductIds": ["11111111-1111-1111-1111-111111111111"],
+                  "title": "User Issue",
+                  "description": "Created by regular user"
+                }
+                """;
+
+        mockMvc.perform(post("/issues")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        verify(issueService).createIssue(anyList(), anyString(), anyString(), eq("USR001"), eq(false));
+    }
+
+    @Test
+    @WithMockUser
+    void addComment_WithStatusButWithoutUpdatePermission_ShouldReturnForbidden() throws Exception {
         Issue issue = Issue.builder()
                 .id("ISS00001")
                 .build();

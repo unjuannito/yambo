@@ -17,7 +17,7 @@ import type { Route } from "./+types/my-orders";
 import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS, ORDER_PRODUCT_STATUS_CONFIG, OrderProductStatus } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
-import { IssueStatusBadge, IssueForm } from "~/components/issues";
+import { IssueStatusBadge, CreateIssueModal } from "~/components/issues";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
@@ -592,26 +592,11 @@ export default function MyOrdersPage() {
       />
 
       {/* Issue Report Modal */}
-      <Modal
-        isOpen={!!issueWindow}
+      <CreateIssueModal
+        issueWindow={issueWindow}
         onClose={() => setIssueWindow(null)}
-        title={issueWindow ? `Nueva incidencia · Pedido #${issueWindow.orderId}` : "Nueva incidencia"}
-        size="md"
-      >
-        {issueWindow && (
-          <>
-            <p className="text-sm text-gray-400 mb-4">
-              Selecciona uno o varios productos de este pedido para asociarlos a la incidencia.
-            </p>
-            <IssueForm
-              orderedProducts={issueWindow.orderedProducts}
-              initialSelectedOrderedProductIds={issueWindow.initialSelectedOrderedProductIds}
-              onSuccess={handleIssueCreated}
-              onCancel={() => setIssueWindow(null)}
-            />
-          </>
-        )}
-      </Modal>
+        onSuccess={handleIssueCreated}
+      />
 
       {/* Upload Receipt Modal */}
       <Modal

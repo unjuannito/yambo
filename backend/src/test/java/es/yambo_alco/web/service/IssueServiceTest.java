@@ -304,6 +304,76 @@ class IssueServiceTest {
         verify(issueRepository).save(any(Issue.class));
     }
 
+    // ==================== Merch Admin Issue Creation Tests ====================
+
+    @Test
+    void createIssue_WhenMerchAdminAndOutsideWindow_ShouldSucceed() {
+        Order expiredOrder = Order.builder()
+                .id("ORD001").customerId("CUS001")
+                .status(OrderStatus.CLOSED)
+                .closedAt(LocalDateTime.now().minusDays(60))
+                .build();
+
+        when(orderProductRepository.findAllById(Set.of(orderedProductId))).thenReturn(List.of(orderProduct));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(expiredOrder));
+        when(userRepository.findById("USR001")).thenReturn(Optional.of(creator));
+        when(userRepository.findById("CUS001")).thenReturn(Optional.of(User.builder().id("CUS001").name("Customer").email("cus@test.com").build()));
+        when(issueRepository.save(any(Issue.class))).thenAnswer(inv -> {
+            Issue saved = inv.getArgument(0);
+            saved.setId("ISS001");
+            return saved;
+        });
+
+        Issue result = issueService.createIssue(List.of(orderedProductId), "Admin Issue", "Reported by admin", "USR001", true);
+
+        assertNotNull(result);
+        assertEquals("ISS001", result.getId());
+        assertEquals(IssueStatus.OPEN, result.getStatus());
+        verify(issueRepository).save(any(Issue.class));
+        verify(settingsService, never()).getIssueCreationWindowDays();
+    }
+
+    @Test
+    void createIssue_WhenMerchAdminAndOrderNotClosed_ShouldSucceed() {
+        Order openOrder = Order.builder()
+                .id("ORD001").customerId("CUS001")
+                .status(OrderStatus.PENDING_PRODUCTS).closedAt(null)
+                .build();
+
+        when(orderProductRepository.findAllById(Set.of(orderedProductId))).thenReturn(List.of(orderProduct));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(openOrder));
+        when(userRepository.findById("USR001")).thenReturn(Optional.of(creator));
+        when(userRepository.findById("CUS001")).thenReturn(Optional.of(User.builder().id("CUS001").name("Customer").email("cus@test.com").build()));
+        when(issueRepository.save(any(Issue.class))).thenAnswer(inv -> {
+            Issue saved = inv.getArgument(0);
+            saved.setId("ISS001");
+            return saved;
+        });
+
+        Issue result = issueService.createIssue(List.of(orderedProductId), "Admin Issue", "Created by merch admin", "USR001", true);
+
+        assertNotNull(result);
+        verify(issueRepository).save(any(Issue.class));
+    }
+
+    @Test
+    void createIssue_WhenBypassFalseAndOutsideWindow_ShouldStillThrow() {
+        when(orderProductRepository.findAllById(Set.of(orderedProductId))).thenReturn(List.of(orderProduct));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(
+                Order.builder()
+                        .id("ORD001").customerId("CUS001")
+                        .status(OrderStatus.CLOSED)
+                        .closedAt(LocalDateTime.now().minusDays(60))
+                        .build()
+        ));
+        when(settingsService.getIssueCreationWindowDays()).thenReturn(30);
+
+        assertThrows(BadRequestException.class,
+                () -> issueService.createIssue(List.of(orderedProductId), "Title", "Desc", "USR001", false));
+
+        verify(issueRepository, never()).save(any());
+    }
+
     // ==================== Issue Creation: Email Tests ====================
 
     @Test

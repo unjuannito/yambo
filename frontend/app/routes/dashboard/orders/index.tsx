@@ -24,7 +24,9 @@ import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import { exportService } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
-import { IssueStatusBadge } from "~/components/issues";
+import type { IssueReportWindowModel } from "~/types/issueType";
+import { IssueStatusBadge, CreateIssueModal } from "~/components/issues";
+import { useAuth } from "~/hooks/useAuth";
 import { useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExport, faXmark, faFileArrowDown, faUpload } from "@fortawesome/free-solid-svg-icons";
@@ -62,6 +64,24 @@ export default function Orders() {
     const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
     const deepLinkLookupRef = useRef<string | null>(null);
     const suppressAutoOpenRef = useRef(false);
+    const { hasPermission } = useAuth();
+    const isMerchAdmin = hasPermission({ obj: "issue", action: "update" });
+    const [issueWindow, setIssueWindow] = useState<IssueReportWindowModel | null>(null);
+
+    const openIssueWindow = (order: Order, preselectedProductId?: string) => {
+        const orderedProducts = order.products.map((p) => ({
+            id: p.id,
+            name: p.productName || p.productId,
+            configuration: p.configuration ?? undefined,
+            quantity: p.quantity,
+            unitPrice: p.price,
+        }));
+        setIssueWindow({
+            orderId: order.id,
+            orderedProducts,
+            initialSelectedOrderedProductIds: preselectedProductId ? [preselectedProductId] : undefined,
+        });
+    };
 
     const [statusOptions] = useState(
         Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
@@ -833,9 +853,19 @@ export default function Orders() {
 
                             {/* Products */}
                             <div>
-                                <h3 className="text-lg font-bold font-display text-yambo-black mb-4">
-                                    Productos
-                                </h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-bold font-display text-yambo-black">
+                                        Productos
+                                    </h3>
+                                    {isMerchAdmin && (
+                                        <button
+                                            onClick={() => openIssueWindow(selectedOrder)}
+                                            className="text-sm text-orange-600 hover:text-orange-800 font-medium transition-colors"
+                                        >
+                                            + Nueva incidencia (varios productos)
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="space-y-4">
                                     {selectedOrder.products &&
                                     selectedOrder.products.length > 0 ? (
@@ -906,6 +936,17 @@ export default function Orders() {
                                                                                 </button>
                                                                             </div>
                                                                         ))}
+                                                                    </div>
+                                                                )}
+                                                                {isMerchAdmin && (
+                                                                    <div className="mt-2">
+                                                                        <ButtonComponent
+                                                                            size="sm"
+                                                                            variant="neutral"
+                                                                            onClick={() => openIssueWindow(selectedOrder, product.id)}
+                                                                        >
+                                                                            + Crear incidencia
+                                                                        </ButtonComponent>
                                                                     </div>
                                                                 )}
                                                         </div>
@@ -992,6 +1033,22 @@ export default function Orders() {
                     </div>
                 </div>
             )}
+            {/* Create Issue Modal (Merch Admin) */}
+            <CreateIssueModal
+                issueWindow={issueWindow}
+                onClose={() => setIssueWindow(null)}
+                onSuccess={() => {
+                    const orderId = issueWindow?.orderId;
+                    setIssueWindow(null);
+                    toast.success("Incidencia creada correctamente");
+                    if (orderId) {
+                        issueService.getIssuesByOrder(orderId)
+                            .then(setSelectedOrderIssues)
+                            .catch(() => {});
+                    }
+                }}
+            />
+
             {/* Cancel Order Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={!!orderToCancel}

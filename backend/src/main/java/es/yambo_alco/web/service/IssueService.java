@@ -52,6 +52,12 @@ public class IssueService {
 
     @Transactional
     public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy) {
+        return createIssue(orderedProductIds, title, description, createdBy, false);
+    }
+
+    @Transactional
+    public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy,
+            boolean bypassWindowValidation) {
         if (orderedProductIds == null || orderedProductIds.isEmpty()) {
             throw new BadRequestException("At least one ordered product is required");
         }
@@ -71,7 +77,9 @@ public class IssueService {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
-        validateIssueCreationWindow(order);
+        if (!bypassWindowValidation) {
+            validateIssueCreationWindow(order);
+        }
 
         User user = userRepository.findById(createdBy)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + createdBy));
