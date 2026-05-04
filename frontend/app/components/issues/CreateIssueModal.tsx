@@ -2,11 +2,11 @@ import { Modal } from "~/components/common/Modal";
 import { IssueForm } from "./IssueForm";
 import type { IssueReportWindowModel } from "~/types/issueType";
 
-interface CreateIssueModalProps {
+type CreateIssueModalProps = Readonly<{
     issueWindow: IssueReportWindowModel | null;
     onClose: () => void;
     onSuccess: () => void;
-}
+}>;
 
 export function CreateIssueModal({ issueWindow, onClose, onSuccess }: CreateIssueModalProps) {
     return (
