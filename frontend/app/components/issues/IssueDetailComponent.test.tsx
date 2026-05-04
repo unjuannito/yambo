@@ -23,7 +23,15 @@ vi.mock('~/services/orderService', () => ({
 }));
 
 vi.mock('~/components/common/forms/MarkdownEditor', () => ({
-    default: () => <div data-testid="markdown-editor" />,
+    default: ({ value }: { value: string }) => <div data-testid="markdown-editor">{value}</div>,
+}));
+
+vi.mock('./IssueCommentForm', () => ({
+    IssueCommentForm: () => <div data-testid="issue-comment-form" />,
+}));
+
+vi.mock('~/components/common/WatcherManager', () => ({
+    WatcherManager: () => <div data-testid="watcher-manager" />,
 }));
 
 const mockIssueDetail = {
@@ -37,6 +45,8 @@ const mockIssueDetail = {
     relatedProducts: [],
     orderedProductIds: [],
 };
+
+const mockIssueList = { content: [{ id: 'ISS001', orderId: 'ORD001' }] };
 
 describe('IssueDetailComponent', () => {
     beforeEach(() => {
@@ -57,7 +67,7 @@ describe('IssueDetailComponent', () => {
         expect(screen.getByText('Cargando...')).toBeInTheDocument();
     });
 
-    it('shows issue not found when getIssue resolves with null-like value', async () => {
+    it('shows error when getIssue rejects', async () => {
         vi.mocked(issueService.getIssue).mockRejectedValue(new Error('Not found'));
         vi.mocked(issueService.getAllIssues).mockResolvedValue({ content: [] } as any);
         vi.mocked(issueService.getWatchers).mockResolvedValue([]);
@@ -71,12 +81,49 @@ describe('IssueDetailComponent', () => {
         await waitFor(() => {
             expect(screen.queryByText('Cargando...')).not.toBeInTheDocument();
         });
+        expect(screen.getByText('Not found')).toBeInTheDocument();
     });
 
-    it('loads watchers when isAdmin is true', async () => {
-        vi.mocked(issueService.getIssue).mockReturnValue(new Promise(() => {}));
-        vi.mocked(issueService.getAllIssues).mockReturnValue(new Promise(() => {}));
+    it('renders issue title and ID when loaded successfully', async () => {
+        vi.mocked(issueService.getIssue).mockResolvedValue(mockIssueDetail as any);
+        vi.mocked(issueService.getAllIssues).mockResolvedValue(mockIssueList as any);
         vi.mocked(issueService.getWatchers).mockResolvedValue([]);
+
+        render(
+            <MemoryRouter>
+                <IssueDetailComponent issueId="ISS001" />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Test Issue')).toBeInTheDocument();
+        });
+        expect(screen.getAllByText('ISS001').length).toBeGreaterThan(0);
+        expect(screen.getByText('Test description')).toBeInTheDocument();
+    });
+
+    it('shows "No disponible" for watchers when not admin', async () => {
+        vi.mocked(issueService.getIssue).mockResolvedValue(mockIssueDetail as any);
+        vi.mocked(issueService.getAllIssues).mockResolvedValue(mockIssueList as any);
+        vi.mocked(issueService.getWatchers).mockResolvedValue([]);
+
+        render(
+            <MemoryRouter>
+                <IssueDetailComponent issueId="ISS001" isAdmin={false} />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Test Issue')).toBeInTheDocument());
+        expect(screen.getByText('No disponible')).toBeInTheDocument();
+        expect(issueService.getWatchers).not.toHaveBeenCalled();
+    });
+
+    it('shows watcher count and calls getWatchers when isAdmin is true', async () => {
+        vi.mocked(issueService.getIssue).mockResolvedValue(mockIssueDetail as any);
+        vi.mocked(issueService.getAllIssues).mockResolvedValue(mockIssueList as any);
+        vi.mocked(issueService.getWatchers).mockResolvedValue([
+            { id: 'w1', email: 'a@b.com', name: 'Alice' },
+        ] as any);
 
         render(
             <MemoryRouter>
@@ -84,9 +131,11 @@ describe('IssueDetailComponent', () => {
             </MemoryRouter>
         );
 
+        await waitFor(() => expect(screen.getByText('Test Issue')).toBeInTheDocument());
         await waitFor(() => {
-            expect(issueService.getWatchers).toHaveBeenCalledWith('ISS001');
+            expect(screen.getByText('1 seguidores')).toBeInTheDocument();
         });
+        expect(issueService.getWatchers).toHaveBeenCalledWith('ISS001');
     });
 
     it('does not load watchers when isAdmin is false', async () => {
@@ -102,5 +151,20 @@ describe('IssueDetailComponent', () => {
         await waitFor(() => {
             expect(issueService.getWatchers).not.toHaveBeenCalled();
         });
+    });
+
+    it('shows "Sin actividad aún" when there are no comments', async () => {
+        vi.mocked(issueService.getIssue).mockResolvedValue({ ...mockIssueDetail, comments: [] } as any);
+        vi.mocked(issueService.getAllIssues).mockResolvedValue(mockIssueList as any);
+        vi.mocked(issueService.getWatchers).mockResolvedValue([]);
+
+        render(
+            <MemoryRouter>
+                <IssueDetailComponent issueId="ISS001" />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => expect(screen.getByText('Test Issue')).toBeInTheDocument());
+        expect(screen.getByText('Sin actividad aún')).toBeInTheDocument();
     });
 });

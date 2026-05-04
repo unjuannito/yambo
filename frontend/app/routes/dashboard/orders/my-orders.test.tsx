@@ -62,6 +62,14 @@ vi.mock('~/components/shop/PaymentInstructions', () => ({
     default: () => null,
 }));
 
+vi.mock('~/components/common/FileUploader', () => ({
+    default: vi.fn(({ onUpload }: { onUpload: (f: any) => void }) => (
+        <div data-testid="file-uploader">
+            <button onClick={() => onUpload({ id: 'file-1' })}>upload-file</button>
+        </div>
+    )),
+}));
+
 vi.mock('~/components/issues', () => ({
     IssueStatusBadge: () => null,
     CreateIssueModal: vi.fn(({ issueWindow, onClose, onSuccess }: { issueWindow: any; onClose: () => void; onSuccess: () => void }) =>
@@ -236,6 +244,97 @@ describe('my-orders route', () => {
                 name: 'Test Product',
                 quantity: 1,
                 unitPrice: 25.00,
+            });
+        });
+
+        it('opens CreateIssueModal with product pre-selected when "Reportar incidencia" is clicked', async () => {
+            renderPage();
+            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('Reportar incidencia')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('Reportar incidencia'));
+
+            await waitFor(() => expect(screen.getByTestId('create-issue-modal')).toBeInTheDocument());
+
+            const lastIssueWindow = vi.mocked(CreateIssueModal).mock.lastCall?.[0]?.issueWindow;
+            expect(lastIssueWindow?.initialSelectedOrderedProductIds).toEqual(['prod-1']);
+        });
+    });
+
+    describe('order detail product rendering', () => {
+        it('shows product name and price inside order detail', async () => {
+            renderPage();
+            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => {
+                expect(screen.getByText('Test Product')).toBeInTheDocument();
+                expect(screen.getByText('25.00 € c/u')).toBeInTheDocument();
+            });
+        });
+
+        it('shows existing issue badge and link for products with open issues', async () => {
+            vi.mocked(issueService.getIssuesByOrder).mockResolvedValue([{
+                id: 'ISS001',
+                title: 'Broken product',
+                status: 'OPEN',
+                orderedProductIds: ['prod-1'],
+                createdAt: '2024-06-01T00:00:00Z',
+                updatedAt: '2024-06-01T00:00:00Z',
+            }] as any);
+
+            renderPage();
+            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => {
+                expect(screen.getByText('Broken product')).toBeInTheDocument();
+                expect(screen.getByText('Ver incidencia')).toBeInTheDocument();
+            });
+            // "Reportar incidencia" should NOT appear when product already has an issue
+            expect(screen.queryByText('Reportar incidencia')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('upload receipt modal', () => {
+        const pendingOrder: Order = { ...mockOrder, status: 'PENDING_PAYMENT' };
+
+        beforeEach(() => {
+            vi.mocked(orderService.getMyOrders).mockResolvedValue({ content: [pendingOrder], page: { totalElements: 1, totalPages: 1, number: 0, size: 50 } });
+        });
+
+        it('opens upload receipt modal when "Subir justificante" is clicked', async () => {
+            renderPage();
+            await waitFor(() => expect(screen.getAllByText('Subir justificante').length).toBeGreaterThan(0));
+            // Click the one in the card view (first match)
+            fireEvent.click(screen.getAllByText('Subir justificante')[0]);
+            await waitFor(() => {
+                expect(screen.getByTestId('file-uploader')).toBeInTheDocument();
+            });
+        });
+
+        it('calls uploadReceipt and closes modal after successful upload', async () => {
+            vi.mocked(orderService.uploadReceipt).mockResolvedValue({ ...pendingOrder, status: 'CONFIRMING_PAYMENT' } as any);
+
+            renderPage();
+            await waitFor(() => expect(screen.getAllByText('Subir justificante').length).toBeGreaterThan(0));
+            fireEvent.click(screen.getAllByText('Subir justificante')[0]);
+            await waitFor(() => expect(screen.getByTestId('file-uploader')).toBeInTheDocument());
+
+            fireEvent.click(screen.getByText('upload-file'));
+
+            await waitFor(() => {
+                expect(orderService.uploadReceipt).toHaveBeenCalledWith('ORD001', 'file-1');
+            });
+        });
+
+        it('shows "Verificando justificante..." in detail modal for CONFIRMING_PAYMENT status', async () => {
+            const confirmingOrder: Order = { ...mockOrder, status: 'CONFIRMING_PAYMENT' };
+            vi.mocked(orderService.getMyOrders).mockResolvedValue({ content: [confirmingOrder], page: { totalElements: 1, totalPages: 1, number: 0, size: 50 } });
+
+            renderPage();
+            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => {
+                expect(screen.getAllByText('Verificando justificante...').length).toBeGreaterThan(0);
             });
         });
     });
