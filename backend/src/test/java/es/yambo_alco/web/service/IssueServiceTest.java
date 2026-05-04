@@ -368,8 +368,9 @@ class IssueServiceTest {
         ));
         when(settingsService.getIssueCreationWindowDays()).thenReturn(30);
 
+        List<UUID> ids = List.of(orderedProductId);
         assertThrows(BadRequestException.class,
-                () -> issueService.createIssue(List.of(orderedProductId), "Title", "Desc", "USR001", false));
+                () -> issueService.createIssue(ids, "Title", "Desc", "USR001", false));
 
         verify(issueRepository, never()).save(any());
     }

@@ -233,7 +233,7 @@ class IssueControllerTest {
                 .quantity(1)
                 .build();
 
-        when(permissionCheckService.hasPermission(eq("issue"), eq("update"))).thenReturn(true);
+        when(permissionCheckService.hasPermission("issue", "update")).thenReturn(true);
         when(issueService.createIssue(anyList(), anyString(), anyString(), eq("USR001"), eq(true)))
                 .thenReturn(issue);
         when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
@@ -275,7 +275,7 @@ class IssueControllerTest {
                 .quantity(1)
                 .build();
 
-        when(permissionCheckService.hasPermission(eq("issue"), eq("update"))).thenReturn(false);
+        when(permissionCheckService.hasPermission("issue", "update")).thenReturn(false);
         when(issueService.createIssue(anyList(), anyString(), anyString(), eq("USR001"), eq(false)))
                 .thenReturn(issue);
         when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
@@ -304,7 +304,7 @@ class IssueControllerTest {
                 .build();
 
         when(issueService.getIssueWithComments("ISS00001")).thenReturn(issue);
-        when(permissionCheckService.hasPermission(eq("issue"), eq("update"))).thenReturn(false);
+        when(permissionCheckService.hasPermission("issue", "update")).thenReturn(false);
 
         String requestBody = """
                 {
