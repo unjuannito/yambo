@@ -41,17 +41,19 @@ public class IssueController {
     private final IssueWatcherService issueWatcherService;
 
     @PostMapping
-    @PreAuthorize("@permissionCheck.hasPermission('issue', 'create')")
+    @PreAuthorize("@permissionCheck.hasPermission('issue', 'create') or @permissionCheck.hasPermission('issue', 'update')")
     public ResponseEntity<IssueResponse> createIssue(@Valid @RequestBody CreateIssueRequest request) {
         User currentUser = authService.getCurrentUser(true);
 
+        boolean isMerchAdmin = permissionCheckService.hasPermission("issue", "update");
         List<UUID> orderedProductIds = request.resolveOrderedProductIds();
 
         Issue issue = issueService.createIssue(
                 orderedProductIds,
                 request.getTitle(),
                 request.getDescription(),
-                currentUser.getId());
+                currentUser.getId(),
+                isMerchAdmin);
 
         List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new IssueResponse(issue, relatedProducts));

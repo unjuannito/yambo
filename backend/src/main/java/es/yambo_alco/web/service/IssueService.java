@@ -52,6 +52,17 @@ public class IssueService {
 
     @Transactional
     public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy) {
+        return doCreateIssue(orderedProductIds, title, description, createdBy, false);
+    }
+
+    @Transactional
+    public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy,
+            boolean bypassWindowValidation) {
+        return doCreateIssue(orderedProductIds, title, description, createdBy, bypassWindowValidation);
+    }
+
+    private Issue doCreateIssue(List<UUID> orderedProductIds, String title, String description, String createdBy,
+            boolean bypassWindowValidation) {
         if (orderedProductIds == null || orderedProductIds.isEmpty()) {
             throw new BadRequestException("At least one ordered product is required");
         }
@@ -71,7 +82,9 @@ public class IssueService {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
-        validateIssueCreationWindow(order);
+        if (!bypassWindowValidation) {
+            validateIssueCreationWindow(order);
+        }
 
         User user = userRepository.findById(createdBy)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + createdBy));
@@ -94,7 +107,11 @@ public class IssueService {
                 .build();
 
         Issue savedIssue = issueRepository.save(issue);
+        sendIssueCreatedEmails(savedIssue, order, user, orderedProducts);
+        return savedIssue;
+    }
 
+    private void sendIssueCreatedEmails(Issue savedIssue, Order order, User creator, List<OrderProduct> orderedProducts) {
         try {
             User customer = userRepository.findById(order.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -111,44 +128,44 @@ public class IssueService {
                         savedIssue.getTitle(),
                         productName,
                         order.getId(),
-                        user.getName(),
+                        creator.getName(),
                         savedIssue.getCreatedAt(),
                         savedIssue.getDescription());
             }
-
-            // Notify drop-level watchers (exclude customer to avoid duplicates)
-            Set<String> dropIds = new HashSet<>();
-            for (OrderProduct op : orderedProducts) {
-                if (op.getProduct() != null && op.getProduct().getFamilyProduct() != null) {
-                    dropIds.add(op.getProduct().getFamilyProduct().getId());
-                }
-            }
             Set<String> notifiedEmails = new HashSet<>();
             notifiedEmails.add(customer.getEmail().toLowerCase());
-
-            for (String dropId : dropIds) {
-                List<FamilyProductWatcher> dropWatchers = familyProductWatcherRepository.findByFamilyProductId(dropId);
-                for (FamilyProductWatcher watcher : dropWatchers) {
-                    if (notifiedEmails.add(watcher.getEmail())) {
-                        String watcherName = watcher.getUser() != null ? watcher.getUser().getName() : watcher.getEmail();
-                        mailService.sendIssueCreated(
-                                watcher.getEmail(),
-                                watcherName,
-                                savedIssue.getId(),
-                                savedIssue.getTitle(),
-                                productName,
-                                order.getId(),
-                                user.getName(),
-                                savedIssue.getCreatedAt(),
-                                savedIssue.getDescription());
-                    }
-                }
-            }
+            notifyIssueCreatedDropWatchers(savedIssue, order, creator, orderedProducts, productName, notifiedEmails);
         } catch (Exception e) {
             log.error("Failed to send issue created email for issue: {}", savedIssue.getId(), e);
         }
+    }
 
-        return savedIssue;
+    private void notifyIssueCreatedDropWatchers(Issue savedIssue, Order order, User creator,
+            List<OrderProduct> orderedProducts, String productName, Set<String> notifiedEmails) {
+        Set<String> dropIds = new HashSet<>();
+        for (OrderProduct op : orderedProducts) {
+            if (op.getProduct() != null && op.getProduct().getFamilyProduct() != null) {
+                dropIds.add(op.getProduct().getFamilyProduct().getId());
+            }
+        }
+        for (String dropId : dropIds) {
+            List<FamilyProductWatcher> dropWatchers = familyProductWatcherRepository.findByFamilyProductId(dropId);
+            for (FamilyProductWatcher watcher : dropWatchers) {
+                if (notifiedEmails.add(watcher.getEmail())) {
+                    String watcherName = watcher.getUser() != null ? watcher.getUser().getName() : watcher.getEmail();
+                    mailService.sendIssueCreated(
+                            watcher.getEmail(),
+                            watcherName,
+                            savedIssue.getId(),
+                            savedIssue.getTitle(),
+                            productName,
+                            order.getId(),
+                            creator.getName(),
+                            savedIssue.getCreatedAt(),
+                            savedIssue.getDescription());
+                }
+            }
+        }
     }
 
     @Transactional(readOnly = true)

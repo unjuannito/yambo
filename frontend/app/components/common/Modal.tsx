@@ -30,11 +30,11 @@ export function Modal({
         <>
         {/* Backdrop — separate element so backdrop-filter doesn't create a containing block */}
         <div
-            className="fixed inset-0 bg-yambo-black/40 backdrop-blur-sm z-1"
+            className="fixed inset-0 bg-yambo-black/40 backdrop-blur-sm z-[60]"
             onClick={onClose}
         />
         <div
-            className="fixed inset-0 flex items-center justify-center p-4 z-1"
+            className="fixed inset-0 flex items-center justify-center p-4 z-[60]"
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div
