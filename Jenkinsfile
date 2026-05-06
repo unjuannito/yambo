@@ -17,6 +17,11 @@ pipeline {
             defaultValue: false,
             description: 'Force re-seed of the preview database even if the environment already exists. Use when you need a fresh dataset.'
         )
+        booleanParam(
+            name: 'FORCE_PROD_DEPLOY',
+            defaultValue: false,
+            description: 'Force a full rebuild and redeploy to production (develop branch) even if the image version already exists in the registry.'
+        )
     }
 
     environment {
@@ -138,7 +143,7 @@ pipeline {
 
         stage('Forced Build Setup') {
             when {
-                expression { env.IS_PR == 'true' || env.IS_CUSTOM_DEPLOY == 'true' }
+                expression { env.IS_PR == 'true' || env.IS_CUSTOM_DEPLOY == 'true' || (params.FORCE_PROD_DEPLOY && env.CAN_DEPLOY == 'true') }
             }
             steps {
                 script {
@@ -146,8 +151,10 @@ pipeline {
                     env.BACKEND_CHANGED  = 'true'
                     if (env.IS_PR == 'true') {
                         echo "🔨 PR build: forcing full build"
-                    } else {
+                    } else if (env.IS_CUSTOM_DEPLOY == 'true') {
                         echo "🔨 Custom preview deploy: forcing full build"
+                    } else {
+                        echo "🔨 FORCE_PROD_DEPLOY: forcing full rebuild and production deploy"
                     }
                 }
             }
