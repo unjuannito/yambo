@@ -50,7 +50,7 @@ pipeline {
                     ).trim()
 
                     env.BACKEND_TAG = sh(
-                        script: "grep '<artifactId>web</artifactId>' backend/pom.xml -A 1 | grep '<version>' | sed 's/.*<version>\\(.*\\)<\\/version>.*/\\1/'",
+                        script: "cd backend && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout",
                         returnStdout: true
                     ).trim()
 
