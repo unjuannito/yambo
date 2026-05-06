@@ -21,6 +21,7 @@ pipeline {
         KUBECONFIG     = "/var/lib/jenkins/.kube/config"
         NAMESPACE      = "yambo"
         FIXED_EMAIL    = 'javiermateos149@gmail.com'
+        APP_DOMAIN     = "yambo.cabrasky.net"
     }
 
     stages {
@@ -350,6 +351,7 @@ pipeline {
                                 -e 's|__PR_ID__|${deployId}|g' \\
                                 -e 's|__PREVIEW_NS__|${previewNs}|g' \\
                                 -e 's|__DEPLOY_LABEL__|${deployLabel}|g' \\
+                                -e 's|__DOMAIN__|${APP_DOMAIN}|g' \\
                                 -e 's|__FRONTEND_IMAGE__|${FRONTEND_IMAGE}|g' \\
                                 -e 's|__FRONTEND_TAG__|${env.FRONTEND_TAG}|g' \\
                                 -e 's|__BACKEND_IMAGE__|${BACKEND_IMAGE}|g' \\
@@ -441,8 +443,9 @@ pipeline {
                         wait
                     """
 
-                    env.PREVIEW_URL = "https://${deployLabel}.yambo.cabrasky.net"
-                    currentBuild.description = "<a href='${env.PREVIEW_URL}'>Preview: ${deployLabel}.yambo.cabrasky.net</a>"
+                    env.PREVIEW_URL = "https://${deployLabel}.${APP_DOMAIN}"
+                    env.PREVIEW_NS  = previewNs
+                    currentBuild.description = "<a href='${env.PREVIEW_URL}'>Preview: ${deployLabel}.${APP_DOMAIN}</a>"
                 }
             }
         }
@@ -470,6 +473,7 @@ pipeline {
 
                     sed -i "s|image: .*yambo-web-frontend:.*|image: ${FRONTEND_IMAGE}:${FRONTEND_TAG}|g" k8s/frontend-deployment.yaml
                     sed -i "s|image: .*yambo-web-backend:.*|image: ${BACKEND_IMAGE}:${BACKEND_TAG}|g" k8s/backend-deployment.yaml
+                    sed -i "s|__DOMAIN__|${APP_DOMAIN}|g" k8s/frontend-deployment.yaml k8s/backend-deployment.yaml k8s/ingress.yaml
 
                     kubectl apply -f k8s/frontend-deployment.yaml
                     kubectl apply -f k8s/backend-deployment.yaml
@@ -498,7 +502,7 @@ pipeline {
                         echo "🌐 Preview: ${env.PREVIEW_URL}"
                     }
                     def previewMsg = env.PREVIEW_URL
-                        ? "Preview environment is live at ${env.PREVIEW_URL}\nNamespace: yambo-pr-${env.CHANGE_ID}"
+                        ? "Preview environment is live at ${env.PREVIEW_URL}\nNamespace: ${env.PREVIEW_NS}"
                         : ''
                     def prRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
                     try {
@@ -525,7 +529,7 @@ URL:    ${env.BUILD_URL}"""
                             body: """A custom preview environment was deployed for branch ${env.BRANCH_NAME}.
 
 Preview URL: ${env.PREVIEW_URL}
-Namespace:   yambo-branch-${env.EFFECTIVE_ID}
+Namespace:   ${env.PREVIEW_NS}
 Frontend:    ${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}
 Backend:     ${env.BACKEND_IMAGE}:${env.BACKEND_TAG}
 

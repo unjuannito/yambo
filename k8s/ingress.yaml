@@ -16,7 +16,7 @@ spec:
       port:
         number: 80
   rules:
-    - host: yambo.cabrasky.net
+    - host: __DOMAIN__
       http:
         paths:
           - path: /api

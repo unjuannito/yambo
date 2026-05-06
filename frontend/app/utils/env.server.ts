@@ -9,6 +9,8 @@
  * current value without a rebuild.
  */
 export function getSiteUrl(): string {
-    const raw = process.env.FRONTEND_URL || "https://yambo.cabrasky.net";
+    // FRONTEND_URL must be set at runtime (docker-compose / k8s env var).
+    // The fallback below only activates when neither env var nor runtime config is provided.
+    const raw = process.env.FRONTEND_URL || "http://localhost";
     return raw.replace(/\/+$/, ""); // strip trailing slashes
 }

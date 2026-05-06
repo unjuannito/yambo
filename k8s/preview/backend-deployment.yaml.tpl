@@ -21,9 +21,9 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            # CORS — wildcard covers all preview subdomains (pr-* and branch-*)
+            # CORS — exact origin for this preview deployment
             - name: CORS_ALLOWED_ORIGINS
-              value: "https://*.yambo.cabrasky.net"
+              value: "https://__DEPLOY_LABEL__.__DOMAIN__"
             # Database — service name stays "db" so app config needs no changes
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://db:5432/yambo_db"

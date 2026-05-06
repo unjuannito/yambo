@@ -15,7 +15,7 @@ spec:
       port:
         number: 80
   rules:
-    - host: __DEPLOY_LABEL__.yambo.cabrasky.net
+    - host: __DEPLOY_LABEL__.__DOMAIN__
       http:
         paths:
           - path: /api

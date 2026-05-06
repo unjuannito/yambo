@@ -22,7 +22,7 @@ spec:
             - name: BACKEND_INTERNAL_URL
               value: "http://yambo-backend-service:8080/api"
             - name: FRONTEND_URL
-              value: "https://pr-__PR_ID__.yambo.cabrasky.net"
+              value: "https://__DEPLOY_LABEL__.__DOMAIN__"
           ports:
             - containerPort: 80
           resources:
