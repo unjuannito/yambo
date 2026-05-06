@@ -100,7 +100,7 @@ pipeline {
 
         stage('Check Version Changes') {
             when {
-                expression { env.IS_PR == 'false' }
+                expression { env.IS_PR == 'false' && env.IS_CUSTOM_DEPLOY == 'false' }
             }
             steps {
                 script {
@@ -441,7 +441,7 @@ pipeline {
                         wait
                     """
 
-                    env.PREVIEW_URL = "http://${deployLabel}.yambo.cabrasky.net"
+                    env.PREVIEW_URL = "https://${deployLabel}.yambo.cabrasky.net"
                     currentBuild.description = "<a href='${env.PREVIEW_URL}'>Preview: ${deployLabel}.yambo.cabrasky.net</a>"
                 }
             }

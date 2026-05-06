@@ -101,10 +101,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         if (env.acceptsProfiles(Profiles.of("dev"))) {
-            config.setAllowedOrigins(List.of("http://localhost:5173"));
+            config.setAllowedOriginPatterns(List.of("http://localhost:5173"));
         } else {
             String allowedOrigins = env.getProperty("CORS_ALLOWED_ORIGINS", settingsService.getDomain());
-            config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+            config.setAllowedOriginPatterns(List.of(allowedOrigins.split(",")));
         }
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
