@@ -239,7 +239,7 @@ pipeline {
                                 script {
                                     def branchArgs = env.IS_PR == 'true'
                                         ? "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
-                                        : "-Dsonar.branch.name=${env.BRANCH_NAME}"
+                                        : (env.BRANCH_NAME == 'develop' ? '' : "-Dsonar.branch.name=${env.BRANCH_NAME}")
                                     sh "./mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml ${branchArgs}"
                                 }
                             }
@@ -257,7 +257,7 @@ pipeline {
                                 script {
                                     def branchArgs = env.IS_PR == 'true'
                                         ? "--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}"
-                                        : "--define sonar.branch.name=${env.BRANCH_NAME}"
+                                        : (env.BRANCH_NAME == 'develop' ? '' : "--define sonar.branch.name=${env.BRANCH_NAME}")
                                     sh "npx sonar-scanner --define sonar.externalIssuesReportPaths=../api-check/api-mapping-issues.json ${branchArgs}"
                                 }
                             }
