@@ -1,6 +1,19 @@
 pipeline {
     agent any
 
+    parameters {
+        booleanParam(
+            name: 'FORCE_PREVIEW_DEPLOY',
+            defaultValue: false,
+            description: 'Deploy this branch as a preview environment (skips the develop-only production deploy guard).'
+        )
+        string(
+            name: 'DEPLOY_ID',
+            defaultValue: '',
+            description: 'Custom namespace/URL slug for the preview (e.g. "my-feature"). Auto-derived from the branch name if left blank.'
+        )
+    }
+
     environment {
         REGISTRY       = "192.168.1.11:5000"
         FRONTEND_IMAGE = "${REGISTRY}/yambo-web-frontend"
@@ -40,9 +53,27 @@ pipeline {
                         env.FRONTEND_TAG = "pr-${env.CHANGE_ID}"
                         env.BACKEND_TAG  = "pr-${env.CHANGE_ID}"
                         env.IS_PR = 'true'
+                        env.IS_CUSTOM_DEPLOY = 'false'
+                    } else if (params.FORCE_PREVIEW_DEPLOY) {
+                        echo "🚀 Custom preview deploy requested for branch: ${env.BRANCH_NAME}"
+                        // Derive a k8s-safe slug from branch name or use the supplied DEPLOY_ID
+                        def slug = params.DEPLOY_ID?.trim()
+                            ? params.DEPLOY_ID.trim()
+                            : env.BRANCH_NAME
+                                .toLowerCase()
+                                .replaceAll('[^a-z0-9]+', '-')
+                                .replaceAll('^-+|-+$', '')
+                                .take(30)
+                        env.EFFECTIVE_ID     = slug
+                        env.FRONTEND_TAG     = "branch-${slug}"
+                        env.BACKEND_TAG      = "branch-${slug}"
+                        env.IS_PR            = 'false'
+                        env.IS_CUSTOM_DEPLOY = 'true'
+                        echo "Effective deploy ID: ${slug}"
                     } else {
                         echo "📌 Branch build: ${env.BRANCH_NAME}"
                         env.IS_PR = 'false'
+                        env.IS_CUSTOM_DEPLOY = 'false'
 
                         def semverPattern = /^\d+\.\d+\.\d+([_-][a-zA-Z0-9]+)?$/
                         if (!env.FRONTEND_TAG.matches(semverPattern)) {
@@ -53,7 +84,7 @@ pipeline {
                         }
                     }
 
-                    if (!env.CHANGE_ID && env.BRANCH_NAME == 'develop') {
+                    if (!env.CHANGE_ID && env.BRANCH_NAME == 'develop' && env.IS_CUSTOM_DEPLOY != 'true') {
                         env.CAN_DEPLOY = 'true'
                         echo "🚀 Deploy enabled (develop branch)"
                     } else {
@@ -99,15 +130,19 @@ pipeline {
             }
         }
 
-        stage('PR Build Setup') {
+        stage('Forced Build Setup') {
             when {
-                expression { env.IS_PR == 'true' }
+                expression { env.IS_PR == 'true' || env.IS_CUSTOM_DEPLOY == 'true' }
             }
             steps {
                 script {
                     env.FRONTEND_CHANGED = 'true'
                     env.BACKEND_CHANGED  = 'true'
-                    echo "🔨 PR build: forcing full build"
+                    if (env.IS_PR == 'true') {
+                        echo "🔨 PR build: forcing full build"
+                    } else {
+                        echo "🔨 Custom preview deploy: forcing full build"
+                    }
                 }
             }
         }
@@ -269,13 +304,23 @@ pipeline {
 
         stage('Deploy Preview Environment') {
             when {
-                expression { env.IS_PR == 'true' }
+                expression { env.IS_PR == 'true' || env.IS_CUSTOM_DEPLOY == 'true' }
             }
             steps {
                 script {
-                    def prId      = env.CHANGE_ID
-                    def previewNs = "yambo-pr-${prId}"
-                    def outDir    = "k8s/preview/rendered/${previewNs}"
+                    // ── Resolve deploy coordinates ──────────────────────────
+                    def deployId, previewNs, deployLabel
+                    if (env.IS_PR == 'true') {
+                        deployId    = env.CHANGE_ID
+                        previewNs   = "yambo-pr-${deployId}"
+                        deployLabel = "pr-${deployId}"
+                    } else {
+                        deployId    = env.EFFECTIVE_ID
+                        previewNs   = "yambo-branch-${deployId}"
+                        deployLabel = "branch-${deployId}"
+                    }
+
+                    def outDir = "k8s/preview/rendered/${previewNs}"
 
                     sh "mkdir -p ${outDir}"
 
@@ -292,8 +337,9 @@ pipeline {
                     templates.each { tpl ->
                         sh """
                             sed \\
-                                -e 's|__PR_ID__|${prId}|g' \\
+                                -e 's|__PR_ID__|${deployId}|g' \\
                                 -e 's|__PREVIEW_NS__|${previewNs}|g' \\
+                                -e 's|__DEPLOY_LABEL__|${deployLabel}|g' \\
                                 -e 's|__FRONTEND_IMAGE__|${FRONTEND_IMAGE}|g' \\
                                 -e 's|__FRONTEND_TAG__|${env.FRONTEND_TAG}|g' \\
                                 -e 's|__BACKEND_IMAGE__|${BACKEND_IMAGE}|g' \\
@@ -317,10 +363,6 @@ pipeline {
                     """
 
                     // ── Generate anonymized DB dump ─────────────────────────
-                    // Run anonymize-dump.sh inside the preview postgres pod.
-                    // The pod already has a running PG server (for temp DB
-                    // operations) and can reach the prod DB via K8s internal
-                    // DNS — no port-forward or Docker needed.
                     def dbUser = sh(
                         script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
                         returnStdout: true
@@ -370,10 +412,10 @@ pipeline {
                             -n ${previewNs} \
                             --from-file=preview-seed.sql=${outDir}/preview-seed.sql
 
-                        kubectl delete job preview-seed-${prId} -n ${previewNs} --ignore-not-found
-                        kubectl wait --for=delete job/preview-seed-${prId} -n ${previewNs} --timeout=120s || true
+                        kubectl delete job preview-seed-${deployId} -n ${previewNs} --ignore-not-found
+                        kubectl wait --for=delete job/preview-seed-${deployId} -n ${previewNs} --timeout=120s || true
                         kubectl apply -f ${outDir}/seed-job.yaml
-                        kubectl wait --for=condition=complete job/preview-seed-${prId} -n ${previewNs} --timeout=600s
+                        kubectl wait --for=condition=complete job/preview-seed-${deployId} -n ${previewNs} --timeout=600s
                     """
 
                     // ── Deploy application (parallel rollout) ───────────────
@@ -389,8 +431,8 @@ pipeline {
                         wait
                     """
 
-                    env.PREVIEW_URL = "http://pr-${prId}.yambo.cabrasky.net"
-                    currentBuild.description = "<a href='${env.PREVIEW_URL}'>Preview: pr-${prId}.yambo.cabrasky.net</a>"
+                    env.PREVIEW_URL = "http://${deployLabel}.yambo.cabrasky.net"
+                    currentBuild.description = "<a href='${env.PREVIEW_URL}'>Preview: ${deployLabel}.yambo.cabrasky.net</a>"
                 }
             }
         }
@@ -460,6 +502,25 @@ ${previewMsg}
 Job:    ${env.JOB_NAME} #${env.BUILD_NUMBER}
 Branch: ${env.CHANGE_BRANCH}
 URL:    ${env.BUILD_URL}"""
+                        )
+                    } catch (e) {
+                        echo "⚠️ Email notification failed: ${e.message}"
+                    }
+                } else if (env.IS_CUSTOM_DEPLOY == 'true') {
+                    echo "✅ Custom preview deploy successful: ${env.PREVIEW_URL}"
+                    try {
+                        emailext(
+                            to: env.FIXED_EMAIL,
+                            subject: "[yambo] ✅ Preview deployed — branch ${env.BRANCH_NAME}",
+                            body: """A custom preview environment was deployed for branch ${env.BRANCH_NAME}.
+
+Preview URL: ${env.PREVIEW_URL}
+Namespace:   yambo-branch-${env.EFFECTIVE_ID}
+Frontend:    ${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}
+Backend:     ${env.BACKEND_IMAGE}:${env.BACKEND_TAG}
+
+Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}"""
                         )
                     } catch (e) {
                         echo "⚠️ Email notification failed: ${e.message}"
