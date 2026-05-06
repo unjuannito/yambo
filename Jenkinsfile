@@ -12,6 +12,11 @@ pipeline {
             defaultValue: '',
             description: 'Custom namespace/URL slug for the preview (e.g. "my-feature"). Auto-derived from the branch name if left blank.'
         )
+        booleanParam(
+            name: 'FORCE_DB_SEED',
+            defaultValue: false,
+            description: 'Force re-seed of the preview database even if the environment already exists. Use when you need a fresh dataset.'
+        )
     }
 
     environment {
@@ -360,6 +365,19 @@ pipeline {
                         """
                     }
 
+                    // ── Check if environment already exists ────────────────
+                    def nsAlreadyExists = sh(
+                        script: "kubectl get namespace ${previewNs} --ignore-not-found --no-headers 2>/dev/null | wc -l",
+                        returnStdout: true
+                    ).trim() != "0"
+                    def needsSeed = !nsAlreadyExists || params.FORCE_DB_SEED
+
+                    if (needsSeed) {
+                        echo "DB seed: will run (namespace exists: ${nsAlreadyExists}, FORCE_DB_SEED: ${params.FORCE_DB_SEED})"
+                    } else {
+                        echo "DB seed: skipping — namespace ${previewNs} already exists. Use FORCE_DB_SEED=true to override."
+                    }
+
                     // ── Apply base resources ────────────────────────────────
                     sh """
                         export KUBECONFIG=/var/lib/jenkins/.kube/config
@@ -375,6 +393,7 @@ pipeline {
                     """
 
                     // ── Generate anonymized DB dump ─────────────────────────
+                    if (needsSeed) {
                     def dbUser = sh(
                         script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
                         returnStdout: true
@@ -429,6 +448,7 @@ pipeline {
                         kubectl apply -f ${outDir}/seed-job.yaml
                         kubectl wait --for=condition=complete job/preview-seed-${deployId} -n ${previewNs} --timeout=600s
                     """
+                    } // end if (needsSeed)
 
                     // ── Deploy application (parallel rollout) ───────────────
                     sh """
