@@ -55,7 +55,7 @@ pipeline {
                     ).trim()
 
                     env.BACKEND_TAG = sh(
-                        script: "cd backend && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout",
+                        script: "cd backend && chmod +x mvnw && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout",
                         returnStdout: true
                     ).trim()
 
