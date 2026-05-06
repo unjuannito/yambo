@@ -371,6 +371,7 @@ pipeline {
                         returnStdout: true
                     ).trim() != "0"
                     def needsSeed = !nsAlreadyExists || params.FORCE_DB_SEED
+                    env.DB_SEEDED = needsSeed ? 'true' : 'false'
 
                     if (needsSeed) {
                         echo "DB seed: will run (namespace exists: ${nsAlreadyExists}, FORCE_DB_SEED: ${params.FORCE_DB_SEED})"
@@ -521,40 +522,63 @@ pipeline {
                     if (env.PREVIEW_URL) {
                         echo "🌐 Preview: ${env.PREVIEW_URL}"
                     }
-                    def previewMsg = env.PREVIEW_URL
-                        ? "Preview environment is live at ${env.PREVIEW_URL}\nNamespace: ${env.PREVIEW_NS}"
+                    def seedBadge = env.DB_SEEDED == 'true'
+                        ? '<span style="background:#2ea44f;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#127807; DB seeded fresh</span>'
+                        : '<span style="background:#6a737d;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#9193; DB seed skipped</span>'
+                    def previewBtn = env.PREVIEW_URL
+                        ? """<p><a href='${env.PREVIEW_URL}' style='display:inline-block;background:#2ea44f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open preview &rarr;</a></p>"""
                         : ''
                     def prRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
                     try {
                         emailext(
                             to: prRecipients,
+                            mimeType: 'text/html',
                             subject: "[yambo] ✅ PR #${env.CHANGE_ID} — build passed",
-                            body: """PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET}) built successfully.
-
-${previewMsg}
-
-Job:    ${env.JOB_NAME} #${env.BUILD_NUMBER}
-Branch: ${env.CHANGE_BRANCH}
-URL:    ${env.BUILD_URL}"""
+                            body: """
+<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#2ea44f;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>&#9989; PR #${env.CHANGE_ID} — build passed</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <p><strong>${env.CHANGE_BRANCH}</strong> &rarr; <strong>${env.CHANGE_TARGET}</strong></p>
+    ${previewBtn}
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Namespace</td><td style='padding:4px 8px'>${env.PREVIEW_NS ?: '-'}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>DB seed</td><td style='padding:4px 8px'>${seedBadge}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+    </table>
+  </div>
+</div>"""
                         )
                     } catch (e) {
                         echo "⚠️ Email notification failed: ${e.message}"
                     }
                 } else if (env.IS_CUSTOM_DEPLOY == 'true') {
                     echo "✅ Custom preview deploy successful: ${env.PREVIEW_URL}"
+                    def seedBadgeB = env.DB_SEEDED == 'true'
+                        ? '<span style="background:#2ea44f;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#127807; DB seeded fresh</span>'
+                        : '<span style="background:#6a737d;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#9193; DB seed skipped</span>'
                     try {
                         emailext(
                             to: env.FIXED_EMAIL,
+                            mimeType: 'text/html',
                             subject: "[yambo] ✅ Preview deployed — branch ${env.BRANCH_NAME}",
-                            body: """A custom preview environment was deployed for branch ${env.BRANCH_NAME}.
-
-Preview URL: ${env.PREVIEW_URL}
-Namespace:   ${env.PREVIEW_NS}
-Frontend:    ${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}
-Backend:     ${env.BACKEND_IMAGE}:${env.BACKEND_TAG}
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}"""
+                            body: """
+<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#2ea44f;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>&#9989; Preview deployed — ${env.BRANCH_NAME}</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <p><a href='${env.PREVIEW_URL}' style='display:inline-block;background:#2ea44f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open preview &rarr;</a></p>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Namespace</td><td style='padding:4px 8px'>${env.PREVIEW_NS}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>DB seed</td><td style='padding:4px 8px'>${seedBadgeB}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Frontend</td><td style='padding:4px 8px'>${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Backend</td><td style='padding:4px 8px'>${env.BACKEND_IMAGE}:${env.BACKEND_TAG}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+    </table>
+  </div>
+</div>"""
                         )
                     } catch (e) {
                         echo "⚠️ Email notification failed: ${e.message}"
@@ -564,14 +588,22 @@ URL: ${env.BUILD_URL}"""
                     try {
                         emailext(
                             to: env.FIXED_EMAIL,
+                            mimeType: 'text/html',
                             subject: "[yambo] 🚀 develop deployed successfully",
-                            body: """The develop branch was deployed to the yambo namespace.
-
-Frontend: ${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}
-Backend:  ${env.BACKEND_IMAGE}:${env.BACKEND_TAG}
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}"""
+                            body: """
+<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#0366d6;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>&#128640; develop deployed to production</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <p><a href='https://${APP_DOMAIN}' style='display:inline-block;background:#0366d6;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open app &rarr;</a></p>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Frontend</td><td style='padding:4px 8px'>${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Backend</td><td style='padding:4px 8px'>${env.BACKEND_IMAGE}:${env.BACKEND_TAG}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+    </table>
+  </div>
+</div>"""
                         )
                     } catch (e) {
                         echo "⚠️ Email notification failed: ${e.message}"
@@ -584,19 +616,27 @@ URL: ${env.BUILD_URL}"""
         failure {
             script {
                 def context = env.IS_PR == 'true'
-                    ? "PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
+                    ? "PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} &rarr; ${env.CHANGE_TARGET})"
                     : "branch ${env.BRANCH_NAME}"
                 def failRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
                 try {
                     emailext(
                         to: failRecipients,
-                        subject: "[yambo] ❌ Build failed — ${context}",
-                        body: """The pipeline failed for ${context}.
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}
-
-Check the console output for details."""
+                        mimeType: 'text/html',
+                        subject: "[yambo] ❌ Build failed — ${env.IS_PR == 'true' ? 'PR #' + env.CHANGE_ID : env.BRANCH_NAME}",
+                        body: """
+<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#d73a49;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>&#10060; Build failed</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <p>The pipeline failed for <strong>${context}</strong>.</p>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Console</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}console'>View console output</a></td></tr>
+    </table>
+  </div>
+</div>"""
                     )
                 } catch (e) {
                     echo "⚠️ Email notification failed: ${e.message}"
