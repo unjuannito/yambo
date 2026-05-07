@@ -15,9 +15,9 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG  = '/var/lib/jenkins/.kube/config'
-        NAMESPACE   = 'yambo'
-        FIXED_EMAIL = 'javiermateos149@gmail.com'
+        KUBECONFIG         = '/var/lib/jenkins/.kube/config'
+        NAMESPACE          = 'yambo'
+        NOTIFICATION_EMAIL = credentials('notification-email')
     }
 
     parameters {
@@ -72,55 +72,57 @@ database-bootstrap: full schema + data dump; use createdb + psql to restore from
         stage('Generate Anonymized Dump') {
             steps {
                 script {
-                    // Read DB credentials from the production secret
-                    def dbUser = sh(
-                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
-                        returnStdout: true
-                    ).trim()
-
-                    def dbPass = sh(
-                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d",
-                        returnStdout: true
-                    ).trim()
-
                     // Resolve the live postgres pod name
-                    def podName = sh(
-                        script: "kubectl get pod -n ${NAMESPACE} -l app=postgres -o jsonpath='{.items[0].metadata.name}'",
+                    def podList = sh(
+                        script: "kubectl get pod -n ${NAMESPACE} -l app=postgres --field-selector=status.phase=Running -o jsonpath='{.items[*].metadata.name}'",
                         returnStdout: true
                     ).trim()
 
-                    if (!podName) {
-                        error "Could not find a running postgres pod in namespace ${NAMESPACE} (label app=postgres)"
+                    def pods = podList ? podList.split(' ') : []
+                    if (pods.size() == 0) {
+                        error "No running postgres pod found in namespace ${NAMESPACE} (label app=postgres)"
                     }
-
+                    if (pods.size() > 1) {
+                        echo "Warning: ${pods.size()} postgres pods found -- using first: ${pods[0]}"
+                    }
+                    def podName = pods[0]
                     echo "Using pod: ${podName}"
 
-                    sh """
-                        chmod +x scripts/anonymize-dump.sh
+                    timeout(time: 10, unit: 'MINUTES') {
+                        try {
+                            sh """
+                                chmod +x scripts/anonymize-dump.sh
+                                kubectl cp scripts/anonymize-dump.sh ${NAMESPACE}/${podName}:/tmp/anonymize-dump.sh
+                            """
 
-                        # Copy script into pod
-                        kubectl cp scripts/anonymize-dump.sh ${NAMESPACE}/${podName}:/tmp/anonymize-dump.sh
+                            // Ensure bash is available (alpine-based images may need it)
+                            sh "kubectl exec ${podName} -n ${NAMESPACE} -- sh -c 'command -v bash >/dev/null 2>&1 || apk add --no-cache bash >/dev/null 2>&1' || true"
 
-                        # Ensure bash is available (alpine-based images may need it)
-                        kubectl exec ${podName} -n ${NAMESPACE} -- sh -c 'command -v bash >/dev/null 2>&1 || apk add --no-cache bash >/dev/null 2>&1' || true
+                            // Write pgpass inside the pod -- credentials never appear in the Jenkins log
+                            sh """
+                                set +x
+                                DB_USER=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d)
+                                DB_PASS=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d)
 
-                        # Run the anonymization script inside the pod
-                        kubectl exec ${podName} -n ${NAMESPACE} -- env \
-                            PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \
-                            PROD_DB_PORT=5432 \
-                            PROD_DB_USER='${dbUser}' \
-                            PROD_DB_PASS='${dbPass}' \
-                            PGHOST=/var/run/postgresql \
-                            PGUSER='${dbUser}' \
-                            ANONYMIZE_DUMP_MODE=${params.MODE} \
-                            bash /tmp/anonymize-dump.sh /tmp/${params.FILENAME}
+                                kubectl exec ${podName} -n ${NAMESPACE} -- sh -c "
+                                    printf 'localhost:5432:yambo_db:%s:%s\\n' \"\${DB_USER}\" \"\${DB_PASS}\" > /tmp/.pgpass
+                                    chmod 600 /tmp/.pgpass
+                                "
 
-                        # Copy result back to workspace
-                        kubectl cp ${NAMESPACE}/${podName}:/tmp/${params.FILENAME} ${WORKSPACE}/${params.FILENAME}
+                                kubectl exec ${podName} -n ${NAMESPACE} -- env \\
+                                    PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \\
+                                    PROD_DB_PORT=5432 \\
+                                    PGHOST=/var/run/postgresql \\
+                                    PGPASSFILE=/tmp/.pgpass \\
+                                    ANONYMIZE_DUMP_MODE=${params.MODE} \\
+                                    bash /tmp/anonymize-dump.sh /tmp/${params.FILENAME}
+                            """
 
-                        # Clean up files from pod
-                        kubectl exec ${podName} -n ${NAMESPACE} -- rm -f /tmp/anonymize-dump.sh /tmp/${params.FILENAME}
-                    """
+                            sh "kubectl cp ${NAMESPACE}/${podName}:/tmp/${params.FILENAME} ${WORKSPACE}/${params.FILENAME}"
+                        } finally {
+                            sh "kubectl exec ${podName} -n ${NAMESPACE} -- rm -f /tmp/anonymize-dump.sh /tmp/${params.FILENAME} /tmp/.pgpass || true"
+                        }
+                    }
                 }
             }
         }
@@ -180,30 +182,31 @@ database-bootstrap: full schema + data dump; use createdb + psql to restore from
         success {
             script {
                 def restoreInstructions = (env.DUMP_MODE == 'database-bootstrap')
-                    ? """Restore (database-bootstrap — full schema + data):
-  createdb yambo_local
-  psql -d yambo_local < ${env.DUMP_FILENAME}"""
-                    : """Restore (seed-data — data only, migrations must already be applied):
-  psql -d yambo_local < ${env.DUMP_FILENAME}"""
+                    ? """Restore (database-bootstrap -- full schema + data):\n  createdb yambo_local\n  psql -d yambo_local &lt; ${env.DUMP_FILENAME}"""
+                    : """Restore (seed-data -- data only, migrations must already be applied):\n  psql -d yambo_local &lt; ${env.DUMP_FILENAME}"""
 
                 try {
                     emailext(
-                        to: env.FIXED_EMAIL,
-                        subject: "[yambo] ✅ Anonymized dump ready — ${env.DUMP_MODE}",
-                        body: """The anonymized database dump has been generated and archived.
-
-Mode:     ${env.DUMP_MODE}
-File:     ${env.DUMP_FILENAME}
-Download: ${env.DOWNLOAD_URL}
-
-  curl -u <user>:<api-token> -L -o ${env.DUMP_FILENAME} '${env.DOWNLOAD_URL}'
-
-${restoreInstructions}
-
-Note: preview passwords for all users are set to 'preview123'.
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}"""
+                        to: env.NOTIFICATION_EMAIL,
+                        mimeType: 'text/html',
+                        subject: "[yambo] Anonymized dump ready -- ${env.DUMP_MODE}",
+                        body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#2ea44f;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>Anonymized dump ready</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Mode</td><td style='padding:4px 8px'>${env.DUMP_MODE}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>File</td><td style='padding:4px 8px'><a href='${env.DOWNLOAD_URL}'>${env.DUMP_FILENAME}</a></td></tr>
+    </table>
+    <p style='margin-top:16px;font-size:13px;color:#586069'>Download:<br><code>curl -u &lt;user&gt;:&lt;api-token&gt; -L -o ${env.DUMP_FILENAME} '${env.DOWNLOAD_URL}'</code></p>
+    <p style='font-size:13px;color:#586069'>${restoreInstructions}</p>
+    <p style='font-size:12px;color:#6a737d'>Note: preview passwords for all users are set to <code>preview123</code>.</p>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+    </table>
+  </div>
+</div>"""
                     )
                 } catch (e) {
                     echo "Warning: email notification failed: ${e.message}"
@@ -215,17 +218,22 @@ URL: ${env.BUILD_URL}"""
             script {
                 try {
                     emailext(
-                        to: env.FIXED_EMAIL,
-                        subject: "[yambo] ❌ Dump job failed — #${env.BUILD_NUMBER}",
-                        body: """The anonymized dump pipeline failed.
-
-Mode:  ${params.MODE}
-File:  ${params.FILENAME}
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}
-
-Check the console output for details."""
+                        to: env.NOTIFICATION_EMAIL,
+                        mimeType: 'text/html',
+                        subject: "[yambo] Dump job failed -- #${env.BUILD_NUMBER}",
+                        body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#d73a49;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>Dump job failed</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Mode</td><td style='padding:4px 8px'>${params.MODE}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>File</td><td style='padding:4px 8px'>${params.FILENAME}</td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Console</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}console'>View output</a></td></tr>
+    </table>
+  </div>
+</div>"""
                     )
                 } catch (e) {
                     echo "Warning: email notification failed: ${e.message}"

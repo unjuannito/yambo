@@ -1,4 +1,8 @@
 .react-router
 build
 node_modules
+coverage
 README.md
+*.log
+.vscode/
+.git

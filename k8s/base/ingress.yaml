@@ -1,21 +1,28 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: yambo-preview-ingress
-  namespace: __PREVIEW_NS__
+  name: yambo-ingress
+  namespace: yambo
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-    traefik.ingress.kubernetes.io/custom-request-headers: "X-Forwarded-Proto: https"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    # Allow large file uploads (images, ~15 MB)
     traefik.ingress.kubernetes.io/buffering-maxrequestbodybytes: "15728640"
+    # cert-manager issues and renews TLS certificates automatically
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - OVERLAY_PATCH_REQUIRED
+      secretName: yambo-tls-cert
   defaultBackend:
     service:
       name: yambo-frontend-service
       port:
         number: 80
   rules:
-    - host: __DEPLOY_LABEL__.__DOMAIN__
+    - host: OVERLAY_PATCH_REQUIRED
       http:
         paths:
           - path: /api

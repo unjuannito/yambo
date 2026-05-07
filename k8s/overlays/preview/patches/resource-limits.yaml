@@ -1,0 +1,42 @@
+# Lighter resource requests/limits for preview environments to reduce cluster load.
+# Backend
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  target:
+    kind: Deployment
+    name: yambo-backend
+
+# Frontend
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests:
+      memory: "128Mi"
+      cpu: "75m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  target:
+    kind: Deployment
+    name: yambo-frontend
+
+# Database StatefulSet — smaller than production
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  target:
+    kind: StatefulSet
+    name: postgres

@@ -7,11 +7,30 @@ services:
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
       SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "true"
     ports:
-      - "8080:8080"
-      - "5005:5005"    # Remote debug
-      - "35729:35729"  # LiveReload
+      - "5005:5005"    # JDWP remote debug
+      - "35729:35729"  # Spring LiveReload
     volumes:
+      # Hot-swap compiled classes without full rebuild
       - ./backend/target/classes:/workspace/app/target/classes
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder   # Stop at the builder stage (node + deps ready)
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080/api}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    ports:
+      - "5173:5173"  # Vite HMR dev server
+    volumes:
+      # Mount source for live HMR; keep container node_modules isolated
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend

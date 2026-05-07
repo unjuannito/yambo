@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# namespace is set by the CI pipeline before rendering:
+#   kustomize edit set namespace yambo-pr-42
+namespace: yambo-pr-PLACEHOLDER
+
+resources:
+  - ../../base
+
+# Image tags are set by the CI pipeline:
+#   kustomize edit set image \
+#     192.168.1.11:5000/yambo-web-frontend=...:pr-42 \
+#     192.168.1.11:5000/yambo-web-backend=...:pr-42
+images:
+  - name: 192.168.1.11:5000/yambo-web-frontend
+    newTag: latest
+  - name: 192.168.1.11:5000/yambo-web-backend
+    newTag: latest
+
+patches:
+  # Single replica for lightweight preview environments
+  - path: patches/backend-replicas.yaml
+  - path: patches/frontend-replicas.yaml
+  # Replace PVC with emptyDir (uploads are ephemeral in previews)
+  - path: patches/backend-emptydir.yaml
+  # Lighter resource limits for previews
+  - path: patches/resource-limits.yaml
+  # Domain is set by the CI pipeline via patches/domain.yaml (generated at build time)
+  - path: patches/domain.yaml
+  # Longer startup delays — preview DB seeding can be slow
+  - path: patches/startup-delays.yaml
+  # Disable mail in preview environments via secrets patch
+  - path: patches/preview-secrets.yaml
