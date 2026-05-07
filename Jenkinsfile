@@ -122,7 +122,7 @@ pipeline {
                 script {
                     def check = { String image, String tag ->
                         def code = sh(
-                            script: "curl -sk -o /dev/null -w '%{http_code}' https://${REGISTRY}/v2/${image}/manifests/${tag}",
+                            script: "curl -sk -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/${image}/manifests/${tag}",
                             returnStdout: true
                         ).trim()
                         if (code == '200') return false  // exists -- unchanged
