@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: yambo-backend
-  namespace: __PREVIEW_NS__
+  namespace: yambo
   labels:
     app: yambo-backend
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: yambo-backend
@@ -15,16 +15,32 @@ spec:
       labels:
         app: yambo-backend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: yambo-backend
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: backend
-          image: __BACKEND_IMAGE__:__BACKEND_TAG__
+          image: 192.168.1.11:5000/yambo-web-backend:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
           ports:
             - containerPort: 8080
           env:
-            # CORS — exact origin for this preview deployment
+            # CORS — set to real domain via overlay patch
             - name: CORS_ALLOWED_ORIGINS
-              value: "https://__DEPLOY_LABEL__.__DOMAIN__"
-            # Database — service name stays "db" so app config needs no changes
+              value: "OVERLAY_PATCH_REQUIRED"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://db:5432/yambo_db"
             - name: DB_USER
@@ -37,13 +53,11 @@ spec:
                 secretKeyRef:
                   name: yambo-secrets
                   key: DB_PASS
-            # JWT
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: yambo-secrets
                   key: JWT_SECRET
-            # Mail — disabled in preview (secrets point to localhost)
             - name: MAIL_HOST
               valueFrom:
                 secretKeyRef:
@@ -78,33 +92,23 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /api/health
               port: 8080
-            initialDelaySeconds: 80
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /api/health
               port: 8080
-            initialDelaySeconds: 120
             periodSeconds: 15
       volumes:
-        # emptyDir — uploads are ephemeral in preview envs (no shared PVC needed)
         - name: uploads-storage
-          emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: yambo-backend-service
-  namespace: __PREVIEW_NS__
-spec:
-  selector:
-    app: yambo-backend
-  ports:
-    - protocol: TCP
-      port: 8080
-      targetPort: 8080
-  type: ClusterIP
+          persistentVolumeClaim:
+            claimName: uploads-pvc

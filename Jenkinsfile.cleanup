@@ -14,8 +14,8 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG = "/var/lib/jenkins/.kube/config"
-        FIXED_EMAIL = 'javiermateos149@gmail.com'
+        KUBECONFIG         = "/var/lib/jenkins/.kube/config"
+        NOTIFICATION_EMAIL = credentials('notification-email')
     }
 
     triggers {
@@ -41,18 +41,27 @@ pipeline {
             steps {
                 script {
                     if (!env.PR_NUMBER?.trim()) {
-                        error "PR_NUMBER is empty — webhook payload missing or filter failed"
+                        error "PR_NUMBER is empty -- webhook payload missing or filter failed"
+                    }
+                    if (!env.PR_NUMBER.isNumber()) {
+                        error "PR_NUMBER is not numeric: '${env.PR_NUMBER}' -- aborting to prevent accidental namespace deletion"
                     }
 
                     def previewNs = "yambo-pr-${env.PR_NUMBER}"
-                    echo "🗑️  Deleting preview namespace: ${previewNs}"
 
-                    sh """
-                        export KUBECONFIG=/var/lib/jenkins/.kube/config
-                        kubectl delete namespace ${previewNs} --ignore-not-found --timeout=120s
-                    """
+                    def exists = sh(
+                        script: "kubectl get namespace ${previewNs} --ignore-not-found --no-headers 2>/dev/null | wc -l",
+                        returnStdout: true
+                    ).trim() != '0'
 
-                    echo "✅ Namespace ${previewNs} deleted (or did not exist)"
+                    if (!exists) {
+                        echo "Namespace ${previewNs} does not exist -- nothing to delete"
+                        return
+                    }
+
+                    echo "Deleting preview namespace: ${previewNs}"
+                    sh "kubectl delete namespace ${previewNs} --timeout=120s"
+                    echo "Namespace ${previewNs} deleted"
                 }
             }
         }
@@ -61,35 +70,52 @@ pipeline {
     post {
         success {
             script {
-                echo "🧹 Preview environment for PR #${env.PR_NUMBER} cleaned up"
-                def recipients = [env.FIXED_EMAIL, env.PR_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
-                emailext(
-                    to: recipients,
-                    subject: "[yambo] 🧹 Preview PR #${env.PR_NUMBER} deleted",
-                    body: """The preview environment for PR #${env.PR_NUMBER} has been cleaned up.
-
-Namespace yambo-pr-${env.PR_NUMBER} has been deleted from the cluster.
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}"""
-                )
+                echo "Preview environment for PR #${env.PR_NUMBER} cleaned up"
+                def recipients = [env.NOTIFICATION_EMAIL, env.PR_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
+                try {
+                    emailext(
+                        to: recipients,
+                        mimeType: 'text/html',
+                        subject: "[yambo] Preview PR #${env.PR_NUMBER} deleted",
+                        body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#2ea44f;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>Preview PR #${env.PR_NUMBER} deleted</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <p>Namespace <code>yambo-pr-${env.PR_NUMBER}</code> has been removed from the cluster.</p>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+    </table>
+  </div>
+</div>"""
+                    )
+                } catch (e) { echo "Email notification failed: ${e.message}" }
             }
         }
         failure {
             script {
-                echo "❌ Cleanup failed for PR #${env.PR_NUMBER}"
-                def recipients = [env.FIXED_EMAIL, env.PR_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
-                emailext(
-                    to: recipients,
-                    subject: "[yambo] ❌ Preview cleanup failed — PR #${env.PR_NUMBER}",
-                    body: """Failed to delete the preview namespace yambo-pr-${env.PR_NUMBER}.
-
-The namespace may still exist in the cluster and require manual cleanup:
-  kubectl delete namespace yambo-pr-${env.PR_NUMBER}
-
-Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}
-URL: ${env.BUILD_URL}"""
-                )
+                echo "Cleanup failed for PR #${env.PR_NUMBER}"
+                def recipients = [env.NOTIFICATION_EMAIL, env.PR_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
+                try {
+                    emailext(
+                        to: recipients,
+                        mimeType: 'text/html',
+                        subject: "[yambo] Preview cleanup failed -- PR #${env.PR_NUMBER}",
+                        body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
+  <div style='background:#d73a49;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
+    <h2 style='margin:0'>Preview cleanup failed -- PR #${env.PR_NUMBER}</h2>
+  </div>
+  <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
+    <p>Failed to delete namespace <code>yambo-pr-${env.PR_NUMBER}</code>. Manual cleanup may be required:</p>
+    <pre style='background:#f6f8fa;padding:12px;border-radius:4px'>kubectl delete namespace yambo-pr-${env.PR_NUMBER}</pre>
+    <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Console</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}console'>View output</a></td></tr>
+    </table>
+  </div>
+</div>"""
+                    )
+                } catch (e) { echo "Email notification failed: ${e.message}" }
             }
         }
     }

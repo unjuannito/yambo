@@ -1,0 +1,38 @@
+# Patches real domain into all three places that reference it.
+# The CI pipeline renders this overlay with kustomize; domain is baked in.
+
+# Patch 1: backend CORS
+- op: replace
+  path: /spec/template/spec/containers/0/env/0/value
+  value: "https://yambo.cabrasky.net"
+  target:
+    kind: Deployment
+    name: yambo-backend
+
+# Patch 2: frontend FRONTEND_URL
+- op: replace
+  path: /spec/template/spec/containers/0/env/1/value
+  value: "https://yambo.cabrasky.net"
+  target:
+    kind: Deployment
+    name: yambo-frontend
+
+# Patch 3: ingress host + TLS
+- op: replace
+  path: /spec/rules/0/host
+  value: yambo.cabrasky.net
+  target:
+    kind: Ingress
+    name: yambo-ingress
+- op: replace
+  path: /spec/tls/0/hosts/0
+  value: yambo.cabrasky.net
+  target:
+    kind: Ingress
+    name: yambo-ingress
+- op: replace
+  path: /spec/tls/0/secretName
+  value: yambo-tls-cert
+  target:
+    kind: Ingress
+    name: yambo-ingress

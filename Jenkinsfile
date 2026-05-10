@@ -10,17 +10,17 @@ pipeline {
         string(
             name: 'DEPLOY_ID',
             defaultValue: '',
-            description: 'Custom namespace/URL slug for the preview (e.g. "my-feature"). Auto-derived from the branch name if left blank.'
+            description: 'Custom namespace/URL slug for the preview (e.g. "my-feature"). Auto-derived from branch name if blank.'
         )
         booleanParam(
             name: 'FORCE_DB_SEED',
             defaultValue: false,
-            description: 'Force re-seed of the preview database even if the environment already exists. Use when you need a fresh dataset.'
+            description: 'Force re-seed of the preview database even if the environment already exists.'
         )
         booleanParam(
             name: 'FORCE_PROD_DEPLOY',
             defaultValue: false,
-            description: 'Force a full rebuild and redeploy to production (develop branch) even if the image version already exists in the registry.'
+            description: 'Redeploy existing registry images to production without rebuilding (develop branch only). Useful after a failed rollout or infra-only change.'
         )
     }
 
@@ -30,8 +30,9 @@ pipeline {
         BACKEND_IMAGE  = "${REGISTRY}/yambo-web-backend"
         KUBECONFIG     = "/var/lib/jenkins/.kube/config"
         NAMESPACE      = "yambo"
-        FIXED_EMAIL    = 'javiermateos149@gmail.com'
         APP_DOMAIN     = "yambo.cabrasky.net"
+        // Notification email stored as a Jenkins credential (plain text)
+        NOTIFICATION_EMAIL = credentials('notification-email')
     }
 
     stages {
@@ -49,119 +50,112 @@ pipeline {
         stage('Read Versions') {
             steps {
                 script {
-                    env.FRONTEND_TAG = sh(
+                    env.FRONTEND_VER = sh(
                         script: "grep '\"version\"' frontend/package.json | head -1 | sed 's/.*\"version\": \"\\(.*\\)\".*/\\1/'",
                         returnStdout: true
                     ).trim()
 
-                    env.BACKEND_TAG = sh(
+                    env.BACKEND_VER = sh(
                         script: "cd backend && chmod +x mvnw && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout",
                         returnStdout: true
                     ).trim()
 
+                    def semverPattern = /^\d+\.\d+\.\d+([_-][a-zA-Z0-9]+)?$/
+
                     if (env.CHANGE_ID) {
-                        echo "🔀 Pull Request #${env.CHANGE_ID} detected (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
+                        // Pull Request build
+                        echo "Pull Request #${env.CHANGE_ID} (${env.CHANGE_BRANCH} -> ${env.CHANGE_TARGET})"
+                        if (!env.FRONTEND_VER.matches(semverPattern)) {
+                            error "Invalid frontend version in package.json: '${env.FRONTEND_VER}' -- must be semver (x.y.z)"
+                        }
+                        if (!env.BACKEND_VER.matches(semverPattern)) {
+                            error "Invalid backend version in pom.xml: '${env.BACKEND_VER}' -- must be semver (x.y.z)"
+                        }
                         env.FRONTEND_TAG = "pr-${env.CHANGE_ID}"
                         env.BACKEND_TAG  = "pr-${env.CHANGE_ID}"
-                        env.IS_PR = 'true'
-                        env.IS_CUSTOM_DEPLOY = 'false'
+                        env.IS_PR        = 'true'
+                        env.IS_CUSTOM    = 'false'
+
                     } else if (params.FORCE_PREVIEW_DEPLOY) {
-                        echo "🚀 Custom preview deploy requested for branch: ${env.BRANCH_NAME}"
-                        // Derive a k8s-safe slug from branch name or use the supplied DEPLOY_ID
-                        def slug = params.DEPLOY_ID?.trim()
+                        // Custom preview deploy from a branch
+                        def slug = (params.DEPLOY_ID?.trim()
                             ? params.DEPLOY_ID.trim()
                             : env.BRANCH_NAME
                                 .toLowerCase()
                                 .replaceAll('[^a-z0-9]+', '-')
-                                .replaceAll('^-+|-+$', '')
-                                .take(30)
-                        env.EFFECTIVE_ID     = slug
-                        env.FRONTEND_TAG     = "branch-${slug}"
-                        env.BACKEND_TAG      = "branch-${slug}"
-                        env.IS_PR            = 'false'
-                        env.IS_CUSTOM_DEPLOY = 'true'
-                        echo "Effective deploy ID: ${slug}"
-                    } else {
-                        echo "📌 Branch build: ${env.BRANCH_NAME}"
-                        env.IS_PR = 'false'
-                        env.IS_CUSTOM_DEPLOY = 'false'
+                                .replaceAll('^-+|-+$', ''))
+                            .take(30)
+                        echo "Custom preview deploy -- slug: ${slug}"
+                        env.EFFECTIVE_ID = slug
+                        env.FRONTEND_TAG = "branch-${slug}"
+                        env.BACKEND_TAG  = "branch-${slug}"
+                        env.IS_PR        = 'false'
+                        env.IS_CUSTOM    = 'true'
 
-                        def semverPattern = /^\d+\.\d+\.\d+([_-][a-zA-Z0-9]+)?$/
-                        if (!env.FRONTEND_TAG.matches(semverPattern)) {
-                            error "Invalid frontend version format: ${env.FRONTEND_TAG}"
+                    } else {
+                        // Regular branch build
+                        echo "Branch build: ${env.BRANCH_NAME}"
+                        if (!env.FRONTEND_VER.matches(semverPattern)) {
+                            error "Invalid frontend version in package.json: '${env.FRONTEND_VER}'"
                         }
-                        if (!env.BACKEND_TAG.matches(semverPattern)) {
-                            error "Invalid backend version format: ${env.BACKEND_TAG}"
+                        if (!env.BACKEND_VER.matches(semverPattern)) {
+                            error "Invalid backend version in pom.xml: '${env.BACKEND_VER}'"
                         }
+                        env.FRONTEND_TAG = env.FRONTEND_VER
+                        env.BACKEND_TAG  = env.BACKEND_VER
+                        env.IS_PR        = 'false'
+                        env.IS_CUSTOM    = 'false'
                     }
 
-                    if (!env.CHANGE_ID && env.BRANCH_NAME == 'develop' && env.IS_CUSTOM_DEPLOY != 'true') {
-                        env.CAN_DEPLOY = 'true'
-                        echo "🚀 Deploy enabled (develop branch)"
-                    } else {
-                        env.CAN_DEPLOY = 'false'
-                        echo "🧱 Deploy disabled (build-only)"
-                    }
-
-                    echo "Frontend tag: ${env.FRONTEND_TAG}"
-                    echo "Backend tag: ${env.BACKEND_TAG}"
+                    env.CAN_DEPLOY = (env.BRANCH_NAME == 'develop' && env.IS_PR == 'false' && env.IS_CUSTOM == 'false') ? 'true' : 'false'
+                    echo "Frontend tag: ${env.FRONTEND_TAG} | Backend tag: ${env.BACKEND_TAG} | Deploy: ${env.CAN_DEPLOY}"
                 }
             }
         }
 
         stage('Check Version Changes') {
+            // Skip for PRs and custom deploys -- always build those
             when {
-                expression { env.IS_PR == 'false' && env.IS_CUSTOM_DEPLOY == 'false' }
+                expression { env.IS_PR == 'false' && env.IS_CUSTOM == 'false' }
             }
             steps {
                 script {
-                    def frontendCode = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/yambo-web-frontend/manifests/${env.FRONTEND_TAG}",
-                        returnStdout: true
-                    ).trim()
-
-                    def backendCode = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/yambo-web-backend/manifests/${env.BACKEND_TAG}",
-                        returnStdout: true
-                    ).trim()
-
-                    env.FRONTEND_CHANGED = (frontendCode == '200') ? 'false' : 'true'
-                    env.BACKEND_CHANGED  = (backendCode == '200')  ? 'false' : 'true'
-
-                    echo "Frontend registry check: HTTP ${frontendCode}"
-                    echo "Backend registry check: HTTP ${backendCode}"
-
-                    if (frontendCode == '200') {
-                        echo "⚠️ Frontend image already exists"
+                    def check = { String image, String tag ->
+                        def code = sh(
+                            script: "curl -sk -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/${image}/manifests/${tag}",
+                            returnStdout: true
+                        ).trim()
+                        if (code == '200') return false  // exists -- unchanged
+                        if (code == '404') return true   // new tag -- build needed
+                        error "Registry check for ${image}:${tag} returned unexpected HTTP ${code} -- aborting"
                     }
-                    if (backendCode == '200') {
-                        echo "⚠️ Backend image already exists"
-                    }
+
+                    env.FRONTEND_CHANGED = check('yambo-web-frontend', env.FRONTEND_TAG) ? 'true' : 'false'
+                    env.BACKEND_CHANGED  = check('yambo-web-backend',  env.BACKEND_TAG)  ? 'true' : 'false'
+
+                    echo "Frontend changed: ${env.FRONTEND_CHANGED} | Backend changed: ${env.BACKEND_CHANGED}"
+                    if (env.FRONTEND_CHANGED == 'false') echo "Frontend image ${env.FRONTEND_TAG} already in registry -- skipping"
+                    if (env.BACKEND_CHANGED  == 'false') echo "Backend image ${env.BACKEND_TAG} already in registry -- skipping"
                 }
             }
         }
 
-        stage('Forced Build Setup') {
+        stage('Force Build') {
+            // PRs and custom deploys always rebuild both components
             when {
-                expression { env.IS_PR == 'true' || env.IS_CUSTOM_DEPLOY == 'true' || (params.FORCE_PROD_DEPLOY && env.CAN_DEPLOY == 'true') }
+                expression { env.IS_PR == 'true' || env.IS_CUSTOM == 'true' }
             }
             steps {
                 script {
                     env.FRONTEND_CHANGED = 'true'
                     env.BACKEND_CHANGED  = 'true'
-                    if (env.IS_PR == 'true') {
-                        echo "🔨 PR build: forcing full build"
-                    } else if (env.IS_CUSTOM_DEPLOY == 'true') {
-                        echo "🔨 Custom preview deploy: forcing full build"
-                    } else {
-                        echo "🔨 FORCE_PROD_DEPLOY: forcing full rebuild and production deploy"
-                    }
+                    echo "Full build forced (PR=${env.IS_PR}, custom=${env.IS_CUSTOM})"
                 }
             }
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 2 — Test + Build (single invocation per stack, parallel)
+        // Phase 2 -- Test + Build (parallel)
         // ─────────────────────────────────────────────────────────────────────
 
         stage('Test & Build') {
@@ -169,16 +163,13 @@ pipeline {
                 expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' }
             }
             parallel {
-                stage('Backend Test & Package') {
+                stage('Backend') {
                     when {
                         expression { env.BACKEND_CHANGED == 'true' }
                     }
                     steps {
                         dir('backend') {
-                            sh '''
-                                chmod +x mvnw
-                                ./mvnw verify -T 1C -B
-                            '''
+                            sh 'chmod +x mvnw && ./mvnw verify -T 1C -B'
                         }
                     }
                     post {
@@ -190,17 +181,13 @@ pipeline {
                         }
                     }
                 }
-                stage('Frontend Typecheck & Build') {
+                stage('Frontend') {
                     when {
                         expression { env.FRONTEND_CHANGED == 'true' }
                     }
                     steps {
                         dir('frontend') {
-                            sh '''
-                                npm install
-                                npm run typecheck
-                                npm run build
-                            '''
+                            sh 'npm install && npm run typecheck && npm run build'
                         }
                     }
                 }
@@ -208,7 +195,7 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 2b — API Contract Check
+        // Phase 2b -- API Contract Check
         // ─────────────────────────────────────────────────────────────────────
 
         stage('API Contract Check') {
@@ -221,12 +208,12 @@ pipeline {
             post {
                 always {
                     publishHTML(target: [
-                        allowMissing      : true,
+                        allowMissing         : true,
                         alwaysLinkToLastBuild: true,
-                        keepAll           : true,
-                        reportDir         : 'api-check',
-                        reportFiles       : 'api-mapping-report.html',
-                        reportName        : 'API Mapping Report',
+                        keepAll              : true,
+                        reportDir            : 'api-check',
+                        reportFiles          : 'api-mapping-report.html',
+                        reportName           : 'API Mapping Report',
                     ])
                     archiveArtifacts artifacts: 'api-check/api-mapping-issues.json', allowEmptyArchive: true
                 }
@@ -234,7 +221,7 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 3 — SonarQube Analysis + Quality Gate
+        // Phase 3 -- SonarQube Analysis + Quality Gate
         // ─────────────────────────────────────────────────────────────────────
 
         stage('SonarQube Analysis') {
@@ -257,6 +244,9 @@ pipeline {
                                 }
                             }
                         }
+                        timeout(time: 5, unit: 'MINUTES') {
+                            waitForQualityGate abortPipeline: true
+                        }
                     }
                 }
                 stage('Frontend Analysis') {
@@ -275,24 +265,16 @@ pipeline {
                                 }
                             }
                         }
+                        timeout(time: 5, unit: 'MINUTES') {
+                            waitForQualityGate abortPipeline: true
+                        }
                     }
                 }
             }
         }
 
-        stage('Quality Gate') {
-            when {
-                expression { env.BACKEND_CHANGED == 'true' || env.FRONTEND_CHANGED == 'true' }
-            }
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 4 — Docker Build & Push (parallel)
+        // Phase 4 -- Docker Build & Push (parallel)
         // ─────────────────────────────────────────────────────────────────────
 
         stage('Docker Build & Push') {
@@ -322,154 +304,154 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 4a — Deploy Preview Environment (PRs only)
+        // Phase 4a -- Deploy Preview Environment (PRs / custom branch deploys)
         // ─────────────────────────────────────────────────────────────────────
 
-        stage('Deploy Preview Environment') {
+        stage('Deploy Preview') {
             when {
-                expression { env.IS_PR == 'true' || env.IS_CUSTOM_DEPLOY == 'true' }
+                expression { env.IS_PR == 'true' || env.IS_CUSTOM == 'true' }
             }
             steps {
                 script {
-                    // ── Resolve deploy coordinates ──────────────────────────
-                    def deployId, previewNs, deployLabel
-                    if (env.IS_PR == 'true') {
-                        deployId    = env.CHANGE_ID
-                        previewNs   = "yambo-pr-${deployId}"
-                        deployLabel = "pr-${deployId}"
-                    } else {
-                        deployId    = env.EFFECTIVE_ID
-                        previewNs   = "yambo-branch-${deployId}"
-                        deployLabel = "branch-${deployId}"
-                    }
+                    def deployId    = (env.IS_PR == 'true') ? env.CHANGE_ID : env.EFFECTIVE_ID
+                    def previewNs   = (env.IS_PR == 'true') ? "yambo-pr-${deployId}" : "yambo-branch-${deployId}"
+                    def deployLabel = (env.IS_PR == 'true') ? "pr-${deployId}" : "branch-${deployId}"
+                    def overlayDir  = "k8s/overlays/preview"
 
-                    def outDir = "k8s/preview/rendered/${previewNs}"
+                    // -- Update Kustomize overlay with this build's values
+                    sh """
+                        cd ${overlayDir}
+                        kustomize edit set namespace ${previewNs}
+                        kustomize edit set image ${FRONTEND_IMAGE}=${FRONTEND_IMAGE}:${env.FRONTEND_TAG}
+                        kustomize edit set image ${BACKEND_IMAGE}=${BACKEND_IMAGE}:${env.BACKEND_TAG}
+                    """
 
-                    sh "mkdir -p ${outDir}"
+                    // -- Write the domain patch for this preview
+                    writeFile file: "${overlayDir}/patches/domain.yaml", text: """
+- op: replace
+  path: /spec/template/spec/containers/0/env/0/value
+  value: "https://${deployLabel}.${APP_DOMAIN}"
+  target:
+    kind: Deployment
+    name: yambo-backend
+- op: replace
+  path: /spec/template/spec/containers/0/env/1/value
+  value: "https://${deployLabel}.${APP_DOMAIN}"
+  target:
+    kind: Deployment
+    name: yambo-frontend
+- op: replace
+  path: /spec/rules/0/host
+  value: ${deployLabel}.${APP_DOMAIN}
+  target:
+    kind: Ingress
+    name: yambo-ingress
+- op: replace
+  path: /spec/tls/0/hosts/0
+  value: ${deployLabel}.${APP_DOMAIN}
+  target:
+    kind: Ingress
+    name: yambo-ingress
+- op: replace
+  path: /spec/tls/0/secretName
+  value: yambo-tls-${deployLabel}
+  target:
+    kind: Ingress
+    name: yambo-ingress
+"""
 
-                    // ── Render K8s templates ────────────────────────────────
-                    def templates = [
-                        'namespace.yaml',
-                        'secrets.yaml',
-                        'database-deployment.yaml',
-                        'backend-deployment.yaml',
-                        'frontend-deployment.yaml',
-                        'ingress.yaml',
-                        'seed-job.yaml'
-                    ]
-                    templates.each { tpl ->
-                        sh """
-                            sed \\
-                                -e 's|__PR_ID__|${deployId}|g' \\
-                                -e 's|__PREVIEW_NS__|${previewNs}|g' \\
-                                -e 's|__DEPLOY_LABEL__|${deployLabel}|g' \\
-                                -e 's|__DOMAIN__|${APP_DOMAIN}|g' \\
-                                -e 's|__FRONTEND_IMAGE__|${FRONTEND_IMAGE}|g' \\
-                                -e 's|__FRONTEND_TAG__|${env.FRONTEND_TAG}|g' \\
-                                -e 's|__BACKEND_IMAGE__|${BACKEND_IMAGE}|g' \\
-                                -e 's|__BACKEND_TAG__|${env.BACKEND_TAG}|g' \\
-                                k8s/preview/${tpl}.tpl > ${outDir}/${tpl}
-                        """
-                    }
-
-                    // ── Check if environment already exists ────────────────
-                    def nsAlreadyExists = sh(
+                    // -- Apply namespace + secrets (idempotent)
+                    // Capture whether this is a brand-new environment BEFORE creating the namespace
+                    def wasFresh = sh(
                         script: "kubectl get namespace ${previewNs} --ignore-not-found --no-headers 2>/dev/null | wc -l",
                         returnStdout: true
-                    ).trim() != "0"
-                    def needsSeed = !nsAlreadyExists || params.FORCE_DB_SEED
+                    ).trim() == "0"
+
+                    sh """
+                        kubectl create namespace ${previewNs} --dry-run=client -o yaml | kubectl apply -f -
+
+                        if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
+                            kubectl apply -k ${overlayDir} --selector=kind=Secret
+                        fi
+                    """
+
+                    // -- Deploy database
+                    sh """
+                        kubectl apply -k ${overlayDir} --selector='app=postgres'
+                        kubectl rollout status statefulset/postgres -n ${previewNs} --timeout=120s
+                    """
+
+                    // -- DB seeding
+                    def needsSeed = wasFresh || params.FORCE_DB_SEED
                     env.DB_SEEDED = needsSeed ? 'true' : 'false'
 
                     if (needsSeed) {
-                        echo "DB seed: will run (namespace exists: ${nsAlreadyExists}, FORCE_DB_SEED: ${params.FORCE_DB_SEED})"
+                        echo "Seeding preview database..."
+
+                        def podName = sh(
+                            script: "kubectl get pod -n ${previewNs} -l app=postgres --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}'",
+                            returnStdout: true
+                        ).trim()
+
+                        if (!podName) {
+                            error "No running postgres pod found in ${previewNs}"
+                        }
+
+                        // Credentials are read inside a shell with set +x -- values never appear in the Jenkins log
+                        sh """
+                            set +x
+
+                            PROD_DB_USER=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d)
+                            PROD_DB_PASS=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d)
+
+                            chmod +x scripts/anonymize-dump.sh
+                            kubectl cp scripts/anonymize-dump.sh ${previewNs}/${podName}:/tmp/anonymize-dump.sh
+
+                            kubectl exec ${podName} -n ${previewNs} -- sh -c 'command -v bash >/dev/null || apk add --no-cache bash >/dev/null 2>&1' || true
+
+                            # Write pgpass inside pod -- credentials never passed as CLI args
+                            kubectl exec ${podName} -n ${previewNs} -- sh -c "
+                                printf '%s:5432:yambo_db:%s:%s\\n' db.${NAMESPACE}.svc.cluster.local \\\${PROD_DB_USER} \\\${PROD_DB_PASS} > /tmp/.pgpass
+                                chmod 600 /tmp/.pgpass
+                            "
+
+                            kubectl exec ${podName} -n ${previewNs} -- env \\
+                                PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \\
+                                PROD_DB_PORT=5432 \\
+                                PGPASSFILE=/tmp/.pgpass \\
+                                PGHOST=/var/run/postgresql \\
+                                PGUSER=\\\$PROD_DB_USER \\
+                                ANONYMIZE_DUMP_MODE=database-bootstrap \\
+                                bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
+
+                            kubectl exec ${podName} -n ${previewNs} -- rm -f /tmp/.pgpass /tmp/anonymize-dump.sh
+
+                            kubectl cp ${previewNs}/${podName}:/tmp/preview-seed.sql /tmp/preview-seed-${previewNs}.sql
+                            kubectl exec ${podName} -n ${previewNs} -- rm -f /tmp/preview-seed.sql
+                        """
+
+                        sh """
+                            kubectl delete configmap preview-seed-sql -n ${previewNs} --ignore-not-found
+                            kubectl create configmap preview-seed-sql \\
+                                -n ${previewNs} \\
+                                --from-file=preview-seed.sql=/tmp/preview-seed-${previewNs}.sql
+
+                            kubectl delete job preview-seed -n ${previewNs} --ignore-not-found
+                            kubectl wait --for=delete job/preview-seed -n ${previewNs} --timeout=120s || true
+
+                            kubectl apply -f ${overlayDir}/seed-job.yaml -n ${previewNs}
+                            kubectl wait --for=condition=complete job/preview-seed -n ${previewNs} --timeout=600s
+
+                            rm -f /tmp/preview-seed-${previewNs}.sql
+                        """
                     } else {
-                        echo "DB seed: skipping — namespace ${previewNs} already exists. Use FORCE_DB_SEED=true to override."
+                        echo "Skipping DB seed -- namespace ${previewNs} already exists (FORCE_DB_SEED=true to override)"
                     }
 
-                    // ── Apply base resources ────────────────────────────────
-                    sh """
-                        export KUBECONFIG=/var/lib/jenkins/.kube/config
-
-                        kubectl apply -f ${outDir}/namespace.yaml --validate=false
-
-                        if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
-                            kubectl apply -f ${outDir}/secrets.yaml
-                        fi
-
-                        kubectl apply -f ${outDir}/database-deployment.yaml
-                        kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
-                    """
-
-                    // ── Generate anonymized DB dump ─────────────────────────
-                    if (needsSeed) {
-                    def dbUser = sh(
-                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d",
-                        returnStdout: true
-                    ).trim()
-
-                    def dbPass = sh(
-                        script: "kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d",
-                        returnStdout: true
-                    ).trim()
-
-                    def podName = sh(
-                        script: "kubectl get pod -n ${previewNs} -l app=postgres -o jsonpath='{.items[0].metadata.name}'",
-                        returnStdout: true
-                    ).trim()
-
-                    sh """
-                        export KUBECONFIG=/var/lib/jenkins/.kube/config
-                        chmod +x scripts/anonymize-dump.sh
-                        mkdir -p ${outDir}
-
-                        kubectl cp scripts/anonymize-dump.sh ${previewNs}/${podName}:/tmp/anonymize-dump.sh
-
-                        kubectl exec ${podName} -n ${previewNs} -- sh -c '
-                            apk add --no-cache bash >/dev/null 2>&1
-                        '
-
-                        kubectl exec ${podName} -n ${previewNs} -- env \
-                            PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \
-                            PROD_DB_PORT=5432 \
-                            PROD_DB_USER='${dbUser}' \
-                            PROD_DB_PASS='${dbPass}' \
-                            PGHOST=/var/run/postgresql \
-                            PGUSER='${dbUser}' \
-                            ANONYMIZE_DUMP_MODE=database-bootstrap \
-                            bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
-
-                        kubectl exec ${podName} -n ${previewNs} -- chmod 644 /tmp/preview-seed.sql
-                        kubectl cp ${previewNs}/${podName}:/tmp/preview-seed.sql ${outDir}/preview-seed.sql
-                    """
-
-                    // ── Seed the preview database ───────────────────────────
-                    sh """
-                        export KUBECONFIG=/var/lib/jenkins/.kube/config
-
-                        kubectl delete configmap preview-seed-sql -n ${previewNs} --ignore-not-found
-                        kubectl create configmap preview-seed-sql \
-                            -n ${previewNs} \
-                            --from-file=preview-seed.sql=${outDir}/preview-seed.sql
-
-                        kubectl delete job preview-seed-${deployId} -n ${previewNs} --ignore-not-found
-                        kubectl wait --for=delete job/preview-seed-${deployId} -n ${previewNs} --timeout=120s || true
-                        kubectl apply -f ${outDir}/seed-job.yaml
-                        kubectl wait --for=condition=complete job/preview-seed-${deployId} -n ${previewNs} --timeout=600s
-                    """
-                    } // end if (needsSeed)
-
-                    // ── Deploy application (parallel rollout) ───────────────
-                    sh """
-                        export KUBECONFIG=/var/lib/jenkins/.kube/config
-
-                        kubectl apply -f ${outDir}/backend-deployment.yaml
-                        kubectl apply -f ${outDir}/frontend-deployment.yaml
-                        kubectl apply -f ${outDir}/ingress.yaml
-
-                        kubectl rollout status deployment/yambo-backend -n ${previewNs} --timeout=300s &
-                        kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s &
-                        wait
-                    """
+                    // -- Deploy application
+                    sh "kubectl apply -k ${overlayDir}"
+                    sh "kubectl rollout status deployment/yambo-backend  -n ${previewNs} --timeout=300s"
+                    sh "kubectl rollout status deployment/yambo-frontend -n ${previewNs} --timeout=300s"
 
                     env.PREVIEW_URL = "https://${deployLabel}.${APP_DOMAIN}"
                     env.PREVIEW_NS  = previewNs
@@ -479,72 +461,88 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Phase 4b — Deploy to Production (develop only)
+        // Phase 4b -- Deploy to Production (develop branch only)
         // ─────────────────────────────────────────────────────────────────────
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy to Production') {
             when {
-                branch 'develop'
+                allOf {
+                    branch 'develop'
+                    expression { env.CAN_DEPLOY == 'true' }
+                    expression { env.FRONTEND_CHANGED == 'true' || env.BACKEND_CHANGED == 'true' || params.FORCE_PROD_DEPLOY }
+                }
             }
             steps {
-                sh '''
-                    export KUBECONFIG=/var/lib/jenkins/.kube/config
+                script {
+                    def overlayDir = "k8s/overlays/production"
 
-                    kubectl apply -f k8s/namespace.yaml --validate=false
+                    sh """
+                        cd ${overlayDir}
+                        kustomize edit set image ${FRONTEND_IMAGE}=${FRONTEND_IMAGE}:${env.FRONTEND_TAG}
+                        kustomize edit set image ${BACKEND_IMAGE}=${BACKEND_IMAGE}:${env.BACKEND_TAG}
+                    """
 
-                    if ! kubectl get secret yambo-secrets -n $NAMESPACE >/dev/null 2>&1; then
-                        kubectl apply -f k8s/secrets.yaml
-                    fi
+                    sh """
+                        kubectl apply -f k8s/base/namespace.yaml
 
-                    kubectl apply -f k8s/database-deployment.yaml
-                    kubectl rollout status deployment/postgres -n $NAMESPACE --timeout=120s
+                        if ! kubectl get secret yambo-secrets -n ${NAMESPACE} >/dev/null 2>&1; then
+                            echo "ERROR: yambo-secrets not found in ${NAMESPACE} -- apply it manually before deploying." >&2
+                            exit 1
+                        fi
+                    """
 
-                    sed -i "s|image: .*yambo-web-frontend:.*|image: ${FRONTEND_IMAGE}:${FRONTEND_TAG}|g" k8s/frontend-deployment.yaml
-                    sed -i "s|image: .*yambo-web-backend:.*|image: ${BACKEND_IMAGE}:${BACKEND_TAG}|g" k8s/backend-deployment.yaml
-                    sed -i "s|__DOMAIN__|${APP_DOMAIN}|g" k8s/frontend-deployment.yaml k8s/backend-deployment.yaml k8s/ingress.yaml
+                    sh "kubectl apply -k ${overlayDir}"
 
-                    kubectl apply -f k8s/frontend-deployment.yaml
-                    kubectl apply -f k8s/backend-deployment.yaml
-                    kubectl apply -f k8s/ingress.yaml
-                    kubectl apply -f k8s/backend-pdb.yaml
-                    kubectl apply -f k8s/frontend-pdb.yaml
+                    sh "kubectl rollout status statefulset/postgres     -n ${NAMESPACE} --timeout=120s"
+                    sh "kubectl rollout status deployment/yambo-backend  -n ${NAMESPACE} --timeout=300s"
+                    sh "kubectl rollout status deployment/yambo-frontend -n ${NAMESPACE} --timeout=300s"
 
-                    kubectl rollout status deployment/yambo-frontend -n $NAMESPACE --timeout=300s &
-                    kubectl rollout status deployment/yambo-backend -n $NAMESPACE --timeout=300s &
-                    wait
-                '''
+                    sh """
+                        git config user.email "jenkins@cabrasky.net"
+                        git config user.name  "Jenkins"
+                    """
+                    // Tag per component — only for the one(s) that actually changed
+                    if (env.FRONTEND_CHANGED == 'true') {
+                        sh """
+                            git tag -f "frontend-v${env.FRONTEND_TAG}" -m "Frontend deployed by Jenkins build #${env.BUILD_NUMBER}"
+                            git push origin "frontend-v${env.FRONTEND_TAG}" --force
+                        """
+                    }
+                    if (env.BACKEND_CHANGED == 'true') {
+                        sh """
+                            git tag -f "backend-v${env.BACKEND_TAG}" -m "Backend deployed by Jenkins build #${env.BUILD_NUMBER}"
+                            git push origin "backend-v${env.BACKEND_TAG}" --force
+                        """
+                    }
+                }
             }
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Post-build
+    // Post-build notifications
     // ─────────────────────────────────────────────────────────────────────────
 
     post {
         success {
             script {
+                def recipients = [env.NOTIFICATION_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
+
                 if (env.IS_PR == 'true') {
-                    echo "✅ PR #${env.CHANGE_ID} build successful"
-                    if (env.PREVIEW_URL) {
-                        echo "🌐 Preview: ${env.PREVIEW_URL}"
-                    }
                     def seedBadge = env.DB_SEEDED == 'true'
-                        ? '<span style="background:#2ea44f;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#127807; DB seeded fresh</span>'
-                        : '<span style="background:#6a737d;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#9193; DB seed skipped</span>'
+                        ? '<span style="background:#2ea44f;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">DB seeded</span>'
+                        : '<span style="background:#6a737d;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">DB seed skipped</span>'
                     def previewBtn = env.PREVIEW_URL
-                        ? """<p><a href='${env.PREVIEW_URL}' style='display:inline-block;background:#2ea44f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open preview &rarr;</a></p>"""
+                        ? "<p><a href='${env.PREVIEW_URL}' style='display:inline-block;background:#2ea44f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open preview &rarr;</a></p>"
                         : ''
-                    def prRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
                     try {
                         emailext(
-                            to: prRecipients,
+                            to: recipients,
                             mimeType: 'text/html',
-                            subject: "[yambo] ✅ PR #${env.CHANGE_ID} — build passed",
-                            body: """
-<div style='font-family:Arial,sans-serif;max-width:600px'>
+                            subject: "[yambo] PR #${env.CHANGE_ID} -- build passed",
+                            body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
   <div style='background:#2ea44f;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
-    <h2 style='margin:0'>&#9989; PR #${env.CHANGE_ID} — build passed</h2>
+    <h2 style='margin:0'>PR #${env.CHANGE_ID} -- build passed</h2>
   </div>
   <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
     <p><strong>${env.CHANGE_BRANCH}</strong> &rarr; <strong>${env.CHANGE_TARGET}</strong></p>
@@ -557,54 +555,43 @@ pipeline {
   </div>
 </div>"""
                         )
-                    } catch (e) {
-                        echo "⚠️ Email notification failed: ${e.message}"
-                    }
-                } else if (env.IS_CUSTOM_DEPLOY == 'true') {
-                    echo "✅ Custom preview deploy successful: ${env.PREVIEW_URL}"
-                    def seedBadgeB = env.DB_SEEDED == 'true'
-                        ? '<span style="background:#2ea44f;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#127807; DB seeded fresh</span>'
-                        : '<span style="background:#6a737d;color:#fff;border-radius:3px;padding:2px 8px;font-size:12px">&#9193; DB seed skipped</span>'
+                    } catch (e) { echo "Email notification failed: ${e.message}" }
+
+                } else if (env.IS_CUSTOM == 'true') {
                     try {
                         emailext(
-                            to: env.FIXED_EMAIL,
+                            to: env.NOTIFICATION_EMAIL,
                             mimeType: 'text/html',
-                            subject: "[yambo] ✅ Preview deployed — branch ${env.BRANCH_NAME}",
-                            body: """
-<div style='font-family:Arial,sans-serif;max-width:600px'>
+                            subject: "[yambo] Preview deployed -- ${env.BRANCH_NAME}",
+                            body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
   <div style='background:#2ea44f;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
-    <h2 style='margin:0'>&#9989; Preview deployed — ${env.BRANCH_NAME}</h2>
+    <h2 style='margin:0'>Preview deployed -- ${env.BRANCH_NAME}</h2>
   </div>
   <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
     <p><a href='${env.PREVIEW_URL}' style='display:inline-block;background:#2ea44f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open preview &rarr;</a></p>
     <table style='border-collapse:collapse;width:100%;font-size:14px'>
       <tr><td style='padding:4px 8px;color:#586069'>Namespace</td><td style='padding:4px 8px'>${env.PREVIEW_NS}</td></tr>
-      <tr><td style='padding:4px 8px;color:#586069'>DB seed</td><td style='padding:4px 8px'>${seedBadgeB}</td></tr>
-      <tr><td style='padding:4px 8px;color:#586069'>Frontend</td><td style='padding:4px 8px'>${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}</td></tr>
-      <tr><td style='padding:4px 8px;color:#586069'>Backend</td><td style='padding:4px 8px'>${env.BACKEND_IMAGE}:${env.BACKEND_TAG}</td></tr>
       <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
     </table>
   </div>
 </div>"""
                         )
-                    } catch (e) {
-                        echo "⚠️ Email notification failed: ${e.message}"
-                    }
+                    } catch (e) { echo "Email notification failed: ${e.message}" }
+
                 } else if (env.CAN_DEPLOY == 'true') {
-                    echo "🚀 Develop deployed successfully"
                     try {
                         emailext(
-                            to: env.FIXED_EMAIL,
+                            to: env.NOTIFICATION_EMAIL,
                             mimeType: 'text/html',
-                            subject: "[yambo] 🚀 develop deployed successfully",
-                            body: """
-<div style='font-family:Arial,sans-serif;max-width:600px'>
+                            subject: "[yambo] develop deployed to production -- v${env.FRONTEND_TAG}",
+                            body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
   <div style='background:#0366d6;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
-    <h2 style='margin:0'>&#128640; develop deployed to production</h2>
+    <h2 style='margin:0'>develop deployed to production</h2>
   </div>
   <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
     <p><a href='https://${APP_DOMAIN}' style='display:inline-block;background:#0366d6;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open app &rarr;</a></p>
     <table style='border-collapse:collapse;width:100%;font-size:14px'>
+      <tr><td style='padding:4px 8px;color:#586069'>Version</td><td style='padding:4px 8px'>v${env.FRONTEND_TAG}</td></tr>
       <tr><td style='padding:4px 8px;color:#586069'>Frontend</td><td style='padding:4px 8px'>${env.FRONTEND_IMAGE}:${env.FRONTEND_TAG}</td></tr>
       <tr><td style='padding:4px 8px;color:#586069'>Backend</td><td style='padding:4px 8px'>${env.BACKEND_IMAGE}:${env.BACKEND_TAG}</td></tr>
       <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
@@ -612,44 +599,37 @@ pipeline {
   </div>
 </div>"""
                         )
-                    } catch (e) {
-                        echo "⚠️ Email notification failed: ${e.message}"
-                    }
-                } else {
-                    echo "✅ Build successful (no deploy)"
+                    } catch (e) { echo "Email notification failed: ${e.message}" }
                 }
             }
         }
+
         failure {
             script {
                 def context = env.IS_PR == 'true'
-                    ? "PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} &rarr; ${env.CHANGE_TARGET})"
+                    ? "PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} -> ${env.CHANGE_TARGET})"
                     : "branch ${env.BRANCH_NAME}"
-                def failRecipients = [env.FIXED_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
+                def recipients = [env.NOTIFICATION_EMAIL, env.CHANGE_AUTHOR_EMAIL].findAll { it?.trim() }.unique().join(',')
                 try {
                     emailext(
-                        to: failRecipients,
+                        to: recipients,
                         mimeType: 'text/html',
-                        subject: "[yambo] ❌ Build failed — ${env.IS_PR == 'true' ? 'PR #' + env.CHANGE_ID : env.BRANCH_NAME}",
-                        body: """
-<div style='font-family:Arial,sans-serif;max-width:600px'>
+                        subject: "[yambo] Build failed -- ${env.IS_PR == 'true' ? 'PR #' + env.CHANGE_ID : env.BRANCH_NAME}",
+                        body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
   <div style='background:#d73a49;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
-    <h2 style='margin:0'>&#10060; Build failed</h2>
+    <h2 style='margin:0'>Build failed</h2>
   </div>
   <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
     <p>The pipeline failed for <strong>${context}</strong>.</p>
     <table style='border-collapse:collapse;width:100%;font-size:14px'>
       <tr><td style='padding:4px 8px;color:#586069'>Job</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}'>${env.JOB_NAME} #${env.BUILD_NUMBER}</a></td></tr>
-      <tr><td style='padding:4px 8px;color:#586069'>Console</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}console'>View console output</a></td></tr>
+      <tr><td style='padding:4px 8px;color:#586069'>Console</td><td style='padding:4px 8px'><a href='${env.BUILD_URL}console'>View output</a></td></tr>
     </table>
   </div>
 </div>"""
                     )
-                } catch (e) {
-                    echo "⚠️ Email notification failed: ${e.message}"
-                }
+                } catch (e) { echo "Email notification failed: ${e.message}" }
             }
-            echo "❌ Pipeline failed"
         }
     }
 }

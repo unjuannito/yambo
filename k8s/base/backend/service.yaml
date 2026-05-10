@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: yambo-backend-service
+  namespace: yambo
+spec:
+  selector:
+    app: yambo-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

@@ -1,23 +1,14 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-  namespace: __PREVIEW_NS__
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2Gi
----
+# StatefulSet for Postgres — guarantees stable network identity and
+# ordered start/stop. volumeClaimTemplates replaces the separate PVC resource.
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
-  namespace: __PREVIEW_NS__
+  namespace: yambo
   labels:
     app: postgres
 spec:
+  serviceName: db
   replicas: 1
   selector:
     matchLabels:
@@ -27,9 +18,15 @@ spec:
       labels:
         app: postgres
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999   # postgres UID in official postgres images
+        fsGroup: 999
       containers:
         - name: postgres
           image: postgres:15-alpine
+          securityContext:
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 5432
           env:
@@ -50,46 +47,27 @@ spec:
               mountPath: /var/lib/postgresql/data
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "50m"
-            limits:
               memory: "256Mi"
-              cpu: "250m"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           readinessProbe:
             exec:
-              command:
-                - pg_isready
-                - -U
-                - yambo_user
-                - -d
-                - yambo_db
+              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "yambo_db"]
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             exec:
-              command:
-                - pg_isready
-                - -U
-                - yambo_user
-                - -d
-                - yambo_db
+              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "yambo_db"]
             initialDelaySeconds: 15
             periodSeconds: 20
-      volumes:
-        - name: postgres-storage
-          persistentVolumeClaim:
-            claimName: postgres-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: db
-  namespace: __PREVIEW_NS__
-spec:
-  selector:
-    app: postgres
-  ports:
-    - protocol: TCP
-      port: 5432
-      targetPort: 5432
-  type: ClusterIP
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
