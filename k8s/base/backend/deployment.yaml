@@ -106,8 +106,6 @@ spec:
               value: "Europe/Madrid"
             - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
               value: "60000"
-            - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
-              value: "0"
           volumeMounts:
             - name: uploads-storage
               mountPath: /data/uploads
