@@ -8,11 +8,12 @@ if [ -z "${BACKEND_INTERNAL_URL}" ]; then
     exit 1
 fi
 
-# envsubst replaces ${BACKEND_INTERNAL_URL} in the nginx config in-place
-# (operates on a copy so the original template survives container restarts)
+# envsubst replaces ${BACKEND_INTERNAL_URL} and writes the result to /tmp.
+# nginx-main.conf includes from /tmp/nginx-http.d/ so we never write back
+# to the root-owned /etc/nginx/http.d/ directory.
+mkdir -p /tmp/nginx-http.d
 envsubst '${BACKEND_INTERNAL_URL}' \
     < /etc/nginx/http.d/default.conf \
-    > /tmp/nginx-default.conf
-cp /tmp/nginx-default.conf /etc/nginx/http.d/default.conf
+    > /tmp/nginx-http.d/default.conf
 
 exec "$@"
