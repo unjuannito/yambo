@@ -34,12 +34,12 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 70
           command:
             - sh
             - -c
             - |
-              until pg_isready -h db -p 5432; do
+              until pg_isready -h db -p 5432 -U postgres; do
                 echo "waiting for db...";
                 sleep 2;
               done
