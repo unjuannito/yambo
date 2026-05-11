@@ -28,6 +28,28 @@ spec:
                   matchLabels:
                     app: yambo-backend
                 topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: wait-for-db
+          image: postgres:15-alpine
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h db -p 5432; do
+                echo "waiting for db...";
+                sleep 2;
+              done
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
       containers:
         - name: backend
           image: 192.168.1.11:5000/yambo-web-backend:latest
@@ -82,6 +104,10 @@ spec:
               value: "/data/uploads"
             - name: TZ
               value: "Europe/Madrid"
+            - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+              value: "60000"
+            - name: SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT
+              value: "0"
           volumeMounts:
             - name: uploads-storage
               mountPath: /data/uploads
