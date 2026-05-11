@@ -378,7 +378,7 @@ pipeline {
                     // -- Deploy database
                     sh """
                         kubectl apply -k ${overlayDir} --selector='app=postgres'
-                        kubectl rollout status statefulset/postgres -n ${previewNs} --timeout=120s
+                        kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
                     """
 
                     // -- DB seeding
@@ -493,7 +493,7 @@ pipeline {
 
                     sh "kubectl apply -k ${overlayDir}"
 
-                    sh "kubectl rollout status statefulset/postgres     -n ${NAMESPACE} --timeout=120s"
+                    sh "kubectl rollout status deployment/postgres     -n ${NAMESPACE} --timeout=120s"
                     sh "kubectl rollout status deployment/yambo-backend  -n ${NAMESPACE} --timeout=300s"
                     sh "kubectl rollout status deployment/yambo-frontend -n ${NAMESPACE} --timeout=300s"
 
