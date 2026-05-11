@@ -10,8 +10,8 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-# Install nginx and supervisord
-RUN apk add --no-cache nginx supervisor
+# Install nginx, supervisord, and gettext (provides envsubst)
+RUN apk add --no-cache nginx supervisor gettext
 
 # Create a non-root user. Nginx temp paths are redirected to /tmp in
 # nginx-main.conf so no pre-creation of /var/lib/nginx/* is needed.
