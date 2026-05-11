@@ -18,10 +18,9 @@ spec:
       labels:
         app: postgres
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 999   # postgres UID in official postgres images
-        fsGroup: 999
+      # The official postgres image starts as root to initialize the data
+      # directory and then drops to the postgres user internally. Pod-level
+      # runAsNonRoot/runAsUser must not be set or the entrypoint will fail.
       containers:
         - name: postgres
           image: postgres:15-alpine
@@ -54,12 +53,12 @@ spec:
               cpu: "500m"
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "yambo_db"]
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d yambo_db"]
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "yambo_db"]
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d yambo_db"]
             initialDelaySeconds: 15
             periodSeconds: 20
   volumeClaimTemplates:
