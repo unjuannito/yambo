@@ -4,18 +4,11 @@ metadata:
   name: yambo-ingress
   namespace: yambo
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.entrypoints: web
     # Allow large file uploads (images, ~15 MB)
     traefik.ingress.kubernetes.io/buffering-maxrequestbodybytes: "15728640"
-    # cert-manager issues and renews TLS certificates automatically
-    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: traefik
-  tls:
-    - hosts:
-        - OVERLAY_PATCH_REQUIRED
-      secretName: yambo-tls-cert
   defaultBackend:
     service:
       name: yambo-frontend-service
