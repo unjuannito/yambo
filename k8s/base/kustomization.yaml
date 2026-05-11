@@ -9,7 +9,7 @@ resources:
   - backend/pvc.yaml
   - frontend/deployment.yaml
   - frontend/service.yaml
-  - database/statefulset.yaml
+  - database/deployment.yaml
   - database/service.yaml
   - ingress.yaml
   - pdb-backend.yaml
