@@ -39,7 +39,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -w 1 db 5432 </dev/null; do
+              until pg_isready -h db -p 5432; do
                 echo "waiting for db...";
                 sleep 2;
               done
