@@ -21,4 +21,24 @@ patches:
   - path: patches/backend-replicas.yaml
   - path: patches/frontend-replicas.yaml
   # Patch real domain into ingress, backend CORS, and frontend FRONTEND_URL
-  - path: patches/domain.yaml
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://yambo.cabrasky.net"
+    target:
+      kind: Deployment
+      name: yambo-backend
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "https://yambo.cabrasky.net"
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: yambo.cabrasky.net
+    target:
+      kind: Ingress
+      name: yambo-ingress
