@@ -363,10 +363,13 @@ public class ReportService {
             revenueOverTime.merge(dateKey, rev, BigDecimal::add);
         }
 
-        // Products by OrderProduct status
+        // Products by Order status
         Map<String, Long> productsByStatus = orderProducts.stream()
                 .collect(Collectors.groupingBy(
-                        op -> op.getStatus().name(),
+                        op -> {
+                            Order o = orderMap.get(op.getOrderId());
+                            return o != null ? o.getStatus().name() : "UNKNOWN";
+                        },
                         Collectors.counting()));
 
         // Conversion funnel using product views

@@ -9,6 +9,13 @@ export interface ProductOption {
   dependencies?: OptionDependency[]
   conditions?: OptionCondition[]
   description?: string
+  /** When true, this option column is omitted from the full detail report. */
+  excludeFromFull?: boolean
+  /**
+   * When true, this option column is omitted from all production reports
+   * (Factory and Warehouse — they share the same audience).
+   */
+  excludeFromProduction?: boolean
 }
 
 export interface OptionValue {

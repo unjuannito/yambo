@@ -152,8 +152,9 @@ public class DashboardController {
                 this.user = new UserInfo(u.getId(), u.getName(), u.getEmail());
             });
 
+            String orderStatus = order.getStatus() != null ? order.getStatus().name() : null;
             this.products = products.stream()
-                    .map(p -> new OrderProductSummary(p, productRepository))
+                    .map(p -> new OrderProductSummary(p, productRepository, orderStatus))
                     .toList();
         }
     }
@@ -167,12 +168,12 @@ public class DashboardController {
         private BigDecimal price;
         private String status;
 
-        public OrderProductSummary(OrderProduct op, ProductRepository productRepository) {
+        public OrderProductSummary(OrderProduct op, ProductRepository productRepository, String orderStatus) {
             this.id = op.getId() != null ? op.getId().toString() : null;
             this.productId = op.getProductId();
             this.quantity = op.getQuantity();
             this.price = op.getPrice();
-            this.status = op.getStatus() != null ? op.getStatus().name() : null;
+            this.status = orderStatus;
 
             productRepository.findById(op.getProductId()).ifPresent(product -> {
                 this.productName = product.getName();

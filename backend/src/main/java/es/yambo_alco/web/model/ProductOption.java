@@ -22,6 +22,13 @@ public class ProductOption {
     private List<OptionDependency> dependencies;
     private List<OptionCondition> conditions;
     private String description;
+    /** When {@code true}, this option column is omitted from the full detail report (FULL). */
+    private Boolean excludeFromFull;
+    /**
+     * When {@code true}, this option column is omitted from all aggregated production reports
+     * (FACTORY and WAREHOUSE). Setting this automatically covers both — they share the same audience.
+     */
+    private Boolean excludeFromProduction;
 
     public static final Set<String> SUPPORTED_TYPES = Set.of("select", "checkbox", "text_input");
 

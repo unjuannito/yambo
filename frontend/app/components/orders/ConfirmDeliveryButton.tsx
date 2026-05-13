@@ -6,17 +6,16 @@ import toast from "react-hot-toast";
 
 interface ConfirmDeliveryButtonProps {
     readonly orderId: string;
-    readonly orderProductId: string;
     readonly onConfirmed: (updated: Order) => void;
 }
 
-export function ConfirmDeliveryButton({ orderId, orderProductId, onConfirmed }: ConfirmDeliveryButtonProps) {
+export function ConfirmDeliveryButton({ orderId, onConfirmed }: ConfirmDeliveryButtonProps) {
     const [isConfirming, setIsConfirming] = useState(false);
 
     const handleClick = async () => {
         setIsConfirming(true);
         try {
-            const updated = await orderService.confirmProductDelivery(orderId, orderProductId);
+            const updated = await orderService.confirmProductDelivery(orderId);
             onConfirmed(updated);
             toast.success("Entrega confirmada correctamente.");
         } catch (err) {

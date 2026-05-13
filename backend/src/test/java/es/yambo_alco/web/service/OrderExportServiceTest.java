@@ -1,7 +1,7 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.model.*;
-import es.yambo_alco.web.model.enums.OrderProductStatus;
+
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -28,6 +28,10 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.mockito.Spy;
+import es.yambo_alco.web.service.export.builder.FullReportBuilder;
+import es.yambo_alco.web.service.export.builder.FactoryReportBuilder;
+import es.yambo_alco.web.service.export.builder.WarehouseReportBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @SuppressWarnings("unchecked")
@@ -44,6 +48,15 @@ class OrderExportServiceTest {
 
     @Mock
     private FamilyProductRepository familyProductRepository;
+
+    @Spy
+    private FullReportBuilder fullReportBuilder = new FullReportBuilder();
+
+    @Spy
+    private FactoryReportBuilder factoryReportBuilder = new FactoryReportBuilder();
+
+    @Spy
+    private WarehouseReportBuilder warehouseReportBuilder = new WarehouseReportBuilder();
 
     @InjectMocks
     private OrderExportService orderExportService;
@@ -109,7 +122,6 @@ class OrderExportServiceTest {
                 .quantity(quantity)
                 .price(price)
                 .configuration(config)
-                .status(OrderProductStatus.OPEN)
                 .build();
     }
 

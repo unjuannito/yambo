@@ -3,7 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
-import es.yambo_alco.web.model.enums.OrderProductStatus;
+
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.repository.IssueRepository;
@@ -1361,11 +1361,11 @@ class OrderServiceTest {
     // Order product status propagation tests
 
     @Test
-    void updateOrderProductStatusByFamilyProduct_PendingFabrication_ShouldTransitionOrderToPendingProducts() {
+    void updateOrderStatusByFamilyProduct_PendingFabrication_ShouldTransitionOrderToPendingProducts() {
         Product product = Product.builder().id("PROD001").name("T-Shirt").build();
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.ORDER_CLOSED).build();
+                .price(BigDecimal.TEN).build();
         Order order = Order.builder()
                 .id("ORD001").customerId("USER001")
                 .status(OrderStatus.PAYMENT_CONFIRMED)
@@ -1377,13 +1377,11 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION);
 
-        assertEquals(OrderProductStatus.PENDING_FABRICATION, op.getStatus());
         assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
         assertEquals(1, result.size());
         assertEquals("ORD001", result.get(0).orderId());
@@ -1392,11 +1390,11 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderProductStatusByFamilyProduct_OrderClosed_ShouldNotTransitionOrder() {
+    void updateOrderStatusByFamilyProduct_OrderClosed_ShouldNotTransitionOrder() {
         Product product = Product.builder().id("PROD001").name("T-Shirt").build();
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.OPEN).build();
+                .price(BigDecimal.TEN).build();
 
         @SuppressWarnings("unchecked")
         Specification<Product> prodSpec = any(Specification.class);
@@ -1404,56 +1402,21 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.ORDER_CLOSED);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.ORDER_CLOSED);
 
-        assertEquals(OrderProductStatus.ORDER_CLOSED, op.getStatus());
         assertTrue(result.isEmpty());
-        // Should NOT attempt to transition orders for ORDER_CLOSED status
-        verify(orderRepository, never()).findById(any());
+        // ORDER_CLOSED does not trigger order-level status transition
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test
-    void updateOrderProductStatusByFamilyProduct_ShouldSkipCanceledProducts() {
+    void updateOrderStatusByFamilyProduct_ShouldSkipOrdersWithoutPaymentConfirmed() {
         Product product = Product.builder().id("PROD001").name("T-Shirt").build();
-        OrderProduct canceledOp = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.CANCELED).build();
-
-        @SuppressWarnings("unchecked")
-        Specification<Product> prodSpec = any(Specification.class);
-        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(canceledOp));
-
-        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
-
-        assertEquals(OrderProductStatus.CANCELED, canceledOp.getStatus()); // Should remain CANCELED
-        assertTrue(result.isEmpty());
-        verify(orderProductRepository, never()).save(any());
-    }
-
-    @Test
-    void updateOrderProductStatusByFamilyProduct_NoProducts_ShouldDoNothing() {
-        @SuppressWarnings("unchecked")
-        Specification<Product> prodSpec = any(Specification.class);
-        when(productRepository.findAll(prodSpec)).thenReturn(List.of());
-
-        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.PENDING_FABRICATION);
-
-        assertTrue(result.isEmpty());
-        verify(orderProductRepository, never()).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
-        verify(orderRepository, never()).findById(any());
-    }
-
-    @Test
-    void updateOrderProductStatusByFamilyProduct_OrderAlreadyPendingProducts_ShouldNotTransitionAgain() {
-        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        // Order is already PENDING_PRODUCTS (not PAYMENT_CONFIRMED) — should not re-transition
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.PENDING_FABRICATION).build();
+                .price(BigDecimal.TEN).build();
         Order order = Order.builder()
                 .id("ORD001").customerId("USER001")
                 .status(OrderStatus.PENDING_PRODUCTS)
@@ -1465,10 +1428,48 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
 
-        List<OrderService.PendingOrderEmail> result = orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.TO_BE_DELIVERED);
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION);
+
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        assertTrue(result.isEmpty());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_NoProducts_ShouldDoNothing() {
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of());
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION);
+
+        assertTrue(result.isEmpty());
+        verify(orderProductRepository, never()).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
+        verify(orderRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_OrderAlreadyPendingProducts_ShouldNotTransitionAgain() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Order order = Order.builder()
+                .id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now()).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.TO_BE_DELIVERED);
 
         // Order should stay at PENDING_PRODUCTS (not PAYMENT_CONFIRMED, so no transition)
         assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
@@ -1521,7 +1522,7 @@ class OrderServiceTest {
     // ---- checkAndCloseOrder tests ----
 
     @Test
-    void checkAndCloseOrder_WhenAllDeliveredAndNoOpenIssues_ShouldClose() {
+    void checkAndCloseOrder_WhenProductsExistAndNoOpenIssues_ShouldClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1531,15 +1532,12 @@ class OrderServiceTest {
 
         OrderProduct op1 = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
+                .price(BigDecimal.TEN).build();
         OrderProduct op2 = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD002").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
+                .price(BigDecimal.TEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op1, op2));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -1551,51 +1549,17 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkAndCloseOrder_WhenNotAllDelivered_ShouldNotClose() {
+    void checkAndCloseOrder_WhenOpenIssues_ShouldNotClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
                 .status(OrderStatus.PENDING_PRODUCTS)
                 .createdAt(LocalDateTime.now())
                 .build();
-
-        OrderProduct op1 = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
-        OrderProduct op2 = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD002").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.TO_BE_DELIVERED).build();
-
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op1, op2));
-
-        orderService.checkAndCloseOrder("ORD001");
-
-        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
-        verify(orderRepository, never()).save(any(Order.class));
-    }
-
-    @Test
-    void checkAndCloseOrder_WhenAllDeliveredButOpenIssues_ShouldNotClose() {
-        Order order = Order.builder()
-                .id("ORD001")
-                .customerId("USER001")
-                .status(OrderStatus.PENDING_PRODUCTS)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        OrderProduct op = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
 
         Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
 
         orderService.checkAndCloseOrder("ORD001");
@@ -1605,7 +1569,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkAndCloseOrder_WhenAllDeliveredButInProgressIssues_ShouldNotClose() {
+    void checkAndCloseOrder_WhenInProgressIssues_ShouldNotClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1613,16 +1577,9 @@ class OrderServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        OrderProduct op = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
-
         Issue inProgressIssue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(inProgressIssue));
 
         orderService.checkAndCloseOrder("ORD001");
@@ -1632,7 +1589,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkAndCloseOrder_WhenAllDeliveredButReopenedIssues_ShouldNotClose() {
+    void checkAndCloseOrder_WhenReopenedIssues_ShouldNotClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1640,16 +1597,9 @@ class OrderServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        OrderProduct op = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
-
         Issue reopenedIssue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(reopenedIssue));
 
         orderService.checkAndCloseOrder("ORD001");
@@ -1659,7 +1609,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkAndCloseOrder_WhenAllDeliveredAndOnlyResolvedClosedIssues_ShouldClose() {
+    void checkAndCloseOrder_WhenOnlyResolvedClosedIssues_ShouldClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1667,17 +1617,10 @@ class OrderServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        OrderProduct op = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
-
         Issue resolved = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
         Issue closed = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(resolved, closed));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -1723,7 +1666,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkAndCloseOrder_WhenEmptyProducts_ShouldNotClose() {
+    void checkAndCloseOrder_WhenNoIssues_ShouldClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1732,14 +1675,13 @@ class OrderServiceTest {
                 .build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> opSpec = any(Specification.class);
-        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of());
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         orderService.checkAndCloseOrder("ORD001");
 
-        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
-        verify(orderRepository, never()).save(any(Order.class));
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        verify(orderRepository).save(order);
     }
 
     @Test
@@ -1759,7 +1701,7 @@ class OrderServiceTest {
 
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
+                .price(BigDecimal.TEN).build();
 
         Product product = Product.builder().id("PROD001").name("T-Shirt").build();
 
@@ -1797,7 +1739,7 @@ class OrderServiceTest {
 
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.DELIVERED).build();
+                .price(BigDecimal.TEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         @SuppressWarnings("unchecked")
@@ -1816,14 +1758,14 @@ class OrderServiceTest {
         verify(orderRepository).save(order);
     }
 
-    // ---- updateOrderProductStatusByFamilyProduct: DELIVERED triggers auto-close ----
+    // ---- updateOrderStatusByFamilyProduct: DELIVERED triggers auto-close ----
 
     @Test
-    void updateOrderProductStatusByFamilyProduct_Delivered_ShouldTriggerAutoClose() {
+    void updateOrderStatusByFamilyProduct_Delivered_ShouldTriggerAutoClose() {
         Product product = Product.builder().id("PROD001").name("T-Shirt").build();
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.TO_BE_DELIVERED).build();
+                .price(BigDecimal.TEN).build();
         Order order = Order.builder()
                 .id("ORD001").customerId("USER001")
                 .status(OrderStatus.PENDING_PRODUCTS)
@@ -1835,25 +1777,23 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.DELIVERED);
+        orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.DELIVERED);
 
-        assertEquals(OrderProductStatus.DELIVERED, op.getStatus());
-        // Auto-close should be triggered, and since all products delivered + no issues -> CLOSED
+        // Auto-close should be triggered: PENDING_PRODUCTS + no open issues -> CLOSED
         assertEquals(OrderStatus.CLOSED, order.getStatus());
         assertNotNull(order.getClosedAt());
     }
 
     @Test
-    void updateOrderProductStatusByFamilyProduct_Delivered_WithOpenIssues_ShouldNotAutoClose() {
+    void updateOrderStatusByFamilyProduct_Delivered_WithOpenIssues_ShouldNotAutoClose() {
         Product product = Product.builder().id("PROD001").name("T-Shirt").build();
         OrderProduct op = OrderProduct.builder()
                 .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).status(OrderProductStatus.TO_BE_DELIVERED).build();
+                .price(BigDecimal.TEN).build();
         Order order = Order.builder()
                 .id("ORD001").customerId("USER001")
                 .status(OrderStatus.PENDING_PRODUCTS)
@@ -1867,13 +1807,11 @@ class OrderServiceTest {
         @SuppressWarnings("unchecked")
         Specification<OrderProduct> opSpec = any(Specification.class);
         when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
 
-        orderService.updateOrderProductStatusByFamilyProduct("FAM001", OrderProductStatus.DELIVERED);
+        orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.DELIVERED);
 
-        assertEquals(OrderProductStatus.DELIVERED, op.getStatus());
         // Should NOT auto-close because of open issues
         assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
     }
@@ -2033,43 +1971,6 @@ class OrderServiceTest {
         Order result = orderService.createOrder("USER001", List.of(orderProduct));
 
         assertEquals(OrderStatus.PENDING_PAYMENT, result.getStatus());
-    }
-
-    @Test
-    void createOrder_ShouldSetProductStatusToOpen() {
-        User user = User.builder()
-                .id("USER001")
-                .email("test@test.com")
-                .profiles(Set.of())
-                .build();
-
-        Product product = Product.builder()
-                .id("PROD001")
-                .name("Test Product")
-                .basePrice(BigDecimal.TEN)
-                .familyProduct(null)
-                .build();
-
-        OrderProduct orderProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .configuration(null)
-                .build();
-
-        when(authService.getCurrentUser(true)).thenReturn(user);
-        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order saved = invocation.getArgument(0);
-            saved.setId("ORD001");
-            return saved;
-        });
-
-        orderService.createOrder("USER001", List.of(orderProduct));
-
-        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
-        verify(orderProductRepository).save(captor.capture());
-        assertEquals(OrderProductStatus.OPEN, captor.getValue().getStatus());
     }
 
     // ---- updateOrderStatus: closedAt set ----
@@ -2558,50 +2459,32 @@ class OrderServiceTest {
         verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
     }
 
-    // ── confirmOrderProductDelivery ──
+    // ── confirmOrderDelivery ──
 
     @Test
-    void confirmOrderProductDelivery_WhenValid_ShouldSetDelivered() {
-        java.util.UUID productUuid = java.util.UUID.randomUUID();
+    void confirmOrderDelivery_WhenValid_ShouldTriggerClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
                 .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
                 .build();
-        OrderProduct orderProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .build();
-        orderProduct.setId(productUuid);
-        orderProduct.setOrderId("ORD001");
-        orderProduct.setStatus(OrderProductStatus.TO_BE_DELIVERED);
-
-        OrderProduct deliveredProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .build();
-        deliveredProduct.setId(productUuid);
-        deliveredProduct.setOrderId("ORD001");
-        deliveredProduct.setStatus(OrderProductStatus.DELIVERED);
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> anySpec = any(Specification.class);
-        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(deliveredProduct));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Order result = orderService.confirmOrderProductDelivery("ORD001", productUuid.toString(), "USER001");
+        orderService.confirmOrderDelivery("ORD001", "USER001");
 
-        assertNotNull(result);
-        verify(orderProductRepository).save(argThat(op -> op.getStatus() == OrderProductStatus.DELIVERED));
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        verify(orderRepository).save(argThat(o -> o.getStatus() == OrderStatus.CLOSED));
     }
 
     @Test
-    void confirmOrderProductDelivery_WhenWrongUser_ShouldThrowForbidden() {
+    void confirmOrderDelivery_WhenWrongUser_ShouldThrowForbidden() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("OWNER001")
@@ -2612,105 +2495,48 @@ class OrderServiceTest {
 
         es.yambo_alco.web.exception.ForbiddenException exception = assertThrows(
                 es.yambo_alco.web.exception.ForbiddenException.class,
-                () -> orderService.confirmOrderProductDelivery("ORD001",
-                        java.util.UUID.randomUUID().toString(), "OTHER_USER"));
+                () -> orderService.confirmOrderDelivery("ORD001", "OTHER_USER"));
         assertEquals("You do not have permission to update this order", exception.getMessage());
-        verify(orderProductRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
     }
 
     @Test
-    void confirmOrderProductDelivery_WhenWrongStatus_ShouldThrowBadRequest() {
-        java.util.UUID productUuid = java.util.UUID.randomUUID();
+    void confirmOrderDelivery_WhenWrongStatus_ShouldThrowBadRequest() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
-                .status(OrderStatus.PENDING_PRODUCTS)
+                .status(OrderStatus.PAYMENT_CONFIRMED)
                 .build();
-        OrderProduct orderProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .build();
-        orderProduct.setId(productUuid);
-        orderProduct.setOrderId("ORD001");
-        orderProduct.setStatus(OrderProductStatus.PENDING_FABRICATION);
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
 
-        String productIdStr = productUuid.toString();
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.confirmOrderProductDelivery("ORD001", productIdStr, "USER001"));
-        assertEquals("Order product can only be confirmed as delivered when in TO_BE_DELIVERED status",
+                () -> orderService.confirmOrderDelivery("ORD001", "USER001"));
+        assertEquals("Order can only be confirmed as delivered when in PENDING_PRODUCTS status",
                 exception.getMessage());
-        verify(orderProductRepository, never()).save(any());
+        verify(orderRepository, never()).save(any());
     }
 
     @Test
-    void confirmOrderProductDelivery_WhenProductNotInOrder_ShouldThrowNotFound() {
-        java.util.UUID productUuid = java.util.UUID.randomUUID();
+    void confirmOrderDelivery_WhenOpenIssues_ShouldNotCloseOrder() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
                 .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
                 .build();
-        OrderProduct orderProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .build();
-        orderProduct.setId(productUuid);
-        orderProduct.setOrderId("OTHER_ORDER");
-        orderProduct.setStatus(OrderProductStatus.TO_BE_DELIVERED);
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
 
-        String productIdStr = productUuid.toString();
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                () -> orderService.confirmOrderProductDelivery("ORD001", productIdStr, "USER001"));
-        assertTrue(exception.getMessage().contains(productIdStr));
-        verify(orderProductRepository, never()).save(any());
-    }
+        orderService.confirmOrderDelivery("ORD001", "USER001");
 
-    @Test
-    void confirmOrderProductDelivery_WhenLastProduct_ShouldCloseOrder() {
-        java.util.UUID productUuid = java.util.UUID.randomUUID();
-        Order order = Order.builder()
-                .id("ORD001")
-                .customerId("USER001")
-                .status(OrderStatus.PENDING_PRODUCTS)
-                .build();
-        OrderProduct orderProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .build();
-        orderProduct.setId(productUuid);
-        orderProduct.setOrderId("ORD001");
-        orderProduct.setStatus(OrderProductStatus.TO_BE_DELIVERED);
-
-        OrderProduct deliveredProduct = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .build();
-        deliveredProduct.setId(productUuid);
-        deliveredProduct.setOrderId("ORD001");
-        deliveredProduct.setStatus(OrderProductStatus.DELIVERED);
-
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(orderProductRepository.findById(productUuid)).thenReturn(Optional.of(orderProduct));
-        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-        @SuppressWarnings("unchecked")
-        Specification<OrderProduct> anySpec = any(Specification.class);
-        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(deliveredProduct));
-        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
-
-        orderService.confirmOrderProductDelivery("ORD001", productUuid.toString(), "USER001");
-
-        verify(orderRepository).save(argThat(o -> o.getStatus() == OrderStatus.CLOSED));
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        verify(orderRepository, never()).save(any());
     }
 }
 

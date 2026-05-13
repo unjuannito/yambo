@@ -27,6 +27,7 @@ import {
     ReportBarChart,
     ReportDoughnutChart,
 } from "~/components/reports/ReportCharts";
+import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
 
 // Status label/color maps
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -63,22 +64,13 @@ const ISSUE_STATUS_COLORS: Record<string, string> = {
     REOPENED: "#906bac",
 };
 
-const ORDER_PRODUCT_STATUS_LABELS: Record<string, string> = {
-    OPEN: "Abierto",
-    ORDER_CLOSED: "Pedido Cerrado",
-    PENDING_FABRICATION: "Pte. Fabricación",
-    TO_BE_DELIVERED: "Por Entregar",
-    DELIVERED: "Entregado",
-    CANCELED: "Cancelado",
-};
-
 const ORDER_PRODUCT_STATUS_COLORS: Record<string, string> = {
-    OPEN: "#4ecdc4",
-    ORDER_CLOSED: "#33a35e",
-    PENDING_FABRICATION: "#ffa07a",
-    TO_BE_DELIVERED: "#ffd93d",
-    DELIVERED: "#33a35e",
-    CANCELED: "#ff6b6b",
+    PENDING_PAYMENT: "#f39c12",
+    CONFIRMING_PAYMENT: "#e67e22",
+    PAYMENT_CONFIRMED: "#27ae60",
+    CANCELED: "#e74c3c",
+    PENDING_PRODUCTS: "#3498db",
+    CLOSED: "#16a085",
 };
 
 const TOP_PRODUCT_COLORS = [
@@ -621,7 +613,7 @@ export default function ReportsPage() {
                                             data.products.productsByStatus
                                         ).map(
                                             (s) =>
-                                                ORDER_PRODUCT_STATUS_LABELS[s] || s
+                                                ORDER_STATUS_CONFIG[s as keyof typeof ORDER_STATUS_CONFIG]?.shortLabel || s
                                         )}
                                         values={Object.values(
                                             data.products.productsByStatus
@@ -630,8 +622,7 @@ export default function ReportsPage() {
                                             data.products.productsByStatus
                                         ).map(
                                             (s) =>
-                                                ORDER_PRODUCT_STATUS_COLORS[s] ||
-                                                "#6b7280"
+                                                ORDER_PRODUCT_STATUS_COLORS[s] || "#6b7280"
                                         )}
                                     />
                                 ) : (

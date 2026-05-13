@@ -4,12 +4,12 @@ import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.OrderExportService;
+import es.yambo_alco.web.service.export.ExportReportType;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import jakarta.validation.Valid;
@@ -88,9 +88,16 @@ public class OrderController {
     @GetMapping("/export")
     @PreAuthorize("@permissionCheck.hasPermission('order', 'read')")
     public ResponseEntity<byte[]> exportOrders(
-            @RequestParam(required = false) List<String> dropIds) throws IOException {
-        byte[] excelBytes = orderExportService.exportOrders(dropIds);
-        String fileName = "fabricacion_" + LocalDate.now() + ".xlsx";
+            @RequestParam(required = false) List<String> dropIds,
+            @RequestParam(required = false, defaultValue = "FULL") ExportReportType reportType,
+            @RequestParam(required = false) OrderStatus productStatusFilter) throws IOException {
+        byte[] excelBytes = orderExportService.exportOrders(dropIds, reportType, productStatusFilter);
+        String prefix = switch (reportType) {
+            case FACTORY   -> "fabrica";
+            case WAREHOUSE -> "almacen";
+            case FULL      -> "fabricacion";
+        };
+        String fileName = prefix + "_" + LocalDate.now() + ".xlsx";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(
@@ -171,13 +178,12 @@ public class OrderController {
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
-    @PutMapping("/my/{id}/products/{orderProductId}/deliver")
+    @PutMapping("/my/{id}/deliver")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<OrderResponse> confirmOrderProductDelivery(
-            @PathVariable String id,
-            @PathVariable String orderProductId) {
+    public ResponseEntity<OrderResponse> confirmOrderDelivery(
+            @PathVariable String id) {
         User user = authService.getCurrentUser(true);
-        Order order = orderService.confirmOrderProductDelivery(id, orderProductId, user.getId());
+        Order order = orderService.confirmOrderDelivery(id, user.getId());
         List<OrderProduct> products = orderService.getOrderProducts(id);
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
@@ -272,7 +278,7 @@ public class OrderController {
         private Integer quantity;
         private BigDecimal price;
         private String configuration;
-        private OrderProductStatus status;
+        private OrderStatus status;
 
         public OrderProductResponse(OrderProduct orderProduct, ProductRepository productRepository) {
             this.id = orderProduct.getId() != null ? orderProduct.getId().toString() : null;
@@ -280,7 +286,9 @@ public class OrderController {
             this.quantity = orderProduct.getQuantity();
             this.price = orderProduct.getPrice();
             this.configuration = orderProduct.getConfiguration();
-            this.status = orderProduct.getStatus();
+            if (orderProduct.getOrder() != null) {
+                this.status = orderProduct.getOrder().getStatus();
+            }
 
             productRepository.findById(orderProduct.getProductId()).ifPresent(product -> {
                 this.productName = product.getName();
