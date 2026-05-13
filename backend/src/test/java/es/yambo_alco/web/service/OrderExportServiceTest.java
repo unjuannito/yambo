@@ -796,4 +796,152 @@ class OrderExportServiceTest {
             assertEquals(4, orderIds.size(), "All 4 orders with included statuses should appear");
         }
     }
+
+    // ─── FACTORY report type tests ─────────────────────────────────
+
+    @Test
+    void exportOrders_WithFactoryType_ShouldProduceAggregatedSheetWithoutPrices() throws Exception {
+        OrderProduct op = createOrderProduct("PROD001", 3, BigDecimal.valueOf(25.00),
+                "{\"Color\":{\"id\":\"c1\",\"label\":\"Rojo\"}}");
+        Order order = createOrder("ORD001", OrderStatus.PAYMENT_CONFIRMED, Set.of(op));
+        setupDefaultMocks(List.of(order));
+
+        byte[] result = orderExportService.exportOrders(null, es.yambo_alco.web.service.export.ExportReportType.FACTORY, null);
+
+        assertNotNull(result);
+        try (XSSFWorkbook wb = parseWorkbook(result)) {
+            // Summary sheet + at least one product sheet
+            assertTrue(wb.getNumberOfSheets() >= 2, "Factory report should have summary + product sheets");
+            Sheet summarySheet = wb.getSheet("Resumen");
+            assertNotNull(summarySheet, "Factory report should have 'Resumen' sheet");
+
+            // Product sheet should NOT contain customer name or price columns
+            Sheet productSheet = wb.getSheet("Camiseta Básica");
+            assertNotNull(productSheet, "Product sheet should exist");
+
+            // Check that no cell in the header row (first data row) contains "Cliente" or "Precio"
+            boolean foundCliente = false;
+            boolean foundPrecio = false;
+            for (int r = 0; r <= productSheet.getLastRowNum(); r++) {
+                Row row = productSheet.getRow(r);
+                if (row == null) continue;
+                for (int c = 0; c < row.getLastCellNum(); c++) {
+                    var cell = row.getCell(c);
+                    if (cell == null) continue;
+                    if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.STRING) {
+                        String v = cell.getStringCellValue();
+                        if ("Cliente".equals(v)) foundCliente = true;
+                        if ("Precio".equals(v)) foundPrecio = true;
+                    }
+                }
+            }
+            assertFalse(foundCliente, "Factory sheet should NOT contain 'Cliente' column");
+            assertFalse(foundPrecio, "Factory sheet should NOT contain 'Precio' column");
+        }
+    }
+
+    @Test
+    void exportOrders_WithFactoryType_ShouldFilterByPaymentConfirmedByDefault() throws Exception {
+        OrderProduct opConfirmed = createOrderProduct("PROD001", 2, BigDecimal.valueOf(25.00), "{}");
+        OrderProduct opPending   = createOrderProduct("PROD001", 5, BigDecimal.valueOf(25.00), "{}");
+
+        Order confirmedOrder = createOrder("ORD001", OrderStatus.PAYMENT_CONFIRMED, Set.of(opConfirmed));
+        Order pendingOrder   = createOrder("ORD002", OrderStatus.PENDING_PRODUCTS, Set.of(opPending));
+
+        // FACTORY default filter is PAYMENT_CONFIRMED — only confirmedOrder's products should appear
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(confirmedOrder, pendingOrder)));
+        when(productRepository.findAll()).thenReturn(List.of(testProduct));
+        when(familyProductRepository.findAll()).thenReturn(List.of(testDrop));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(testUser));
+
+        byte[] result = orderExportService.exportOrders(null, es.yambo_alco.web.service.export.ExportReportType.FACTORY, null);
+
+        assertNotNull(result);
+        try (XSSFWorkbook wb = parseWorkbook(result)) {
+            Sheet productSheet = wb.getSheet("Camiseta Básica");
+            assertNotNull(productSheet);
+
+            // Only PAYMENT_CONFIRMED order (qty=2) should appear → aggregated quantity must be 2, not 7
+            boolean found7 = false;
+            for (int r = 0; r <= productSheet.getLastRowNum(); r++) {
+                Row row = productSheet.getRow(r);
+                if (row == null) continue;
+                for (int c = 0; c < row.getLastCellNum(); c++) {
+                    var cell = row.getCell(c);
+                    if (cell == null) continue;
+                    if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC
+                            && cell.getNumericCellValue() == 7.0) {
+                        found7 = true;
+                    }
+                }
+            }
+            assertFalse(found7, "Factory sheet should NOT sum both orders' quantities when status filter is active");
+        }
+    }
+
+    // ─── WAREHOUSE report type tests ───────────────────────────────
+
+    @Test
+    void exportOrders_WithWarehouseType_ShouldIncludeValidationColumns() throws Exception {
+        OrderProduct op = createOrderProduct("PROD001", 1, BigDecimal.valueOf(25.00), "{}");
+        Order order = createOrder("ORD001", OrderStatus.PENDING_PRODUCTS, Set.of(op));
+
+        // Use PENDING_PRODUCTS status since that is the default filter for WAREHOUSE
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(order)));
+        when(productRepository.findAll()).thenReturn(List.of(testProduct));
+        when(familyProductRepository.findAll()).thenReturn(List.of(testDrop));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(testUser));
+
+        byte[] result = orderExportService.exportOrders(null, es.yambo_alco.web.service.export.ExportReportType.WAREHOUSE, null);
+
+        assertNotNull(result);
+        try (XSSFWorkbook wb = parseWorkbook(result)) {
+            Sheet productSheet = wb.getSheet("Camiseta Básica");
+            assertNotNull(productSheet, "Product sheet should exist for warehouse report");
+
+            // Validation columns: "Recibido", "OK", "Notas" should be present
+            boolean foundRecibido = false;
+            boolean foundOk = false;
+            boolean foundNotas = false;
+            for (int r = 0; r <= productSheet.getLastRowNum(); r++) {
+                Row row = productSheet.getRow(r);
+                if (row == null) continue;
+                for (int c = 0; c < row.getLastCellNum(); c++) {
+                    var cell = row.getCell(c);
+                    if (cell == null) continue;
+                    if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.STRING) {
+                        String v = cell.getStringCellValue();
+                        if ("Recibido".equals(v)) foundRecibido = true;
+                        if ("OK".equals(v)) foundOk = true;
+                        if ("Notas".equals(v)) foundNotas = true;
+                    }
+                }
+            }
+            assertTrue(foundRecibido, "Warehouse sheet should contain 'Recibido' column");
+            assertTrue(foundOk, "Warehouse sheet should contain 'OK' column");
+            assertTrue(foundNotas, "Warehouse sheet should contain 'Notas' column");
+        }
+    }
+
+    @Test
+    void exportOrders_WithWarehouseType_ShouldProduceSummarySheet() throws Exception {
+        OrderProduct op = createOrderProduct("PROD001", 2, BigDecimal.valueOf(25.00), "{}");
+        Order order = createOrder("ORD001", OrderStatus.PENDING_PRODUCTS, Set.of(op));
+
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(order)));
+        when(productRepository.findAll()).thenReturn(List.of(testProduct));
+        when(familyProductRepository.findAll()).thenReturn(List.of(testDrop));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(testUser));
+
+        byte[] result = orderExportService.exportOrders(null, es.yambo_alco.web.service.export.ExportReportType.WAREHOUSE, null);
+
+        assertNotNull(result);
+        try (XSSFWorkbook wb = parseWorkbook(result)) {
+            assertTrue(wb.getNumberOfSheets() >= 2);
+            assertNotNull(wb.getSheet("Resumen"), "Warehouse report should have 'Resumen' sheet");
+        }
+    }
 }
