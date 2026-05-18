@@ -14,7 +14,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import FileUploader from "~/components/common/FileUploader";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { Route } from "./+types/my-orders";
-import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS, ORDER_PRODUCT_STATUS_CONFIG, OrderProductStatus } from "~/constants/orderStatus";
+import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge, CreateIssueModal } from "~/components/issues";
@@ -464,16 +464,15 @@ export default function MyOrdersPage() {
                           <span className="font-medium text-yambo-green-600">{product.price.toFixed(2)} € c/u</span>
                           <span>•</span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            ORDER_PRODUCT_STATUS_CONFIG[product.status as keyof typeof ORDER_PRODUCT_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
+                            ORDER_STATUS_CONFIG[product.status as keyof typeof ORDER_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
                           }`}>
-                            {ORDER_PRODUCT_STATUS_CONFIG[product.status as keyof typeof ORDER_PRODUCT_STATUS_CONFIG]?.shortLabel || product.status}
+                            {ORDER_STATUS_CONFIG[product.status as keyof typeof ORDER_STATUS_CONFIG]?.shortLabel || product.status}
                           </span>
                         </div>
 
-                        {product.status === OrderProductStatus.TO_BE_DELIVERED && (
+                        {orderDetail.status === 'PENDING_PRODUCTS' && (
                           <ConfirmDeliveryButton
                             orderId={orderDetail.id}
-                            orderProductId={product.id}
                             onConfirmed={handleOrderUpdated}
                           />
                         )}

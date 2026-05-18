@@ -1,6 +1,5 @@
 package es.yambo_alco.web.model;
 
-import es.yambo_alco.web.model.enums.OrderProductStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,9 +52,4 @@ public class OrderProduct {
     @Builder.Default
     @Column(nullable = false)
     private Integer quantity = 1;
-
-    @Builder.Default
-    @Column(nullable = false)
-    @Enumerated(EnumType.ORDINAL)
-    private OrderProductStatus status = OrderProductStatus.OPEN;
 }

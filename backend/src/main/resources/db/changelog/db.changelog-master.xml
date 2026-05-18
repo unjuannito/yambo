@@ -86,5 +86,6 @@
     <include file="db/changelog/changes/76-issue-watchers.xml"/>
     <include file="db/changelog/changes/77-family-product-watchers.xml"/>
     <include file="db/changelog/changes/78-remove-issue-ordered-product-id.xml"/>
+    <include file="db/changelog/changes/79-drop-order-product-status.xml"/>
 
 </databaseChangeLog>

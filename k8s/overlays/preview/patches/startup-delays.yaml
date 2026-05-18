@@ -10,18 +10,9 @@
       port: 8080
     failureThreshold: 30
     periodSeconds: 10
-  target:
-    kind: Deployment
-    name: yambo-backend
 - op: replace
   path: /spec/template/spec/containers/0/readinessProbe/initialDelaySeconds
   value: 90
-  target:
-    kind: Deployment
-    name: yambo-backend
 - op: replace
   path: /spec/template/spec/containers/0/livenessProbe/initialDelaySeconds
   value: 120
-  target:
-    kind: Deployment
-    name: yambo-backend

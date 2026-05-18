@@ -38,7 +38,6 @@ describe('ConfirmDeliveryButton', () => {
         render(
             <ConfirmDeliveryButton
                 orderId="ORD001"
-                orderProductId="OP001"
                 onConfirmed={mockOnConfirmed}
             />
         );
@@ -59,7 +58,6 @@ describe('ConfirmDeliveryButton', () => {
         render(
             <ConfirmDeliveryButton
                 orderId="ORD001"
-                orderProductId="OP001"
                 onConfirmed={mockOnConfirmed}
             />
         );
@@ -81,7 +79,6 @@ describe('ConfirmDeliveryButton', () => {
         render(
             <ConfirmDeliveryButton
                 orderId="ORD001"
-                orderProductId="OP001"
                 onConfirmed={mockOnConfirmed}
             />
         );
@@ -89,7 +86,7 @@ describe('ConfirmDeliveryButton', () => {
         fireEvent.click(screen.getByRole('button'));
 
         await waitFor(() => {
-            expect(orderService.confirmProductDelivery).toHaveBeenCalledWith('ORD001', 'OP001');
+            expect(orderService.confirmProductDelivery).toHaveBeenCalledWith('ORD001');
             expect(mockOnConfirmed).toHaveBeenCalledWith(mockOrder);
             expect(toast.success).toHaveBeenCalledWith('Entrega confirmada correctamente.');
         });
@@ -104,7 +101,6 @@ describe('ConfirmDeliveryButton', () => {
         render(
             <ConfirmDeliveryButton
                 orderId="ORD001"
-                orderProductId="OP001"
                 onConfirmed={mockOnConfirmed}
             />
         );

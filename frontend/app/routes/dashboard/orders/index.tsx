@@ -21,7 +21,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { OrderStatus, ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
-import { exportService } from "~/services/exportService";
+import { exportService, type ExportReportType } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import type { IssueReportWindowModel } from "~/types/issueType";
@@ -56,6 +56,7 @@ export default function Orders() {
     const [products, setProducts] = useState<Product[]>([]);
     const [drops, setDrops] = useState<FamilyProduct[]>([]);
     const [selectedDropIds, setSelectedDropIds] = useState<string[]>([]);
+    const [reportType, setReportType] = useState<ExportReportType>('FULL');
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
@@ -313,16 +314,21 @@ export default function Orders() {
         }
     };
 
+    const REPORT_TYPE_LABELS: Record<ExportReportType, string> = {
+        FULL: 'Informe completo',
+        FACTORY: 'Hoja de fabricación',
+        WAREHOUSE: 'Hoja de almacén',
+    };
+
     const exportToExcel = async () => {
         setIsExporting(true);
         try {
-            await exportService.exportOrders(selectedDropIds);
+            await exportService.exportOrders(selectedDropIds, reportType);
 
             const dropsLabel = selectedDropIds.length > 0 ? `${selectedDropIds.length} drops seleccionados` : 'todos los drops';
-            toast.success(
-                `Excel de fabricación generado (${dropsLabel})`,
-            );
+            toast.success(`${REPORT_TYPE_LABELS[reportType]} generado (${dropsLabel})`);
             setIsExportModalOpen(false);
+            setReportType('FULL');
         } catch (err) {
             toast.error(getErrorMessage(err, "¡El Excel se nos atragantó!"));
         } finally {
@@ -661,7 +667,7 @@ export default function Orders() {
             <Modal
                 isOpen={isExportModalOpen}
                 onClose={() => {
-                    if (!isExporting) setIsExportModalOpen(false);
+                    if (!isExporting) { setIsExportModalOpen(false); setReportType('FULL'); }
                 }}
                 title="Exportar pedidos"
                 size="md"
@@ -669,7 +675,7 @@ export default function Orders() {
                     <>
                         <ButtonComponent
                             variant="secondary"
-                            onClick={() => setIsExportModalOpen(false)}
+                            onClick={() => { setIsExportModalOpen(false); setReportType('FULL'); }}
                             disabled={isExporting}
                         >
                             Cancelar
@@ -685,9 +691,36 @@ export default function Orders() {
                 }
             >
                 <div className="flex flex-col gap-4">
-                    <p className="text-sm text-gray-400">
-                        Selecciona los drops a incluir. Si no eliges ninguno, se exportan todos.
-                    </p>
+                    {/* Report type selector */}
+                    <div>
+                        <p className="text-xs font-medium text-gray-400 mb-2">Tipo de informe</p>
+                        <div className="flex gap-1 bg-gray-800 rounded-xl p-1">
+                            {([
+                                { value: 'FULL',      label: 'Completo' },
+                                { value: 'FACTORY',   label: 'Fábrica' },
+                                { value: 'WAREHOUSE', label: 'Almacén' },
+                            ] as { value: ExportReportType; label: string }[]).map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setReportType(opt.value)}
+                                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 ${
+                                        reportType === opt.value
+                                            ? 'bg-violet-600 text-white shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-200'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            {reportType === 'FULL' && 'Informe detallado: cliente, precio, estado y configuración por pedido.'}
+                            {reportType === 'FACTORY' && 'Solo configuraciones y cantidades agrupadas. Sin datos de clientes ni precios.'}
+                            {reportType === 'WAREHOUSE' && 'Configuraciones agrupadas con columnas de validación en blanco (Recibido / OK / Notas).'}
+                        </p>
+                    </div>
+
                     <MultiSelectComponent
                         label="Filtrar por Drops"
                         value={selectedDropIds}
@@ -705,9 +738,8 @@ export default function Orders() {
                             setSelectedDropIds(values);
                         }}
                     />
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-gray-500">
                         Se excluyen automáticamente los pedidos pendientes de pago y cancelados.
-                        El archivo incluye una hoja resumen y una hoja por producto con configuraciones detalladas.
                     </div>
                 </div>
             </Modal>

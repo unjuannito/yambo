@@ -11,6 +11,7 @@ import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.OrderExportService;
 import es.yambo_alco.web.service.OrderService;
+import es.yambo_alco.web.service.export.ExportReportType;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -295,7 +296,7 @@ class OrderControllerTest {
     @WithMockUser
     void exportOrders_WithAuth_ShouldReturnXlsxFile() throws Exception {
         byte[] fakeExcel = new byte[]{0x50, 0x4B, 0x03, 0x04}; // PK zip header
-        when(orderExportService.exportOrders(any())).thenReturn(fakeExcel);
+        when(orderExportService.exportOrders(any(), any(ExportReportType.class), any())).thenReturn(fakeExcel);
 
         mockMvc.perform(get("/orders/export"))
                 .andExpect(status().isOk())
@@ -309,7 +310,7 @@ class OrderControllerTest {
     @WithMockUser
     void exportOrders_WithDropIds_ShouldPassDropIds() throws Exception {
         byte[] fakeExcel = new byte[]{0x50, 0x4B, 0x03, 0x04};
-        when(orderExportService.exportOrders(eq(List.of("DROP001", "DROP002")))).thenReturn(fakeExcel);
+        when(orderExportService.exportOrders(eq(List.of("DROP001", "DROP002")), any(ExportReportType.class), any())).thenReturn(fakeExcel);
 
         mockMvc.perform(get("/orders/export")
                 .param("dropIds", "DROP001", "DROP002"))
@@ -349,7 +350,6 @@ class OrderControllerTest {
     @Test
     @WithMockUser
     void confirmOrderProductDelivery_AsOwner_ShouldReturnUpdatedOrder() throws Exception {
-        String orderProductId = java.util.UUID.randomUUID().toString();
         User user = User.builder().id("USER001").build();
         Order order = Order.builder()
                 .id("ORD001")
@@ -359,10 +359,10 @@ class OrderControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
-        when(orderService.confirmOrderProductDelivery("ORD001", orderProductId, "USER001")).thenReturn(order);
+        when(orderService.confirmOrderDelivery("ORD001", "USER001")).thenReturn(order);
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 
-        mockMvc.perform(put("/orders/my/ORD001/products/" + orderProductId + "/deliver"))
+        mockMvc.perform(put("/orders/my/ORD001/deliver"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("ORD001"))
                 .andExpect(jsonPath("$.status").value("PENDING_PRODUCTS"));
@@ -370,7 +370,7 @@ class OrderControllerTest {
 
     @Test
     void confirmOrderProductDelivery_WithoutAuth_ShouldReturn403() throws Exception {
-        mockMvc.perform(put("/orders/my/ORD001/products/" + java.util.UUID.randomUUID() + "/deliver"))
+        mockMvc.perform(put("/orders/my/ORD001/deliver"))
                 .andExpect(status().isForbidden());
     }
 }

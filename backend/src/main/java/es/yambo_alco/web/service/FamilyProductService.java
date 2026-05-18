@@ -6,7 +6,6 @@ import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
-import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
@@ -205,9 +204,8 @@ public class FamilyProductService {
         familyProduct.setStatus(status);
         FamilyProduct saved = familyProductRepository.save(familyProduct);
 
-        // Propagate status to order products
-        OrderProductStatus orderProductStatus = OrderProductStatus.fromFamilyProductStatus(status);
-        List<PendingOrderEmail> pendingEmails = orderService.updateOrderProductStatusByFamilyProduct(id, orderProductStatus);
+        // Propagate status change to orders
+        List<PendingOrderEmail> pendingEmails = orderService.updateOrderStatusByFamilyProduct(id, status);
 
         return new FamilyProductUpdateResult(saved, pendingEmails);
     }
@@ -227,8 +225,7 @@ public class FamilyProductService {
             drop.setStatus(FamilyProductStatus.ORDER_CLOSED);
             familyProductRepository.save(drop);
 
-            OrderProductStatus orderProductStatus = OrderProductStatus.fromFamilyProductStatus(FamilyProductStatus.ORDER_CLOSED);
-            List<PendingOrderEmail> pendingEmails = orderService.updateOrderProductStatusByFamilyProduct(drop.getId(), orderProductStatus);
+            List<PendingOrderEmail> pendingEmails = orderService.updateOrderStatusByFamilyProduct(drop.getId(), FamilyProductStatus.ORDER_CLOSED);
             allPendingEmails.addAll(pendingEmails);
         }
 

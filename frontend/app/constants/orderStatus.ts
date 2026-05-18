@@ -51,59 +51,6 @@ export const ORDER_WORKFLOW_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     [OrderStatus.CANCELED]: [],
 };
 
-// ── Order Product Status ──
-
-export enum OrderProductStatus {
-    OPEN = 'OPEN',
-    ORDER_CLOSED = 'ORDER_CLOSED',
-    PENDING_FABRICATION = 'PENDING_FABRICATION',
-    TO_BE_DELIVERED = 'TO_BE_DELIVERED',
-    DELIVERED = 'DELIVERED',
-    CANCELED = 'CANCELED',
-}
-
-export const ORDER_PRODUCT_STATUS_CONFIG = {
-    OPEN: {
-        label: "Abierto",
-        shortLabel: "Abierto",
-        className: "bg-green-100 text-green-800"
-    },
-    ORDER_CLOSED: {
-        label: "Pedidos Cerrados",
-        shortLabel: "Cerrado",
-        className: "bg-blue-100 text-blue-800"
-    },
-    PENDING_FABRICATION: {
-        label: "En Fabricación",
-        shortLabel: "Fabricación",
-        className: "bg-yellow-100 text-yellow-800"
-    },
-    TO_BE_DELIVERED: {
-        label: "Por Entregar",
-        shortLabel: "Por Entregar",
-        className: "bg-orange-100 text-orange-800"
-    },
-    DELIVERED: {
-        label: "Entregado",
-        shortLabel: "Entregado",
-        className: "bg-green-100 text-green-800"
-    },
-    CANCELED: {
-        label: "Cancelado",
-        shortLabel: "Cancelado",
-        className: "bg-red-100 text-red-800"
-    }
-} as const;
-
-export const ORDER_PRODUCT_WORKFLOW_TRANSITIONS: Record<OrderProductStatus, OrderProductStatus[]> = {
-    [OrderProductStatus.OPEN]: [OrderProductStatus.ORDER_CLOSED, OrderProductStatus.CANCELED],
-    [OrderProductStatus.ORDER_CLOSED]: [OrderProductStatus.PENDING_FABRICATION, OrderProductStatus.CANCELED],
-    [OrderProductStatus.PENDING_FABRICATION]: [OrderProductStatus.TO_BE_DELIVERED, OrderProductStatus.CANCELED],
-    [OrderProductStatus.TO_BE_DELIVERED]: [OrderProductStatus.DELIVERED, OrderProductStatus.CANCELED],
-    [OrderProductStatus.DELIVERED]: [],
-    [OrderProductStatus.CANCELED]: [],
-};
-
 // ── Family Product (Drop) Status ──
 
 export enum FamilyProductStatus {

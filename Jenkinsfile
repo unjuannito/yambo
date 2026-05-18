@@ -326,38 +326,18 @@ pipeline {
                         kustomize edit set image ${BACKEND_IMAGE}=${BACKEND_IMAGE}:${env.BACKEND_TAG}
                     """
 
-                    // -- Write the domain patch for this preview
-                    writeFile file: "${overlayDir}/patches/domain.yaml", text: """
-- op: replace
+                    // -- Write the domain patches for this preview (split by target resource)
+                    writeFile file: "${overlayDir}/patches/domain-backend.yaml", text: """- op: replace
   path: /spec/template/spec/containers/0/env/0/value
   value: "https://${deployLabel}.${APP_DOMAIN}"
-  target:
-    kind: Deployment
-    name: yambo-backend
-- op: replace
+"""
+                    writeFile file: "${overlayDir}/patches/domain-frontend.yaml", text: """- op: replace
   path: /spec/template/spec/containers/0/env/1/value
   value: "https://${deployLabel}.${APP_DOMAIN}"
-  target:
-    kind: Deployment
-    name: yambo-frontend
-- op: replace
+"""
+                    writeFile file: "${overlayDir}/patches/domain-ingress.yaml", text: """- op: replace
   path: /spec/rules/0/host
   value: ${deployLabel}.${APP_DOMAIN}
-  target:
-    kind: Ingress
-    name: yambo-ingress
-- op: replace
-  path: /spec/tls/0/hosts/0
-  value: ${deployLabel}.${APP_DOMAIN}
-  target:
-    kind: Ingress
-    name: yambo-ingress
-- op: replace
-  path: /spec/tls/0/secretName
-  value: yambo-tls-${deployLabel}
-  target:
-    kind: Ingress
-    name: yambo-ingress
 """
 
                     // -- Apply namespace + secrets (idempotent)
@@ -375,17 +355,27 @@ pipeline {
                                 BEGIN { doc = ""; is_secret = 0 }
                                 /^---/ {
                                     if (is_secret) { printf "%s", doc }
-                                    doc = "---\n"; is_secret = 0; next
+                                    doc = "---\\n"; is_secret = 0; next
                                 }
-                                { doc = doc \$0 "\n" }
+                                { doc = doc \$0 "\\n" }
                                 /^kind: Secret\$/ { is_secret = 1 }
                                 END { if (is_secret) { printf "%s", doc } }
                             ' | kubectl apply -f -
                         fi
                     """
 
-                    // -- Deploy database
+                    // -- Deploy database (PVCs first, then the deployment/service)
                     sh """
+                        kubectl kustomize ${overlayDir} | awk '
+                            BEGIN { doc = ""; is_pvc = 0 }
+                            /^---/ {
+                                if (is_pvc) { printf "%s", doc }
+                                doc = "---\\n"; is_pvc = 0; next
+                            }
+                            { doc = doc \$0 "\\n" }
+                            /^kind: PersistentVolumeClaim\$/ { is_pvc = 1 }
+                            END { if (is_pvc) { printf "%s", doc } }
+                        ' | kubectl apply -f -
                         kubectl kustomize ${overlayDir} | kubectl apply --selector='app=postgres' -f -
                         kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
                     """
@@ -412,6 +402,7 @@ pipeline {
 
                             PROD_DB_USER=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d)
                             PROD_DB_PASS=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d)
+                            PREVIEW_DB_USER=\$(kubectl get secret yambo-secrets -n ${previewNs} -o jsonpath='{.data.DB_USER}' | base64 -d)
 
                             chmod +x scripts/anonymize-dump.sh
                             kubectl cp scripts/anonymize-dump.sh ${previewNs}/${podName}:/tmp/anonymize-dump.sh
@@ -427,9 +418,11 @@ pipeline {
                             kubectl exec ${podName} -n ${previewNs} -- env \\
                                 PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \\
                                 PROD_DB_PORT=5432 \\
+                                PROD_DB_USER=\${PROD_DB_USER} \\
+                                PROD_DB_PASS=\${PROD_DB_PASS} \\
                                 PGPASSFILE=/tmp/.pgpass \\
                                 PGHOST=/var/run/postgresql \\
-                                PGUSER=\\\$PROD_DB_USER \\
+                                PGUSER=\${PREVIEW_DB_USER} \\
                                 ANONYMIZE_DUMP_MODE=database-bootstrap \\
                                 bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
 
@@ -500,7 +493,16 @@ pipeline {
                         fi
                     """
 
-                    sh "kubectl apply -k ${overlayDir}"
+                    // PRODUCTION SAFETY: Never auto-override secrets unless explicitly forced
+                    // Kustomize output includes yambo-secrets, but we exclude it from deployment
+                    // to protect real credentials. Secrets must be pre-applied to the cluster.
+                    sh "kubectl apply -k ${overlayDir} --selector='kind!=Secret'"
+
+                    // Only recreate secrets if FORCE_PROD_DEPLOY is explicitly enabled
+                    if (params.FORCE_PROD_DEPLOY) {
+                        echo "WARNING: Forcing production secret re-deployment (FORCE_PROD_DEPLOY=true)"
+                        sh "kubectl apply -k ${overlayDir} -l kind=Secret"
+                    }
 
                     sh "kubectl rollout status deployment/postgres     -n ${NAMESPACE} --timeout=120s"
                     sh "kubectl rollout status deployment/yambo-backend  -n ${NAMESPACE} --timeout=300s"

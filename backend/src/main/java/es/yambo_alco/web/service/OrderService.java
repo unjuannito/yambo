@@ -5,7 +5,6 @@ import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.IssueStatus;
-import es.yambo_alco.web.model.enums.OrderProductStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
@@ -31,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -81,7 +79,6 @@ public class OrderService {
 
         for (OrderProduct op : orderProducts) {
             op.setOrderId(order.getId());
-            op.setStatus(OrderProductStatus.OPEN);
             orderProductRepository.save(op);
         }
 
@@ -387,7 +384,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Order confirmOrderProductDelivery(@NonNull String orderId, @NonNull String orderProductId,
+    public Order confirmOrderDelivery(@NonNull String orderId,
             @NonNull String currentUserId) {
         Order order = getOrderById(orderId);
 
@@ -395,20 +392,10 @@ public class OrderService {
             throw new ForbiddenException("You do not have permission to update this order");
         }
 
-        OrderProduct orderProduct = orderProductRepository.findById(UUID.fromString(orderProductId))
-                .orElseThrow(() -> new ResourceNotFoundException("Order product not found: " + orderProductId));
-
-        if (!orderProduct.getOrderId().equals(orderId)) {
-            throw new ResourceNotFoundException("Order product not found: " + orderProductId);
-        }
-
-        if (orderProduct.getStatus() != OrderProductStatus.TO_BE_DELIVERED) {
+        if (order.getStatus() != OrderStatus.PENDING_PRODUCTS) {
             throw new BadRequestException(
-                    "Order product can only be confirmed as delivered when in TO_BE_DELIVERED status");
+                    "Order can only be confirmed as delivered when in PENDING_PRODUCTS status");
         }
-
-        orderProduct.setStatus(OrderProductStatus.DELIVERED);
-        orderProductRepository.save(orderProduct);
 
         checkAndCloseOrder(orderId);
 
@@ -454,18 +441,6 @@ public class OrderService {
             return;
         }
 
-        List<OrderProduct> orderProducts = getOrderProducts(orderId);
-        if (orderProducts.isEmpty()) {
-            return;
-        }
-
-        boolean allDelivered = orderProducts.stream()
-                .allMatch(op -> op.getStatus() == OrderProductStatus.DELIVERED);
-
-        if (!allDelivered) {
-            return;
-        }
-
         if (issueRepository.findByOrderId(orderId).stream().anyMatch(this::isOpenIssue)) {
             return;
         }
@@ -485,13 +460,13 @@ public class OrderService {
     }
 
     /**
-     * Update all order product statuses for products belonging to a given family product.
+     * Update order statuses for orders containing products belonging to a given family product.
      * Called when the family product status changes.
      * Returns a list of pending email notifications to be sent asynchronously.
      */
     @Transactional
-    public List<PendingOrderEmail> updateOrderProductStatusByFamilyProduct(@NonNull String familyProductId,
-            @NonNull OrderProductStatus newStatus) {
+    public List<PendingOrderEmail> updateOrderStatusByFamilyProduct(@NonNull String familyProductId,
+            @NonNull es.yambo_alco.web.model.enums.FamilyProductStatus newFamilyStatus) {
         List<Product> products = productRepository.findAll(
                 (root, query, cb) -> cb.equal(root.get("familyProduct").get("id"), familyProductId));
 
@@ -506,61 +481,33 @@ public class OrderService {
         List<OrderProduct> orderProducts = orderProductRepository.findAll(
                 (root, query, cb) -> root.get("productId").in(productIds));
 
-        Set<String> affectedOrderIds = new java.util.HashSet<>();
-
-        for (OrderProduct op : orderProducts) {
-            // Don't update canceled order products
-            if (op.getStatus() == OrderProductStatus.CANCELED) {
-                continue;
-            }
-            op.setStatus(newStatus);
-            orderProductRepository.save(op);
-            affectedOrderIds.add(op.getOrderId());
-        }
+        Set<String> affectedOrderIds = orderProducts.stream()
+                .map(OrderProduct::getOrderId)
+                .collect(Collectors.toSet());
 
         List<PendingOrderEmail> pendingEmails = new ArrayList<>();
 
         // When drop moves to fabrication or beyond, transition orders from PAYMENT_CONFIRMED to PENDING_PRODUCTS
-        if (newStatus == OrderProductStatus.PENDING_FABRICATION
-                || newStatus == OrderProductStatus.TO_BE_DELIVERED
-                || newStatus == OrderProductStatus.DELIVERED) {
+        boolean moveToProduction = newFamilyStatus == es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION
+                || newFamilyStatus == es.yambo_alco.web.model.enums.FamilyProductStatus.TO_BE_DELIVERED
+                || newFamilyStatus == es.yambo_alco.web.model.enums.FamilyProductStatus.DELIVERED;
+
+        if (moveToProduction) {
             for (String orderId : affectedOrderIds) {
                 Order order = orderRepository.findById(orderId).orElse(null);
                 if (order != null && order.getStatus() == OrderStatus.PAYMENT_CONFIRMED) {
                     order.setStatus(OrderStatus.PENDING_PRODUCTS);
                     orderRepository.save(order);
-
                     recordStatusChange(orderId, OrderStatus.PAYMENT_CONFIRMED, OrderStatus.PENDING_PRODUCTS, null);
                     pendingEmails.add(new PendingOrderEmail(orderId, OrderStatus.PENDING_PRODUCTS));
                 }
             }
         }
 
-        // Check if any affected orders should be auto-closed
-        if (newStatus == OrderProductStatus.DELIVERED) {
+        // When drop moves to DELIVERED, auto-close any fully-eligible orders
+        if (newFamilyStatus == es.yambo_alco.web.model.enums.FamilyProductStatus.DELIVERED) {
             for (String orderId : affectedOrderIds) {
-                Order order = getOrderById(orderId);
-                if (order.getStatus() == OrderStatus.CLOSED || order.getStatus() == OrderStatus.CANCELED) {
-                    continue;
-                }
-                List<OrderProduct> ops = getOrderProducts(orderId);
-                if (ops.isEmpty()) continue;
-                boolean allDelivered = ops.stream()
-                        .allMatch(op -> op.getStatus() == OrderProductStatus.DELIVERED);
-                if (!allDelivered) continue;
-                List<Issue> issues = issueRepository.findByOrderId(orderId);
-                boolean hasOpenIssues = issues.stream()
-                        .anyMatch(issue -> {
-                            IssueStatus is = issue.getStatus();
-                            return is == IssueStatus.OPEN || is == IssueStatus.IN_PROGRESS || is == IssueStatus.REOPENED;
-                        });
-                if (hasOpenIssues) continue;
-
-                order.setStatus(OrderStatus.CLOSED);
-                order.setClosedAt(LocalDateTime.now());
-                orderRepository.save(order);
-                recordStatusChange(orderId, OrderStatus.PENDING_PRODUCTS, OrderStatus.CLOSED, null);
-                pendingEmails.add(new PendingOrderEmail(orderId, OrderStatus.CLOSED));
+                checkAndCloseOrder(orderId);
             }
         }
 

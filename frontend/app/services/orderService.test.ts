@@ -26,10 +26,10 @@ describe('OrderService', () => {
         it('calls PUT with the correct endpoint and returns the updated order', async () => {
             putSpy.mockResolvedValue(mockOrder);
 
-            const result = await orderService.confirmProductDelivery('ORD001', 'OP001');
+            const result = await orderService.confirmProductDelivery('ORD001');
 
             expect(putSpy).toHaveBeenCalledWith(
-                '/orders/my/ORD001/products/OP001/deliver',
+                '/orders/my/ORD001/deliver',
                 {}
             );
             expect(result).toEqual(mockOrder);
@@ -40,7 +40,7 @@ describe('OrderService', () => {
             putSpy.mockRejectedValue(error);
 
             await expect(
-                orderService.confirmProductDelivery('ORD001', 'OP001')
+                orderService.confirmProductDelivery('ORD001')
             ).rejects.toThrow('Forbidden');
         });
     });

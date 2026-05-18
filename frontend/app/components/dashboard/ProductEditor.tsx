@@ -655,6 +655,24 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                         />
                                     </div>
 
+                                    <div className="mb-4">
+                                        <p className="text-xs font-medium text-gray-500 mb-2">Excluir de informes Excel</p>
+                                        <div className="flex flex-col gap-2">
+                                            <CheckboxComponent
+                                                label="Excluir del informe completo"
+                                                variant="left"
+                                                checked={!!option.excludeFromFull}
+                                                onChange={(e) => updateOption(optionIndex, { excludeFromFull: e.target.checked || undefined })}
+                                            />
+                                            <CheckboxComponent
+                                                label="Excluir de los informes de producción (Fábrica y Almacén)"
+                                                variant="left"
+                                                checked={!!option.excludeFromProduction}
+                                                onChange={(e) => updateOption(optionIndex, { excludeFromProduction: e.target.checked || undefined })}
+                                            />
+                                        </div>
+                                    </div>
+
                                     {option.type === "select" && (
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
