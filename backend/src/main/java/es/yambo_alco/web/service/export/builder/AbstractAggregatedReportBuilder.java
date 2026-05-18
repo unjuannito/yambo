@@ -84,59 +84,23 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
         int currentRow = 0;
 
         // ── Logo ──
-        if (logoBytes != null) {
-            try {
-                int pictureIdx = wb.addPicture(logoBytes, Workbook.PICTURE_TYPE_PNG);
-                CreationHelper helper = wb.getCreationHelper();
-                Drawing<?> drawing = ws.createDrawingPatriarch();
-                ClientAnchor anchor = helper.createClientAnchor();
-                anchor.setCol1(0);
-                anchor.setRow1(0);
-                anchor.setCol2(1);
-                anchor.setRow2(3);
-                drawing.createPicture(anchor, pictureIdx);
-                ExcelWorkbookHelper.getOrCreateRow(ws, 0).setHeightInPoints(30);
-                ExcelWorkbookHelper.getOrCreateRow(ws, 1).setHeightInPoints(30);
-                ExcelWorkbookHelper.getOrCreateRow(ws, 2).setHeightInPoints(30);
-                currentRow = 4;
-            } catch (Exception e) {
-                log.warn("Could not embed logo in Excel: {}", e.getMessage());
-            }
-        }
+        currentRow = ReportSheetSectionHelper.addLogo(wb, ws, logoBytes, log);
 
         // ── Title ──
         String dateStr = LocalDateTime.now().format(
                 DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", new Locale("es", "ES")));
-        Row titleRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-        Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue(getReportTitle() + " — " + dateStr);
-        titleCell.setCellStyle(styles.title);
-        ws.addMergedRegion(new CellRangeAddress(currentRow, currentRow, 0, 2));
-        titleRow.setHeightInPoints(28);
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, 2, getReportTitle() + " — " + dateStr, styles.title);
         currentRow++;
 
         // ── Subtitle: selected drops ──
-        if (!selectedDropNames.isEmpty()) {
-            Row subRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-            Cell subCell = subRow.createCell(0);
-            subCell.setCellValue("Drops: " + String.join(", ", selectedDropNames));
-            subCell.setCellStyle(styles.subtitle);
-            ws.addMergedRegion(new CellRangeAddress(currentRow, currentRow, 0, 2));
-            currentRow++;
-        }
+        currentRow = ReportSheetSectionHelper.addDropsSubtitle(ws, currentRow, 2, selectedDropNames, styles.subtitle);
 
         currentRow++; // blank row
 
         // ── Table header — no price columns ──
         int headerRowNum = currentRow;
-        String[] headers = {"Producto", "Drop", "Unidades Totales"};
-        Row headerRow = ExcelWorkbookHelper.getOrCreateRow(ws, headerRowNum);
-        headerRow.setHeightInPoints(22);
-        for (int i = 0; i < headers.length; i++) {
-            Cell cell = headerRow.createCell(i);
-            cell.setCellValue(headers[i]);
-            cell.setCellStyle(styles.header);
-        }
+        List<String> headers = List.of("Producto", "Drop", "Unidades Totales");
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, headers, styles.header);
         currentRow++;
 
         // ── Data rows ──
@@ -210,12 +174,8 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
         int currentRow = 0;
 
         // ── Product title ──
-        Row titleRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-        Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue(group.productName);
-        titleCell.setCellStyle(styles.productTitle);
-        ws.addMergedRegion(new CellRangeAddress(currentRow, currentRow, 0, Math.max(allHeaders.size() - 1, 0)));
-        titleRow.setHeightInPoints(24);
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(allHeaders.size() - 1, 0), group.productName, styles.productTitle);
+        ExcelWorkbookHelper.getOrCreateRow(ws, currentRow).setHeightInPoints(24);
         currentRow++;
 
         // ── Product metadata ──
@@ -224,24 +184,13 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
                 {"Total unidades:", String.valueOf(group.totalQty())},
                 {"Variantes:",     String.valueOf(aggregated.size())},
         };
-        for (String[] m : meta) {
-            Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-            Cell label = row.createCell(0); label.setCellValue(m[0]); label.setCellStyle(styles.metaLabel);
-            Cell value = row.createCell(1); value.setCellValue(m[1]); value.setCellStyle(styles.metaValue);
-            currentRow++;
-        }
+        currentRow = ReportSheetSectionHelper.addProductMetaRows(ws, currentRow, meta, styles);
 
         currentRow++; // blank separator
 
         // ── Column headers ──
         int headerRowNum = currentRow;
-        Row headerRow = ExcelWorkbookHelper.getOrCreateRow(ws, headerRowNum);
-        headerRow.setHeightInPoints(22);
-        for (int i = 0; i < allHeaders.size(); i++) {
-            Cell cell = headerRow.createCell(i);
-            cell.setCellValue(allHeaders.get(i));
-            cell.setCellStyle(styles.header);
-        }
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, allHeaders, styles.header);
         currentRow++;
 
         // ── Aggregated data rows ──
