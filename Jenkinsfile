@@ -120,6 +120,13 @@ pipeline {
             }
             steps {
                 script {
+                    if (env.BRANCH_NAME == 'develop') {
+                        env.FRONTEND_CHANGED = 'true'
+                        env.BACKEND_CHANGED  = 'true'
+                        echo 'Develop branch: forcing rebuild and redeploy of both images'
+                        return
+                    }
+
                     def check = { String image, String tag ->
                         def code = sh(
                             script: "curl -sk -o /dev/null -w '%{http_code}' http://${REGISTRY}/v2/${image}/manifests/${tag}",
