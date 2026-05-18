@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ReportsPage, { meta } from './index';
 import { useReportData } from '~/hooks/useReportData';
+import { ReportDoughnutChart } from '~/components/reports/ReportCharts';
 
 vi.mock('~/hooks/useReportData', () => ({
     useReportData: vi.fn(),
@@ -27,7 +28,7 @@ vi.mock('~/components/reports/ReportCharts', () => ({
     ),
     ReportLineChart: () => <div>line-chart</div>,
     ReportBarChart: () => <div>bar-chart</div>,
-    ReportDoughnutChart: () => <div>doughnut-chart</div>,
+    ReportDoughnutChart: vi.fn(() => <div>doughnut-chart</div>),
 }));
 
 const reportData = {
@@ -197,5 +198,63 @@ describe('reports route', () => {
         expect(screen.getByText('5%')).toBeInTheDocument();
         expect(screen.getByText('2%')).toBeInTheDocument();
         expect(screen.queryByText('Sin datos en este periodo')).not.toBeInTheDocument();
+    });
+
+    it('uses fallback labels and colors for unknown status keys in doughnut charts', () => {
+        vi.mocked(useReportData).mockReturnValue({
+            data: {
+                ...reportData,
+                orders: {
+                    ...reportData.orders,
+                    ordersByStatus: { CUSTOM_ORDER_STATUS: 2 },
+                },
+                issues: {
+                    ...reportData.issues,
+                    issuesByStatus: { CUSTOM_ISSUE_STATUS: 1 },
+                },
+                products: {
+                    ...reportData.products,
+                    productsByStatus: { CUSTOM_PRODUCT_STATUS: 3 },
+                },
+            },
+            loading: false,
+            error: null,
+            refetch: vi.fn(),
+            startDate: '2026-05-01',
+            endDate: '2026-05-18',
+            setStartDate: vi.fn(),
+            setEndDate: vi.fn(),
+        } as any);
+
+        render(<ReportsPage />);
+
+        const calls = vi.mocked(ReportDoughnutChart).mock.calls.map((call) => call[0] as any);
+
+        expect(
+            calls.some((props) =>
+                Array.isArray(props.labels) &&
+                props.labels.includes('CUSTOM_ORDER_STATUS') &&
+                Array.isArray(props.colors) &&
+                props.colors.includes('#6b7280'),
+            ),
+        ).toBe(true);
+
+        expect(
+            calls.some((props) =>
+                Array.isArray(props.labels) &&
+                props.labels.includes('CUSTOM_ISSUE_STATUS') &&
+                Array.isArray(props.colors) &&
+                props.colors.includes('#6b7280'),
+            ),
+        ).toBe(true);
+
+        expect(
+            calls.some((props) =>
+                Array.isArray(props.labels) &&
+                props.labels.includes('CUSTOM_PRODUCT_STATUS') &&
+                Array.isArray(props.colors) &&
+                props.colors.includes('#6b7280'),
+            ),
+        ).toBe(true);
     });
 });

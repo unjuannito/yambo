@@ -326,6 +326,39 @@ describe('my-orders route', () => {
             const lastIssueWindow = vi.mocked(CreateIssueModal).mock.lastCall?.[0]?.issueWindow;
             expect(lastIssueWindow?.initialSelectedOrderedProductIds).toEqual(['prod-1']);
         });
+
+        it('does not open issue modal when the order has no products and shows raw unknown status', async () => {
+            const emptyUnknownStatusOrder: Order = {
+                ...mockOrder,
+                id: 'ORD-EMPTY',
+                status: 'CUSTOM_STATUS' as any,
+                products: [],
+            };
+
+            vi.mocked(orderService.getMyOrders).mockResolvedValue({
+                content: [emptyUnknownStatusOrder],
+                page: { totalElements: 1, totalPages: 1, number: 0, size: 50 },
+            } as any);
+
+            renderPage();
+
+            await waitFor(() => {
+                expect(screen.getByText('#ORD-EMPTY')).toBeInTheDocument();
+                expect(screen.getByText('CUSTOM_STATUS')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByText('Ver detalles'));
+
+            await waitFor(() => {
+                expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByText('Nueva incidencia (varios productos)'));
+
+            await waitFor(() => {
+                expect(screen.queryByTestId('create-issue-modal')).not.toBeInTheDocument();
+            });
+        });
     });
 
     describe('order detail product rendering', () => {

@@ -97,7 +97,20 @@ vi.mock('~/components/common/forms/SelectComponent', () => ({
 }));
 
 vi.mock('~/components/common/forms/CheckboxComponent', () => ({
-    default: ({ label }: { label: string }) => <label>{label}<input type="checkbox" /></label>,
+    default: ({
+        label,
+        checked,
+        onChange,
+    }: {
+        label: string;
+        checked?: boolean;
+        onChange?: (e: any) => void;
+    }) => (
+        <label>
+            {label}
+            <input type="checkbox" checked={checked} onChange={(e) => onChange?.(e)} />
+        </label>
+    ),
 }));
 
 vi.mock('~/components/common/forms/MarkdownEditor', () => ({
@@ -237,5 +250,51 @@ describe('ProductEditor', () => {
         });
 
         expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/merch/prod-123');
+    });
+
+    it('allows configuring options and normalizes text_input options on create', async () => {
+        vi.mocked(productService.createProduct).mockResolvedValue({ id: 'new-id' } as any);
+
+        render(<ProductEditor mode="create" />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Crear Nuevo Producto')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('+ Añadir Opción'));
+        fireEvent.click(screen.getByText('+ Añadir Valor'));
+
+        fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'text_input' } });
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Precio adicional (€)')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Crear Producto'));
+
+        await waitFor(() => {
+            expect(productService.createProduct).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    options: [
+                        expect.objectContaining({
+                            type: 'text_input',
+                            values: undefined,
+                        }),
+                    ],
+                }),
+            );
+        });
+    });
+
+    it('navigates back when initial family products loading fails', async () => {
+        vi.mocked(familyProductService.listFamilyProducts).mockRejectedValue(new Error('load-failed'));
+
+        render(<ProductEditor mode="create" />);
+
+        await waitFor(() => {
+            expect(toast.error).toHaveBeenCalled();
+        });
+
+        expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch');
     });
 });
