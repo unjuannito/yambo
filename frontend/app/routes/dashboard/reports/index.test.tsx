@@ -173,7 +173,11 @@ describe('reports route', () => {
                     topProductsByRevenue: [{ productId: 'p1', productName: 'Prod 1', quantity: 3, revenue: 30 }],
                     salesByFamily: [{ familyId: 'f1', familyName: 'Drop Uno', quantity: 3, revenue: 30 }],
                     productsByStatus: { PENDING_PRODUCTS: 1 },
-                    conversionFunnel: [{ productId: 'p1', productName: 'Prod 1', views: 100, purchases: 5, conversionRate: 5 }],
+                    conversionFunnel: [
+                        { productId: 'p1', productName: 'Prod 1', views: 100, purchases: 12, conversionRate: 12 },
+                        { productId: 'p2', productName: 'Prod 2', views: 100, purchases: 5, conversionRate: 5 },
+                        { productId: 'p3', productName: 'Prod 3', views: 100, purchases: 2, conversionRate: 2 },
+                    ],
                 },
             },
             loading: false,
@@ -189,6 +193,9 @@ describe('reports route', () => {
 
         expect(screen.getByText('Drop Uno')).toBeInTheDocument();
         expect(screen.getByText('Prod 1')).toBeInTheDocument();
+        expect(screen.getByText('12%')).toBeInTheDocument();
+        expect(screen.getByText('5%')).toBeInTheDocument();
+        expect(screen.getByText('2%')).toBeInTheDocument();
         expect(screen.queryByText('Sin datos en este periodo')).not.toBeInTheDocument();
     });
 });

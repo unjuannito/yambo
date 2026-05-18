@@ -117,79 +117,79 @@ public final class ExcelStyleFactory {
         short dateFmt     = wb.createDataFormat().getFormat("DD/MM/YYYY");
 
         // ── Title ──
-        s.title = wb.createCellStyle();
-        s.title.setFont(titleFont);
+        s.setTitle(wb.createCellStyle());
+        s.getTitle().setFont(titleFont);
 
         // ── Product title ──
-        s.productTitle = wb.createCellStyle();
-        s.productTitle.setFont(productTitleFont);
+        s.setProductTitle(wb.createCellStyle());
+        s.getProductTitle().setFont(productTitleFont);
 
         // ── Section title ──
-        s.sectionTitle = wb.createCellStyle();
-        s.sectionTitle.setFont(sectionTitleFont);
+        s.setSectionTitle(wb.createCellStyle());
+        s.getSectionTitle().setFont(sectionTitleFont);
 
         // ── Subtitle ──
-        s.subtitle = wb.createCellStyle();
-        s.subtitle.setFont(subtitleFont);
+        s.setSubtitle(wb.createCellStyle());
+        s.getSubtitle().setFont(subtitleFont);
 
         // ── Note ──
-        s.note = wb.createCellStyle();
-        s.note.setFont(noteFont);
+        s.setNote(wb.createCellStyle());
+        s.getNote().setFont(noteFont);
 
         // ── Header ──
-        s.header = wb.createCellStyle();
-        s.header.setFont(headerFont);
-        s.header.setFillForegroundColor(xssfColor(BRAND_PRIMARY));
-        s.header.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        s.header.setAlignment(HorizontalAlignment.CENTER);
-        s.header.setVerticalAlignment(VerticalAlignment.CENTER);
-        s.header.setWrapText(true);
-        applyThinBorders(s.header);
+        s.setHeader(wb.createCellStyle());
+        s.getHeader().setFont(headerFont);
+        s.getHeader().setFillForegroundColor(xssfColor(BRAND_PRIMARY));
+        s.getHeader().setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        s.getHeader().setAlignment(HorizontalAlignment.CENTER);
+        s.getHeader().setVerticalAlignment(VerticalAlignment.CENTER);
+        s.getHeader().setWrapText(true);
+        applyThinBorders(s.getHeader());
 
         // ── Data alternating rows ──
-        s.dataAlt1 = createDataStyle(wb, dataFont, BRAND_LIGHT, null,        HorizontalAlignment.LEFT);
-        s.dataAlt2 = createDataStyle(wb, dataFont, null,        null,        HorizontalAlignment.LEFT);
+        s.setDataAlt1(createDataStyle(wb, dataFont, BRAND_LIGHT, null, HorizontalAlignment.LEFT));
+        s.setDataAlt2(createDataStyle(wb, dataFont, null, null, HorizontalAlignment.LEFT));
 
-        s.centerAlt1 = createDataStyle(wb, dataFont, BRAND_LIGHT, null,        HorizontalAlignment.CENTER);
-        s.centerAlt2 = createDataStyle(wb, dataFont, null,        null,        HorizontalAlignment.CENTER);
+        s.setCenterAlt1(createDataStyle(wb, dataFont, BRAND_LIGHT, null, HorizontalAlignment.CENTER));
+        s.setCenterAlt2(createDataStyle(wb, dataFont, null, null, HorizontalAlignment.CENTER));
 
-        s.currencyAlt1 = createDataStyle(wb, dataFont, BRAND_LIGHT, currencyFmt, HorizontalAlignment.RIGHT);
-        s.currencyAlt2 = createDataStyle(wb, dataFont, null,        currencyFmt, HorizontalAlignment.RIGHT);
+        s.setCurrencyAlt1(createDataStyle(wb, dataFont, BRAND_LIGHT, currencyFmt, HorizontalAlignment.RIGHT));
+        s.setCurrencyAlt2(createDataStyle(wb, dataFont, null, currencyFmt, HorizontalAlignment.RIGHT));
 
-        s.dateAlt1 = createDataStyle(wb, dataFont, BRAND_LIGHT, dateFmt, HorizontalAlignment.CENTER);
-        s.dateAlt2 = createDataStyle(wb, dataFont, null,        dateFmt, HorizontalAlignment.CENTER);
+        s.setDateAlt1(createDataStyle(wb, dataFont, BRAND_LIGHT, dateFmt, HorizontalAlignment.CENTER));
+        s.setDateAlt2(createDataStyle(wb, dataFont, null, dateFmt, HorizontalAlignment.CENTER));
 
-        s.boldCenterAlt1 = createDataStyle(wb, dataBoldFont, BRAND_LIGHT, null, HorizontalAlignment.CENTER);
-        s.boldCenterAlt2 = createDataStyle(wb, dataBoldFont, null,        null, HorizontalAlignment.CENTER);
+        s.setBoldCenterAlt1(createDataStyle(wb, dataBoldFont, BRAND_LIGHT, null, HorizontalAlignment.CENTER));
+        s.setBoldCenterAlt2(createDataStyle(wb, dataBoldFont, null, null, HorizontalAlignment.CENTER));
 
         // ── Totals ──
-        s.totals = createTotalsStyle(wb, totalsFont, null);
+        s.setTotals(createTotalsStyle(wb, totalsFont, null));
 
-        s.totalsLabel = createTotalsStyle(wb, totalsFont, null);
-        s.totalsLabel.setAlignment(HorizontalAlignment.LEFT);
+        s.setTotalsLabel(createTotalsStyle(wb, totalsFont, null));
+        s.getTotalsLabel().setAlignment(HorizontalAlignment.LEFT);
 
-        s.totalsLabelRight = createTotalsStyle(wb, totals10Font, null);
-        s.totalsLabelRight.setAlignment(HorizontalAlignment.RIGHT);
+        s.setTotalsLabelRight(createTotalsStyle(wb, totals10Font, null));
+        s.getTotalsLabelRight().setAlignment(HorizontalAlignment.RIGHT);
 
-        s.totalsCenter = createTotalsStyle(wb, totalsFont, null);
-        s.totalsCenter.setAlignment(HorizontalAlignment.CENTER);
+        s.setTotalsCenter(createTotalsStyle(wb, totalsFont, null));
+        s.getTotalsCenter().setAlignment(HorizontalAlignment.CENTER);
 
-        s.totalsCurrency = createTotalsStyle(wb, totalsFont, currencyFmt);
-        s.totalsCurrency.setAlignment(HorizontalAlignment.RIGHT);
+        s.setTotalsCurrency(createTotalsStyle(wb, totalsFont, currencyFmt));
+        s.getTotalsCurrency().setAlignment(HorizontalAlignment.RIGHT);
 
         // ── Meta ──
-        s.metaLabel = wb.createCellStyle();
-        s.metaLabel.setFont(metaLabelFont);
+        s.setMetaLabel(wb.createCellStyle());
+        s.getMetaLabel().setFont(metaLabelFont);
 
-        s.metaValue = wb.createCellStyle();
-        s.metaValue.setFont(metaValueFont);
+        s.setMetaValue(wb.createCellStyle());
+        s.getMetaValue().setFont(metaValueFont);
 
         // ── Stats ──
-        s.statLabel = wb.createCellStyle();
-        s.statLabel.setFont(statLabelFont);
+        s.setStatLabel(wb.createCellStyle());
+        s.getStatLabel().setFont(statLabelFont);
 
-        s.statValue = wb.createCellStyle();
-        s.statValue.setFont(statValueFont);
+        s.setStatValue(wb.createCellStyle());
+        s.getStatValue().setFont(statValueFont);
 
         return s;
     }

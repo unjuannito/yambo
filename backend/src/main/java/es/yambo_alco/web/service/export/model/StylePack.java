@@ -1,5 +1,7 @@
 package es.yambo_alco.web.service.export.model;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 
 /**
@@ -8,29 +10,29 @@ import org.apache.poi.xssf.usermodel.XSSFCellStyle;
  * and shared across all sheet builders.
  */
 public class StylePack {
-    public XSSFCellStyle title;
-    public XSSFCellStyle productTitle;
-    public XSSFCellStyle sectionTitle;
-    public XSSFCellStyle subtitle;
-    public XSSFCellStyle note;
-    public XSSFCellStyle header;
-    public XSSFCellStyle dataAlt1;
-    public XSSFCellStyle dataAlt2;
-    public XSSFCellStyle centerAlt1;
-    public XSSFCellStyle centerAlt2;
-    public XSSFCellStyle currencyAlt1;
-    public XSSFCellStyle currencyAlt2;
-    public XSSFCellStyle dateAlt1;
-    public XSSFCellStyle dateAlt2;
-    public XSSFCellStyle boldCenterAlt1;
-    public XSSFCellStyle boldCenterAlt2;
-    public XSSFCellStyle totals;
-    public XSSFCellStyle totalsLabel;
-    public XSSFCellStyle totalsLabelRight;
-    public XSSFCellStyle totalsCenter;
-    public XSSFCellStyle totalsCurrency;
-    public XSSFCellStyle metaLabel;
-    public XSSFCellStyle metaValue;
-    public XSSFCellStyle statLabel;
-    public XSSFCellStyle statValue;
+    @Getter @Setter private XSSFCellStyle title;
+    @Getter @Setter private XSSFCellStyle productTitle;
+    @Getter @Setter private XSSFCellStyle sectionTitle;
+    @Getter @Setter private XSSFCellStyle subtitle;
+    @Getter @Setter private XSSFCellStyle note;
+    @Getter @Setter private XSSFCellStyle header;
+    @Getter @Setter private XSSFCellStyle dataAlt1;
+    @Getter @Setter private XSSFCellStyle dataAlt2;
+    @Getter @Setter private XSSFCellStyle centerAlt1;
+    @Getter @Setter private XSSFCellStyle centerAlt2;
+    @Getter @Setter private XSSFCellStyle currencyAlt1;
+    @Getter @Setter private XSSFCellStyle currencyAlt2;
+    @Getter @Setter private XSSFCellStyle dateAlt1;
+    @Getter @Setter private XSSFCellStyle dateAlt2;
+    @Getter @Setter private XSSFCellStyle boldCenterAlt1;
+    @Getter @Setter private XSSFCellStyle boldCenterAlt2;
+    @Getter @Setter private XSSFCellStyle totals;
+    @Getter @Setter private XSSFCellStyle totalsLabel;
+    @Getter @Setter private XSSFCellStyle totalsLabelRight;
+    @Getter @Setter private XSSFCellStyle totalsCenter;
+    @Getter @Setter private XSSFCellStyle totalsCurrency;
+    @Getter @Setter private XSSFCellStyle metaLabel;
+    @Getter @Setter private XSSFCellStyle metaValue;
+    @Getter @Setter private XSSFCellStyle statLabel;
+    @Getter @Setter private XSSFCellStyle statValue;
 }

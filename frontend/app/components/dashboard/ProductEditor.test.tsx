@@ -189,4 +189,53 @@ describe('ProductEditor', () => {
             expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch/prod-123');
         });
     });
+
+    it('shows save error toast when createProduct fails', async () => {
+        vi.mocked(productService.createProduct).mockRejectedValue(new Error('save-failed'));
+
+        render(<ProductEditor mode="create" />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Crear Nuevo Producto')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Crear Producto'));
+
+        await waitFor(() => {
+            expect(productService.createProduct).toHaveBeenCalled();
+            expect(toast.error).toHaveBeenCalled();
+        });
+
+        expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/merch');
+    });
+
+    it('shows save error toast when updateProduct fails in edit mode', async () => {
+        vi.mocked(productService.getProductById).mockResolvedValue({
+            id: 'prod-123',
+            name: 'Producto',
+            projectId: null,
+            familyProductId: null,
+            active: true,
+            basePrice: 15,
+            options: [],
+            images: [],
+            description: 'desc',
+        } as any);
+        vi.mocked(productService.updateProduct).mockRejectedValue(new Error('update-failed'));
+
+        render(<ProductEditor mode="edit" productId="prod-123" />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Editar Producto')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Guardar Cambios'));
+
+        await waitFor(() => {
+            expect(productService.updateProduct).toHaveBeenCalled();
+            expect(toast.error).toHaveBeenCalled();
+        });
+
+        expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/merch/prod-123');
+    });
 });

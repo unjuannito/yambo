@@ -170,7 +170,7 @@ public final class ConfigAggregator {
 
             AggregatedProductRow existing = byKey.get(key);
             if (existing != null) {
-                existing.totalQuantity += item.quantity();
+                existing.addQuantity(item.quantity());
             } else {
                 byKey.put(key, new AggregatedProductRow(resolved, item.quantity()));
             }
@@ -191,8 +191,8 @@ public final class ConfigAggregator {
                                                                      List<ProductOption> productOptions) {
         return (a, b) -> {
             for (ConfigColumn col : configColumns) {
-                String valA = a.configValues.getOrDefault(col.label(), "");
-                String valB = b.configValues.getOrDefault(col.label(), "");
+                String valA = a.getConfigValues().getOrDefault(col.label(), "");
+                String valB = b.getConfigValues().getOrDefault(col.label(), "");
 
                 int selectCmp = compareSelectColumn(col, valA, valB, productOptions);
                 if (selectCmp != Integer.MIN_VALUE) {

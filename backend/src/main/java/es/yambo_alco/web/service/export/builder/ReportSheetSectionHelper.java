@@ -72,10 +72,10 @@ final class ReportSheetSectionHelper {
             Row row = ExcelWorkbookHelper.getOrCreateRow(ws, rowIdx);
             Cell label = row.createCell(0);
             label.setCellValue(m[0]);
-            label.setCellStyle(styles.metaLabel);
+            label.setCellStyle(styles.getMetaLabel());
             Cell value = row.createCell(1);
             value.setCellValue(m[1]);
-            value.setCellStyle(styles.metaValue);
+            value.setCellStyle(styles.getMetaValue());
             rowIdx++;
         }
         return rowIdx;

@@ -1,6 +1,7 @@
 package es.yambo_alco.web.service.export.model;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Represents one aggregated row in a factory or warehouse sheet.
@@ -13,13 +14,25 @@ import java.util.LinkedHashMap;
 public class AggregatedProductRow {
 
     /** Ordered map: option label → resolved display value. */
-    public final LinkedHashMap<String, String> configValues;
+    private final Map<String, String> configValues;
 
     /** Sum of quantities across all merged items. */
-    public int totalQuantity;
+    private int totalQuantity;
 
-    public AggregatedProductRow(LinkedHashMap<String, String> configValues, int totalQuantity) {
-        this.configValues = configValues;
+    public AggregatedProductRow(Map<String, String> configValues, int totalQuantity) {
+        this.configValues = new LinkedHashMap<>(configValues);
         this.totalQuantity = totalQuantity;
+    }
+
+    public Map<String, String> getConfigValues() {
+        return configValues;
+    }
+
+    public int getTotalQuantity() {
+        return totalQuantity;
+    }
+
+    public void addQuantity(int quantity) {
+        this.totalQuantity += quantity;
     }
 }

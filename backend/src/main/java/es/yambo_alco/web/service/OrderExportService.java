@@ -122,7 +122,7 @@ public class OrderExportService {
 
     private Set<String> resolveAllowedProductIds(List<String> dropIds, Map<String, Product> productMap) {
         if (dropIds == null || dropIds.isEmpty()) {
-            return null;
+            return new HashSet<>(productMap.keySet());
         }
 
         return productMap.values().stream()
@@ -161,7 +161,7 @@ public class OrderExportService {
     }
 
     private boolean isAllowedProduct(String productId, Set<String> allowedProductIds) {
-        return allowedProductIds == null || allowedProductIds.contains(productId);
+        return allowedProductIds.contains(productId);
     }
 
     private void appendProductGroupItem(Map<String, ProductGroup> groups,

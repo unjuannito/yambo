@@ -224,6 +224,29 @@ describe('Orders route', () => {
             });
         });
 
+        it('closes deep-linked order detail and does not re-open immediately', async () => {
+            vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
+
+            const { container } = renderWithRouter('/?orderId=ORD001');
+
+            await waitFor(() => {
+                expect(screen.getByText('Test Product')).toBeInTheDocument();
+            });
+
+            const closeButton = container.querySelector('button.text-gray-300') as HTMLButtonElement | null;
+            expect(closeButton).not.toBeNull();
+
+            if (closeButton) {
+                fireEvent.click(closeButton);
+            }
+
+            await waitFor(() => {
+                expect(screen.queryByText('Test Product')).not.toBeInTheDocument();
+            });
+
+            expect(orderService.getOrder).toHaveBeenCalledTimes(1);
+        });
+
         it('opens the Create Issue modal with all products pre-selected when order-level button is clicked', async () => {
             vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
 
