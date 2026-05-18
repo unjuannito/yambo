@@ -421,7 +421,7 @@ pipeline {
                                 PROD_DB_PASS=\${PROD_DB_PASS} \\
                                 PGPASSFILE=/tmp/.pgpass \\
                                 PGHOST=/var/run/postgresql \\
-                                PGUSER=\${PROD_DB_USER} \\
+                                PGUSER=postgres \\
                                 ANONYMIZE_DUMP_MODE=database-bootstrap \\
                                 bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
 
