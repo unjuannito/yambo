@@ -30,15 +30,3 @@
   target:
     kind: Ingress
     name: yambo-ingress
-- op: replace
-  path: /spec/tls/0/hosts/0
-  value: PLACEHOLDER.yambo.cabrasky.net
-  target:
-    kind: Ingress
-    name: yambo-ingress
-- op: replace
-  path: /spec/tls/0/secretName
-  value: yambo-tls-PLACEHOLDER
-  target:
-    kind: Ingress
-    name: yambo-ingress
