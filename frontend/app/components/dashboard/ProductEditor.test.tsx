@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent } from '@testing-library/react';
 import ProductEditor from './ProductEditor';
 import { productService } from '~/services/productService';
 import { familyProductService } from '~/services/familyProductService';
@@ -136,5 +137,56 @@ describe('ProductEditor', () => {
 
         expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch');
         expect(productService.getProductById).not.toHaveBeenCalled();
+    });
+
+    it('saves a new product in create mode', async () => {
+        vi.mocked(productService.createProduct).mockResolvedValue({ id: 'new-id' } as any);
+
+        render(<ProductEditor mode="create" />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Crear Nuevo Producto')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Crear Producto'));
+
+        await waitFor(() => {
+            expect(productService.createProduct).toHaveBeenCalled();
+            expect(toast.success).toHaveBeenCalledWith('Producto guardado exitosamente');
+            expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch');
+        });
+    });
+
+    it('updates an existing product in edit mode', async () => {
+        vi.mocked(productService.getProductById).mockResolvedValue({
+            id: 'prod-123',
+            name: 'Producto',
+            projectId: null,
+            familyProductId: null,
+            active: true,
+            basePrice: 15,
+            options: [],
+            images: [],
+            description: 'desc',
+        } as any);
+        vi.mocked(productService.updateProduct).mockResolvedValue({} as any);
+
+        render(<ProductEditor mode="edit" productId="prod-123" />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Editar Producto')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByText('Guardar Cambios'));
+
+        await waitFor(() => {
+            expect(productService.updateProduct).toHaveBeenCalledWith('prod-123', expect.objectContaining({
+                name: 'Producto',
+                description: 'desc',
+                familyProductId: undefined,
+            }));
+            expect(toast.success).toHaveBeenCalledWith('Producto actualizado exitosamente');
+            expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch/prod-123');
+        });
     });
 });

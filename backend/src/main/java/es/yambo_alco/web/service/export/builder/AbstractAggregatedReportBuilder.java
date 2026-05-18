@@ -31,6 +31,8 @@ import java.util.*;
  */
 abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
 
+    private record ProductSheetLayout(List<String> headers, int qtyColIdx, int validationStartIdx) {}
+
     private static final Logger log = LoggerFactory.getLogger(AbstractAggregatedReportBuilder.class);
 
     /** Title string embedded in the workbook header (e.g., "Hoja de Fabricación"). */
@@ -88,7 +90,7 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
 
         // ── Title ──
         String dateStr = LocalDateTime.now().format(
-                DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", new Locale("es", "ES")));
+            DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.of("es", "ES")));
         ReportSheetSectionHelper.addTitleRow(ws, currentRow, 2, getReportTitle() + " — " + dateStr, styles.title);
         currentRow++;
 
@@ -158,23 +160,12 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
         List<ConfigColumn> configColumns = ConfigAggregator.getConfigColumns(productOptions, group.items, getExportReportType());
         List<AggregatedProductRow> aggregated = ConfigAggregator.aggregate(group.items, configColumns, productOptions);
 
-        // ── Column layout: [config…] | Cantidad [| Recibido | OK | Notas] ──
-        List<String> allHeaders = new ArrayList<>(configColumns.stream().map(ConfigColumn::label).toList());
-        allHeaders.add("Cantidad");
-        int qtyColIdx = allHeaders.size() - 1;
-
-        int validationStartIdx = -1;
-        if (includeValidationColumns()) {
-            validationStartIdx = allHeaders.size();
-            allHeaders.add("Recibido");
-            allHeaders.add("OK");
-            allHeaders.add("Notas");
-        }
+        ProductSheetLayout layout = buildProductSheetLayout(configColumns);
 
         int currentRow = 0;
 
         // ── Product title ──
-        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(allHeaders.size() - 1, 0), group.productName, styles.productTitle);
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(layout.headers().size() - 1, 0), group.productName, styles.productTitle);
         ExcelWorkbookHelper.getOrCreateRow(ws, currentRow).setHeightInPoints(24);
         currentRow++;
 
@@ -190,20 +181,57 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
 
         // ── Column headers ──
         int headerRowNum = currentRow;
-        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, allHeaders, styles.header);
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, layout.headers(), styles.header);
         currentRow++;
 
         // ── Aggregated data rows ──
         int dataStartRow = currentRow;
+        currentRow = writeAggregatedRows(ws, aggregated, layout, styles, currentRow);
+
+        int lastDataRow = currentRow - 1;
+
+        // ── Totals row ──
+        writeTotalsRow(ws, layout, styles, dataStartRow, lastDataRow, currentRow);
+
+        // ── Column widths ──
+        applyColumnWidths(ws, configColumns.size(), layout);
+
+        // ── Freeze & auto-filter ──
+        ws.createFreezePane(0, headerRowNum + 1);
+        if (lastDataRow >= headerRowNum) {
+            ws.setAutoFilter(new CellRangeAddress(headerRowNum, lastDataRow, 0, layout.headers().size() - 1));
+        }
+    }
+
+    private ProductSheetLayout buildProductSheetLayout(List<ConfigColumn> configColumns) {
+        List<String> headers = new ArrayList<>(configColumns.stream().map(ConfigColumn::label).toList());
+        headers.add("Cantidad");
+
+        int qtyColIdx = headers.size() - 1;
+        int validationStartIdx = -1;
+        if (includeValidationColumns()) {
+            validationStartIdx = headers.size();
+            headers.add("Recibido");
+            headers.add("OK");
+            headers.add("Notas");
+        }
+
+        return new ProductSheetLayout(headers, qtyColIdx, validationStartIdx);
+    }
+
+    private int writeAggregatedRows(XSSFSheet ws,
+                                    List<AggregatedProductRow> aggregated,
+                                    ProductSheetLayout layout,
+                                    StylePack styles,
+                                    int startRow) {
+        int currentRow = startRow;
         int idx = 0;
 
         for (AggregatedProductRow agg : aggregated) {
             Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-
-            CellStyle centerStyle    = idx % 2 == 0 ? styles.centerAlt1     : styles.centerAlt2;
+            CellStyle centerStyle = idx % 2 == 0 ? styles.centerAlt1 : styles.centerAlt2;
             CellStyle boldCenterStyle = idx % 2 == 0 ? styles.boldCenterAlt1 : styles.boldCenterAlt2;
 
-            // Config columns
             int colIdx = 0;
             for (String resolved : agg.configValues.values()) {
                 Cell cell = row.createCell(colIdx++);
@@ -211,64 +239,68 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
                 cell.setCellStyle(centerStyle);
             }
 
-            // Quantity (bold)
-            Cell qtyCell = row.createCell(qtyColIdx);
+            Cell qtyCell = row.createCell(layout.qtyColIdx());
             qtyCell.setCellValue(agg.totalQuantity);
             qtyCell.setCellStyle(boldCenterStyle);
 
-            // Blank validation columns
-            if (includeValidationColumns()) {
-                for (int v = validationStartIdx; v < allHeaders.size(); v++) {
-                    row.createCell(v).setCellStyle(centerStyle);
-                }
-            }
+            fillValidationColumns(row, layout, centerStyle);
 
             currentRow++;
             idx++;
         }
 
-        int lastDataRow = currentRow - 1;
+        return currentRow;
+    }
 
-        // ── Totals row ──
-        Row totalsRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
+    private void fillValidationColumns(Row row, ProductSheetLayout layout, CellStyle cellStyle) {
+        if (!includeValidationColumns()) {
+            return;
+        }
+        for (int v = layout.validationStartIdx(); v < layout.headers().size(); v++) {
+            row.createCell(v).setCellStyle(cellStyle);
+        }
+    }
 
-        if (qtyColIdx > 0) {
-            for (int c = 0; c < qtyColIdx - 1; c++) {
+    private void writeTotalsRow(XSSFSheet ws,
+                                ProductSheetLayout layout,
+                                StylePack styles,
+                                int dataStartRow,
+                                int lastDataRow,
+                                int totalsRowIdx) {
+        Row totalsRow = ExcelWorkbookHelper.getOrCreateRow(ws, totalsRowIdx);
+
+        if (layout.qtyColIdx() > 0) {
+            for (int c = 0; c < layout.qtyColIdx() - 1; c++) {
                 totalsRow.createCell(c).setCellStyle(styles.totals);
             }
-            Cell labelCell = totalsRow.createCell(qtyColIdx - 1);
+            Cell labelCell = totalsRow.createCell(layout.qtyColIdx() - 1);
             labelCell.setCellValue("TOTALES:");
             labelCell.setCellStyle(styles.totalsLabelRight);
         }
 
-        Cell qtyTotalCell = totalsRow.createCell(qtyColIdx);
-        qtyTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(qtyColIdx) + (dataStartRow + 1)
-                + ":" + ExcelWorkbookHelper.getColLetter(qtyColIdx) + (lastDataRow + 1) + ")");
+        Cell qtyTotalCell = totalsRow.createCell(layout.qtyColIdx());
+        qtyTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + (dataStartRow + 1)
+                + ":" + ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + (lastDataRow + 1) + ")");
         qtyTotalCell.setCellStyle(styles.totalsCenter);
 
         if (includeValidationColumns()) {
-            for (int v = validationStartIdx; v < allHeaders.size(); v++) {
+            for (int v = layout.validationStartIdx(); v < layout.headers().size(); v++) {
                 totalsRow.createCell(v).setCellStyle(styles.totals);
             }
         }
+    }
 
-        // ── Column widths ──
-        for (int i = 0; i < allHeaders.size(); i++) {
-            if (i < configColumns.size()) {
-                ws.setColumnWidth(i, 20 * 256);          // config columns
-            } else if (i == qtyColIdx) {
-                ws.setColumnWidth(i, 12 * 256);          // Cantidad
-            } else if (includeValidationColumns() && i == allHeaders.size() - 1) {
-                ws.setColumnWidth(i, 25 * 256);          // Notas (wider for free text)
+    private void applyColumnWidths(XSSFSheet ws, int configColumnCount, ProductSheetLayout layout) {
+        for (int i = 0; i < layout.headers().size(); i++) {
+            if (i < configColumnCount) {
+                ws.setColumnWidth(i, 20 * 256);
+            } else if (i == layout.qtyColIdx()) {
+                ws.setColumnWidth(i, 12 * 256);
+            } else if (includeValidationColumns() && i == layout.headers().size() - 1) {
+                ws.setColumnWidth(i, 25 * 256);
             } else {
-                ws.setColumnWidth(i, 14 * 256);          // Recibido / OK
+                ws.setColumnWidth(i, 14 * 256);
             }
-        }
-
-        // ── Freeze & auto-filter ──
-        ws.createFreezePane(0, headerRowNum + 1);
-        if (lastDataRow >= headerRowNum) {
-            ws.setAutoFilter(new CellRangeAddress(headerRowNum, lastDataRow, 0, allHeaders.size() - 1));
         }
     }
 }

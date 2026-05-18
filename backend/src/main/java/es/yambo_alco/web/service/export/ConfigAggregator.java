@@ -25,6 +25,8 @@ import java.util.*;
  */
 public final class ConfigAggregator {
 
+    private static final String LABEL_KEY = "label";
+
     private ConfigAggregator() {}
 
     // ════════════════════════════════════════════════════════
@@ -92,28 +94,54 @@ public final class ConfigAggregator {
         }
 
         if ("select".equals(col.type()) && productOptions != null) {
-            ProductOption option = productOptions.stream()
-                    .filter(o -> col.key().equals(o.getName()))
-                    .findFirst()
-                    .orElse(null);
-            if (option != null && option.getValues() != null) {
-                for (OptionValue v : option.getValues()) {
-                    if (rawValue.equals(v.getId()) || rawValue.equals(v.getLabel())) {
-                        return v.getLabel();
-                    }
-                }
-            }
-            if (rawValue instanceof Map<?, ?> map && map.containsKey("label")) {
-                return String.valueOf(map.get("label"));
-            }
-            return String.valueOf(rawValue);
+            return resolveSelectValue(col, rawValue, productOptions);
         }
 
-        if (rawValue instanceof Map<?, ?> map && map.containsKey("label")) {
-            return String.valueOf(map.get("label"));
+        String mappedLabel = mapLabelValue(rawValue);
+        if (mappedLabel != null) {
+            return mappedLabel;
         }
 
         return String.valueOf(rawValue);
+    }
+
+    private static String resolveSelectValue(ConfigColumn col, Object rawValue, List<ProductOption> productOptions) {
+        ProductOption option = productOptions.stream()
+                .filter(o -> col.key().equals(o.getName()))
+                .findFirst()
+                .orElse(null);
+
+        String optionLabel = matchOptionLabel(rawValue, option);
+        if (optionLabel != null) {
+            return optionLabel;
+        }
+
+        String mappedLabel = mapLabelValue(rawValue);
+        if (mappedLabel != null) {
+            return mappedLabel;
+        }
+
+        return String.valueOf(rawValue);
+    }
+
+    private static String matchOptionLabel(Object rawValue, ProductOption option) {
+        if (option == null || option.getValues() == null) {
+            return null;
+        }
+
+        for (OptionValue v : option.getValues()) {
+            if (rawValue.equals(v.getId()) || rawValue.equals(v.getLabel())) {
+                return v.getLabel();
+            }
+        }
+        return null;
+    }
+
+    private static String mapLabelValue(Object rawValue) {
+        if (rawValue instanceof Map<?, ?> map && map.containsKey(LABEL_KEY)) {
+            return String.valueOf(map.get(LABEL_KEY));
+        }
+        return null;
     }
 
     // ════════════════════════════════════════════════════════
@@ -166,22 +194,12 @@ public final class ConfigAggregator {
                 String valA = a.configValues.getOrDefault(col.label(), "");
                 String valB = b.configValues.getOrDefault(col.label(), "");
 
-                // Select columns: sort by values-array position (definition order)
-                if ("select".equals(col.type())) {
-                    ProductOption opt = productOptions.stream()
-                            .filter(o -> col.key().equals(o.getName()))
-                            .findFirst().orElse(null);
-                    if (opt != null && opt.getValues() != null) {
-                        List<String> labels = opt.getValues().stream()
-                                .map(OptionValue::getLabel).toList();
-                        int idxA = labels.indexOf(valA);
-                        int idxB = labels.indexOf(valB);
-                        if (idxA < 0) idxA = Integer.MAX_VALUE;
-                        if (idxB < 0) idxB = Integer.MAX_VALUE;
-                        int cmp = Integer.compare(idxA, idxB);
-                        if (cmp != 0) return cmp;
-                        continue;
+                int selectCmp = compareSelectColumn(col, valA, valB, productOptions);
+                if (selectCmp != Integer.MIN_VALUE) {
+                    if (selectCmp != 0) {
+                        return selectCmp;
                     }
+                    continue;
                 }
 
                 // text_input / checkbox / fallback: alphabetical
@@ -190,5 +208,30 @@ public final class ConfigAggregator {
             }
             return 0;
         };
+    }
+
+    private static int compareSelectColumn(ConfigColumn col,
+                                           String valA,
+                                           String valB,
+                                           List<ProductOption> productOptions) {
+        if (!"select".equals(col.type())) {
+            return Integer.MIN_VALUE;
+        }
+
+        ProductOption opt = productOptions.stream()
+                .filter(o -> col.key().equals(o.getName()))
+                .findFirst()
+                .orElse(null);
+        if (opt == null || opt.getValues() == null) {
+            return Integer.MIN_VALUE;
+        }
+
+        List<String> labels = opt.getValues().stream().map(OptionValue::getLabel).toList();
+        int idxA = labels.indexOf(valA);
+        int idxB = labels.indexOf(valB);
+
+        if (idxA < 0) idxA = Integer.MAX_VALUE;
+        if (idxB < 0) idxB = Integer.MAX_VALUE;
+        return Integer.compare(idxA, idxB);
     }
 }
