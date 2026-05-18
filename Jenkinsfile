@@ -484,6 +484,7 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/production"
+                    def scmCredentialsId = scm?.userRemoteConfigs?.getAt(0)?.credentialsId
 
                     sh """
                         cd ${overlayDir}
@@ -500,15 +501,40 @@ pipeline {
                         fi
                     """
 
-                    // PRODUCTION SAFETY: Never auto-override secrets unless explicitly forced
-                    // Kustomize output includes yambo-secrets, but we exclude it from deployment
-                    // to protect real credentials. Secrets must be pre-applied to the cluster.
-                    sh "kubectl apply -k ${overlayDir} --selector='kind!=Secret'"
+                    // PRODUCTION SAFETY: Never auto-override secrets unless explicitly forced.
+                    // `--selector` filters by labels (not resource kind), so we must filter by manifest kind.
+                    sh """
+                        kubectl kustomize ${overlayDir} | awk '
+                            BEGIN { doc = ""; is_secret = 0 }
+                            /^---/ {
+                                if (doc != "" && !is_secret) { printf "%s", doc }
+                                doc = "---\\n"; is_secret = 0; next
+                            }
+                            { doc = doc \$0 "\\n" }
+                            /^kind: Secret\$/ { is_secret = 1 }
+                            END {
+                                if (doc != "" && !is_secret) { printf "%s", doc }
+                            }
+                        ' | kubectl apply -f -
+                    """
 
                     // Only recreate secrets if FORCE_PROD_DEPLOY is explicitly enabled
                     if (params.FORCE_PROD_DEPLOY) {
                         echo "WARNING: Forcing production secret re-deployment (FORCE_PROD_DEPLOY=true)"
-                        sh "kubectl apply -k ${overlayDir} -l kind=Secret"
+                        sh """
+                            kubectl kustomize ${overlayDir} | awk '
+                                BEGIN { doc = ""; is_secret = 0 }
+                                /^---/ {
+                                    if (is_secret) { printf "%s", doc }
+                                    doc = "---\\n"; is_secret = 0; next
+                                }
+                                { doc = doc \$0 "\\n" }
+                                /^kind: Secret\$/ { is_secret = 1 }
+                                END {
+                                    if (is_secret) { printf "%s", doc }
+                                }
+                            ' | kubectl apply -f -
+                        """
                     }
 
                     sh "kubectl rollout status deployment/postgres     -n ${NAMESPACE} --timeout=120s"
@@ -519,18 +545,27 @@ pipeline {
                         git config user.email "jenkins@cabrasky.net"
                         git config user.name  "Jenkins"
                     """
+
+                    if (!scmCredentialsId?.trim()) {
+                        error "Missing SCM credentialsId -- cannot push deployment tags to origin"
+                    }
+
                     // Tag per component — only for the one(s) that actually changed
                     if (env.FRONTEND_CHANGED == 'true') {
-                        sh """
-                            git tag -f "frontend-v${env.FRONTEND_TAG}" -m "Frontend deployed by Jenkins build #${env.BUILD_NUMBER}"
-                            git push origin "frontend-v${env.FRONTEND_TAG}" --force
-                        """
+                        withCredentials([gitUsernamePassword(credentialsId: scmCredentialsId, gitToolName: 'git')]) {
+                            sh """
+                                git tag -f "frontend-v${env.FRONTEND_TAG}" -m "Frontend deployed by Jenkins build #${env.BUILD_NUMBER}"
+                                git push origin "frontend-v${env.FRONTEND_TAG}" --force
+                            """
+                        }
                     }
                     if (env.BACKEND_CHANGED == 'true') {
-                        sh """
-                            git tag -f "backend-v${env.BACKEND_TAG}" -m "Backend deployed by Jenkins build #${env.BUILD_NUMBER}"
-                            git push origin "backend-v${env.BACKEND_TAG}" --force
-                        """
+                        withCredentials([gitUsernamePassword(credentialsId: scmCredentialsId, gitToolName: 'git')]) {
+                            sh """
+                                git tag -f "backend-v${env.BACKEND_TAG}" -m "Backend deployed by Jenkins build #${env.BUILD_NUMBER}"
+                                git push origin "backend-v${env.BACKEND_TAG}" --force
+                            """
+                        }
                     }
                 }
             }
