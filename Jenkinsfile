@@ -371,13 +371,22 @@ pipeline {
                         kubectl create namespace ${previewNs} --dry-run=client -o yaml | kubectl apply -f -
 
                         if ! kubectl get secret yambo-secrets -n ${previewNs} >/dev/null 2>&1; then
-                            kubectl apply -k ${overlayDir} --selector=kind=Secret
+                            kubectl kustomize ${overlayDir} | awk '
+                                BEGIN { doc = ""; is_secret = 0 }
+                                /^---/ {
+                                    if (is_secret) { printf "%s", doc }
+                                    doc = "---\n"; is_secret = 0; next
+                                }
+                                { doc = doc \$0 "\n" }
+                                /^kind: Secret\$/ { is_secret = 1 }
+                                END { if (is_secret) { printf "%s", doc } }
+                            ' | kubectl apply -f -
                         fi
                     """
 
                     // -- Deploy database
                     sh """
-                        kubectl apply -k ${overlayDir} --selector='app=postgres'
+                        kubectl kustomize ${overlayDir} | kubectl apply --selector='app=postgres' -f -
                         kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
                     """
 
