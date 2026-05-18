@@ -493,7 +493,16 @@ pipeline {
                         fi
                     """
 
-                    sh "kubectl apply -k ${overlayDir}"
+                    // PRODUCTION SAFETY: Never auto-override secrets unless explicitly forced
+                    // Kustomize output includes yambo-secrets, but we exclude it from deployment
+                    // to protect real credentials. Secrets must be pre-applied to the cluster.
+                    sh "kubectl apply -k ${overlayDir} --selector='kind!=Secret'"
+
+                    // Only recreate secrets if FORCE_PROD_DEPLOY is explicitly enabled
+                    if (params.FORCE_PROD_DEPLOY) {
+                        echo "WARNING: Forcing production secret re-deployment (FORCE_PROD_DEPLOY=true)"
+                        sh "kubectl apply -k ${overlayDir} -l kind=Secret"
+                    }
 
                     sh "kubectl rollout status deployment/postgres     -n ${NAMESPACE} --timeout=120s"
                     sh "kubectl rollout status deployment/yambo-backend  -n ${NAMESPACE} --timeout=300s"
