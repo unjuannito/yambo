@@ -1530,13 +1530,6 @@ class OrderServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        OrderProduct op1 = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).build();
-        OrderProduct op2 = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD002").quantity(1)
-                .price(BigDecimal.TEN).build();
-
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -2469,9 +2462,6 @@ class OrderServiceTest {
                 .status(OrderStatus.PENDING_PRODUCTS)
                 .createdAt(LocalDateTime.now())
                 .build();
-        OrderProduct op = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
@@ -2525,9 +2515,6 @@ class OrderServiceTest {
                 .status(OrderStatus.PENDING_PRODUCTS)
                 .createdAt(LocalDateTime.now())
                 .build();
-        OrderProduct op = OrderProduct.builder()
-                .orderId("ORD001").productId("PROD001").quantity(1)
-                .price(BigDecimal.TEN).build();
         Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
