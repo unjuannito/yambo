@@ -364,8 +364,18 @@ pipeline {
                         fi
                     """
 
-                    // -- Deploy database
+                    // -- Deploy database (PVCs first, then the deployment/service)
                     sh """
+                        kubectl kustomize ${overlayDir} | awk '
+                            BEGIN { doc = ""; is_pvc = 0 }
+                            /^---/ {
+                                if (is_pvc) { printf "%s", doc }
+                                doc = "---\\n"; is_pvc = 0; next
+                            }
+                            { doc = doc \$0 "\\n" }
+                            /^kind: PersistentVolumeClaim\$/ { is_pvc = 1 }
+                            END { if (is_pvc) { printf "%s", doc } }
+                        ' | kubectl apply -f -
                         kubectl kustomize ${overlayDir} | kubectl apply --selector='app=postgres' -f -
                         kubectl rollout status deployment/postgres -n ${previewNs} --timeout=120s
                     """
