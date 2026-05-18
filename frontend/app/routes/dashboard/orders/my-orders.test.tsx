@@ -55,7 +55,16 @@ vi.mock('~/components/orders/ConfirmDeliveryButton', () => ({
 }));
 
 vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
-    default: () => null,
+    default: ({ onChange }: { onChange: (e: any) => void }) => (
+        <select
+            multiple
+            data-testid="status-filter"
+            onChange={onChange}
+        >
+            <option value="PAYMENT_CONFIRMED">Pago confirmado</option>
+            <option value="CANCELED">Cancelado</option>
+        </select>
+    ),
 }));
 
 vi.mock('~/components/shop/PaymentInstructions', () => ({
@@ -144,6 +153,21 @@ describe('my-orders route', () => {
     });
 
     describe('loading and rendering', () => {
+        it('does not load orders when user is not authenticated', async () => {
+            vi.mocked(useAuth).mockReturnValue({
+                isAuthenticated: () => false,
+                hasPermission: () => false,
+                user: null,
+                loading: false,
+            } as any);
+
+            renderPage();
+
+            await waitFor(() => {
+                expect(orderService.getMyOrders).not.toHaveBeenCalled();
+            });
+        });
+
         it('shows loading spinner on mount', () => {
             renderPage();
             expect(screen.getByText(/cargando/i)).toBeInTheDocument();
@@ -161,6 +185,31 @@ describe('my-orders route', () => {
             renderPage();
             await waitFor(() => {
                 expect(screen.getByText(/no tienes pedidos/i)).toBeInTheDocument();
+            });
+        });
+
+        it('filters rendered orders by selected statuses', async () => {
+            const canceledOrder: Order = { ...mockOrder, id: 'ORD002', status: 'CANCELED' };
+            vi.mocked(orderService.getMyOrders).mockResolvedValue({
+                content: [mockOrder, canceledOrder],
+                page: { totalElements: 2, totalPages: 1, number: 0, size: 50 },
+            } as any);
+
+            renderPage();
+
+            await waitFor(() => {
+                expect(screen.getByText('#ORD001')).toBeInTheDocument();
+                expect(screen.getByText('#ORD002')).toBeInTheDocument();
+            });
+
+            const filter = screen.getByTestId('status-filter');
+            const options = (filter as HTMLSelectElement).options;
+            options[0].selected = true;
+            fireEvent.change(filter);
+
+            await waitFor(() => {
+                expect(screen.getByText('#ORD001')).toBeInTheDocument();
+                expect(screen.queryByText('#ORD002')).not.toBeInTheDocument();
             });
         });
 

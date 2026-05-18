@@ -183,6 +183,19 @@ describe('Orders route', () => {
             expect(screen.queryByText('+ Nueva incidencia (varios productos)')).not.toBeInTheDocument();
         });
 
+        it('keeps page usable when deep-link order lookup fails', async () => {
+            vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
+            vi.mocked(orderService.getOrder).mockRejectedValue(new Error('not-found'));
+
+            renderWithRouter('/?orderId=ORD404');
+
+            await waitFor(() => {
+                expect(orderService.getOrder).toHaveBeenCalledWith('ORD404');
+            });
+
+            expect(screen.queryByTestId('issue-form')).not.toBeInTheDocument();
+        });
+
         it('opens the Create Issue modal when "Crear incidencia" is clicked', async () => {
             vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
 
