@@ -24,7 +24,7 @@ class ReportSheetSectionHelperTest {
 
             int nextRow = ReportSheetSectionHelper.addLogo(wb, ws, null, log);
 
-            assertThat(nextRow).isEqualTo(0);
+            assertThat(nextRow).isZero();
         }
     }
 
@@ -72,7 +72,7 @@ class ReportSheetSectionHelperTest {
             int nextRow = ReportSheetSectionHelper.addDropsSubtitle(ws, 5, 3, List.of(), subtitleStyle);
 
             assertThat(nextRow).isEqualTo(5);
-            assertThat(ws.getPhysicalNumberOfRows()).isEqualTo(0);
+            assertThat(ws.getPhysicalNumberOfRows()).isZero();
         }
     }
 

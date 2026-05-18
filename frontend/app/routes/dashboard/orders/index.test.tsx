@@ -6,6 +6,7 @@ import { orderService } from '~/services/orderService';
 import { issueService } from '~/services/issueService';
 import { productService } from '~/services/productService';
 import { familyProductService } from '~/services/familyProductService';
+import { exportService } from '~/services/exportService';
 import { useAuth } from '~/hooks/useAuth';
 import { CreateIssueModal } from '~/components/issues';
 import toast from 'react-hot-toast';
@@ -57,6 +58,14 @@ vi.mock('~/services/exportService', () => ({
 
 vi.mock('~/components/common/FilterableTable', () => ({
     FilterableTable: () => null,
+}));
+
+vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
+    default: ({ onChange }: { onChange: (e: any) => void }) => (
+        <select multiple data-testid="drops-filter" onChange={onChange}>
+            <option value="drop-1">Drop 1</option>
+        </select>
+    ),
 }));
 
 vi.mock('~/components/common/StatusWorkflow', () => ({
@@ -388,6 +397,51 @@ describe('Orders route', () => {
             expect(lastIssueWindow?.orderedProducts).toHaveLength(2);
             // Second product is pre-selected
             expect(lastIssueWindow?.initialSelectedOrderedProductIds).toEqual(['prod-2']);
+        });
+
+        it('switches export report type and exports with selected type', async () => {
+            vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
+            vi.mocked(exportService.exportOrders).mockResolvedValue(undefined as any);
+
+            renderWithRouter('/?orderId=ORD001');
+
+            await waitFor(() => {
+                expect(screen.getByText('Exportar a Excel')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByText('Exportar a Excel'));
+
+            await waitFor(() => {
+                expect(screen.getByText('Informe detallado: cliente, precio, estado y configuración por pedido.')).toBeInTheDocument();
+            });
+
+            fireEvent.click(screen.getByText('Fábrica'));
+            expect(screen.getByText('Solo configuraciones y cantidades agrupadas. Sin datos de clientes ni precios.')).toBeInTheDocument();
+
+            fireEvent.click(screen.getByText('Almacén'));
+            expect(screen.getByText('Configuraciones agrupadas con columnas de validación en blanco (Recibido / OK / Notas).')).toBeInTheDocument();
+
+            fireEvent.click(screen.getAllByText('Exportar')[0]);
+
+            await waitFor(() => {
+                expect(exportService.exportOrders).toHaveBeenCalledWith([], 'WAREHOUSE');
+            });
+        });
+
+        it('renders invalid configuration string as-is when parsing fails', async () => {
+            const invalidConfigOrder: Order = {
+                ...mockOrder,
+                products: [{ ...mockProduct, configuration: '{broken-json' }],
+            };
+
+            vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
+            vi.mocked(orderService.getOrder).mockResolvedValue(invalidConfigOrder);
+
+            renderWithRouter('/?orderId=ORD001');
+
+            await waitFor(() => {
+                expect(screen.getByText('{broken-json')).toBeInTheDocument();
+            });
         });
     });
 });
