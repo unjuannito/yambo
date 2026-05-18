@@ -130,7 +130,7 @@ class OrderExportServiceTest {
                 .thenReturn(new PageImpl<>(orders));
         when(productRepository.findAll()).thenReturn(List.of(testProduct, testProduct2));
         when(familyProductRepository.findAll()).thenReturn(List.of(testDrop));
-        when(userRepository.findById("USER001")).thenReturn(Optional.of(testUser));
+        lenient().when(userRepository.findById("USER001")).thenReturn(Optional.of(testUser));
     }
 
     private XSSFWorkbook parseWorkbook(byte[] bytes) throws Exception {

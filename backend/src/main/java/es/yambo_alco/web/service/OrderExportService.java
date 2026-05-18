@@ -93,93 +93,120 @@ public class OrderExportService {
     public byte[] exportOrders(List<String> dropIds,
                                 ExportReportType reportType,
                                 OrderStatus productStatusFilter) throws IOException {
-        if (reportType == null) reportType = ExportReportType.FULL;
-        OrderStatus effectiveFilter = resolveStatusFilter(reportType, productStatusFilter);
+        ExportReportType effectiveReportType = reportType != null ? reportType : ExportReportType.FULL;
+        OrderStatus effectiveFilter = resolveStatusFilter(effectiveReportType, productStatusFilter);
 
-        // 1. Load orders (order-level status: always the same included set)
         Specification<Order> spec = Specification.where(OrderSpecifications.statusIn(INCLUDED_STATUSES));
         List<Order> orders = orderRepository.findAll(spec, Pageable.unpaged()).getContent();
 
-        // 2. Load all products and drops for resolution
         Map<String, Product> productMap = productRepository.findAll().stream()
-                .collect(Collectors.toMap(Product::getId, p -> p));
+            .collect(Collectors.toMap(Product::getId, p -> p));
         Map<String, FamilyProduct> dropMap = familyProductRepository.findAll().stream()
-                .collect(Collectors.toMap(FamilyProduct::getId, d -> d));
-        Map<String, User> userCache = new HashMap<>();
+            .collect(Collectors.toMap(FamilyProduct::getId, d -> d));
 
-        // 3. Determine which product IDs belong to selected drops
-        Set<String> allowedProductIds = null;
-        if (dropIds != null && !dropIds.isEmpty()) {
-            allowedProductIds = productMap.values().stream()
-                    .filter(p -> p.getFamilyProduct() != null
-                            && dropIds.contains(p.getFamilyProduct().getId()))
-                    .map(Product::getId)
-                    .collect(Collectors.toSet());
-        }
-
-        // 4. Group order-products by productId, applying both drop and status filters
-        Map<String, ProductGroup> groups = new LinkedHashMap<>();
-
-        for (Order order : orders) {
-            User user = userCache.computeIfAbsent(order.getCustomerId(),
-                    id -> userRepository.findById(id).orElse(null));
-
-            if (order.getOrderProducts() == null) continue;
-
-            for (OrderProduct op : order.getOrderProducts()) {
-                if (allowedProductIds != null && !allowedProductIds.contains(op.getProductId())) {
-                    continue;
-                }
-                if (effectiveFilter != null && !effectiveFilter.equals(order.getStatus())) {
-                    continue;
-                }
-
-                Product product = productMap.get(op.getProductId());
-                FamilyProduct drop = product != null && product.getFamilyProduct() != null
-                        ? dropMap.get(product.getFamilyProduct().getId())
-                        : null;
-
-                String productName = product != null ? product.getName() : op.getProductId();
-                String dropName    = drop != null ? drop.getName() : "Sin Drop";
-                String dropId      = drop != null ? drop.getId()   : "";
-
-                Map<String, Object> configParsed = parseConfig(op.getConfiguration());
-
-                groups.computeIfAbsent(op.getProductId(), k ->
-                        new ProductGroup(op.getProductId(), productName, dropName, dropId, product));
-
-                groups.get(op.getProductId()).items.add(new ProductGroupItem(
-                        order.getId(),
-                        user != null ? user.getName()  : "N/A",
-                        user != null ? user.getEmail() : "",
-                        order.getStatus(),
-                        order.getCreatedAt(),
-                        op.getQuantity(),
-                        op.getPrice(),
-                        configParsed
-                ));
-            }
-        }
-
-        // 5. Resolve selected drop names for the report title/subtitle
-        List<String> selectedDropNames = new ArrayList<>();
-        if (dropIds != null && !dropIds.isEmpty()) {
-            for (String id : dropIds) {
-                FamilyProduct fp = dropMap.get(id);
-                if (fp != null) selectedDropNames.add(fp.getName());
-            }
-        }
+        Set<String> allowedProductIds = resolveAllowedProductIds(dropIds, productMap);
+        Map<String, ProductGroup> groups = buildProductGroups(orders, productMap, dropMap, allowedProductIds, effectiveFilter);
+        List<String> selectedDropNames = resolveSelectedDropNames(dropIds, dropMap);
 
         // 6. Build workbook and delegate to the appropriate builder
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             byte[] logoBytes = loadLogo();
             StylePack styles = ExcelStyleFactory.createStyles(wb);
-            selectBuilder(reportType).build(wb, groups, selectedDropNames, logoBytes, styles);
+            selectBuilder(effectiveReportType).build(wb, groups, selectedDropNames, logoBytes, styles);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             wb.write(out);
             return out.toByteArray();
         }
+    }
+
+    private Set<String> resolveAllowedProductIds(List<String> dropIds, Map<String, Product> productMap) {
+        if (dropIds == null || dropIds.isEmpty()) {
+            return null;
+        }
+
+        return productMap.values().stream()
+                .filter(p -> p.getFamilyProduct() != null && dropIds.contains(p.getFamilyProduct().getId()))
+                .map(Product::getId)
+                .collect(Collectors.toSet());
+    }
+
+    private Map<String, ProductGroup> buildProductGroups(List<Order> orders,
+                                                         Map<String, Product> productMap,
+                                                         Map<String, FamilyProduct> dropMap,
+                                                         Set<String> allowedProductIds,
+                                                         OrderStatus effectiveFilter) {
+        Map<String, ProductGroup> groups = new LinkedHashMap<>();
+        Map<String, User> userCache = new HashMap<>();
+
+        for (Order order : orders) {
+            if (order.getOrderProducts() == null || !matchesStatusFilter(order, effectiveFilter)) {
+                continue;
+            }
+
+            User user = userCache.computeIfAbsent(order.getCustomerId(), id -> userRepository.findById(id).orElse(null));
+
+            for (OrderProduct orderProduct : order.getOrderProducts()) {
+                if (isAllowedProduct(orderProduct.getProductId(), allowedProductIds)) {
+                    appendProductGroupItem(groups, order, orderProduct, user, productMap, dropMap);
+                }
+            }
+        }
+
+        return groups;
+    }
+
+    private boolean matchesStatusFilter(Order order, OrderStatus effectiveFilter) {
+        return effectiveFilter == null || effectiveFilter.equals(order.getStatus());
+    }
+
+    private boolean isAllowedProduct(String productId, Set<String> allowedProductIds) {
+        return allowedProductIds == null || allowedProductIds.contains(productId);
+    }
+
+    private void appendProductGroupItem(Map<String, ProductGroup> groups,
+                                        Order order,
+                                        OrderProduct orderProduct,
+                                        User user,
+                                        Map<String, Product> productMap,
+                                        Map<String, FamilyProduct> dropMap) {
+        Product product = productMap.get(orderProduct.getProductId());
+        FamilyProduct drop = product != null && product.getFamilyProduct() != null
+                ? dropMap.get(product.getFamilyProduct().getId())
+                : null;
+
+        String productName = product != null ? product.getName() : orderProduct.getProductId();
+        String dropName = drop != null ? drop.getName() : "Sin Drop";
+        String dropId = drop != null ? drop.getId() : "";
+
+        groups.computeIfAbsent(orderProduct.getProductId(), k ->
+                new ProductGroup(orderProduct.getProductId(), productName, dropName, dropId, product));
+
+        groups.get(orderProduct.getProductId()).items.add(new ProductGroupItem(
+                order.getId(),
+                user != null ? user.getName() : "N/A",
+                user != null ? user.getEmail() : "",
+                order.getStatus(),
+                order.getCreatedAt(),
+                orderProduct.getQuantity(),
+                orderProduct.getPrice(),
+                parseConfig(orderProduct.getConfiguration())
+        ));
+    }
+
+    private List<String> resolveSelectedDropNames(List<String> dropIds, Map<String, FamilyProduct> dropMap) {
+        if (dropIds == null || dropIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> selectedDropNames = new ArrayList<>();
+        for (String id : dropIds) {
+            FamilyProduct fp = dropMap.get(id);
+            if (fp != null) {
+                selectedDropNames.add(fp.getName());
+            }
+        }
+        return selectedDropNames;
     }
 
     // ════════════════════════════════════════════════════════
