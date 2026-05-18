@@ -231,6 +231,16 @@ describe('my-orders route', () => {
             });
         });
 
+        it('does not auto-open detail when query orderId is not in loaded orders', async () => {
+            renderPage('/?orderId=ORD404');
+
+            await waitFor(() => {
+                expect(screen.getByText('#ORD001')).toBeInTheDocument();
+            });
+
+            expect(screen.queryByText('Nueva incidencia (varios productos)')).not.toBeInTheDocument();
+        });
+
         it('opens order details when "Ver detalles" is clicked', async () => {
             renderPage();
             await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
