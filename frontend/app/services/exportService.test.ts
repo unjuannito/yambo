@@ -54,7 +54,7 @@ describe('ExportService', () => {
             }),
         };
 
-        let createdLink: HTMLAnchorElement | null = null;
+        let createdLink: any = null;
         vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
             const el = document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as any;
             if (tagName.toLowerCase() === 'a') {
@@ -68,6 +68,9 @@ describe('ExportService', () => {
         await service.exportOrders([], 'FULL');
 
         expect(service.axiosInstance.get).toHaveBeenCalledWith('/orders/export?reportType=FULL', { responseType: 'blob' });
-        expect(createdLink?.download).toMatch(/^fabricacion_\d{4}-\d{2}-\d{2}\.xlsx$/);
+        if (!createdLink) {
+            throw new Error('Expected anchor element to be created');
+        }
+        expect(createdLink.download).toMatch(/^fabricacion_\d{4}-\d{2}-\d{2}\.xlsx$/);
     });
 });
