@@ -223,6 +223,14 @@ describe('my-orders route', () => {
     });
 
     describe('order details modal', () => {
+        it('auto-opens order detail from orderId query param', async () => {
+            renderPage('/?orderId=ORD001');
+
+            await waitFor(() => {
+                expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument();
+            });
+        });
+
         it('opens order details when "Ver detalles" is clicked', async () => {
             renderPage();
             await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());

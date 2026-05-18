@@ -196,6 +196,18 @@ describe('Orders route', () => {
             expect(screen.queryByTestId('issue-form')).not.toBeInTheDocument();
         });
 
+        it('does not deep-link lookup when orderId query param is missing', async () => {
+            vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
+
+            renderWithRouter('/');
+
+            await waitFor(() => {
+                expect(productService.getAllProducts).toHaveBeenCalled();
+            });
+
+            expect(orderService.getOrder).not.toHaveBeenCalled();
+        });
+
         it('opens the Create Issue modal when "Crear incidencia" is clicked', async () => {
             vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
 

@@ -144,4 +144,51 @@ describe('reports route', () => {
         expect(setStartDate).toHaveBeenCalled();
         expect(setEndDate).toHaveBeenCalled();
     });
+
+    it('renders populated analytics sections when data arrays are present', () => {
+        vi.mocked(useReportData).mockReturnValue({
+            data: {
+                ...reportData,
+                orders: {
+                    ...reportData.orders,
+                    ordersOverTime: [{ date: '2026-05-01', value: 2 }],
+                    revenueOverTime: [{ date: '2026-05-01', value: 20 }],
+                    ordersByStatus: { PENDING_PAYMENT: 1 },
+                },
+                users: {
+                    ...reportData.users,
+                    registrationsOverTime: [{ date: '2026-05-01', value: 1 }],
+                    activeUsersOverTime: [{ date: '2026-05-01', value: 2 }],
+                },
+                issues: {
+                    ...reportData.issues,
+                    issuesOverTime: [{ date: '2026-05-01', value: 1 }],
+                    issuesByStatus: { OPEN: 1 },
+                },
+                products: {
+                    ...reportData.products,
+                    productSalesOverTime: [{ date: '2026-05-01', value: 3 }],
+                    productRevenueOverTime: [{ date: '2026-05-01', value: 30 }],
+                    topProductsByQuantity: [{ productId: 'p1', productName: 'Prod 1', quantity: 3, revenue: 30 }],
+                    topProductsByRevenue: [{ productId: 'p1', productName: 'Prod 1', quantity: 3, revenue: 30 }],
+                    salesByFamily: [{ familyId: 'f1', familyName: 'Drop Uno', quantity: 3, revenue: 30 }],
+                    productsByStatus: { PENDING_PRODUCTS: 1 },
+                    conversionFunnel: [{ productId: 'p1', productName: 'Prod 1', views: 100, purchases: 5, conversionRate: 5 }],
+                },
+            },
+            loading: false,
+            error: null,
+            refetch: vi.fn(),
+            startDate: '2026-05-01',
+            endDate: '2026-05-18',
+            setStartDate: vi.fn(),
+            setEndDate: vi.fn(),
+        } as any);
+
+        render(<ReportsPage />);
+
+        expect(screen.getByText('Drop Uno')).toBeInTheDocument();
+        expect(screen.getByText('Prod 1')).toBeInTheDocument();
+        expect(screen.queryByText('Sin datos en este periodo')).not.toBeInTheDocument();
+    });
 });
