@@ -262,8 +262,8 @@ class ConfigAggregatorTest {
                 List.of(item1, item2), List.of(col), List.of(tallaOpt));
 
         assertEquals(1, result.size());
-        assertEquals(5, result.get(0).totalQuantity); // 3 + 2
-        assertEquals("M", result.get(0).configValues.get("Talla"));
+        assertEquals(5, result.get(0).getTotalQuantity()); // 3 + 2
+        assertEquals("M", result.get(0).getConfigValues().get("Talla"));
     }
 
     @Test
@@ -305,9 +305,9 @@ class ConfigAggregatorTest {
                 List.of(itemL, itemS, itemM), List.of(col), List.of(tallaOpt));
 
         assertEquals(3, result.size());
-        assertEquals("S", result.get(0).configValues.get("Talla")); // S is first
-        assertEquals("M", result.get(1).configValues.get("Talla")); // M second
-        assertEquals("L", result.get(2).configValues.get("Talla")); // L third
+        assertEquals("S", result.get(0).getConfigValues().get("Talla")); // S is first
+        assertEquals("M", result.get(1).getConfigValues().get("Talla")); // M second
+        assertEquals("L", result.get(2).getConfigValues().get("Talla")); // L third
     }
 
     @Test
@@ -327,7 +327,7 @@ class ConfigAggregatorTest {
                 List.of(itemB, itemA), List.of(col), List.of(nombreOpt));
 
         assertEquals(2, result.size());
-        assertEquals("Apple", result.get(0).configValues.get("Nombre"));
-        assertEquals("Banana", result.get(1).configValues.get("Nombre"));
+        assertEquals("Apple", result.get(0).getConfigValues().get("Nombre"));
+        assertEquals("Banana", result.get(1).getConfigValues().get("Nombre"));
     }
 }

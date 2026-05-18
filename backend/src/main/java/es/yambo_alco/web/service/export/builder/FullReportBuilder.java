@@ -29,6 +29,7 @@ import java.util.*;
 public class FullReportBuilder implements ReportBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(FullReportBuilder.class);
+    private record ProductSheetLayout(List<String> headers, int fixedStartLength, int qtyColIdx, int priceColIdx, int subtotalColIdx) {}
 
     private static final Map<OrderStatus, String> ORDER_STATUS_LABELS = Map.of(
             OrderStatus.PENDING_PAYMENT,   "Pendiente de Pago",
@@ -79,17 +80,17 @@ public class FullReportBuilder implements ReportBuilder {
 
         // ── Title ──
         String dateStr = LocalDateTime.now().format(
-                DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", new Locale("es", "ES")));
-        ReportSheetSectionHelper.addTitleRow(ws, currentRow, 4, "Pedido para Fabricación — " + dateStr, styles.title);
+                DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.of("es", "ES")));
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, 4, "Pedido para Fabricación — " + dateStr, styles.getTitle());
         currentRow++;
 
         // ── Subtitle: selected drops ──
-        currentRow = ReportSheetSectionHelper.addDropsSubtitle(ws, currentRow, 4, selectedDropNames, styles.subtitle);
+        currentRow = ReportSheetSectionHelper.addDropsSubtitle(ws, currentRow, 4, selectedDropNames, styles.getSubtitle());
 
         // ── Note about excluded statuses ──
         ReportSheetSectionHelper.addMergedRow(ws, currentRow, 4,
             "Nota: Se excluyen automáticamente los pedidos con estado 'Pendiente de Pago' y 'Cancelado'.",
-            styles.note);
+            styles.getNote());
         currentRow++;
 
         currentRow++; // blank row
@@ -97,7 +98,7 @@ public class FullReportBuilder implements ReportBuilder {
         // ── Table header ──
         int headerRowNum = currentRow;
         List<String> headers = List.of("Producto", "Drop", "Unidades Totales", "Precio Unitario Medio (€)", "Importe Total (€)");
-        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, headers, styles.header);
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, headers, styles.getHeader());
         currentRow++;
 
         // ── Data rows ──
@@ -115,9 +116,9 @@ public class FullReportBuilder implements ReportBuilder {
                     ? totalRevenue.divide(BigDecimal.valueOf(qty), 2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO;
 
-            CellStyle dataStyle   = idx % 2 == 0 ? styles.dataAlt1   : styles.dataAlt2;
-            CellStyle currStyle   = idx % 2 == 0 ? styles.currencyAlt1 : styles.currencyAlt2;
-            CellStyle centerStyle = idx % 2 == 0 ? styles.centerAlt1  : styles.centerAlt2;
+            CellStyle dataStyle   = idx % 2 == 0 ? styles.getDataAlt1()   : styles.getDataAlt2();
+            CellStyle currStyle   = idx % 2 == 0 ? styles.getCurrencyAlt1() : styles.getCurrencyAlt2();
+            CellStyle centerStyle = idx % 2 == 0 ? styles.getCenterAlt1()  : styles.getCenterAlt2();
 
             Cell c0 = row.createCell(0); c0.setCellValue(g.productName);            c0.setCellStyle(dataStyle);
             Cell c1 = row.createCell(1); c1.setCellValue(g.dropName);               c1.setCellStyle(centerStyle);
@@ -134,17 +135,17 @@ public class FullReportBuilder implements ReportBuilder {
         // ── Totals row ──
         Row totalsRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
 
-        Cell t0 = totalsRow.createCell(0); t0.setCellValue("TOTALES"); t0.setCellStyle(styles.totalsLabel);
-        totalsRow.createCell(1).setCellStyle(styles.totals);
+        Cell t0 = totalsRow.createCell(0); t0.setCellValue("TOTALES"); t0.setCellStyle(styles.getTotalsLabel());
+        totalsRow.createCell(1).setCellStyle(styles.getTotals());
 
         Cell t2 = totalsRow.createCell(2);
         t2.setCellFormula("SUM(C" + (dataStartRow + 1) + ":C" + (lastDataRow + 1) + ")");
-        t2.setCellStyle(styles.totalsCenter);
-        totalsRow.createCell(3).setCellStyle(styles.totals);
+        t2.setCellStyle(styles.getTotalsCenter());
+        totalsRow.createCell(3).setCellStyle(styles.getTotals());
 
         Cell t4 = totalsRow.createCell(4);
         t4.setCellFormula("SUM(E" + (dataStartRow + 1) + ":E" + (lastDataRow + 1) + ")");
-        t4.setCellStyle(styles.totalsCurrency);
+        t4.setCellStyle(styles.getTotalsCurrency());
 
         currentRow += 2;
 
@@ -152,7 +153,7 @@ public class FullReportBuilder implements ReportBuilder {
         Row statsTitle = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
         Cell statsTitleCell = statsTitle.createCell(0);
         statsTitleCell.setCellValue("Estadísticas");
-        statsTitleCell.setCellStyle(styles.sectionTitle);
+        statsTitleCell.setCellStyle(styles.getSectionTitle());
         currentRow++;
 
         Set<String> uniqueOrders = new HashSet<>();
@@ -174,8 +175,8 @@ public class FullReportBuilder implements ReportBuilder {
         };
         for (String[] stat : stats) {
             Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-            Cell label = row.createCell(0); label.setCellValue(stat[0]); label.setCellStyle(styles.statLabel);
-            Cell value = row.createCell(1); value.setCellValue(stat[1]); value.setCellStyle(styles.statValue);
+            Cell label = row.createCell(0); label.setCellValue(stat[0]); label.setCellStyle(styles.getStatLabel());
+            Cell value = row.createCell(1); value.setCellValue(stat[1]); value.setCellStyle(styles.getStatValue());
             currentRow++;
         }
 
@@ -199,24 +200,12 @@ public class FullReportBuilder implements ReportBuilder {
         if (productOptions == null) productOptions = List.of();
 
         List<ConfigColumn> configColumns = ConfigAggregator.getConfigColumns(productOptions, group.items, ExportReportType.FULL);
-
-        // ── Column layout ──
-        String[] fixedStart = {"Nº Pedido", "Cliente", "Email", "Estado Producto", "Fecha"};
-        String[] fixedEnd   = {"Cantidad", "Precio Unitario (€)", "Subtotal (€)"};
-
-        List<String> allHeaders = new ArrayList<>();
-        Collections.addAll(allHeaders, fixedStart);
-        configColumns.forEach(c -> allHeaders.add(c.label()));
-        Collections.addAll(allHeaders, fixedEnd);
-
-        int qtyColIdx      = fixedStart.length + configColumns.size();
-        int priceColIdx    = qtyColIdx + 1;
-        int subtotalColIdx = priceColIdx + 1;
+        ProductSheetLayout layout = buildProductSheetLayout(configColumns);
 
         int currentRow = 0;
 
         // ── Product title ──
-        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(allHeaders.size() - 1, 0), group.productName, styles.productTitle);
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(layout.headers().size() - 1, 0), group.productName, styles.getProductTitle());
         ExcelWorkbookHelper.getOrCreateRow(ws, currentRow).setHeightInPoints(24);
         currentRow++;
 
@@ -232,117 +221,179 @@ public class FullReportBuilder implements ReportBuilder {
 
         // ── Column headers ──
         int headerRowNum = currentRow;
-        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, allHeaders, styles.header);
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, layout.headers(), styles.getHeader());
         currentRow++;
 
         // ── Data rows ──
         int dataStartRow = currentRow;
 
         List<ProductGroupItem> sortedItems = group.items.stream()
-                .sorted(Comparator.comparing(ProductGroupItem::clientName)
-                        .thenComparing(ProductGroupItem::orderId))
-                .toList();
-
-        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        int idx = 0;
-
-        for (ProductGroupItem item : sortedItems) {
-            Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-            int excelRow = currentRow + 1;
-
-            CellStyle dataStyle      = idx % 2 == 0 ? styles.dataAlt1       : styles.dataAlt2;
-            CellStyle centerStyle    = idx % 2 == 0 ? styles.centerAlt1     : styles.centerAlt2;
-            CellStyle currStyle      = idx % 2 == 0 ? styles.currencyAlt1   : styles.currencyAlt2;
-            CellStyle dateStyle      = idx % 2 == 0 ? styles.dateAlt1       : styles.dateAlt2;
-            CellStyle boldCenterStyle = idx % 2 == 0 ? styles.boldCenterAlt1 : styles.boldCenterAlt2;
-
-            // Fixed start
-            Cell c0 = row.createCell(0); c0.setCellValue(item.orderId());                          c0.setCellStyle(dataStyle);
-            Cell c1 = row.createCell(1); c1.setCellValue(item.clientName());                       c1.setCellStyle(dataStyle);
-            Cell c2 = row.createCell(2); c2.setCellValue(item.clientEmail());                      c2.setCellStyle(dataStyle);
-            Cell c3 = row.createCell(3); c3.setCellValue(resolveOrderStatus(item.orderStatus())); c3.setCellStyle(centerStyle);
-            Cell c4 = row.createCell(4);
-            if (item.orderDate() != null) c4.setCellValue(item.orderDate().format(dateFmt));
-            c4.setCellStyle(dateStyle);
-
-            // Config columns
-            for (int colIdx = 0; colIdx < configColumns.size(); colIdx++) {
-                ConfigColumn col = configColumns.get(colIdx);
-                Cell cell = row.createCell(fixedStart.length + colIdx);
-                cell.setCellValue(ConfigAggregator.resolveConfigValue(col, item.configParsed().get(col.key()), productOptions));
-                cell.setCellStyle(centerStyle);
-            }
-
-            // Quantity
-            Cell qtyCell = row.createCell(qtyColIdx);
-            qtyCell.setCellValue(item.quantity());
-            qtyCell.setCellStyle(boldCenterStyle);
-
-            // Unit price
-            Cell priceCell = row.createCell(priceColIdx);
-            priceCell.setCellValue(item.unitPrice().doubleValue());
-            priceCell.setCellStyle(currStyle);
-
-            // Subtotal formula
-            Cell subtotalCell = row.createCell(subtotalColIdx);
-            subtotalCell.setCellFormula(ExcelWorkbookHelper.getColLetter(qtyColIdx) + excelRow
-                    + "*" + ExcelWorkbookHelper.getColLetter(priceColIdx) + excelRow);
-            subtotalCell.setCellStyle(currStyle);
-
-            currentRow++;
-            idx++;
-        }
+            .sorted(Comparator.comparing(ProductGroupItem::clientName)
+                .thenComparing(ProductGroupItem::orderId))
+            .toList();
+        currentRow = writeProductDataRows(ws, sortedItems, configColumns, productOptions, styles, layout, currentRow);
 
         int lastDataRow = currentRow - 1;
 
         // ── Totals row ──
-        Row totalsRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-
-        if (qtyColIdx > 0) {
-            Cell labelCell = totalsRow.createCell(qtyColIdx - 1);
-            labelCell.setCellValue("TOTALES:");
-            labelCell.setCellStyle(styles.totalsLabelRight);
-        }
-        for (int c = 0; c < qtyColIdx - 1; c++) {
-            totalsRow.createCell(c).setCellStyle(styles.totals);
-        }
-
-        Cell qtyTotalCell = totalsRow.createCell(qtyColIdx);
-        qtyTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(qtyColIdx) + (dataStartRow + 1)
-                + ":" + ExcelWorkbookHelper.getColLetter(qtyColIdx) + (lastDataRow + 1) + ")");
-        qtyTotalCell.setCellStyle(styles.totalsCenter);
-
-        Cell priceTotalCell = totalsRow.createCell(priceColIdx);
-        if (dataStartRow <= lastDataRow) {
-            priceTotalCell.setCellFormula("AVERAGE(" + ExcelWorkbookHelper.getColLetter(priceColIdx) + (dataStartRow + 1)
-                    + ":" + ExcelWorkbookHelper.getColLetter(priceColIdx) + (lastDataRow + 1) + ")");
-        }
-        priceTotalCell.setCellStyle(styles.totalsCurrency);
-
-        Cell subtotalTotalCell = totalsRow.createCell(subtotalColIdx);
-        subtotalTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(subtotalColIdx) + (dataStartRow + 1)
-                + ":" + ExcelWorkbookHelper.getColLetter(subtotalColIdx) + (lastDataRow + 1) + ")");
-        subtotalTotalCell.setCellStyle(styles.totalsCurrency);
+        writeProductTotalsRow(ws, styles, layout, dataStartRow, lastDataRow, currentRow);
 
         // ── Column widths ──
-        int[] fixedStartWidths = {14, 24, 28, 18, 14};
-        int[] fixedEndWidths   = {12, 18, 18};
-        for (int i = 0; i < allHeaders.size(); i++) {
-            int width;
-            if (i < fixedStart.length) {
-                width = fixedStartWidths[i];
-            } else if (i < fixedStart.length + configColumns.size()) {
-                width = 18;
-            } else {
-                width = fixedEndWidths[i - fixedStart.length - configColumns.size()];
-            }
-            ws.setColumnWidth(i, width * 256);
-        }
+        applyProductSheetColumnWidths(ws, layout, configColumns.size());
 
         // ── Freeze & auto-filter ──
         ws.createFreezePane(1, headerRowNum + 1);
         if (lastDataRow >= headerRowNum) {
-            ws.setAutoFilter(new CellRangeAddress(headerRowNum, lastDataRow, 0, allHeaders.size() - 1));
+            ws.setAutoFilter(new CellRangeAddress(headerRowNum, lastDataRow, 0, layout.headers().size() - 1));
+        }
+    }
+
+    private ProductSheetLayout buildProductSheetLayout(List<ConfigColumn> configColumns) {
+        String[] fixedStart = {"Nº Pedido", "Cliente", "Email", "Estado Producto", "Fecha"};
+        String[] fixedEnd = {"Cantidad", "Precio Unitario (€)", "Subtotal (€)"};
+
+        List<String> headers = new ArrayList<>();
+        Collections.addAll(headers, fixedStart);
+        configColumns.forEach(c -> headers.add(c.label()));
+        Collections.addAll(headers, fixedEnd);
+
+        int qtyColIdx = fixedStart.length + configColumns.size();
+        int priceColIdx = qtyColIdx + 1;
+        int subtotalColIdx = priceColIdx + 1;
+        return new ProductSheetLayout(headers, fixedStart.length, qtyColIdx, priceColIdx, subtotalColIdx);
+    }
+
+    private int writeProductDataRows(XSSFSheet ws,
+                                     List<ProductGroupItem> sortedItems,
+                                     List<ConfigColumn> configColumns,
+                                     List<ProductOption> productOptions,
+                                     StylePack styles,
+                                     ProductSheetLayout layout,
+                                     int startRow) {
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        int currentRow = startRow;
+
+        for (int idx = 0; idx < sortedItems.size(); idx++) {
+            ProductGroupItem item = sortedItems.get(idx);
+            Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
+            int excelRow = currentRow + 1;
+
+            CellStyle dataStyle = idx % 2 == 0 ? styles.getDataAlt1() : styles.getDataAlt2();
+            CellStyle centerStyle = idx % 2 == 0 ? styles.getCenterAlt1() : styles.getCenterAlt2();
+            CellStyle currStyle = idx % 2 == 0 ? styles.getCurrencyAlt1() : styles.getCurrencyAlt2();
+            CellStyle dateStyle = idx % 2 == 0 ? styles.getDateAlt1() : styles.getDateAlt2();
+            CellStyle boldCenterStyle = idx % 2 == 0 ? styles.getBoldCenterAlt1() : styles.getBoldCenterAlt2();
+
+            writeProductFixedColumns(row, item, dateFmt, dataStyle, centerStyle, dateStyle);
+            writeProductConfigColumns(row, item, configColumns, productOptions, layout.fixedStartLength(), centerStyle);
+            writeProductAmounts(row, item, layout, excelRow, currStyle, boldCenterStyle);
+            currentRow++;
+        }
+
+        return currentRow;
+    }
+
+    private void writeProductFixedColumns(Row row,
+                                          ProductGroupItem item,
+                                          DateTimeFormatter dateFmt,
+                                          CellStyle dataStyle,
+                                          CellStyle centerStyle,
+                                          CellStyle dateStyle) {
+        Cell c0 = row.createCell(0); c0.setCellValue(item.orderId()); c0.setCellStyle(dataStyle);
+        Cell c1 = row.createCell(1); c1.setCellValue(item.clientName()); c1.setCellStyle(dataStyle);
+        Cell c2 = row.createCell(2); c2.setCellValue(item.clientEmail()); c2.setCellStyle(dataStyle);
+        Cell c3 = row.createCell(3); c3.setCellValue(resolveOrderStatus(item.orderStatus())); c3.setCellStyle(centerStyle);
+
+        Cell c4 = row.createCell(4);
+        if (item.orderDate() != null) {
+            c4.setCellValue(item.orderDate().format(dateFmt));
+        }
+        c4.setCellStyle(dateStyle);
+    }
+
+    private void writeProductConfigColumns(Row row,
+                                           ProductGroupItem item,
+                                           List<ConfigColumn> configColumns,
+                                           List<ProductOption> productOptions,
+                                           int fixedStartLength,
+                                           CellStyle centerStyle) {
+        for (int colIdx = 0; colIdx < configColumns.size(); colIdx++) {
+            ConfigColumn col = configColumns.get(colIdx);
+            Cell cell = row.createCell(fixedStartLength + colIdx);
+            cell.setCellValue(ConfigAggregator.resolveConfigValue(col, item.configParsed().get(col.key()), productOptions));
+            cell.setCellStyle(centerStyle);
+        }
+    }
+
+    private void writeProductAmounts(Row row,
+                                     ProductGroupItem item,
+                                     ProductSheetLayout layout,
+                                     int excelRow,
+                                     CellStyle currStyle,
+                                     CellStyle boldCenterStyle) {
+        Cell qtyCell = row.createCell(layout.qtyColIdx());
+        qtyCell.setCellValue(item.quantity());
+        qtyCell.setCellStyle(boldCenterStyle);
+
+        Cell priceCell = row.createCell(layout.priceColIdx());
+        priceCell.setCellValue(item.unitPrice().doubleValue());
+        priceCell.setCellStyle(currStyle);
+
+        Cell subtotalCell = row.createCell(layout.subtotalColIdx());
+        subtotalCell.setCellFormula(ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + excelRow
+                + "*" + ExcelWorkbookHelper.getColLetter(layout.priceColIdx()) + excelRow);
+        subtotalCell.setCellStyle(currStyle);
+    }
+
+    private void writeProductTotalsRow(XSSFSheet ws,
+                                       StylePack styles,
+                                       ProductSheetLayout layout,
+                                       int dataStartRow,
+                                       int lastDataRow,
+                                       int totalsRowIdx) {
+        Row totalsRow = ExcelWorkbookHelper.getOrCreateRow(ws, totalsRowIdx);
+
+        if (layout.qtyColIdx() > 0) {
+            Cell labelCell = totalsRow.createCell(layout.qtyColIdx() - 1);
+            labelCell.setCellValue("TOTALES:");
+            labelCell.setCellStyle(styles.getTotalsLabelRight());
+        }
+        for (int c = 0; c < layout.qtyColIdx() - 1; c++) {
+            totalsRow.createCell(c).setCellStyle(styles.getTotals());
+        }
+
+        Cell qtyTotalCell = totalsRow.createCell(layout.qtyColIdx());
+        qtyTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + (dataStartRow + 1)
+                + ":" + ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + (lastDataRow + 1) + ")");
+        qtyTotalCell.setCellStyle(styles.getTotalsCenter());
+
+        Cell priceTotalCell = totalsRow.createCell(layout.priceColIdx());
+        if (dataStartRow <= lastDataRow) {
+            priceTotalCell.setCellFormula("AVERAGE(" + ExcelWorkbookHelper.getColLetter(layout.priceColIdx()) + (dataStartRow + 1)
+                    + ":" + ExcelWorkbookHelper.getColLetter(layout.priceColIdx()) + (lastDataRow + 1) + ")");
+        }
+        priceTotalCell.setCellStyle(styles.getTotalsCurrency());
+
+        Cell subtotalTotalCell = totalsRow.createCell(layout.subtotalColIdx());
+        subtotalTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(layout.subtotalColIdx()) + (dataStartRow + 1)
+                + ":" + ExcelWorkbookHelper.getColLetter(layout.subtotalColIdx()) + (lastDataRow + 1) + ")");
+        subtotalTotalCell.setCellStyle(styles.getTotalsCurrency());
+    }
+
+    private void applyProductSheetColumnWidths(XSSFSheet ws, ProductSheetLayout layout, int configColumnCount) {
+        int[] fixedStartWidths = {14, 24, 28, 18, 14};
+        int[] fixedEndWidths = {12, 18, 18};
+
+        for (int i = 0; i < layout.headers().size(); i++) {
+            int width;
+            if (i < layout.fixedStartLength()) {
+                width = fixedStartWidths[i];
+            } else if (i < layout.fixedStartLength() + configColumnCount) {
+                width = 18;
+            } else {
+                width = fixedEndWidths[i - layout.fixedStartLength() - configColumnCount];
+            }
+            ws.setColumnWidth(i, width * 256);
         }
     }
 

@@ -91,18 +91,18 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
         // ── Title ──
         String dateStr = LocalDateTime.now().format(
             DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale.of("es", "ES")));
-        ReportSheetSectionHelper.addTitleRow(ws, currentRow, 2, getReportTitle() + " — " + dateStr, styles.title);
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, 2, getReportTitle() + " — " + dateStr, styles.getTitle());
         currentRow++;
 
         // ── Subtitle: selected drops ──
-        currentRow = ReportSheetSectionHelper.addDropsSubtitle(ws, currentRow, 2, selectedDropNames, styles.subtitle);
+        currentRow = ReportSheetSectionHelper.addDropsSubtitle(ws, currentRow, 2, selectedDropNames, styles.getSubtitle());
 
         currentRow++; // blank row
 
         // ── Table header — no price columns ──
         int headerRowNum = currentRow;
         List<String> headers = List.of("Producto", "Drop", "Unidades Totales");
-        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, headers, styles.header);
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, headers, styles.getHeader());
         currentRow++;
 
         // ── Data rows ──
@@ -116,8 +116,8 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
             Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
             int qty = g.totalQty();
 
-            CellStyle dataStyle   = idx % 2 == 0 ? styles.dataAlt1  : styles.dataAlt2;
-            CellStyle centerStyle = idx % 2 == 0 ? styles.centerAlt1 : styles.centerAlt2;
+            CellStyle dataStyle   = idx % 2 == 0 ? styles.getDataAlt1()  : styles.getDataAlt2();
+            CellStyle centerStyle = idx % 2 == 0 ? styles.getCenterAlt1() : styles.getCenterAlt2();
 
             Cell c0 = row.createCell(0); c0.setCellValue(g.productName); c0.setCellStyle(dataStyle);
             Cell c1 = row.createCell(1); c1.setCellValue(g.dropName);    c1.setCellStyle(centerStyle);
@@ -132,12 +132,12 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
         // ── Totals row ──
         Row totalsRow = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
 
-        Cell t0 = totalsRow.createCell(0); t0.setCellValue("TOTALES"); t0.setCellStyle(styles.totalsLabel);
-        totalsRow.createCell(1).setCellStyle(styles.totals);
+        Cell t0 = totalsRow.createCell(0); t0.setCellValue("TOTALES"); t0.setCellStyle(styles.getTotalsLabel());
+        totalsRow.createCell(1).setCellStyle(styles.getTotals());
 
         Cell t2 = totalsRow.createCell(2);
         t2.setCellFormula("SUM(C" + (dataStartRow + 1) + ":C" + (lastDataRow + 1) + ")");
-        t2.setCellStyle(styles.totalsCenter);
+        t2.setCellStyle(styles.getTotalsCenter());
 
         // ── Column widths & freeze ──
         ws.setColumnWidth(0, 32 * 256);
@@ -165,7 +165,7 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
         int currentRow = 0;
 
         // ── Product title ──
-        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(layout.headers().size() - 1, 0), group.productName, styles.productTitle);
+        ReportSheetSectionHelper.addTitleRow(ws, currentRow, Math.max(layout.headers().size() - 1, 0), group.productName, styles.getProductTitle());
         ExcelWorkbookHelper.getOrCreateRow(ws, currentRow).setHeightInPoints(24);
         currentRow++;
 
@@ -181,7 +181,7 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
 
         // ── Column headers ──
         int headerRowNum = currentRow;
-        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, layout.headers(), styles.header);
+        ReportSheetSectionHelper.addHeaderRow(ws, headerRowNum, layout.headers(), styles.getHeader());
         currentRow++;
 
         // ── Aggregated data rows ──
@@ -229,18 +229,18 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
 
         for (AggregatedProductRow agg : aggregated) {
             Row row = ExcelWorkbookHelper.getOrCreateRow(ws, currentRow);
-            CellStyle centerStyle = idx % 2 == 0 ? styles.centerAlt1 : styles.centerAlt2;
-            CellStyle boldCenterStyle = idx % 2 == 0 ? styles.boldCenterAlt1 : styles.boldCenterAlt2;
+            CellStyle centerStyle = idx % 2 == 0 ? styles.getCenterAlt1() : styles.getCenterAlt2();
+            CellStyle boldCenterStyle = idx % 2 == 0 ? styles.getBoldCenterAlt1() : styles.getBoldCenterAlt2();
 
             int colIdx = 0;
-            for (String resolved : agg.configValues.values()) {
+            for (String resolved : agg.getConfigValues().values()) {
                 Cell cell = row.createCell(colIdx++);
                 cell.setCellValue(resolved);
                 cell.setCellStyle(centerStyle);
             }
 
             Cell qtyCell = row.createCell(layout.qtyColIdx());
-            qtyCell.setCellValue(agg.totalQuantity);
+            qtyCell.setCellValue(agg.getTotalQuantity());
             qtyCell.setCellStyle(boldCenterStyle);
 
             fillValidationColumns(row, layout, centerStyle);
@@ -271,21 +271,21 @@ abstract class AbstractAggregatedReportBuilder implements ReportBuilder {
 
         if (layout.qtyColIdx() > 0) {
             for (int c = 0; c < layout.qtyColIdx() - 1; c++) {
-                totalsRow.createCell(c).setCellStyle(styles.totals);
+                totalsRow.createCell(c).setCellStyle(styles.getTotals());
             }
             Cell labelCell = totalsRow.createCell(layout.qtyColIdx() - 1);
             labelCell.setCellValue("TOTALES:");
-            labelCell.setCellStyle(styles.totalsLabelRight);
+            labelCell.setCellStyle(styles.getTotalsLabelRight());
         }
 
         Cell qtyTotalCell = totalsRow.createCell(layout.qtyColIdx());
         qtyTotalCell.setCellFormula("SUM(" + ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + (dataStartRow + 1)
                 + ":" + ExcelWorkbookHelper.getColLetter(layout.qtyColIdx()) + (lastDataRow + 1) + ")");
-        qtyTotalCell.setCellStyle(styles.totalsCenter);
+        qtyTotalCell.setCellStyle(styles.getTotalsCenter());
 
         if (includeValidationColumns()) {
             for (int v = layout.validationStartIdx(); v < layout.headers().size(); v++) {
-                totalsRow.createCell(v).setCellStyle(styles.totals);
+                totalsRow.createCell(v).setCellStyle(styles.getTotals());
             }
         }
     }

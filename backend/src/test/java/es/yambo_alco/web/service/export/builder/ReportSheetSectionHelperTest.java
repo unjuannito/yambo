@@ -95,8 +95,8 @@ class ReportSheetSectionHelperTest {
             assertThat(ws.getRow(1).getHeightInPoints()).isEqualTo(22f);
 
                 StylePack styles = new StylePack();
-                styles.metaLabel = (XSSFCellStyle) wb.createCellStyle();
-                styles.metaValue = (XSSFCellStyle) wb.createCellStyle();
+                styles.setMetaLabel((XSSFCellStyle) wb.createCellStyle());
+                styles.setMetaValue((XSSFCellStyle) wb.createCellStyle());
 
             int nextRow = ReportSheetSectionHelper.addProductMetaRows(
                     ws,
