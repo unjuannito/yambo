@@ -417,9 +417,11 @@ pipeline {
                             kubectl exec ${podName} -n ${previewNs} -- env \\
                                 PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \\
                                 PROD_DB_PORT=5432 \\
+                                PROD_DB_USER=${PROD_DB_USER} \\
+                                PROD_DB_PASS=${PROD_DB_PASS} \\
                                 PGPASSFILE=/tmp/.pgpass \\
                                 PGHOST=/var/run/postgresql \\
-                                PGUSER=\\\$PROD_DB_USER \\
+                                PGUSER=${PROD_DB_USER} \\
                                 ANONYMIZE_DUMP_MODE=database-bootstrap \\
                                 bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
 
