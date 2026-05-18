@@ -402,6 +402,7 @@ pipeline {
 
                             PROD_DB_USER=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_USER}' | base64 -d)
                             PROD_DB_PASS=\$(kubectl get secret yambo-secrets -n ${NAMESPACE} -o jsonpath='{.data.DB_PASS}' | base64 -d)
+                            PREVIEW_DB_USER=\$(kubectl get secret yambo-secrets -n ${previewNs} -o jsonpath='{.data.DB_USER}' | base64 -d)
 
                             chmod +x scripts/anonymize-dump.sh
                             kubectl cp scripts/anonymize-dump.sh ${previewNs}/${podName}:/tmp/anonymize-dump.sh
@@ -421,7 +422,7 @@ pipeline {
                                 PROD_DB_PASS=\${PROD_DB_PASS} \\
                                 PGPASSFILE=/tmp/.pgpass \\
                                 PGHOST=/var/run/postgresql \\
-                                PGUSER=postgres \\
+                                PGUSER=\${PREVIEW_DB_USER} \\
                                 ANONYMIZE_DUMP_MODE=database-bootstrap \\
                                 bash /tmp/anonymize-dump.sh /tmp/preview-seed.sql
 
