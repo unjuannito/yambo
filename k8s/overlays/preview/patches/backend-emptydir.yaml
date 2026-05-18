@@ -5,6 +5,3 @@
   value:
     name: uploads-storage
     emptyDir: {}
-  target:
-    kind: Deployment
-    name: yambo-backend

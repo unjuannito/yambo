@@ -326,38 +326,18 @@ pipeline {
                         kustomize edit set image ${BACKEND_IMAGE}=${BACKEND_IMAGE}:${env.BACKEND_TAG}
                     """
 
-                    // -- Write the domain patch for this preview
-                    writeFile file: "${overlayDir}/patches/domain.yaml", text: """
-- op: replace
+                    // -- Write the domain patches for this preview (split by target resource)
+                    writeFile file: "${overlayDir}/patches/domain-backend.yaml", text: """- op: replace
   path: /spec/template/spec/containers/0/env/0/value
   value: "https://${deployLabel}.${APP_DOMAIN}"
-  target:
-    kind: Deployment
-    name: yambo-backend
-- op: replace
+"""
+                    writeFile file: "${overlayDir}/patches/domain-frontend.yaml", text: """- op: replace
   path: /spec/template/spec/containers/0/env/1/value
   value: "https://${deployLabel}.${APP_DOMAIN}"
-  target:
-    kind: Deployment
-    name: yambo-frontend
-- op: replace
+"""
+                    writeFile file: "${overlayDir}/patches/domain-ingress.yaml", text: """- op: replace
   path: /spec/rules/0/host
   value: ${deployLabel}.${APP_DOMAIN}
-  target:
-    kind: Ingress
-    name: yambo-ingress
-- op: replace
-  path: /spec/tls/0/hosts/0
-  value: ${deployLabel}.${APP_DOMAIN}
-  target:
-    kind: Ingress
-    name: yambo-ingress
-- op: replace
-  path: /spec/tls/0/secretName
-  value: yambo-tls-${deployLabel}
-  target:
-    kind: Ingress
-    name: yambo-ingress
 """
 
                     // -- Apply namespace + secrets (idempotent)
@@ -375,9 +355,9 @@ pipeline {
                                 BEGIN { doc = ""; is_secret = 0 }
                                 /^---/ {
                                     if (is_secret) { printf "%s", doc }
-                                    doc = "---\n"; is_secret = 0; next
+                                    doc = "---\\n"; is_secret = 0; next
                                 }
-                                { doc = doc \$0 "\n" }
+                                { doc = doc \$0 "\\n" }
                                 /^kind: Secret\$/ { is_secret = 1 }
                                 END { if (is_secret) { printf "%s", doc } }
                             ' | kubectl apply -f -

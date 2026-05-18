@@ -21,14 +21,51 @@ images:
 patches:
   # Single replica for lightweight preview environments
   - path: patches/backend-replicas.yaml
+    target:
+      kind: Deployment
+      name: yambo-backend
   - path: patches/frontend-replicas.yaml
+    target:
+      kind: Deployment
+      name: yambo-frontend
   # Replace PVC with emptyDir (uploads are ephemeral in previews)
   - path: patches/backend-emptydir.yaml
+    target:
+      kind: Deployment
+      name: yambo-backend
   # Lighter resource limits for previews
-  - path: patches/resource-limits.yaml
-  # Domain is set by the CI pipeline via patches/domain.yaml (generated at build time)
-  - path: patches/domain.yaml
+  - path: patches/backend-resource-limits.yaml
+    target:
+      kind: Deployment
+      name: yambo-backend
+  - path: patches/frontend-resource-limits.yaml
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  - path: patches/database-resource-limits.yaml
+    target:
+      kind: Deployment
+      name: postgres
+  # Domain is set by the CI pipeline via patches/domain-*.yaml (generated at build time)
+  - path: patches/domain-backend.yaml
+    target:
+      kind: Deployment
+      name: yambo-backend
+  - path: patches/domain-frontend.yaml
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  - path: patches/domain-ingress.yaml
+    target:
+      kind: Ingress
+      name: yambo-ingress
   # Longer startup delays — preview DB seeding can be slow
   - path: patches/startup-delays.yaml
+    target:
+      kind: Deployment
+      name: yambo-backend
   # Disable mail in preview environments via secrets patch
   - path: patches/preview-secrets.yaml
+    target:
+      kind: Secret
+      name: yambo-secrets
