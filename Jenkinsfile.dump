@@ -112,6 +112,8 @@ database-bootstrap: full schema + data dump; use createdb + psql to restore from
                                 kubectl exec ${podName} -n ${NAMESPACE} -- env \\
                                     PROD_DB_HOST=db.${NAMESPACE}.svc.cluster.local \\
                                     PROD_DB_PORT=5432 \\
+                                    PROD_DB_USER=\${DB_USER} \\
+                                    PROD_DB_PASS=\${DB_PASS} \\
                                     PGHOST=/var/run/postgresql \\
                                     PGPASSFILE=/tmp/.pgpass \\
                                     ANONYMIZE_DUMP_MODE=${params.MODE} \\
