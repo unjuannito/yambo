@@ -48,8 +48,8 @@ OUTPUT="${1:-backend/src/main/resources/db/scripts/preview-seed.sql}"
 MODE="${ANONYMIZE_DUMP_MODE:-seed-data}"
 
 # Local PostgreSQL superuser (for temp DB management via Unix socket)
-# kubectl exec runs as root, which has no pg role; use the postgres superuser.
-export PGUSER="${LOCAL_DB_USER:-postgres}"
+# Priority: LOCAL_DB_USER > PGUSER (from env) > yambo_user (K8s pod default)
+export PGUSER="${LOCAL_DB_USER:-${PGUSER:-yambo_user}}"
 
 # Temp database name  includes the PID so parallel runs don't collide
 TEMP_DB="yambo_anon_$$"
