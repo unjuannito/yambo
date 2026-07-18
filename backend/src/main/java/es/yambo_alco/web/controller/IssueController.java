@@ -4,6 +4,7 @@ import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.model.Issue;
 import es.yambo_alco.web.model.IssueComment;
+import es.yambo_alco.web.model.IssueFilter;
 import es.yambo_alco.web.model.IssueWatcher;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
@@ -75,6 +76,7 @@ public class IssueController {
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('issue', 'read')")
     public ResponseEntity<Page<IssueListResponse>> listIssues(
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String issueId,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String userId,
@@ -82,7 +84,7 @@ public class IssueController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
-        Page<Issue> issues = issueService.listIssues(issueId, title, userId, status, startDate, endDate, pageable);
+        Page<Issue> issues = issueService.listIssues(new IssueFilter(query, issueId, title, userId, status, startDate, endDate), pageable);
         Page<IssueListResponse> response = issues.map(issue -> {
             List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
             return new IssueListResponse(issue, relatedProducts);
@@ -99,7 +101,7 @@ public class IssueController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
         User currentUser = authService.getCurrentUser(true);
-        Page<Issue> issues = issueService.listIssues(null, title, currentUser.getId(), status, startDate, endDate, pageable);
+        Page<Issue> issues = issueService.listIssues(new IssueFilter(null, null, title, currentUser.getId(), status, startDate, endDate), pageable);
         Page<IssueListResponse> response = issues.map(issue -> {
             List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
             return new IssueListResponse(issue, relatedProducts);
@@ -214,6 +216,7 @@ public class IssueController {
         private String description;
         private IssueStatus status;
         private String createdBy;
+        private String userName;
         private String createdAt;
         private String updatedAt;
         private List<IssueCommentResponse> comments;
@@ -226,6 +229,7 @@ public class IssueController {
             this.description = issue.getDescription();
             this.status = issue.getStatus();
             this.createdBy = issue.getCreatedBy();
+                this.userName = issue.getCreatedByUser() != null ? issue.getCreatedByUser().getName() : issue.getCreatedBy();
             this.createdAt = issue.getCreatedAt().toString();
             this.updatedAt = issue.getUpdatedAt().toString();
             this.comments = comments.stream()

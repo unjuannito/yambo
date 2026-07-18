@@ -47,6 +47,7 @@ export class IssueService extends ApiService {
         startDate?: string,
         endDate?: string,
         status?: string[],
+        query?: string,
         userId?: string,
         issueId?: string,
         title?: string
@@ -55,11 +56,13 @@ export class IssueService extends ApiService {
             page: page.toString(),
             size: size.toString(),
         });
+        params.append('sort', 'updatedAt,desc');
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (status && status.length > 0) {
             for (const s of status) params.append('status', s);
         }
+        if (query) params.append('query', query);
         if (userId) params.append('userId', userId);
         if (issueId) params.append('issueId', issueId);
         if (title) params.append('title', title);
@@ -78,6 +81,7 @@ export class IssueService extends ApiService {
             page: page.toString(),
             size: size.toString(),
         });
+        params.append('sort', 'updatedAt,desc');
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (status && status.length > 0) {

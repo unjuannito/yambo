@@ -5,9 +5,10 @@ import { PERSONAL_CARDS } from "~/data/summaries";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import SummaryCards from "~/components/dashboard/home/SummaryCards";
-import QuickActions from "~/components/dashboard/home/QuickActions";
 import RecentOrdersList from "~/components/dashboard/home/RecentOrdersList";
 import AdminStatsSection from "~/components/dashboard/home/AdminStatsSection";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHand } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -31,14 +32,15 @@ export default function AreaSociosIndex() {
     };
 
     return (
-        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-            {/* Playful greeting header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">
-                    ¡Hola, {user?.name}! 👋
+        <main className="flex flex-col p-3 md:p-5 w-full">
+            {/* Greeting header */}
+            <div className="mb-3">
+                <h1 className="text-xl font-extrabold font-display text-yambo-black mb-0.5 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faHand} className="w-4 h-4 text-amber-400" />
+                    ¡Hola, {user?.name}!
                 </h1>
-                <p className="text-gray-400">
-                    Bienvenido a tu espacio en Yambo. Aquí tienes un resumen de tu actividad.
+                <p className="text-sm text-gray-400">
+                    Bienvenido a tu espacio en Yambo.
                 </p>
             </div>
 
@@ -49,13 +51,13 @@ export default function AreaSociosIndex() {
             ) : error ? (
                 <ErrorMessage message={error} onRetry={refetch} />
             ) : (
-                <div className="space-y-8">
-                    <QuickActions />
+                <div className="space-y-3">
 
                     <SummaryCards
                         cards={PERSONAL_CARDS}
                         counts={personalCounts}
                         title="Mi resumen"
+                        columns={3}
                     />
 
                     <RecentOrdersList orders={personal?.recentOrders ?? []} />

@@ -83,6 +83,12 @@ const LINKS_MAP: Link[] = [
         need: { obj: "seo_metadata", action: "read" },
     },
     {
+        name: "legal",
+        href: "/mi-espacio/admin/legal",
+        label: "Documentos Legales",
+        need: { obj: "legal_page", action: "read" },
+    },
+    {
         name: "reports",
         href: "/mi-espacio/admin/informes",
         label: "Informes",
@@ -109,17 +115,17 @@ const LINKS_MAP: Link[] = [
         need: { obj: "activity", action: "read" },
     },
 
-    // Merch
+    // Productos
     {
         name: "merch",
-        href: "/mi-espacio/merch",
+        href: "/mi-espacio/articulos",
         label: "Productos",
         need: null,
     },
     {
         name: "merchFamilies",
-        href: "/mi-espacio/merch/drops",
-        label: "Drops",
+        href: "/mi-espacio/articulos/colecciones",
+        label: "Colecciones",
         need: { obj: "family_product", action: "read" },
     },
     {

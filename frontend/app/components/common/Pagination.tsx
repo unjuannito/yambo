@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 export interface PaginationProps {
@@ -12,9 +13,10 @@ export function Pagination({
   page,
   totalPages,
   onPageChange,
-  previousLabel = "Anterior",
-  nextLabel = "Siguiente",
+  previousLabel,
+  nextLabel,
 }: PaginationProps) {
+  const { t } = useTranslation();
   return (
     <nav className="flex justify-center items-center mt-4 flex gap-2">
       <ButtonComponent
@@ -22,12 +24,12 @@ export function Pagination({
         onClick={() => onPageChange(Math.max(0, page - 1))}
         disabled={page === 0}
       >
-        {previousLabel}
+        {previousLabel || t("common.previous")}
       </ButtonComponent>
       <div className="px-4 py-2 flex flex-wrap gap-1 justify-center items-center text-sm">
-        <span>Página</span>
+        <span>{t("common.page")}</span>
         <span className="font-semibold text-yambo-green-600">
-          {page + 1} de {totalPages}
+          {page + 1} {t("common.of")} {totalPages}
         </span>
       </div>
       <ButtonComponent
@@ -37,7 +39,7 @@ export function Pagination({
         }
         disabled={page >= totalPages - 1}
       >
-        {nextLabel}
+        {nextLabel || t("common.next")}
       </ButtonComponent>
     </nav>
   );

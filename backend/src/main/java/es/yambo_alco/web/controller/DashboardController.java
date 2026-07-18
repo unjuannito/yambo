@@ -199,7 +199,11 @@ public class DashboardController {
         private String id;
         private String name;
         private String description;
+        private String image;
+        private String location;
+        private BigDecimal price;
         private LocalDateTime date;
+        private LocalDateTime endDate;
         private StatusInfo status;
         private boolean isPublic;
         private ProjectSummary project;
@@ -209,7 +213,11 @@ public class DashboardController {
             this.id = activity.getId();
             this.name = activity.getName();
             this.description = activity.getDescription();
+            this.image = activity.getImage();
+            this.location = activity.getLocation();
+            this.price = activity.getPrice();
             this.date = activity.getDate();
+            this.endDate = activity.getEndDate();
             this.status = activity.getStatus() != null
                     ? new StatusInfo(activity.getStatus().name(), activity.getStatus().getLabel(), activity.getStatus().getColor())
                     : null;

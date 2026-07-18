@@ -1,4 +1,5 @@
 import React, { useState, forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import LabelComponent from "./LabelComponent";
 import { twMerge } from "tailwind-merge";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -14,19 +15,20 @@ const InputComponent = forwardRef<HTMLInputElement, InputProps>(({
     ...props
 }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
+    const { t } = useTranslation();
 
     const validationRules = {
         email: {
             pattern: undefined,
-            title: "Por favor, introduce un correo electrónico válido.",
+            title: t("component.emailValidationTitle"),
         },
         tel: {
             pattern: "[0-9]{9}",
-            title: "Por favor, introduce un número de teléfono válido de 9 dígitos.",
+            title: t("component.phoneValidationTitle"),
         },
         password: {
             pattern: props.pattern || ".{6,}",
-            title: "La contraseña debe tener al menos 6 caracteres.",
+            title: t("component.passwordValidationTitle"),
         },
     };
 
@@ -54,7 +56,7 @@ const InputComponent = forwardRef<HTMLInputElement, InputProps>(({
                 type="button"
                 tabIndex={0}
                 aria-label={
-                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    showPassword ? t("component.toggleHidePassword") : t("component.toggleShowPassword")
                 }
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-yambo-green-600 cursor-pointer transition-colors"
                 onClick={() => setShowPassword(!showPassword)}

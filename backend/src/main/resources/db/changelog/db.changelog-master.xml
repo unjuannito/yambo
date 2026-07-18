@@ -87,5 +87,10 @@
     <include file="db/changelog/changes/77-family-product-watchers.xml"/>
     <include file="db/changelog/changes/78-remove-issue-ordered-product-id.xml"/>
     <include file="db/changelog/changes/79-drop-order-product-status.xml"/>
+    <include file="db/changelog/changes/80-issue-status-workflow-simplification.xml"/>
+    <include file="db/changelog/changes/81-activity-image-location.xml"/>
+    <include file="db/changelog/changes/82-activity-price.xml"/>
+    <include file="db/changelog/changes/83-legal-pages.xml"/>
+    <include file="db/changelog/changes/84-product-short-description.xml"/>
 
 </databaseChangeLog>

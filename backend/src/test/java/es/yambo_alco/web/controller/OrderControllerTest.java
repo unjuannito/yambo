@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Order;
+import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.User;
@@ -146,7 +147,7 @@ class OrderControllerTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(orderService.listOrders(eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any()))
+        when(orderService.listOrders(any(OrderFilter.class), any()))
                 .thenReturn(new PageImpl<>(List.of(order), PageRequest.of(0, 20), 1));
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 
@@ -251,7 +252,7 @@ class OrderControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(user);
-        when(orderService.listOrders(eq(null), eq(null), eq("USER001"), eq(null), eq(null), eq(null), any()))
+        when(orderService.listOrders(any(OrderFilter.class), any()))
                 .thenReturn(new PageImpl<>(List.of(order), PageRequest.of(0, 20), 1));
         when(orderService.getOrderProducts("ORD001")).thenReturn(List.of());
 

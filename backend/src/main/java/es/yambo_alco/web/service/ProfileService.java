@@ -10,6 +10,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +31,18 @@ public class ProfileService {
         return profileRepository.findAll();
     }
 
-    public Page<Profile> listProfiles(String search, List<String> permissionIds, Pageable pageable) {
-        Page<Profile> profiles = profileRepository.findAll(pageable);
+    public Page<Profile> listProfiles(String query, String search, List<String> permissionIds, Pageable pageable) {
+        Specification<Profile> spec = Specification.where(null);
+
+        if (query != null && !query.isBlank()) {
+            String pattern = "%" + query.toLowerCase() + "%";
+            spec = spec.and((root, q, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("id")), pattern),
+                    cb.like(cb.lower(root.get("name")), pattern)
+            ));
+        }
+
+        Page<Profile> profiles = profileRepository.findAll(spec, pageable);
 
         if (search != null && !search.trim().isEmpty()) {
             String searchLower = search.toLowerCase();

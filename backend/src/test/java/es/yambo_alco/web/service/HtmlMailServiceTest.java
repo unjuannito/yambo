@@ -20,7 +20,6 @@ import org.thymeleaf.context.Context;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -252,8 +251,8 @@ class HtmlMailServiceTest {
         assertThat(headerIcon).isNotNull().startsWith("<svg").contains("</svg>");
         assertThat((String) ctx.getVariable("headerColor")).isEqualTo("#3498db");
         assertThat((Boolean) ctx.getVariable("statusChanged")).isTrue();
-        assertThat((String) ctx.getVariable("oldStatusText")).isEqualTo("ABIERTO");
-        assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("EN PROGRESO");
+        assertThat((String) ctx.getVariable("oldStatusText")).isEqualTo("Abierto");
+        assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("En Progreso");
 
         verify(mailSender).send(mimeMessage);
     }
@@ -267,7 +266,7 @@ class HtmlMailServiceTest {
         // When
         htmlMailService.sendIssueStatusChanged(
                 "user@test.com", "User", "ISS003", "Talla incorrecta",
-                "Pantalón", IssueStatus.OPEN, IssueStatus.RESOLVED,
+            "Pantalón", IssueStatus.OPEN, IssueStatus.CLOSED,
                 "admin01", LocalDateTime.of(2026, 2, 15, 11, 30));
 
         // Then
@@ -277,11 +276,55 @@ class HtmlMailServiceTest {
         Context ctx = contextCaptor.getValue();
         String headerIcon = (String) ctx.getVariable("headerIcon");
         assertThat(headerIcon).isNotNull().startsWith("<svg").contains("</svg>");
-        assertThat((String) ctx.getVariable("headerColor")).isEqualTo(IssueStatus.RESOLVED.getColor());
-        assertThat((String) ctx.getVariable("oldStatusText")).isEqualTo("ABIERTO");
-        assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("RESUELTO");
+        assertThat((String) ctx.getVariable("headerColor")).isEqualTo(IssueStatus.CLOSED.getColor());
+        assertThat((String) ctx.getVariable("oldStatusText")).isEqualTo("Abierto");
+        assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("Cerrado");
 
         verify(mailSender).send(mimeMessage);
+    }
+
+    @Test
+    void sendIssueStatusChanged_WhenReopened_ShouldExposeReabiertoText() {
+        // Given
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(templateEngine.process(eq("emails/issue-status-changed"), any())).thenReturn("<html>Status</html>");
+
+        // When
+        htmlMailService.sendIssueStatusChanged(
+                "user@test.com", "User", "ISS004", "Talla incorrecta",
+                "Pantalón", IssueStatus.CLOSED, IssueStatus.OPEN,
+                "admin01", LocalDateTime.of(2026, 2, 16, 10, 10));
+
+        // Then
+        ArgumentCaptor<Context> contextCaptor = ArgumentCaptor.forClass(Context.class);
+        verify(templateEngine).process(eq("emails/issue-status-changed"), contextCaptor.capture());
+
+        Context ctx = contextCaptor.getValue();
+        assertThat((String) ctx.getVariable("oldStatusText")).isEqualTo("Cerrado");
+        assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("Reabierto");
+    }
+
+    @Test
+    void sendIssueCommentAdded_WhenReopened_ShouldExposeReabiertoText() {
+        // Given
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(templateEngine.process(eq("emails/issue-comment-added"), any())).thenReturn("<html>Comment</html>");
+
+        // When
+        htmlMailService.sendIssueCommentAdded(
+                "user@test.com", "User", "ISS005", "Ajuste pendiente",
+                "Pantalón", "admin01", "Lo reabrimos para revisión",
+                LocalDateTime.of(2026, 2, 17, 8, 20),
+                IssueStatus.CLOSED, IssueStatus.OPEN);
+
+        // Then
+        ArgumentCaptor<Context> contextCaptor = ArgumentCaptor.forClass(Context.class);
+        verify(templateEngine).process(eq("emails/issue-comment-added"), contextCaptor.capture());
+
+        Context ctx = contextCaptor.getValue();
+        assertThat((Boolean) ctx.getVariable("statusChanged")).isTrue();
+        assertThat((String) ctx.getVariable("oldStatusText")).isEqualTo("Cerrado");
+        assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("Reabierto");
     }
 
     // ── Console mode (mail not configured) ───────────────────────────────

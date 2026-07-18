@@ -47,4 +47,16 @@ public final class IssueSpecifications {
     public static Specification<Issue> createdByEquals(String userId) {
         return (root, query, cb) -> userId == null ? null : cb.equal(root.get("createdBy"), userId);
     }
+
+    public static Specification<Issue> queryContains(String query) {
+        return (root, queryObj, cb) -> {
+            if (query == null || query.isBlank()) return null;
+            String pattern = "%" + query.toLowerCase() + "%";
+            return cb.or(
+                cb.like(cb.lower(root.get("id")), pattern),
+                cb.like(cb.lower(root.get("title")), pattern),
+                cb.like(cb.lower(root.get("createdBy")), pattern)
+            );
+        };
+    }
 }

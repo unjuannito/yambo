@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import ActivityForm from "~/components/dashboard/activities/ActivityForm";
-import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
-import LabelComponent from "~/components/common/forms/LabelComponent";
 import { activityService } from "~/services/activityService";
 import type { Activity } from "~/types/activity";
 import { ACTIVITY_STATUS_OPTIONS } from "~/types/activity";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faCalendarDays,
+    faFolder,
+    faUser,
+    faCopy,
+    faPenToSquare,
+    faEye,
+} from "@fortawesome/free-solid-svg-icons";
 import {
     FilterableTable,
     type FetchDataParams,
@@ -13,22 +22,21 @@ import {
 } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import { projectService } from "~/services/projectService";
-import { adminUserService } from "~/services/adminUserService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "~/types/error";
 
 export default function ActivitiesAdminPage() {
-    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-        null,
-    );
-    const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+    const { t } = useTranslation();
     const [formModalOpen, setFormModalOpen] = useState(false);
     const [editing, setEditing] = useState<string | null>(null);
 
     const [form, setForm] = useState({
         name: "",
         description: "",
+        image: "",
+        location: "",
+        price: "",
         date: "",
         endDate: "",
         status: "",
@@ -51,28 +59,70 @@ export default function ActivitiesAdminPage() {
                 content.map((p: any) => ({ value: p.id, label: p.name })),
             );
         }
-        async function fetchManagers() {
-            const { content } = await adminUserService.listUsers({
-                page: 0,
-                size: 50,
-                role: "ANY",
-            });
-            setManagerOptions(
-                content.map((u: any) => ({ value: u.id, label: u.name })),
-            );
-        }
         fetchProjects();
-        fetchManagers();
     }, []);
 
-    const columns: FilterableColumn<Activity>[] = [
+    // Load all project staff (monitors/coordinators) as manager filter options
+    const [allManagerOptions, setAllManagerOptions] = useState<
+        { value: string; label: string }[]
+    >([]);
+
+    useEffect(() => {
+        async function fetchAllStaff() {
+            try {
+                const staff = await activityService.getAllStaff();
+                setAllManagerOptions(
+                    staff.map((u) => ({ value: u.id, label: u.name })),
+                );
+            } catch {
+                // Filter will just have no options
+            }
+        }
+        fetchAllStaff();
+    }, []);
+
+    useEffect(() => {
+        if (!formModalOpen || !form.projectId) {
+            setManagerOptions([]);
+            return;
+        }
+
+        let isMounted = true;
+        async function fetchProjectStaff() {
+            try {
+                const staff = await activityService.getProjectStaff(form.projectId);
+                if (!isMounted) return;
+
+                const options = staff.map((u) => ({ value: u.id, label: u.name }));
+                setManagerOptions(options);
+
+                if (form.managerId && !options.some((o) => o.value === form.managerId)) {
+                    setForm((prev) => ({ ...prev, managerId: "" }));
+                }
+            } catch {
+                if (!isMounted) return;
+                setManagerOptions([]);
+                if (form.managerId) {
+                    setForm((prev) => ({ ...prev, managerId: "" }));
+                }
+            }
+        }
+
+        fetchProjectStaff();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [formModalOpen, form.projectId, form.managerId]);
+
+    const columns = useMemo((): FilterableColumn<Activity>[] => [
         {
             key: "name",
-            header: "Nombre",
+            header: t("common.name"),
             filter: {
                 enabled: true,
                 type: "search" as const,
-                placeholder: "Buscar nombre",
+                placeholder: t("activities.searchByName"),
             },
             render: (a: Activity) => (
                 <span className="font-semibold text-yambo-black">{a.name}</span>
@@ -80,7 +130,8 @@ export default function ActivitiesAdminPage() {
         },
         {
             key: "dateRange",
-            header: "Fecha",
+            header: t("common.date"),
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "date-range" as const,
@@ -96,11 +147,15 @@ export default function ActivitiesAdminPage() {
         },
         {
             key: "manager",
-            header: "Responsable",
+            header: t("activities.manager"),
+            className: "hidden md:table-cell",
             filter: {
                 enabled: true,
                 type: "select" as const,
-                options: managerOptions,
+                options: [
+                    { value: "", label: t("common.all") },
+                    ...allManagerOptions,
+                ],
             },
             render: (a: Activity) => (
                 <span>{a.manager ? a.manager.name : "-"}</span>
@@ -108,11 +163,14 @@ export default function ActivitiesAdminPage() {
         },
         {
             key: "status",
-            header: "Estado",
+            header: t("activities.status"),
             filter: {
                 enabled: true,
                 type: "select" as const,
-                options: ACTIVITY_STATUS_OPTIONS,
+                options: [
+                    { value: "", label: t("common.all") },
+                    ...ACTIVITY_STATUS_OPTIONS,
+                ],
             },
             render: (a: Activity) =>
                 a.status ? (
@@ -128,11 +186,15 @@ export default function ActivitiesAdminPage() {
         },
         {
             key: "project",
-            header: "Proyecto",
+            header: t("activities.project"),
+            className: "hidden md:table-cell",
             filter: {
                 enabled: true,
                 type: "select" as const,
-                options: projectOptions,
+                options: [
+                    { value: "", label: t("common.all") },
+                    ...projectOptions,
+                ],
             },
             render: (a: Activity) => (
                 <span>{a.project ? a.project.name : "-"}</span>
@@ -140,47 +202,62 @@ export default function ActivitiesAdminPage() {
         },
         {
             key: "public",
-            header: "Pública",
+            header: t("activities.public"),
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "toggle" as const,
             },
             render: (a: Activity) => (
                 <span className={a.public ? "text-yambo-green-600 font-medium" : "text-gray-400"}>
-                    {a.public ? "Sí" : "No"}
+                    {a.public ? t("common.yes") : t("common.no")}
                 </span>
             ),
         },
         {
             key: "actions",
-            header: "Acciones",
+            header: t("common.actions"),
+            requiredPerms: [{ obj: "activity", action: "update" }],
             render: (a: Activity) => (
-                <div className="flex gap-2">
+                <div className="flex gap-1 sm:gap-2">
+                    <ButtonComponent
+                        variant="success"
+                        size="sm"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleCloneClick(a);
+                        }}
+                    >
+                        <span className="sm:hidden"><FontAwesomeIcon icon={faCopy} className="w-3.5 h-3.5" /></span>
+                        <span className="hidden sm:inline">{t("activities.clone")}</span>
+                    </ButtonComponent>
                     <ButtonComponent
                         variant="primary"
+                        size="sm"
                         onClick={(e) => {
                             e.stopPropagation();
                             handleEditClick(a);
                         }}
                     >
-                        Editar
+                        <span className="sm:hidden"><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></span>
+                        <span className="hidden sm:inline">{t("common.edit")}</span>
                     </ButtonComponent>
-                    <ButtonComponent
-                        variant="neutral"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedActivity(a);
-                            setDetailsModalOpen(true);
-                        }}
+                    <Link
+                        to={`/actividades/${a.id}`}
+                        className="inline-flex items-center px-2 sm:px-4 py-2 rounded-xl text-sm font-bold text-white bg-yambo-green-600 hover:bg-yambo-green-700 transition-all shadow-sm hover:shadow-md"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        Detalles
-                    </ButtonComponent>
+                        <span className="sm:hidden"><FontAwesomeIcon icon={faEye} className="w-3.5 h-3.5" /></span>
+                        <span className="hidden sm:inline">{t("activities.details")}</span>
+                    </Link>
                 </div>
             ),
         },
-    ];
+    ], [allManagerOptions, projectOptions, t]);
 
-    const fetchData = async ({
+    const features = useMemo(() => ({ enableFilters: true, enablePagination: true }), []);
+
+    const fetchData = useCallback(async ({
         page,
         size,
         filters,
@@ -221,14 +298,34 @@ export default function ActivitiesAdminPage() {
                 totalPages: result.totalPages,
             },
         };
-    };
+    }, []);
 
     const handleEditClick = (activity: Activity) => {
-        setSelectedActivity(activity);
         setEditing(activity.id);
         setForm({
             name: activity.name,
             description: activity.description || "",
+            image: activity.image || "",
+            location: activity.location || "",
+            price: activity.price != null ? String(activity.price) : "",
+            date: activity.date || "",
+            endDate: activity.endDate || "",
+            status: activity.status?.value || "",
+            public: activity.public,
+            projectId: activity.project?.id || "",
+            managerId: activity.manager?.id || "",
+        });
+        setFormModalOpen(true);
+    };
+
+    const handleCloneClick = (activity: Activity) => {
+        setEditing(null);
+        setForm({
+            name: activity.name,
+            description: activity.description || "",
+            image: activity.image || "",
+            location: activity.location || "",
+            price: activity.price != null ? String(activity.price) : "",
             date: activity.date || "",
             endDate: activity.endDate || "",
             status: activity.status?.value || "",
@@ -240,11 +337,14 @@ export default function ActivitiesAdminPage() {
     };
 
     const handleCreateClick = () => {
-        setSelectedActivity(null);
         setEditing(null);
+        setManagerOptions([]);
         setForm({
             name: "",
             description: "",
+            image: "",
+            location: "",
+            price: "",
             date: "",
             endDate: "",
             status: "",
@@ -256,101 +356,133 @@ export default function ActivitiesAdminPage() {
     };
 
     const handleFormChange = (field: string, value: any) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
+        setForm((prev) => {
+            if (field === "projectId") {
+                return { ...prev, projectId: value, managerId: "" };
+            }
+            return { ...prev, [field]: value };
+        });
+    };
+
+    const buildActivityPayload = () => {
+        const trimmedName = form.name.trim();
+        const trimmedDescription = form.description.trim();
+        const trimmedImage = form.image.trim();
+        const trimmedLocation = form.location.trim();
+        const trimmedProjectId = form.projectId.trim();
+        const trimmedManagerId = form.managerId.trim();
+
+        return {
+            name: trimmedName,
+            description: trimmedDescription || undefined,
+            image: trimmedImage || undefined,
+            location: trimmedLocation || undefined,
+            price: form.price !== "" ? Number(form.price) : undefined,
+            date: form.date || undefined,
+            endDate: form.endDate || undefined,
+            status: form.status || undefined,
+            isPublic: form.public,
+            projectId: trimmedProjectId,
+            managerId: trimmedManagerId || undefined,
+        };
     };
 
     const handleFormSubmit = async () => {
         try {
+            const payload = buildActivityPayload();
+
+            if (!payload.projectId) {
+                toast.error(t("activities.selectProjectError"));
+                return;
+            }
+
             if (editing) {
-                await activityService.updateActivity(editing, form);
+                await activityService.updateActivity(editing, payload);
             } else {
-                await activityService.createActivity(form);
+                await activityService.createActivity(payload);
             }
             setFormModalOpen(false);
             window.location.reload();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡La actividad no quiere guardarse!"));
+            toast.error(getErrorMessage(err, t("activities.saveError")));
         }
     };
 
     return (
-        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-            <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Panel de actividades</h1>
+        <main className="flex flex-col p-4 md:p-6 w-full">
+            <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("activities.panelTitle")}</h1>
             <div className="mb-4">
                 <ButtonComponent variant="success" onClick={handleCreateClick}>
-                    Crear actividad
+                    {t("activities.createNew")}
                 </ButtonComponent>
             </div>
             <FilterableTable
                 columns={columns}
                 keyField="id"
                 serverSide={{ fetchData }}
-                features={{ enableFilters: true, enablePagination: true }}
+                features={features}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4"
-            />
-            {/* Detalles modal */}
-            <Modal
-                isOpen={detailsModalOpen}
-                onClose={() => setDetailsModalOpen(false)}
-                title={selectedActivity?.name || "Detalles de actividad"}
-                size="xl"
-            >
-                {selectedActivity && (
-                    <div className="flex flex-col gap-4">
-                        <LabelComponent label="Descripción">
-                            <MarkdownEditor
-                                value={selectedActivity.description || "-"}
-                                readOnly
-                                className="border rounded-xl"
-                            />
-                        </LabelComponent>
-                        <LabelComponent label="Fecha">
-                            <span className="px-2">
-                                {selectedActivity.date
-                                    ? new Date(
-                                          selectedActivity.date,
-                                      ).toLocaleString()
-                                    : "-"}
-                                {selectedActivity.endDate && (
-                                    <> — {new Date(selectedActivity.endDate).toLocaleString()}</>
+                display={{
+                    renderMobileCard: (a: Activity) => (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <span className="font-bold text-yambo-black text-sm leading-tight line-clamp-2 flex-1">{a.name}</span>
+                                {a.status && (
+                                    <span
+                                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-white shrink-0"
+                                        style={{ backgroundColor: a.status.color }}
+                                    >
+                                        {a.status.label}
+                                    </span>
                                 )}
-                            </span>
-                        </LabelComponent>
-                        <LabelComponent label="Responsable">
-                            <span className="px-2">
-                                {selectedActivity.manager?.name || "-"}
-                            </span>
-                        </LabelComponent>
-                        <LabelComponent label="Estado">
-                            {selectedActivity.status ? (
-                                <span
-                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white ml-2"
-                                    style={{ backgroundColor: selectedActivity.status.color }}
-                                >
-                                    {selectedActivity.status.label}
-                                </span>
-                            ) : (
-                                <span className="px-2 text-gray-400">-</span>
-                            )}
-                        </LabelComponent>
-                        <LabelComponent label="Pública">
-                            <span className="px-2">
-                                {selectedActivity.public ? "Sí" : "No"}
-                            </span>
-                        </LabelComponent>
-                        <LabelComponent label="Proyecto">
-                            <span className="px-2">
-                                {selectedActivity.project?.name || "-"}
-                            </span>
-                        </LabelComponent>
-                    </div>
-                )}
-            </Modal>
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                                {a.date && (
+                                    <span className="flex items-center gap-1">
+                                        <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3 text-gray-400" />
+                                        {new Date(a.date).toLocaleDateString()}{a.endDate ? ` — ${new Date(a.endDate).toLocaleDateString()}` : ''}
+                                    </span>
+                                )}
+                                {a.project && (
+                                    <span className="flex items-center gap-1">
+                                        <FontAwesomeIcon icon={faFolder} className="w-3 h-3 text-gray-400" />
+                                        {a.project.name}
+                                    </span>
+                                )}
+                                {a.manager && (
+                                    <span className="flex items-center gap-1">
+                                        <FontAwesomeIcon icon={faUser} className="w-3 h-3 text-gray-400" />
+                                        {a.manager.name}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-1.5 pt-1">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleCloneClick(a); }}
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                                    title={t("activities.clone")}
+                                ><FontAwesomeIcon icon={faCopy} className="w-3.5 h-3.5" /></button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleEditClick(a); }}
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                                    title={t("common.edit")}
+                                ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
+                                <a
+                                    href={`/actividades/${a.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-yambo-green-600 text-white hover:bg-yambo-green-700 transition-colors ml-auto"
+                                    title={t("activities.details")}
+                                ><FontAwesomeIcon icon={faEye} className="w-3.5 h-3.5" /></a>
+                            </div>
+                        </div>
+                    ),
+                }}
+            />
             {/* Crear / Editar modal */}
             <Modal
                 isOpen={formModalOpen}
                 onClose={() => setFormModalOpen(false)}
-                title={editing ? "Editar actividad" : "Crear actividad"}
+                title={editing ? t("activities.editTitle") : t("activities.createTitle")}
                 size="xl"
                 footer={null}
             >
@@ -360,7 +492,7 @@ export default function ActivitiesAdminPage() {
                     managerOptions={managerOptions}
                     onChange={handleFormChange}
                     onSubmit={handleFormSubmit}
-                    submitLabel={editing ? "Guardar" : "Crear"}
+                    submitLabel={editing ? t("common.save") : t("common.create")}
                 />
             </Modal>
         </main>

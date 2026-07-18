@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
@@ -47,6 +48,7 @@ public class AdminUserController {
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
     public ResponseEntity<Page<AdminUserResponse>> listUsers(
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String id,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -73,8 +75,9 @@ public class AdminUserController {
         PageRequest pr = (sortBy == null || sortBy.isBlank()) ? PageRequest.of(page, size)
                 : PageRequest.of(page, size, dir, sortBy);
 
-        Page<User> users = userService.listUsers(id, name, email, enabled, perms == null ? null : List.copyOf(perms),
-                profilesList, role, pr);
+        UserFilter userFilter = new UserFilter(query, id, name, email, enabled, perms == null ? null : List.copyOf(perms),
+                profilesList, role);
+        Page<User> users = userService.listUsers(userFilter, pr);
         return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
 

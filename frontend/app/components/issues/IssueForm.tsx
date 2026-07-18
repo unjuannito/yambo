@@ -1,10 +1,11 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { issueService } from "~/services/issueService";
 import { formatConfiguration } from "~/utils/issueUtils";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
-import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
+import toast from "react-hot-toast";
 
 interface IssueFormProps {
     orderedProducts: {
@@ -25,6 +26,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
     onSuccess,
     onCancel,
 }) => {
+    const { t } = useTranslation();
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [selectedOrderedProductIds, setSelectedOrderedProductIds] = useState<
@@ -47,19 +49,19 @@ export const IssueForm: React.FC<IssueFormProps> = ({
 
         try {
             if (!title.trim()) {
-                setError("¡Dale un título a tu incidencia!");
+                setError(t('issues.titleRequired'));
                 setLoading(false);
                 return;
             }
 
             if (!description.trim()) {
-                setError("¡Cuéntanos qué pasó! La descripción es necesaria");
+                setError(t('issues.descriptionRequired'));
                 setLoading(false);
                 return;
             }
 
             if (selectedOrderedProductIds.length === 0) {
-                setError("¡Selecciona al menos un producto, anda!");
+                setError(t('issues.selectProductRequired'));
                 setLoading(false);
                 return;
             }
@@ -69,6 +71,8 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                 title: title.trim(),
                 description: description.trim(),
             });
+
+            toast.success(t('issues.created'));
 
             setTitle("");
             setDescription("");
@@ -80,8 +84,10 @@ export const IssueForm: React.FC<IssueFormProps> = ({
             );
             onSuccess();
         } catch (err) {
+            const message = getErrorMessage(err, t('issues.createError'));
+            toast.error(message);
             setError(
-                getErrorMessage(err, "Error al crear la incidencia"),
+                message,
             );
         } finally {
             setLoading(false);
@@ -91,7 +97,7 @@ export const IssueForm: React.FC<IssueFormProps> = ({
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
             <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-4">
-                Reportar incidencia
+                {t('issues.createIssue') || "Reportar incidencia"}
             </h2>
 
             {error && <ErrorMessage message={error} />}
@@ -102,14 +108,14 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                         htmlFor="title"
                         className="block text-sm font-semibold text-yambo-black mb-1.5"
                     >
-                        Título *
+                        {t('issues.title')} *
                     </label>
                     <input
                         type="text"
                         id="title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Describe la incidencia brevemente"
+                        placeholder={t('issues.titlePlaceholder')}
                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-400 transition-all"
                         disabled={loading}
                     />
@@ -119,83 +125,89 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                     {isMultiSelection ? (
                         <>
                             <label className="block text-sm font-semibold text-yambo-black mb-2">
-                                Productos relacionados *
+                                {t('orders.product')} *
                             </label>
-                            <div className="border border-gray-200 rounded-xl p-3 max-h-48 overflow-y-auto space-y-2">
+                            <div className="border border-gray-200 rounded-xl p-2.5 max-h-56 overflow-y-auto space-y-2 bg-slate-50/40">
                                 {orderedProducts.map((product) => {
                                     const checked =
                                         selectedOrderedProductIds.includes(
                                             product.id,
                                         );
                                     return (
-                                        <label
+                                        <div
                                             key={product.id}
-                                            className="flex items-start gap-2.5 text-sm text-gray-600 hover:bg-yambo-green-50/30 rounded-lg p-1.5 transition-colors cursor-pointer"
+                                            className={`rounded-xl border transition-colors ${checked ? "border-yambo-green-200 bg-yambo-green-50/60" : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50"}`}
                                         >
-                                            <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={() => {
-                                                    setSelectedOrderedProductIds(
-                                                        (prev) =>
-                                                            checked
-                                                                ? prev.filter(
-                                                                      (id) =>
-                                                                          id !==
+                                            <label
+                                                htmlFor={`ordered-product-${product.id}`}
+                                                className="flex items-start gap-3 p-3 cursor-pointer"
+                                            >
+                                                <input
+                                                    id={`ordered-product-${product.id}`}
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => {
+                                                        setSelectedOrderedProductIds(
+                                                            (prev) =>
+                                                                checked
+                                                                    ? prev.filter(
+                                                                          (id) => id !== product.id,
+                                                                      )
+                                                                    : [
+                                                                          ...prev,
                                                                           product.id,
-                                                                  )
-                                                                : [
-                                                                      ...prev,
-                                                                      product.id,
-                                                                  ],
-                                                    );
-                                                }}
-                                                disabled={loading}
-                                                className="w-4 h-4 text-yambo-green-500 rounded-md mt-0.5 accent-yambo-green-500"
-                                            />
-                                            <span>
-                                                <span className="block font-semibold text-yambo-black">
-                                                    {product.name}
-                                                </span>
-                                                <span className="block text-xs text-gray-400">
-                                                    Cantidad:{" "}
-                                                    {product.quantity ?? 1}
-                                                    {typeof product.unitPrice ===
-                                                    "number"
-                                                        ? ` · ${product.unitPrice.toFixed(2)} €`
-                                                        : ""}
-                                                </span>
-                                                {product.configuration &&
-                                                    product.configuration !==
-                                                        "{}" && (
-                                                        <span className="block text-xs text-gray-400">
-                                                            Configuración:{" "}
-                                                            {formatConfiguration(
-                                                                product.configuration,
-                                                            )}
+                                                                      ],
+                                                        );
+                                                    }}
+                                                    disabled={loading}
+                                                    className="mt-0.5 h-4 w-4 shrink-0 rounded-md accent-yambo-green-500"
+                                                />
+                                                <div className="min-w-0 flex-1 text-sm text-gray-600">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <span className="block font-semibold text-yambo-black break-words">
+                                                            {product.name}
                                                         </span>
-                                                    )}
-                                            </span>
-                                        </label>
+                                                        {checked && (
+                                                            <span className="shrink-0 rounded-full bg-yambo-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-yambo-green-700">
+                                                                {t('common.selected')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        {t('orders.quantity')}: {product.quantity ?? 1}
+                                                        {typeof product.unitPrice === "number"
+                                                            ? ` · ${product.unitPrice.toFixed(2)} €`
+                                                            : ""}
+                                                    </p>
+                                                    {product.configuration &&
+                                                        product.configuration !== "{}" && (
+                                                            <p className="mt-1 text-xs leading-relaxed text-gray-500 break-words">
+                                                                <span className="font-medium text-gray-600">{t('orders.configuration')}</span>{" "}
+                                                                {formatConfiguration(product.configuration)}
+                                                            </p>
+                                                        )}
+                                                </div>
+                                            </label>
+                                        </div>
                                     );
                                 })}
                             </div>
-                            <p className="mt-1.5 text-xs text-gray-400">
-                                {selectedOrderedProductIds.length} seleccionados
+                            <p className="mt-2 text-xs font-medium text-gray-500">
+                                {selectedOrderedProductIds.length} {t('common.selected') || "seleccionados"}
                             </p>
                         </>
                     ) : (
                         <>
                             <label className="block text-sm font-semibold text-yambo-black mb-1.5">
-                                Producto relacionado
+                                {t('orders.product')}
                             </label>
                             <p className="text-sm text-gray-600 bg-yambo-green-50/30 border border-gray-100 rounded-xl px-4 py-2.5">
-                                {orderedProducts[0]?.name || "Producto"}
+                                {orderedProducts[0]?.name || t('orders.product')}
                             </p>
                             {orderedProducts[0]?.configuration &&
                                 orderedProducts[0].configuration !== "{}" && (
                                     <p className="mt-1.5 text-xs text-gray-400">
-                                        Configuración:{" "}
+                                        {t('orders.configuration')}{" "}
                                         {formatConfiguration(
                                             orderedProducts[0].configuration,
                                         )}
@@ -210,14 +222,16 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                         htmlFor="description"
                         className="block text-sm font-semibold text-yambo-black mb-1.5"
                     >
-                        Descripción *
+                        {t('issues.description')} *
                     </label>
-                    <div className={loading ? "pointer-events-none opacity-50" : ""}>
-                        <MarkdownEditor
-                            value={description}
-                            onChange={(val) => setDescription(val)}
-                        />
-                    </div>
+                    <textarea
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder={t('issues.descriptionPlaceholder')}
+                        className="w-full min-h-[160px] px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-400 transition-all resize-y text-sm text-yambo-black placeholder-gray-400"
+                        disabled={loading}
+                    />
                 </div>
 
                 <div className="flex gap-2 justify-end">
@@ -227,14 +241,14 @@ export const IssueForm: React.FC<IssueFormProps> = ({
                         disabled={loading}
                         variant="neutral"
                     >
-                        Cancelar
+                        {t('common.cancel')}
                     </ButtonComponent>
                     <ButtonComponent
                         type="submit"
                         isLoading={loading}
                         variant="primary"
                     >
-                        {loading ? "Guardando..." : "Reportar incidencia"}
+                        {loading ? t('common.saving') : (t('issues.createIssue') || "Reportar incidencia")}
                     </ButtonComponent>
                 </div>
             </form>

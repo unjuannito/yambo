@@ -7,6 +7,7 @@ import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
@@ -58,40 +59,22 @@ public class UserService {
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 	}
 
-	public Page<User> listUsers(String name, String email, Boolean enabled, Set<String> permissions,
-			Pageable pageable) {
+
+	public Page<User> listUsers(UserFilter filter, Pageable pageable) {
+		Set<String> perms = filter.permissions() == null ? null : filter.permissions().stream().collect(Collectors.toSet());
+		Set<String> profileSet = filter.profiles() == null ? null : filter.profiles().stream().collect(Collectors.toSet());
 		Specification<User> spec = Specification.where(null);
-		spec = spec.and(UserSpecifications.nameContains(name));
-		spec = spec.and(UserSpecifications.emailContains(email));
-		spec = spec.and(UserSpecifications.enabledEquals(enabled));
-		if (permissions != null && !permissions.isEmpty()) {
-			spec = spec.and(UserSpecifications.hasPermissions(permissions));
-		}
-
-		var sort = pageable.getSort();
-		var sanitized = pageable;
-		if (sort != null && sort.stream().anyMatch(o -> !ALLOWED_SORT_FIELDS.contains(o.getProperty()))) {
-			sanitized = Pageable.ofSize(pageable.getPageSize()).withPage(pageable.getPageNumber());
-		}
-
-		return userRepository.findAll(spec, sanitized);
-	}
-
-public Page<User> listUsers(String id, String name, String email, Boolean enabled, List<String> permissions,
-			List<String> profiles, String role, Pageable pageable) {
-		Set<String> perms = permissions == null ? null : permissions.stream().collect(Collectors.toSet());
-		Set<String> profileSet = profiles == null ? null : profiles.stream().collect(Collectors.toSet());
-		Specification<User> spec = Specification.where(null);
-		spec = spec.and(UserSpecifications.idContains(id));
-		spec = spec.and(UserSpecifications.nameContains(name));
-		spec = spec.and(UserSpecifications.emailContains(email));
-		spec = spec.and(UserSpecifications.enabledEquals(enabled));
+		spec = spec.and(UserSpecifications.queryContains(filter.query()));
+		spec = spec.and(UserSpecifications.idContains(filter.id()));
+		spec = spec.and(UserSpecifications.nameContains(filter.name()));
+		spec = spec.and(UserSpecifications.emailContains(filter.email()));
+		spec = spec.and(UserSpecifications.enabledEquals(filter.enabled()));
 		if (perms != null && !perms.isEmpty())
 			spec = spec.and(UserSpecifications.hasPermissions(perms));
 		if (profileSet != null && !profileSet.isEmpty())
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
-		if (role != null && !role.isBlank())
-			spec = spec.and(UserSpecifications.hasGroupRole(role));
+		if (filter.role() != null && !filter.role().isBlank())
+			spec = spec.and(UserSpecifications.hasGroupRole(filter.role()));
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();

@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 interface LoadingSpinnerProps {
     size?: "sm" | "md" | "lg" | "xl";
     message?: string;
@@ -14,6 +16,7 @@ export function LoadingSpinner({
     size = "md",
     message
 }: LoadingSpinnerProps) {
+    const { t } = useTranslation();
     const cfg = sizeConfig[size];
 
     return (

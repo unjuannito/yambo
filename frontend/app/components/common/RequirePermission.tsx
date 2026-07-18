@@ -1,4 +1,5 @@
 import { useContext, useEffect, useRef, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { AuthContext } from "~/context/AuthContext";
 import type { RequiredPermission } from "~/types/authContextType";
@@ -15,6 +16,7 @@ export function RequirePermission({
   redirectTo?: string;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   const context = useContext(AuthContext);
   if (!context)
     throw new Error(
@@ -32,9 +34,9 @@ export function RequirePermission({
       !toastShown.current
     ) {
       toastShown.current = true;
-      toast.error("¡Zona restringida! No tienes permiso para entrar aquí");
+      toast.error(t("component.requirePermission.restricted"));
     }
-  }, [redirect, loading, hasPermission, permission]);
+  }, [redirect, loading, hasPermission, permission, t]);
 
   if (loading) return null;
 

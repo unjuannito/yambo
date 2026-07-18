@@ -4,30 +4,36 @@ import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  cacheDir: ".vite",
+
+  plugins: [
+    reactRouter(),
+    tailwindcss(),
+    tsconfigPaths(),
+  ],
+
   server: {
-    host: true, // Listen on all addresses
+    host: true,
     port: 5173,
     strictPort: true,
     watch: {
-      usePolling: true,
-      interval: 500,
-    },
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost',
-      port: 5173,
-      clientPort: 80,
+        usePolling: true,
+        interval: 1000,
     },
   },
+
+  optimizeDeps: {
+    force: false,
+  },
+
   test: {
-    environment: 'jsdom',
+    environment: "jsdom",
     passWithNoTests: true,
     coverage: {
-      provider: 'v8',
-      reporter: ['lcov', 'text'],
-      reportsDirectory: 'coverage',
-      include: ['app/**'],
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "coverage",
+      include: ["app/**"],
     },
   },
 });

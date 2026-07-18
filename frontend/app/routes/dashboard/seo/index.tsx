@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type {
@@ -20,6 +21,7 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faWandMagicSparkles,
+    faMagnifyingGlass,
 } from "@fortawesome/free-solid-svg-icons";
 
 export function meta() {
@@ -44,6 +46,7 @@ const EMPTY_FORM: EditForm = {
 };
 
 export default function SeoAdmin() {
+    const { t } = useTranslation();
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Edit modal
@@ -113,13 +116,13 @@ export default function SeoAdmin() {
             };
 
             await seoService.update(editingEntry.id, request);
-            toast.success("Metadatos SEO actualizados");
+            toast.success(t("seo.updated"));
             setEditModalOpen(false);
             setEditingEntry(null);
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "¡Los metadatos SEO se nos resisten!"),
+                getErrorMessage(err, t("seo.saveError")),
             );
         } finally {
             setSaving(false);
@@ -137,13 +140,13 @@ export default function SeoAdmin() {
         setActionLoading(true);
         try {
             await seoService.remove(actionEntry.id);
-            toast.success("Metadatos SEO eliminados");
+            toast.success(t("seo.deleted"));
             setDeleteConfirmOpen(false);
             setActionEntry(null);
             setRefreshKey((prev) => prev + 1);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "¡Los metadatos SEO se aferran a la vida!"),
+                getErrorMessage(err, t("seo.deleteError")),
             );
         } finally {
             setActionLoading(false);
@@ -165,14 +168,14 @@ export default function SeoAdmin() {
                 actionEntry.entityId,
             );
             toast.success(
-                "Regeneración SEO iniciada. Los cambios pueden tardar unos segundos.",
+                t("seo.regenerateStarted"),
             );
             setRegenerateConfirmOpen(false);
             setActionEntry(null);
             setTimeout(() => setRefreshKey((prev) => prev + 1), 3000);
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "¡Los metadatos SEO no quieren regenerarse!"),
+                getErrorMessage(err, t("seo.regenerateError")),
             );
         } finally {
             setActionLoading(false);
@@ -185,13 +188,13 @@ export default function SeoAdmin() {
         try {
             await seoService.bulkGenerate();
             toast.success(
-                "Generación masiva iniciada. Verás el progreso en tiempo real.",
+                t("seo.bulkGenerateStarted"),
             );
         } catch (err) {
             toast.error(
                 getErrorMessage(
                     err,
-                    "¡La generación masiva SEO no quiere arrancar!",
+                    t("seo.bulkGenerateError"),
                 ),
             );
         } finally {
@@ -231,12 +234,12 @@ export default function SeoAdmin() {
         () => [
             {
                 key: "entityType",
-                header: "Entidad",
+                header: t("seo.entityType"),
                 filter: {
                     enabled: true,
                     type: "select" as const,
-                    placeholder: "Todos los tipos",
-                    options: [{ value: "PROJECT", label: "Proyectos" }],
+                    placeholder: t("seo.filterAllTypes"),
+                    options: [{ value: "PROJECT", label: t("seo.filterProjects") }],
                 },
                 render: (entry: SeoMetadataAdmin) => (
                     <div className="flex flex-col">
@@ -251,7 +254,8 @@ export default function SeoAdmin() {
             },
             {
                 key: "slug",
-                header: "Slug",
+                header: t("seo.slug"),
+                className: "hidden sm:table-cell",
                 render: (entry: SeoMetadataAdmin) => (
                     <span className="text-sm text-yambo-green-600 font-mono">
                         {truncate(entry.slug, 30)}
@@ -260,7 +264,8 @@ export default function SeoAdmin() {
             },
             {
                 key: "metaDescription",
-                header: "Meta Description",
+                header: t("seo.metaDescription"),
+                className: "hidden md:table-cell",
                 render: (entry: SeoMetadataAdmin) => (
                     <span className="text-sm text-gray-400">
                         {truncate(entry.metaDescription, 50)}
@@ -269,14 +274,15 @@ export default function SeoAdmin() {
             },
             {
                 key: "keywords",
-                header: "Keywords",
+                header: t("seo.keywords"),
+                className: "hidden md:table-cell",
                 render: (entry: SeoMetadataAdmin) => {
                     const kws = parseKeywords(entry.keywords);
                     return (
                         <div className="flex flex-wrap gap-1">
                             {kws.slice(0, 3).map((kw, i) => (
                                 <span
-                                    key={i}
+                                    key={`kw-${kw}-${i}`}
                                     className="px-2 py-0.5 rounded-full text-xs font-medium bg-yambo-green-50 text-yambo-green-700"
                                 >
                                     {kw}
@@ -293,7 +299,8 @@ export default function SeoAdmin() {
             },
             {
                 key: "updatedAt",
-                header: "Actualizado",
+                header: t("seo.updatedAtCol"),
+                className: "hidden sm:table-cell",
                 render: (entry: SeoMetadataAdmin) => (
                     <span className="text-sm text-gray-400">
                         {formatDate(entry.updatedAt)}
@@ -302,7 +309,8 @@ export default function SeoAdmin() {
             },
             {
                 key: "actions",
-                header: "Acciones",
+                header: t("common.actions"),
+                requiredPerms: [{ obj: "seo_metadata", action: "update" }],
                 render: (entry: SeoMetadataAdmin) => (
                     <div className="flex gap-2">
                         <RequirePermission
@@ -314,7 +322,7 @@ export default function SeoAdmin() {
                                 size="sm"
                                 onClick={() => openEdit(entry)}
                             >
-                                Editar
+                                {t("common.edit")}
                             </ButtonComponent>
                             <ButtonComponent
                                 variant="neutral"
@@ -325,7 +333,7 @@ export default function SeoAdmin() {
                                     icon={faWandMagicSparkles}
                                     className="mr-1"
                                 />
-                                IA
+                                {t("seo.aiRegenerate")}
                             </ButtonComponent>
                         </RequirePermission>
                         <RequirePermission
@@ -337,14 +345,14 @@ export default function SeoAdmin() {
                                 size="sm"
                                 onClick={() => openDelete(entry)}
                             >
-                                Eliminar
+                                {t("common.delete")}
                             </ButtonComponent>
                         </RequirePermission>
                     </div>
                 ),
             },
         ],
-        [],
+        [t],
     );
 
     // ── Render ──
@@ -353,9 +361,12 @@ export default function SeoAdmin() {
             permission={{ obj: "seo_metadata", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-4 md:p-6 w-full">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">SEO 🔍</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black flex items-center gap-2">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-yambo-green-500" />
+                        {t("seo.title")}
+                    </h1>
                     <RequirePermission
                         permission={{ obj: "seo_metadata", action: "create" }}
                         redirect={false}
@@ -370,7 +381,7 @@ export default function SeoAdmin() {
                                 icon={faWandMagicSparkles}
                                 className="mr-2"
                             />
-                            Generar faltantes
+                            {t("seo.generateMissing")}
                         </ButtonComponent>
                     </RequirePermission>
                 </div>
@@ -379,8 +390,8 @@ export default function SeoAdmin() {
                     columns={columns}
                     keyField="id"
                     display={{
-                        emptyMessage: "No se encontraron metadatos SEO",
-                        loadingMessage: "Cargando metadatos SEO...",
+                        emptyMessage: t("seo.noMetadata"),
+                        loadingMessage: t("seo.loading"),
                     }}
                     serverSide={{ fetchData: fetchSeoData }}
                 />
@@ -392,7 +403,7 @@ export default function SeoAdmin() {
                         setEditModalOpen(false);
                         setEditingEntry(null);
                     }}
-                    title={`Editar SEO — ${editingEntry?.entityName || ""}`}
+                    title={t("seo.editTitle", { name: editingEntry?.entityName || "" })}
                     size="lg"
                     footer={
                         <>
@@ -404,7 +415,7 @@ export default function SeoAdmin() {
                                 }}
                                 disabled={saving}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 variant="primary"
@@ -412,7 +423,7 @@ export default function SeoAdmin() {
                                 isLoading={saving}
                                 disabled={saving}
                             >
-                                Guardar
+                                {t("common.save")}
                             </ButtonComponent>
                         </>
                     }
@@ -421,21 +432,21 @@ export default function SeoAdmin() {
                         {/* Slug */}
                         <div>
                             <InputComponent
-                                label="Slug"
+                                label={t("seo.slug")}
                                 value={form.slug}
                                 onChange={(e) =>
                                     setForm({ ...form, slug: e.target.value })
                                 }
-                                placeholder="proyectos/mi-proyecto-2025"
+                                placeholder={t("seo.slugPlaceholder")}
                                 maxLength={200}
                             />
                             <p className="text-xs text-gray-400 mt-1">
-                                URL amigable para SEO ({form.slug.length}/200)
+                                {t("seo.slugHelper", { count: form.slug.length })}
                             </p>
                         </div>
 
                         {/* Meta Description */}
-                        <LabelComponent label="Meta Description">
+                        <LabelComponent label={t("seo.metaDescription")}>
                             <textarea
                                 value={form.metaDescription}
                                 onChange={(e) =>
@@ -447,19 +458,19 @@ export default function SeoAdmin() {
                                 maxLength={200}
                                 rows={3}
                                 className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
-                                placeholder="Descripción para motores de búsqueda..."
+                                placeholder={t("seo.metaDescriptionPlaceholder")}
                             />
                             <p
                                 className={`text-xs mt-1 ${form.metaDescription.length > 155 ? "text-amber-600" : "text-gray-400"}`}
                             >
-                                {form.metaDescription.length}/200 caracteres
+                                {t("seo.metaDescriptionHelper", { count: form.metaDescription.length })}
                                 {form.metaDescription.length > 155 &&
-                                    " (recomendado: ≤155)"}
+                                    t("seo.metaDescriptionRecommended")}
                             </p>
                         </LabelComponent>
 
                         {/* OG Description */}
-                        <LabelComponent label="OG Description">
+                        <LabelComponent label={t("seo.keywords")}>
                             <textarea
                                 value={form.ogDescription}
                                 onChange={(e) =>
@@ -471,15 +482,15 @@ export default function SeoAdmin() {
                                 maxLength={300}
                                 rows={3}
                                 className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
-                                placeholder="Descripción para Open Graph (redes sociales)..."
+                                placeholder={t("seo.ogDescriptionPlaceholder")}
                             />
                             <p className="text-xs text-gray-400 mt-1">
-                                {form.ogDescription.length}/300 caracteres
+                                {t("seo.ogDescriptionHelper", { count: form.ogDescription.length })}
                             </p>
                         </LabelComponent>
 
                         {/* Keywords */}
-                        <LabelComponent label="Keywords">
+                        <LabelComponent label={t("seo.keywords")}>
                             <textarea
                                 value={form.keywords}
                                 onChange={(e) =>
@@ -490,16 +501,14 @@ export default function SeoAdmin() {
                                 }
                                 rows={2}
                                 className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
-                                placeholder="palabra1, palabra2, palabra3..."
+                                placeholder={t("seo.keywordsPlaceholder")}
                             />
                             <p className="text-xs text-gray-400 mt-1">
-                                Separadas por comas (
-                                {
-                                    form.keywords
+                                {t("seo.keywordsHelper", {
+                                    count: form.keywords
                                         .split(",")
-                                        .filter((k) => k.trim()).length
-                                }{" "}
-                                keywords)
+                                        .filter((k) => k.trim()).length,
+                                })}
                             </p>
                         </LabelComponent>
                     </div>
@@ -513,9 +522,9 @@ export default function SeoAdmin() {
                         setActionEntry(null);
                     }}
                     onConfirm={handleDelete}
-                    title="Eliminar metadatos SEO"
-                    message={`¿Estás seguro de que deseas eliminar los metadatos SEO de "${actionEntry?.entityName}"? Esta acción no se puede deshacer.`}
-                    confirmLabel="Eliminar"
+                    title={t("seo.confirmDeleteTitle")}
+                    message={t("seo.confirmDeleteMessage", { name: actionEntry?.entityName })}
+                    confirmLabel={t("common.delete")}
                     variant="danger"
                     isLoading={actionLoading}
                 />
@@ -528,9 +537,9 @@ export default function SeoAdmin() {
                         setActionEntry(null);
                     }}
                     onConfirm={handleRegenerate}
-                    title="Regenerar SEO con IA"
-                    message={`¿Regenerar los metadatos SEO de "${actionEntry?.entityName}" usando inteligencia artificial? Los valores actuales serán reemplazados.`}
-                    confirmLabel="Regenerar"
+                    title={t("seo.regenerateTitle")}
+                    message={t("seo.regenerateMessage", { name: actionEntry?.entityName })}
+                    confirmLabel={t("seo.regenerateLabel")}
                     variant="warning"
                     isLoading={actionLoading}
                 />

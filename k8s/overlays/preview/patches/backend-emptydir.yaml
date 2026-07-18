@@ -1,7 +1,8 @@
-# Replace the PVC-backed uploads volume with emptyDir.
-# Uploads in preview environments are ephemeral — they don't need persistent storage.
+# Use a persistent volume claim for uploads in preview environments.
+# Images must persist across pod restarts/redeploys.
 - op: replace
   path: /spec/template/spec/volumes/0
   value:
     name: uploads-storage
-    emptyDir: {}
+    persistentVolumeClaim:
+      claimName: preview-uploads-pvc

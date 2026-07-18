@@ -9,7 +9,8 @@ import { settingsService, type EmailConfig, type UploadConfig, type OllamaConfig
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faGear } from "@fortawesome/free-solid-svg-icons";
+import { useTranslation } from "react-i18next";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -21,6 +22,7 @@ export function meta({}: Route.MetaArgs) {
 type SettingsTab = "organization" | "application" | "bank" | "email" | "contact" | "upload" | "ai";
 
 export default function Settings() {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<SettingsTab>("organization");
@@ -232,20 +234,20 @@ export default function Settings() {
     };
 
     const tabItems: { key: SettingsTab; label: string }[] = [
-        { key: "organization", label: "Organización" },
-        { key: "application", label: "Aplicación" },
-        { key: "bank", label: "Banco" },
-        { key: "email", label: "Email" },
-        { key: "contact", label: "Contacto" },
-        { key: "upload", label: "Archivos" },
-        { key: "ai", label: "IA" },
+        { key: "organization", label: t('settings.tabOrganization') },
+        { key: "application", label: t('settings.tabApplication') },
+        { key: "bank", label: t('settings.tabBank') },
+        { key: "email", label: t('settings.tabEmail') },
+        { key: "contact", label: t('settings.tabContact') },
+        { key: "upload", label: t('settings.tabUpload') },
+        { key: "ai", label: t('settings.tabAI') },
     ];
 
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                    <LoadingSpinner message="Cargando configuración..." size="lg" />
+                <main className="flex flex-col p-4 md:p-6 w-full">
+                    <LoadingSpinner message={t('settings.loadingSettings')} size="lg" />
                 </main>
             </RequirePermission>
         );
@@ -254,8 +256,11 @@ export default function Settings() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Configuración General ⚙️</h1>
+                <main className="flex flex-col p-4 md:p-6 w-full">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
+                        {t('settings.generalSettings')}
+                    </h1>
                     <ErrorMessage message={error} onRetry={loadSettings} />
                 </main>
             </RequirePermission>
@@ -264,9 +269,12 @@ export default function Settings() {
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Configuración General ⚙️</h1>
-                <p className="text-gray-400 mb-6">Gestiona la configuración del sistema por secciones.</p>
+            <main className="flex flex-col p-4 md:p-6 w-full">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
+                    Configuración General
+                </h1>
+                <p className="text-gray-400 mb-6">{t('settings.manageSettingsHint')}</p>
 
                 <section className="bg-white rounded-2xl border border-gray-100 p-4 mb-6">
                     <div className="flex flex-wrap gap-2">
@@ -288,28 +296,28 @@ export default function Settings() {
 
                 {activeTab === "organization" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de la Organización</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionOrganization')}</h2>
                         <InputComponent
-                            label="Nombre de la Organización"
+                            label={t('settings.orgName')}
                             type="text"
                             value={organizationName}
                             onChange={(e) => setOrganizationName(e.target.value)}
-                            placeholder="Yambo"
+                            placeholder={t('settings.orgNamePlaceholder')}
                             required
                         />
                         <p className="text-sm text-gray-400">
-                            Nombre corto que se usará en los asuntos de los correos electrónicos.
+                            {t('settings.orgNameHint')}
                         </p>
                         <InputComponent
-                            label="Nombre Legal de la Organización"
+                            label={t('settings.orgLegalName')}
                             type="text"
                             value={organizationLegalName}
                             onChange={(e) => setOrganizationLegalName(e.target.value)}
-                            placeholder="Yambo ALCO"
+                            placeholder={t('settings.orgLegalNamePlaceholder')}
                             required
                         />
                         <p className="text-sm text-gray-400">
-                            Este nombre se mostrará como beneficiario en las instrucciones de pago de los pedidos.
+                            {t('settings.orgLegalNameHint')}
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
@@ -318,7 +326,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "organization" ? "Guardando..." : "Guardar Configuración de la Organización"}
+                                    {savingTab === "organization" ? t('common.saving') : t('settings.saveOrganization')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -327,15 +335,15 @@ export default function Settings() {
 
                 {activeTab === "application" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de la Aplicación</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionApplication')}</h2>
                         <div className="flex gap-2">
                             <div className="flex-1">
                                 <InputComponent
-                                    label="Dominio de la Aplicación"
+                                    label={t('settings.appDomain')}
                                     type="text"
                                     value={domain}
                                     onChange={(e) => setDomain(e.target.value)}
-                                    placeholder={currentHost}
+                                    placeholder={t('settings.appDomainPlaceholder')}
                                     required
                                 />
                             </div>
@@ -345,15 +353,15 @@ export default function Settings() {
                                     variant="neutral"
                                     disabled={savingTab !== null}
                                 >
-                                    Usar Host Actual
+                                    {t('settings.useCurrentHost')}
                                 </ButtonComponent>
                             </div>
                         </div>
                         <p className="text-sm text-gray-400">
-                            Este dominio se utilizará para generar enlaces correctos en los correos electrónicos enviados por la aplicación.
+                            {t('settings.appDomainHint')}
                         </p>
                         <InputComponent
-                            label="Días para crear incidencias tras cerrar pedido"
+                            label={t('settings.issueCreationWindow')}
                             type="number"
                             min="0"
                             step="1"
@@ -363,7 +371,7 @@ export default function Settings() {
                             required
                         />
                         <p className="text-sm text-gray-400">
-                            Pasado este plazo, no se podrán crear nuevas incidencias para pedidos cerrados.
+                            {t('settings.issueCreationWindowHint')}
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
@@ -372,7 +380,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "application" ? "Guardando..." : "Guardar Configuración de la Aplicación"}
+                                    {savingTab === "application" ? t('common.saving') : t('settings.saveApplication')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -381,13 +389,13 @@ export default function Settings() {
 
                 {activeTab === "bank" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración Bancaria</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionBank')}</h2>
                         <InputComponent
-                            label="IBAN"
+                            label={t('settings.iban')}
                             type="text"
                             value={iban}
                             onChange={(e) => setIban(e.target.value)}
-                            placeholder="ES00 0000 0000 0000 0000 0000"
+                            placeholder={t('settings.ibanPlaceholder')}
                             required
                         />
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
@@ -397,7 +405,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "bank" ? "Guardando..." : "Guardar Configuración Bancaria"}
+                                    {savingTab === "bank" ? t('common.saving') : t('settings.saveBank')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -406,56 +414,56 @@ export default function Settings() {
 
                 {activeTab === "email" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de Correo Electrónico</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionEmail')}</h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputComponent
-                                label="Servidor SMTP"
+                                label={t('settings.smtpServer')}
                                 type="text"
                                 value={emailConfig.host}
                                 onChange={(e) => setEmailConfig({ ...emailConfig, host: e.target.value })}
-                                placeholder="smtp.gmail.com"
+                                placeholder={t('settings.smtpServerPlaceholder')}
                                 required
                             />
                             <InputComponent
-                                label="Puerto"
+                                label={t('settings.smtpPort')}
                                 type="text"
                                 value={emailConfig.port}
                                 onChange={(e) => setEmailConfig({ ...emailConfig, port: e.target.value })}
-                                placeholder="587"
+                                placeholder={t('settings.smtpPortPlaceholder')}
                                 required
                             />
                         </div>
                         <InputComponent
-                            label="Usuario"
+                            label={t('settings.smtpUser')}
                             type="text"
                             value={emailConfig.username}
                             onChange={(e) => setEmailConfig({ ...emailConfig, username: e.target.value })}
-                            placeholder="usuario@ejemplo.com"
+                            placeholder={t('settings.smtpUserPlaceholder')}
                             required
                         />
                         <InputComponent
-                            label="Contraseña"
+                            label={t('settings.smtpPassword')}
                             type="password"
                             value={emailConfig.password}
                             onChange={(e) => setEmailConfig({ ...emailConfig, password: e.target.value })}
-                            placeholder="Dejar vacío para no modificar"
+                            placeholder={t('settings.smtpPasswordPlaceholder')}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputComponent
-                                label="Correo del Remitente"
+                                label={t('settings.senderEmail')}
                                 type="email"
                                 value={emailConfig.from}
                                 onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })}
-                                placeholder="noreply@yambo.es"
+                                placeholder={t('settings.senderEmailPlaceholder')}
                                 required
                             />
                             <InputComponent
-                                label="Nombre del Remitente"
+                                label={t('settings.senderName')}
                                 type="text"
                                 value={emailConfig.fromName || ""}
                                 onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
-                                placeholder="Yambo"
+                                placeholder={t('settings.senderNamePlaceholder')}
                             />
                         </div>
 
@@ -469,7 +477,7 @@ export default function Settings() {
                                     icon={faChevronRight}
                                     className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
                                 />
-                                Configuración Avanzada SMTP
+                                {t('settings.advancedSmtp')}
                             </button>
 
                             {showAdvanced && (
@@ -482,7 +490,7 @@ export default function Settings() {
                                                 onChange={(e) => setSmtpConfig({ ...smtpConfig, auth: e.target.checked })}
                                                 className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
                                             />
-                                            <span className="text-sm">Autenticación SMTP</span>
+                                            <span className="text-sm">{t('settings.smtpAuth')}</span>
                                         </label>
                                         <label className="flex items-center space-x-2">
                                             <input
@@ -491,7 +499,7 @@ export default function Settings() {
                                                 onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsEnable: e.target.checked })}
                                                 className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
                                             />
-                                            <span className="text-sm">Habilitar STARTTLS</span>
+                                            <span className="text-sm">{t('settings.smtpStarttlsEnable')}</span>
                                         </label>
                                         <label className="flex items-center space-x-2">
                                             <input
@@ -500,26 +508,26 @@ export default function Settings() {
                                                 onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsRequired: e.target.checked })}
                                                 className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
                                             />
-                                            <span className="text-sm">Requerir STARTTLS</span>
+                                            <span className="text-sm">{t('settings.smtpStarttlsRequired')}</span>
                                         </label>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <InputComponent
-                                            label="Timeout de Conexión (ms)"
+                                            label={t('settings.connectionTimeout')}
                                             type="number"
                                             value={String(smtpConfig.connectionTimeout)}
                                             onChange={(e) => setSmtpConfig({ ...smtpConfig, connectionTimeout: Number(e.target.value) })}
                                             placeholder="5000"
                                         />
                                         <InputComponent
-                                            label="Timeout de Lectura (ms)"
+                                            label={t('settings.readTimeout')}
                                             type="number"
                                             value={String(smtpConfig.timeout)}
                                             onChange={(e) => setSmtpConfig({ ...smtpConfig, timeout: Number(e.target.value) })}
                                             placeholder="5000"
                                         />
                                         <InputComponent
-                                            label="Timeout de Escritura (ms)"
+                                            label={t('settings.writeTimeout')}
                                             type="number"
                                             value={String(smtpConfig.writeTimeout)}
                                             onChange={(e) => setSmtpConfig({ ...smtpConfig, writeTimeout: Number(e.target.value) })}
@@ -537,7 +545,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "email" ? "Guardando..." : "Guardar Configuración de Email"}
+                                    {savingTab === "email" ? t('common.saving') : t('settings.saveEmail')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -546,30 +554,30 @@ export default function Settings() {
 
                 {activeTab === "contact" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de Contacto</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionContact')}</h2>
                         <p className="text-sm text-gray-400">
-                            Estos datos se mostrarán en la página pública de contacto.
+                            {t('settings.contactHint')}
                         </p>
                         <InputComponent
-                            label="Correo electrónico de contacto"
+                            label={t('settings.contactEmail')}
                             type="email"
                             value={contactEmail}
                             onChange={(e) => setContactEmail(e.target.value)}
-                            placeholder="info@yambo.es"
+                            placeholder={t('settings.contactEmailPlaceholder')}
                         />
                         <InputComponent
-                            label="Instagram"
+                            label={t('settings.contactInstagram')}
                             type="text"
                             value={contactInstagram}
                             onChange={(e) => setContactInstagram(e.target.value)}
-                            placeholder="@yambo o https://instagram.com/yambo"
+                            placeholder={t('settings.contactInstagramPlaceholder')}
                         />
                         <InputComponent
-                            label="TikTok"
+                            label={t('settings.contactTiktok')}
                             type="text"
                             value={contactTiktok}
                             onChange={(e) => setContactTiktok(e.target.value)}
-                            placeholder="@yambo o https://tiktok.com/@yambo"
+                            placeholder={t('settings.contactTiktokPlaceholder')}
                         />
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
@@ -578,7 +586,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "contact" ? "Guardando..." : "Guardar Configuración de Contacto"}
+                                    {savingTab === "contact" ? t('common.saving') : t('settings.saveContact')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -587,12 +595,12 @@ export default function Settings() {
 
                 {activeTab === "upload" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de Archivos</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionUpload')}</h2>
                         <p className="text-sm text-gray-400">
-                            Configura los límites y tipos de archivo permitidos para la subida de imágenes.
+                            {t('settings.uploadHint')}
                         </p>
                         <InputComponent
-                            label="Tamaño máximo de archivo (MB)"
+                            label={t('settings.maxFileSize')}
                             type="number"
                             min="1"
                             step="1"
@@ -602,7 +610,7 @@ export default function Settings() {
                             required
                         />
                         <p className="text-sm text-gray-400">
-                            Tamaño máximo permitido por archivo subido. Afecta a todos los archivos subidos.
+                            {t('settings.maxFileSizeHint')}
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
@@ -611,7 +619,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "upload" ? "Guardando..." : "Guardar Configuración de Archivos"}
+                                    {savingTab === "upload" ? t('common.saving') : t('settings.saveUpload')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -620,31 +628,31 @@ export default function Settings() {
 
                 {activeTab === "ai" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración de IA (Ollama)</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionAI')}</h2>
                         <p className="text-sm text-gray-400">
-                            Configura la conexión con el servidor de IA Ollama utilizado para la generación automática de metadatos SEO.
+                            {t('settings.aiHint')}
                         </p>
                         <InputComponent
-                            label="URL de la API de Ollama"
+                            label={t('settings.ollamaApiUrl')}
                             type="text"
                             value={ollamaConfig.apiUrl}
                             onChange={(e) => setOllamaConfig({ ...ollamaConfig, apiUrl: e.target.value })}
-                            placeholder="http://localhost:11434"
+                            placeholder={t('settings.ollamaApiUrlPlaceholder')}
                             required
                         />
                         <p className="text-sm text-gray-400">
-                            Dirección completa del servidor Ollama, incluyendo protocolo y puerto.
+                            {t('settings.ollamaApiUrlHint')}
                         </p>
                         <InputComponent
-                            label="Modelo"
+                            label={t('settings.ollamaModel')}
                             type="text"
                             value={ollamaConfig.model}
                             onChange={(e) => setOllamaConfig({ ...ollamaConfig, model: e.target.value })}
-                            placeholder="phi3:mini"
+                            placeholder={t('settings.ollamaModelPlaceholder')}
                             required
                         />
                         <p className="text-sm text-gray-400">
-                            Nombre del modelo de Ollama a utilizar. Debe estar previamente descargado en el servidor.
+                            {t('settings.ollamaModelHint')}
                         </p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
@@ -653,7 +661,7 @@ export default function Settings() {
                                     variant="primary"
                                     disabled={savingTab !== null}
                                 >
-                                    {savingTab === "ai" ? "Guardando..." : "Guardar Configuración de IA"}
+                                    {savingTab === "ai" ? t('common.saving') : t('settings.saveAI')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>

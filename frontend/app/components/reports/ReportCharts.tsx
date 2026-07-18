@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -306,11 +307,12 @@ export function DateRangePicker({
     onStartDateChange,
     onEndDateChange,
 }: DateRangePickerProps) {
+    const { t } = useTranslation();
     const presets = [
-        { label: "7 días", days: 7 },
-        { label: "30 días", days: 30 },
-        { label: "90 días", days: 90 },
-        { label: "1 año", days: 365 },
+        { label: t('common.7days') || "7 días", days: 7 },
+        { label: t('common.30days') || "30 días", days: 30 },
+        { label: t('common.90days') || "90 días", days: 90 },
+        { label: t('common.1year') || "1 año", days: 365 },
     ];
 
     const applyPreset = (days: number) => {
@@ -324,7 +326,7 @@ export function DateRangePicker({
     return (
         <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Desde</label>
+                <label className="text-sm text-gray-400">{t('common.since')}</label>
                 <input
                     type="date"
                     value={startDate}
@@ -333,7 +335,7 @@ export function DateRangePicker({
                 />
             </div>
             <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Hasta</label>
+                <label className="text-sm text-gray-400">{t('common.until')}</label>
                 <input
                     type="date"
                     value={endDate}

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "~/i18n/config";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -21,15 +23,16 @@ import toast from "react-hot-toast";
 
 export function meta() {
     return [
-        { title: "Yambo - Invitaciones" },
+        { title: i18n.t("invitations.metaTitle") },
         {
-            name: "Yambo - Invitaciones",
-            content: "Yambo - Invitaciones",
+            name: "description",
+            content: i18n.t("invitations.metaTitle"),
         },
     ];
 }
 
 export default function Invitations() {
+    const { t } = useTranslation();
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [invitations, setInvitations] = useState<Invitation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,11 +58,11 @@ export default function Invitations() {
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
         } catch (err) {
-            setError(getErrorMessage(err, "¡Los perfiles se esconden!"));
+            setError(getErrorMessage(err, t("invitations.profilesLoadingError")));
         } finally {
             setLoading(false);
         }
-    }, [activeTab]);
+    }, [activeTab, t]);
 
     useEffect(() => {
         void loadProfiles();
@@ -67,7 +70,7 @@ export default function Invitations() {
 
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
     const formatDateTime = (value?: string | null) =>
-        value ? new Date(value).toLocaleString() : "Sin fin";
+        value ? new Date(value).toLocaleString() : t("invitations.noEnd");
 
     const isExpired = (invitation: Invitation) =>
         invitation.expiresAt
@@ -90,7 +93,7 @@ export default function Invitations() {
 
     const handleCreate = async () => {
         if (selectedProfiles.length === 0) {
-            toast.error("¡Elige al menos un perfil primero!");
+            toast.error(t("invitations.selectProfileFirst"));
             return;
         }
 
@@ -107,13 +110,13 @@ export default function Invitations() {
             setStartTms("");
             setEndTms("");
             setIsModalOpen(false);
-            toast.success("Invitación creada correctamente");
+            toast.success(t("invitations.createdSuccess"));
             const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const updated =
                 await invitationService.listInvitations(startDate);
             setInvitations(updated);
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡La invitación no quiere nacer!"));
+            toast.error(getErrorMessage(err, t("invitations.createError")));
         } finally {
             setCreating(false);
         }
@@ -123,7 +126,8 @@ export default function Invitations() {
         () => [
             {
                 key: "token",
-                header: "Token",
+                header: t("invitations.token"),
+                className: "hidden md:table-cell",
                 render: (invitation) => (
                     <span className="font-mono text-xs break-all text-gray-500">
                         {invitation.token}
@@ -132,10 +136,16 @@ export default function Invitations() {
             },
             {
                 key: "invitationLink" as any,
-                header: "Link de registro",
+                header: t("invitations.registrationLink"),
                 render: (invitation) => {
                     const link = `${baseUrl}/register?invite=${invitation.token}`;
                     const expired = isExpired(invitation);
+                    const handleCopy = () => {
+                        if (!link || expired) return;
+                        navigator.clipboard.writeText(link)
+                            .then(() => toast.success(t("invitations.linkCopied")))
+                            .catch(() => toast.error(t("invitations.linkCopyError")));
+                    };
                     return (
                         <ButtonComponent
                             variant={expired ? "neutral" : "primary"}
@@ -144,26 +154,17 @@ export default function Invitations() {
                                     ? "cursor-not-allowed opacity-50 text-xs"
                                     : "text-xs"
                             }
-                            onClick={async () => {
-                                if (!link || expired) return;
-                                try {
-                                    await navigator.clipboard.writeText(link);
-                                    toast.success(
-                                        "Link copiado al portapapeles",
-                                    );
-                                } catch (err) {
-                                    toast.error("¡El link se nos escapa!");
-                                }
-                            }}
+                            onClick={handleCopy}
                         >
-                            Copiar link
+                            {t("invitations.copyLink")}
                         </ButtonComponent>
                     );
                 },
             },
             {
                 key: "startTms",
-                header: "Inicio",
+                header: t("invitations.startDate"),
+                className: "hidden sm:table-cell",
                 render: (invitation) => (
                     <span className="text-sm text-gray-500">
                         {new Date(invitation.startTms).toLocaleString()}
@@ -172,7 +173,8 @@ export default function Invitations() {
             },
             {
                 key: "expiresAt",
-                header: "Fin",
+                header: t("invitations.endDate"),
+                className: "hidden sm:table-cell",
                 render: (invitation) => (
                     <span className="text-sm text-gray-500">
                         {formatDateTime(invitation.expiresAt)}
@@ -181,11 +183,12 @@ export default function Invitations() {
             },
             {
                 key: "profileIds",
-                header: "Perfiles",
+                header: t("invitations.profiles"),
+                className: "hidden md:table-cell",
                 filter: {
                     enabled: true,
                     type: "multi-select",
-                    placeholder: "Filtrar perfiles...",
+                    placeholder: t("invitations.filterProfiles"),
                     options: profileOptions,
                 },
                 render: (invitation) => {
@@ -205,22 +208,22 @@ export default function Invitations() {
             },
             {
                 key: "computedStatus",
-                header: "Estado",
+                header: t("invitations.status"),
                 filter: {
                     enabled: true,
                     type: "multi-select",
-                    placeholder: "Filtrar estado...",
+                    placeholder: t("invitations.filterStatus"),
                     options: [
-                        { value: "Activa", label: "Activa" },
-                        { value: "Pendiente", label: "Pendiente" },
-                        { value: "Expirada", label: "Expirada" },
+                        { value: t("invitations.statusActive"), label: t("invitations.statusActive") },
+                        { value: t("invitations.statusPending"), label: t("invitations.statusPending") },
+                        { value: t("invitations.statusExpired"), label: t("invitations.statusExpired") },
                     ],
                 },
                 render: (invitation) => {
                     const status = invitation.computedStatus;
                     let cls = "bg-yambo-green-50 text-yambo-green-700";
-                    if (status === "Pendiente") cls = "bg-amber-50 text-amber-700";
-                    else if (status === "Expirada") cls = "bg-gray-100 text-gray-500";
+                    if (status === t("invitations.statusPending")) cls = "bg-amber-50 text-amber-700";
+                    else if (status === t("invitations.statusExpired")) cls = "bg-gray-100 text-gray-500";
                     return (
                         <span
                             className={`px-2.5 py-1 text-xs font-medium rounded-full ${cls}`}
@@ -232,35 +235,40 @@ export default function Invitations() {
             },
             {
                 key: "id",
-                header: "Acciones",
-                render: (invitation) => (
+                header: t("invitations.actions"),
+                requiredPerms: [{ obj: "invitation", action: "update" }],
+                render: (invitation) => {
+                    const expired = isExpired(invitation);
+                    const handleDisable = async () => {
+                        if (expired) return;
+                        try {
+                            await invitationService.disableInvitation(
+                                invitation.id,
+                            );
+                            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
+                            const updated =
+                                await invitationService.listInvitations(startDate);
+                            setInvitations(updated);
+                            toast.success(t("invitations.disabledSuccess"));
+                        } catch (err) {
+                            toast.error(
+                            getErrorMessage(err, t("invitations.disableError")),
+                            );
+                        }
+                    };
+                    return (
                     <ButtonComponent
-                        variant={`${isExpired(invitation) ? "destructive-text" : "destructive"}`}
-                        className={`${isExpired(invitation) ? "cursor-not-allowed opacity-50 text-xs" : "text-xs"}`}
-                        onClick={async () => {
-                            if (isExpired(invitation)) return;
-                            try {
-                                await invitationService.disableInvitation(
-                                    invitation.id,
-                                );
-                                const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-                                const updated =
-                                    await invitationService.listInvitations(startDate);
-                                setInvitations(updated);
-                                toast.success("Invitación deshabilitada");
-                            } catch (err) {
-                                toast.error(
-                                getErrorMessage(err, "¡La invitación se niega a desactivarse!"),
-                                );
-                            }
-                        }}
+                        variant={expired ? "destructive-text" : "destructive"}
+                        className={expired ? "cursor-not-allowed opacity-50 text-xs" : "text-xs"}
+                        onClick={handleDisable}
                     >
-                        Deshabilitar
+                        {t("invitations.disableButton")}
                     </ButtonComponent>
-                ),
+                    );
+                },
             },
         ],
-        [profiles, profileOptions],
+        [profiles, profileOptions, t, baseUrl, isExpired, activeTab, formatDateTime],
     );
 
     const enrichedInvitations = useMemo(() => {
@@ -268,22 +276,22 @@ export default function Invitations() {
         return invitations.map((inv) => {
             const start = new Date(inv.startTms);
             const end = inv.expiresAt ? new Date(inv.expiresAt) : null;
-            let computedStatus = "Activa";
-            if (now < start) computedStatus = "Pendiente";
-            else if (end && now > end) computedStatus = "Expirada";
+            let computedStatus = t("invitations.statusActive");
+            if (now < start) computedStatus = t("invitations.statusPending");
+            else if (end && now > end) computedStatus = t("invitations.statusExpired");
             return { ...inv, computedStatus };
         });
-    }, [invitations]);
+    }, [invitations, t]);
 
     return (
         <RequirePermission
             permission={{ obj: "invitation", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-4 md:p-6 w-full">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black">
-                        Invitaciones
+                        {t("invitations.title")}
                     </h1>
                     {!loading && !error && (
                         <RequirePermission
@@ -294,7 +302,7 @@ export default function Invitations() {
                                 variant="primary"
                                 onClick={() => setIsModalOpen(true)}
                             >
-                                + Nueva Invitación
+                                {t("invitations.newInvitation")}
                             </ButtonComponent>
                         </RequirePermission>
                     )}
@@ -306,7 +314,7 @@ export default function Invitations() {
                     <div className="flex justify-center py-8">
                         <LoadingSpinner
                             size="md"
-                            message="Cargando perfiles..."
+                            message={t("invitations.loadingProfiles")}
                         />
                     </div>
                 )}
@@ -318,16 +326,16 @@ export default function Invitations() {
                 )}
 
                 {!loading && !error && (
-                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
                         <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
-                            Invitaciones creadas
+                            {t("invitations.createdInvitations")}
                         </h2>
                         <FilterableTable
                             columns={columns}
                             data={enrichedInvitations}
                             keyField="id"
                             display={{
-                                emptyMessage: "No hay invitaciones que coincidan con los filtros",
+                                emptyMessage: t("invitations.noInvitations"),
                             }}
                             features={{
                                 enableFilters: true,
@@ -338,28 +346,28 @@ export default function Invitations() {
                 )}
 
                 {lastInvitation && (
-                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-6">
+                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 mt-6">
                         <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
-                            Última invitación creada
+                            {t("invitations.lastCreated")}
                         </h2>
                         <div className="grid gap-4">
                             <InputComponent
-                                label="Token"
+                                label={t("invitations.token")}
                                 value={lastInvitation.token}
                                 readOnly
                             />
                             <InputComponent
-                                label="Inicio"
+                                label={t("invitations.startDate")}
                                 value={formatDateTime(lastInvitation.startTms)}
                                 readOnly
                             />
                             <InputComponent
-                                label="Fin"
+                                label={t("invitations.endDate")}
                                 value={formatDateTime(lastInvitation.expiresAt)}
                                 readOnly
                             />
                             <InputComponent
-                                label="Link de registro"
+                                label={t("invitations.registrationLink")}
                                 value={invitationLink}
                                 readOnly
                             />
@@ -372,16 +380,16 @@ export default function Invitations() {
                                             invitationLink,
                                         );
                                         toast.success(
-                                            "Link copiado al portapapeles",
+                                            t("invitations.linkCopied"),
                                         );
                                     } catch (err) {
                                         toast.error(
-                                            "¡El link se nos escapa!",
+                                            t("invitations.linkCopyError"),
                                         );
                                     }
                                 }}
                             >
-                                Copiar link
+                                {t("invitations.copyLink")}
                             </ButtonComponent>
                         </div>
                     </section>
@@ -395,7 +403,7 @@ export default function Invitations() {
                         setStartTms("");
                         setEndTms("");
                     }}
-                    title="Crear link de invitación"
+                    title={t("invitations.createLink")}
                     footer={
                         <>
                             <ButtonComponent
@@ -407,24 +415,24 @@ export default function Invitations() {
                                     setEndTms("");
                                 }}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 variant="primary"
                                 onClick={handleCreate}
                                 disabled={creating}
                             >
-                                {creating ? "Creando..." : "Crear"}
+                                {creating ? t("common.loadingEllipsis") : t("common.create")}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="grid gap-4">
                         <MultiSelectComponent
-                            label="Perfiles"
+                            label={t("invitations.profiles")}
                             options={profileOptions}
                             value={selectedProfiles}
-                            placeholder="Selecciona los perfiles"
+                            placeholder={t("invitations.selectProfiles")}
                             onChange={(e) => {
                                 const selected = Array.from(
                                     e.target.selectedOptions,
@@ -433,13 +441,13 @@ export default function Invitations() {
                             }}
                         />
                         <InputComponent
-                            label="Inicio (opcional)"
+                            label={t("invitations.startOptional")}
                             type="datetime-local"
                             value={startTms}
                             onChange={(e) => setStartTms(e.target.value)}
                         />
                         <InputComponent
-                            label="Fin (opcional)"
+                            label={t("invitations.endOptional")}
                             type="datetime-local"
                             value={endTms}
                             onChange={(e) => setEndTms(e.target.value)}

@@ -48,6 +48,7 @@ export interface Product {
     options: ProductOption[];
     images?: string[];
     description?: string;
+    shortDescription?: string;
 }
 
 export interface CreateProductRequest {
@@ -58,6 +59,7 @@ export interface CreateProductRequest {
     options?: ProductOption[];
     images?: string[];
     description?: string;
+    shortDescription?: string;
 }
 
 export interface UpdateProductRequest {
@@ -69,6 +71,7 @@ export interface UpdateProductRequest {
     familyProductId?: string;
     projectId?: string;
     description?: string;
+    shortDescription?: string;
 }
 
 export class ProductService extends ApiService {

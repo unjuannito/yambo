@@ -30,12 +30,13 @@ public class ProfileController {
     @GetMapping("/list")
     @PreAuthorize("@permissionCheck.hasPermission('profile', 'read')")
     public ResponseEntity<Page<ProfileResponseDto>> listProfiles(
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String id,
             @RequestParam(required = false) List<String> permissions,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Profile> profilesPage = profileService.listProfiles(id, permissions, pageable);
+        Page<Profile> profilesPage = profileService.listProfiles(query, id, permissions, pageable);
         return ResponseEntity.ok(profilesPage.map(this::mapToProfileResponseDto));
     }
 

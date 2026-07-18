@@ -56,7 +56,7 @@ class ReportSheetSectionHelperTest {
             );
 
             assertThat(nextRow).isEqualTo(3);
-            assertThat(ws.getRow(2).getCell(0).getStringCellValue()).isEqualTo("Drops: Drop A, Drop B");
+            assertThat(ws.getRow(2).getCell(0).getStringCellValue()).isEqualTo("Colecciones: Drop A, Drop B");
             assertThat(ws.getNumMergedRegions()).isEqualTo(1);
             assertThat(ws.getMergedRegion(0).getFirstRow()).isEqualTo(2);
             assertThat(ws.getMergedRegion(0).getLastColumn()).isEqualTo(4);

@@ -17,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class ActivityService {
     }
 
     public List<Activity> getPublicActivities() {
-        return activityRepository.findByIsPublicTrueOrderByDateAsc();
+        return activityRepository.findByIsPublicTrueOrderByDateDesc();
     }
 
     public Page<Activity> listActivities(String name, ActivityStatus status, Boolean isPublic,
@@ -53,15 +54,16 @@ public class ActivityService {
         return activityRepository.findAll(spec, pageable);
     }
 
-    public Activity createActivity(@NonNull String name, String description, LocalDateTime date,
+    public Activity createActivity(@NonNull String name, String description, String image, String location, BigDecimal price, LocalDateTime date,
                                    LocalDateTime endDate, ActivityStatus status, Boolean isPublic,
                                    @NonNull String projectId, String managerId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         User manager = null;
-        if (managerId != null) {
-            manager = userRepository.findById(managerId)
+        if (managerId != null && !managerId.isBlank()) {
+            String normalizedManagerId = managerId.trim();
+            manager = userRepository.findById(normalizedManagerId)
                     .orElseThrow(() -> new ResourceNotFoundException("Manager user not found"));
             validateManagerBelongsToProject(manager, projectId);
         }
@@ -69,6 +71,9 @@ public class ActivityService {
         Activity activity = Activity.builder()
                 .name(name)
                 .description(description)
+                .image(image)
+                .location(location)
+                .price(price)
                 .date(date)
                 .endDate(endDate)
                 .status(status)
@@ -80,7 +85,7 @@ public class ActivityService {
         return activityRepository.save(activity);
     }
 
-    public Activity updateActivity(@NonNull String id, String name, String description, LocalDateTime date,
+    public Activity updateActivity(@NonNull String id, String name, String description, String image, String location, BigDecimal price, LocalDateTime date,
                                    LocalDateTime endDate, ActivityStatus status, Boolean isPublic,
                                    String projectId, String managerId) {
         Activity activity = getActivityById(id);
@@ -90,6 +95,15 @@ public class ActivityService {
         }
         if (description != null) {
             activity.setDescription(description);
+        }
+        if (image != null) {
+            activity.setImage(image);
+        }
+        if (location != null) {
+            activity.setLocation(location);
+        }
+        if (price != null) {
+            activity.setPrice(price);
         }
         if (date != null) {
             activity.setDate(date);
@@ -128,6 +142,10 @@ public class ActivityService {
             throw new ResourceNotFoundException("Project not found");
         }
         return userRepository.findStaffByProjectId(projectId);
+    }
+
+    public List<User> getAllStaff() {
+        return userRepository.findStaff();
     }
 
     public void deleteActivity(@NonNull String id) {

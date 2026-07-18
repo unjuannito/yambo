@@ -3,6 +3,75 @@ import { describe, it, expect, vi } from 'vitest';
 import { CreateIssueModal } from './CreateIssueModal';
 import type { IssueReportWindowModel } from '~/types/issueType';
 
+vi.mock("react-i18next", () => ({
+    useTranslation: () => ({
+        t: (key: string) => {
+            const map: Record<string, string> = {
+                'public.activitiesTitle': 'Actividades',
+                'public.activitiesSubtitle': 'Descubre las actividades abiertas al público.',
+                'public.activitiesPageTitle': 'Yambo - Actividades | Asociación Juvenil en Alcobendas',
+                'public.upcomingSection': 'Próximas',
+                'public.pastSection': 'Pasadas',
+                'public.searchPlaceholder': 'Buscar actividades...',
+                'public.listView': 'Lista',
+                'public.calendarView': 'Calendario',
+                'public.filterAllProjects': 'Todas',
+                'public.viewDetail': 'Detalle',
+                'public.seeMore': 'Ver más',
+                'public.activityNights': 'noches',
+                'public.activityNight': 'noche',
+                'public.activityPrice': '{price} €',
+                'public.activitiesCount': '{count} actividades',
+                'public.activityCancelledTitle': '[Cancelada]',
+                'public.activityShare': 'Compartir',
+                'public.share': 'Compartir',
+                'issues.title': 'Incidencias',
+                'issues.trackingTitle': 'Seguimiento de incidencias',
+                'issues.adminTitle': 'Administrador de incidencias',
+                'issues.queue': 'Cola',
+                'issues.queueTitle': 'Cola de incidencias',
+                'issues.myIssuesDesc': 'Consulta y gestiona tus incidencias.',
+                'issues.navigator': 'Navegador',
+                'issues.adminDesc': 'Gestiona todas las incidencias del sistema.',
+                'issues.statTotal': 'Total',
+                'issues.statOpen': 'Abiertas',
+                'issues.statInProgress': 'En progreso',
+                'issues.statClosed': 'Cerradas',
+                'issues.workflow': 'Flujo de trabajo',
+                'issues.newIssue': 'Nueva incidencia',
+                'issues.orderPrefix': 'Pedido',
+                'issues.createIssue': 'Nueva incidencia',
+                'issues.form.title': 'Título',
+                'issues.form.titleRequired': 'Título *',
+                'issues.form.description': 'Descripción',
+                'issues.form.submit': 'Crear incidencia',
+                'orders.orderNumber': 'Pedido',
+                'component.filterButton': 'Filtros',
+                'component.watcher.noWatchers': 'Sin seguidores aún.',
+                'component.multiSelectPlaceholder': 'Seleccionar...',
+                'component.statusFilter': 'Estado',
+                'common.search': 'Buscar',
+                'common.clear': 'Limpiar',
+                'common.loading': 'Cargando...',
+                'common.noResults': 'Sin resultados',
+                'common.previous': 'Anterior',
+                'common.next': 'Siguiente',
+                'common.save': 'Guardar',
+                'common.cancel': 'Cancelar',
+                'orders.confirmDelivery': 'Confirmar entrega',
+                'orders.confirming': 'Confirmando...',
+                'merch.drops.title': 'Drops',
+                'issues.selectProducts': 'Selecciona uno o varios productos de este pedido para asociarlos a la incidencia.',
+            };
+            return map[key] || key;
+        },
+        i18n: { language: 'es', changeLanguage: vi.fn() },
+        ready: true,
+    }),
+    initReactI18next: { type: '3rdParty', init: vi.fn() },
+    Trans: ({ children }: any) => children,
+}));
+
 vi.mock('./IssueForm', () => ({
     IssueForm: vi.fn(({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) => (
         <div data-testid="issue-form">

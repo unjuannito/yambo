@@ -26,11 +26,12 @@ export interface OrderResponse {
 }
 
 export class OrderService extends ApiService {
-    public async getAllOrders(page = 0, size = 20, orderId?: string, customerName?: string, customerId?: string, status?: string[], startDate?: string, endDate?: string): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
+    public async getAllOrders(page = 0, size = 20, query?: string, orderId?: string, customerName?: string, customerId?: string, status?: string[], startDate?: string, endDate?: string): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
         const params = new URLSearchParams({
             page: page.toString(),
             size: size.toString(),
         });
+        if (query) params.append('query', query);
         if (orderId) params.append('orderId', orderId);
         if (customerName) params.append('customerName', customerName);
         if (customerId) params.append('customerId', customerId);

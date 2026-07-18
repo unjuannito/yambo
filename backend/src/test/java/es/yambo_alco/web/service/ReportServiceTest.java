@@ -231,14 +231,14 @@ class ReportServiceTest {
                 .createdAt(LocalDateTime.of(2025, 1, 1, 10, 0)).build();
         Issue inProgress  = Issue.builder().id("I2").status(IssueStatus.IN_PROGRESS)
                 .createdAt(LocalDateTime.of(2025, 1, 2, 10, 0)).build();
-        Issue resolved    = Issue.builder().id("I3").status(IssueStatus.RESOLVED)
+        Issue closed1     = Issue.builder().id("I3").status(IssueStatus.CLOSED)
                 .createdAt(LocalDateTime.of(2025, 1, 3, 10, 0)).build();
-        Issue closed      = Issue.builder().id("I4").status(IssueStatus.CLOSED)
+        Issue closed2     = Issue.builder().id("I4").status(IssueStatus.CLOSED)
                 .createdAt(LocalDateTime.of(2025, 1, 4, 10, 0)).build();
 
         when(issueRepository.findAll(any(Specification.class)))
-                .thenReturn(List.of(openIssue, inProgress, resolved, closed));
-        // No RESOLVED comment for these resolved/closed issues
+                .thenReturn(List.of(openIssue, inProgress, closed1, closed2));
+        // No CLOSED comment for these closed issues
         when(issueCommentRepository.findByIssueIdOrderByCreatedAtDescWithUser(any()))
                 .thenReturn(List.of());
 
@@ -251,25 +251,25 @@ class ReportServiceTest {
     }
 
     @Test
-    void getIssueMetrics_WithResolvedIssue_ShouldCalculateResolutionHours() {
+    void getIssueMetrics_WithClosedIssue_ShouldCalculateResolutionHours() {
         LocalDateTime issueCreatedAt = LocalDateTime.of(2025, 1, 10, 8, 0);
         LocalDateTime commentAt      = LocalDateTime.of(2025, 1, 10, 12, 0); // 4h later
 
-        Issue resolved = Issue.builder()
+        Issue closed = Issue.builder()
                 .id("I1")
-                .status(IssueStatus.RESOLVED)
+                .status(IssueStatus.CLOSED)
                 .createdAt(issueCreatedAt)
                 .build();
 
-        IssueComment resolvedComment = IssueComment.builder()
+        IssueComment closedComment = IssueComment.builder()
                 .issueId("I1")
-                .status(IssueStatus.RESOLVED)
+                .status(IssueStatus.CLOSED)
                 .createdAt(commentAt)
                 .build();
 
-        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(resolved));
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(closed));
         when(issueCommentRepository.findByIssueIdOrderByCreatedAtDescWithUser("I1"))
-                .thenReturn(List.of(resolvedComment));
+                .thenReturn(List.of(closedComment));
 
         ReportService.IssueMetrics result = reportService.getIssueMetrics(START, END);
 
@@ -278,10 +278,10 @@ class ReportServiceTest {
     }
 
     @Test
-    void getIssueMetrics_WithResolvedIssueButNoResolvedComment_ShouldReturnNullResolution() {
-        Issue resolved = Issue.builder()
+        void getIssueMetrics_WithClosedIssueButNoClosedComment_ShouldReturnNullResolution() {
+                Issue closed = Issue.builder()
                 .id("I1")
-                .status(IssueStatus.RESOLVED)
+                                .status(IssueStatus.CLOSED)
                 .createdAt(LocalDateTime.of(2025, 1, 10, 8, 0))
                 .build();
 
@@ -291,7 +291,7 @@ class ReportServiceTest {
                 .createdAt(LocalDateTime.of(2025, 1, 10, 9, 0))
                 .build();
 
-        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(resolved));
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(closed));
         when(issueCommentRepository.findByIssueIdOrderByCreatedAtDescWithUser("I1"))
                 .thenReturn(List.of(otherComment));
 

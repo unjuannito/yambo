@@ -8,7 +8,7 @@ import { settingsService } from "~/services/settingsService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash, faHouse } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
 
 export function meta() {
@@ -224,7 +224,7 @@ export default function MainPageEditor() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <main className="flex flex-col p-4 md:p-6 w-full">
                     <LoadingSpinner message="Cargando configuración..." size="lg" />
                 </main>
             </RequirePermission>
@@ -234,7 +234,7 @@ export default function MainPageEditor() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+                <main className="flex flex-col p-4 md:p-6 w-full">
                     <ErrorMessage message={error} onRetry={loadSettings} />
                 </main>
             </RequirePermission>
@@ -243,8 +243,11 @@ export default function MainPageEditor() {
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Editor de Página Principal 🏠</h1>
+            <main className="flex flex-col p-4 md:p-6 w-full">
+                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faHouse} className="text-yambo-green-500" />
+                    Editor de Página Principal
+                </h1>
                 <p className="text-gray-400 mb-6">Personaliza el contenido visible en la página de inicio.</p>
 
                 {/* Tabs */}
@@ -286,7 +289,7 @@ export default function MainPageEditor() {
                                 >
                                     <div className="flex items-center gap-3">
                                         {/* Reorder buttons */}
-                                        <div className="flex flex-col gap-0.5">
+                                        <div className="flex flex-col gap-0.5 items-center">
                                             <button
                                                 type="button"
                                                 onClick={() => moveSection(index, "up")}
@@ -511,7 +514,7 @@ export default function MainPageEditor() {
                             <div className="space-y-4">
                                 {aboutBullets.map((bullet, index) => (
                                     <div
-                                        key={index}
+                                        key={`bullet-${index}`}
                                         className="border border-gray-100 rounded-2xl p-4 bg-yambo-green-50/30 relative"
                                     >
                                         <div className="flex items-center justify-between mb-3">

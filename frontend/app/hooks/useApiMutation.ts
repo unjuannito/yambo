@@ -20,6 +20,61 @@ interface UseApiMutationResult<TData, TVariables> {
     reset: () => void;
 }
 
+function invokeSuccessMessage<TData, TVariables>(
+    successMessage: string | ((data: TData, variables: TVariables) => string) | undefined,
+    result: TData,
+    variables: TVariables,
+): void {
+    if (!successMessage) return;
+    const message =
+        typeof successMessage === "function"
+            ? successMessage(result, variables)
+            : successMessage;
+    toast.success(message);
+}
+
+function resolveToastMessage<TData, TVariables>(
+    err: unknown,
+    errorMessage: string | ((error: ApiError | Error, variables: TVariables) => string) | undefined,
+    variables: TVariables,
+): { message: string; duration: number } {
+    const apiError = err instanceof ApiError ? err : null;
+    const errorMsg = getErrorMessage(err, "¡Algo salió mal!");
+
+    if (errorMessage) {
+        return {
+            message:
+                typeof errorMessage === "function"
+                    ? errorMessage(apiError ?? new Error(errorMsg), variables)
+                    : errorMessage,
+            duration: 4000,
+        };
+    }
+
+    if (apiError?.isValidationError() && apiError.details) {
+        return {
+            message: `Error de validación:\n${apiError.details}`,
+            duration: 6000,
+        };
+    }
+
+    if (apiError?.isForbiddenError()) {
+        return {
+            message: "¡Acceso denegado! No tienes permisos para esto",
+            duration: 4000,
+        };
+    }
+
+    if (apiError?.isServerError()) {
+        return {
+            message: "Nuestro servidor necesita un respiro. Vuelve en un ratito",
+            duration: 5000,
+        };
+    }
+
+    return { message: errorMsg, duration: 4000 };
+}
+
 /**
  * Hook for API mutations with loading states, error handling, and toast notifications
  * @param options Configuration object with mutation function and callbacks
@@ -48,13 +103,7 @@ export function useApiMutation<TData = any, TVariables = void>({
                 const result = await mutationFn(variables);
                 setData(result);
 
-                if (successMessage) {
-                    const message =
-                        typeof successMessage === "function"
-                            ? successMessage(result, variables)
-                            : successMessage;
-                    toast.success(message);
-                }
+                invokeSuccessMessage(successMessage, result, variables);
 
                 if (onSuccess) {
                     onSuccess(result, variables);
@@ -73,28 +122,8 @@ export function useApiMutation<TData = any, TVariables = void>({
                     throw err;
                 }
 
-                let toastMessage: string;
-                let toastDuration = 4000;
-
-                if (errorMessage) {
-                    toastMessage =
-                        typeof errorMessage === "function"
-                            ? errorMessage(
-                                  apiError ?? new Error(errorMsg),
-                                  variables,
-                              )
-                            : errorMessage;
-                } else if (apiError?.isValidationError() && apiError.details) {
-                    toastMessage = `Error de validación:\n${apiError.details}`;
-                    toastDuration = 6000;
-                } else if (apiError?.isForbiddenError()) {
-                    toastMessage = "¡Acceso denegado! No tienes permisos para esto";
-                } else if (apiError?.isServerError()) {
-                    toastMessage = "Nuestro servidor necesita un respiro. Vuelve en un ratito";
-                    toastDuration = 5000;
-                } else {
-                    toastMessage = errorMsg;
-                }
+                const { message: toastMessage, duration: toastDuration } =
+                    resolveToastMessage(err, errorMessage, variables);
 
                 toast.error(toastMessage, { duration: toastDuration });
 

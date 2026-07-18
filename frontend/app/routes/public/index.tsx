@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useLoaderData } from "react-router";
+import { useTranslation } from "react-i18next";
 import Hero from "~/components/home/Hero";
 import AboutUs from "~/components/home/AboutUs";
 import FeaturedProjects from "~/components/home/FeaturedProjects";
@@ -16,19 +17,15 @@ import { organizationJsonLd, webSiteJsonLd } from "~/utils/jsonld";
 import type { Route } from "./+types";
 
 export function meta({ data }: Route.MetaArgs) {
+    const { t } = useTranslation();
     const siteUrl = data?.siteUrl ?? "";
-    const title = "Yambo - Asociación Juvenil en Alcobendas (Madrid)";
-    const description =
-        "Yambo es una asociación juvenil en Alcobendas (Madrid) dedicada al ocio educativo, tiempo libre y actividades para niños y adolescentes.";
+    const title = t("public.homeTitle");
+    const description = t("public.homeDescription");
 
     return [
         { title },
         { name: "description", content: description },
-        {
-            name: "keywords",
-            content:
-                "Yambo, asociación juvenil, Alcobendas, Madrid, ocio educativo, tiempo libre, actividades niños, actividades adolescentes, educación no formal, campamentos, proyectos juveniles, monitores",
-        },
+        { name: "keywords", content: t("public.homeKeywords") },
         { tagName: "link", rel: "canonical", href: siteUrl },
         { property: "og:title", content: title },
         { property: "og:description", content: description },
@@ -40,7 +37,7 @@ export function meta({ data }: Route.MetaArgs) {
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "robots", content: "index, follow" },
-        { name: "author", content: "Juan Cañas Cañate, Javier Mateos Mata" },
+        { name: "author", content: t("public.homeAuthor") },
         { "script:ld+json": organizationJsonLd(siteUrl) },
         { "script:ld+json": webSiteJsonLd(siteUrl) },
     ];
@@ -52,14 +49,6 @@ interface SectionConfig {
     title: string;
 }
 
-const DEFAULT_SECTIONS: SectionConfig[] = [
-    { id: "hero", visible: true, title: "" },
-    { id: "about", visible: true, title: "¿Qué es Yambo?" },
-    { id: "projects", visible: true, title: "Proyectos Destacados" },
-    { id: "activities", visible: true, title: "Actividades" },
-    { id: "monitors", visible: true, title: "Nuestro Equipo" },
-];
-
 export async function loader() {
     const [settings, projects, monitors, activities] = await Promise.all([
         getHomeSettings(),
@@ -70,10 +59,59 @@ export async function loader() {
     return { settings, projects, monitors, activities, siteUrl: getSiteUrl() };
 }
 
+const SECTION_COMPONENTS: Record<
+    string,
+    (props: {
+        title: string;
+        sectionIndex: number;
+        settings: Record<string, string>;
+        projects: any;
+        monitors: any;
+        activities: any;
+    }) => React.ReactNode
+> = {
+    hero: ({ settings }) => (
+        <Hero
+            key="hero"
+            title={settings["home.hero.title"]}
+            subtitle={settings["home.hero.subtitle"]}
+            image={settings["home.hero.image"]}
+        />
+    ),
+    about: ({ title, sectionIndex, settings }) => (
+        <AboutUs
+            key="about"
+            title={title}
+            sectionIndex={sectionIndex}
+            intro={settings["home.about.intro"]}
+            bulletsJson={settings["home.about.bullets"]}
+            image={settings["home.about.image"]}
+        />
+    ),
+    projects: ({ title, sectionIndex, projects }) => (
+        <FeaturedProjects key="projects" title={title} sectionIndex={sectionIndex} projects={projects} />
+    ),
+    activities: ({ title, sectionIndex, activities }) => (
+        <ActivitiesPreview key="activities" title={title} sectionIndex={sectionIndex} activities={activities} />
+    ),
+    monitors: ({ title, sectionIndex, monitors }) => (
+        <MonitorsGallery key="monitors" title={title} sectionIndex={sectionIndex} monitors={monitors} />
+    ),
+};
+
 export default function Index() {
+    const { t } = useTranslation();
     const { settings, projects, monitors, activities } = useLoaderData<typeof loader>();
 
     const sections = useMemo<SectionConfig[]>(() => {
+        const defaults: SectionConfig[] = [
+            { id: "hero", visible: true, title: "" },
+            { id: "about", visible: true, title: t("public.aboutSection") },
+            { id: "projects", visible: true, title: t("public.featuredProjects") },
+            { id: "activities", visible: true, title: t("public.activitiesTitle") },
+            { id: "monitors", visible: true, title: t("public.ourTeam") },
+        ];
+
         const raw = settings["home.sections.config"];
         if (raw) {
             try {
@@ -83,72 +121,19 @@ export default function Index() {
                 /* use defaults */
             }
         }
-        return DEFAULT_SECTIONS;
-    }, [settings]);
+        return defaults;
+    }, [settings, t]);
 
-    const sectionTitle = (id: string) =>
-        sections.find((s) => s.id === id)?.title || "";
-
-    const renderSection = (section: SectionConfig) => {
-        if (!section.visible) return null;
-
-        switch (section.id) {
-            case "hero":
-                return (
-                    <Hero
-                        key="hero"
-                        title={settings["home.hero.title"]}
-                        subtitle={settings["home.hero.subtitle"]}
-                        image={settings["home.hero.image"]}
-                        loading={false}
-                    />
-                );
-            case "about":
-                return (
-                    <AboutUs
-                        key="about"
-                        title={sectionTitle("about")}
-                        intro={settings["home.about.intro"]}
-                        bulletsJson={settings["home.about.bullets"]}
-                        image={settings["home.about.image"]}
-                        loading={false}
-                    />
-                );
-            case "projects":
-                return (
-                    <FeaturedProjects
-                        key="projects"
-                        title={sectionTitle("projects")}
-                        projects={projects}
-                        loading={false}
-                    />
-                );
-            case "activities":
-                return (
-                    <ActivitiesPreview
-                        key="activities"
-                        title={sectionTitle("activities")}
-                        activities={activities}
-                        loading={false}
-                    />
-                );
-            case "monitors":
-                return (
-                    <MonitorsGallery
-                        key="monitors"
-                        title={sectionTitle("monitors")}
-                        monitors={monitors}
-                        loading={false}
-                    />
-                );
-            default:
-                return null;
-        }
-    };
+    const sharedProps = { settings, projects, monitors, activities };
 
     return (
         <>
-            {sections.map(renderSection)}
+            {sections.map((section, index) => {
+                if (!section.visible) return null;
+                const Component = SECTION_COMPONENTS[section.id];
+                if (!Component) return null;
+                return Component({ title: section.title, sectionIndex: index, ...sharedProps });
+            })}
         </>
     );
 }

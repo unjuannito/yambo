@@ -38,6 +38,9 @@ export class ActivityService extends ApiService {
     public async createActivity(data: {
         name: string;
         description?: string;
+        image?: string;
+        location?: string;
+        price?: number;
         date?: string;
         endDate?: string;
         status?: string;
@@ -51,6 +54,9 @@ export class ActivityService extends ApiService {
     public async updateActivity(id: string, data: {
         name?: string;
         description?: string;
+        image?: string;
+        location?: string;
+        price?: number;
         date?: string;
         endDate?: string;
         status?: string;
@@ -63,6 +69,10 @@ export class ActivityService extends ApiService {
 
     public async getProjectStaff(projectId: string): Promise<ActivityManager[]> {
         return await this.get(`/activities/projects/${projectId}/monitors`);
+    }
+
+    public async getAllStaff(): Promise<ActivityManager[]> {
+        return await this.get(`/activities/staff`);
     }
 
     public async deleteActivity(id: string): Promise<void> {

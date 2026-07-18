@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -27,6 +28,15 @@ public class Activity {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(length = 500)
+    private String image;
+
+    @Column(columnDefinition = "TEXT")
+    private String location;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal price;
 
     @Column
     private LocalDateTime date;

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 export const StatCard = React.memo(function StatCard({
   label,
@@ -9,6 +10,7 @@ export const StatCard = React.memo(function StatCard({
   value: number;
   className: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={`rounded-2xl px-4 py-4 hover-lift transition-all duration-200 ${className}`}

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
 import ButtonComponent from "./forms/ButtonComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,11 +11,12 @@ interface BurgerButtonProps {
 }
 
 export function BurgerButton({ isOpen, onClick, className = "" }: BurgerButtonProps) {
+  const { t } = useTranslation();
   return (
     <ButtonComponent
       tabIndex={0}
       variant="base"
-      aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
+      aria-label={isOpen ? t("component.burgerButton.closeMenu") : t("component.burgerButton.openMenu")}
       aria-expanded={isOpen}
       className={twMerge(`focus:outline-none cursor-pointer text-yambo-black ${className}`)}
       onClick={onClick}

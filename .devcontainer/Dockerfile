@@ -7,7 +7,7 @@ RUN apt-get update && \
     curl -sSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor > /usr/share/keyrings/adoptium.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list && \
     apt-get update && \
-    apt-get install -y temurin-21-jdk maven
+    apt-get install -y temurin-21-jdk maven jq
 
 # Install PostgreSQL client and nginx
 RUN apt-get install -y postgresql-client nginx

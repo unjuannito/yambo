@@ -81,9 +81,16 @@ vi.mock('~/components/common/RequirePermission', () => ({
     RequirePermission: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('~/components/issues', () => ({
-    IssueStatusBadge: () => null,
-    IssueForm: () => null,
+vi.mock('~/components/issues', async () => {
+    const actual = await vi.importActual<typeof import('~/components/issues')>('~/components/issues');
+    return {
+        ...actual,
+        IssueStatusBadge: () => null,
+        IssueForm: () => null,
+    };
+});
+
+vi.mock('~/components/issues/CreateIssueModal', () => ({
     CreateIssueModal: vi.fn(({ issueWindow, onClose, onSuccess }: { issueWindow: any; onClose: () => void; onSuccess: () => void }) =>
         issueWindow ? (
             <div data-testid="issue-form">
@@ -299,7 +306,7 @@ describe('Orders route', () => {
             });
         });
 
-        it('shows success toast and refreshes issues when issue is created successfully', async () => {
+        it('refreshes issues when issue is created successfully', async () => {
             vi.mocked(useAuth).mockReturnValue(makeMerchAdminAuth() as any);
 
             renderWithRouter('/?orderId=ORD001');
@@ -319,10 +326,6 @@ describe('Orders route', () => {
             vi.mocked(issueService.getIssuesByOrder).mockResolvedValue([]);
 
             fireEvent.click(screen.getByText('submit-issue'));
-
-            await waitFor(() => {
-                expect(toast.success).toHaveBeenCalledWith('Incidencia creada correctamente');
-            });
 
             expect(issueService.getIssuesByOrder).toHaveBeenCalledWith('ORD001');
 

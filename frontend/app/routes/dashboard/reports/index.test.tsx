@@ -172,7 +172,7 @@ describe('reports route', () => {
                     productRevenueOverTime: [{ date: '2026-05-01', value: 30 }],
                     topProductsByQuantity: [{ productId: 'p1', productName: 'Prod 1', quantity: 3, revenue: 30 }],
                     topProductsByRevenue: [{ productId: 'p1', productName: 'Prod 1', quantity: 3, revenue: 30 }],
-                    salesByFamily: [{ familyId: 'f1', familyName: 'Drop Uno', quantity: 3, revenue: 30 }],
+                    salesByFamily: [{ familyId: 'f1', familyName: 'Colección Uno', quantity: 3, revenue: 30 }],
                     productsByStatus: { PENDING_PRODUCTS: 1 },
                     conversionFunnel: [
                         { productId: 'p1', productName: 'Prod 1', views: 100, purchases: 12, conversionRate: 12 },
@@ -192,7 +192,7 @@ describe('reports route', () => {
 
         render(<ReportsPage />);
 
-        expect(screen.getByText('Drop Uno')).toBeInTheDocument();
+        expect(screen.getByText('Colección Uno')).toBeInTheDocument();
         expect(screen.getByText('Prod 1')).toBeInTheDocument();
         expect(screen.getByText('12%')).toBeInTheDocument();
         expect(screen.getByText('5%')).toBeInTheDocument();

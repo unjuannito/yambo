@@ -53,7 +53,7 @@ final class ReportSheetSectionHelper {
             return rowIdx;
         }
 
-        addMergedRow(ws, rowIdx, colTo, "Drops: " + String.join(", ", selectedDropNames), subtitleStyle);
+        addMergedRow(ws, rowIdx, colTo, "Colecciones: " + String.join(", ", selectedDropNames), subtitleStyle);
         return rowIdx + 1;
     }
 

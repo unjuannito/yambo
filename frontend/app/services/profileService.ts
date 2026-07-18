@@ -33,13 +33,13 @@ export class ProfileService extends ApiService {
     }
 
     public async listProfiles(params: {
-        id?: string;
+        query?: string;
         permissions?: string[];
         page: number;
         size: number;
     }): Promise<PagedResponse<Profile>> {
         const queryParams = new URLSearchParams();
-        if (params.id) queryParams.append('id', params.id);
+        if (params.query) queryParams.append('query', params.query);
         if (params.permissions && params.permissions.length > 0) {
             params.permissions.forEach(p => queryParams.append('permissions', p));
         }

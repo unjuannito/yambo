@@ -3,9 +3,9 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
-
-import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -16,6 +16,9 @@ import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -27,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -563,7 +567,54 @@ class OrderServiceTest {
         when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
             .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
 
-        orderService.listOrders(null, null, "USER001", List.of(OrderStatus.PAYMENT_CONFIRMED), LocalDateTime.now().minusDays(1), LocalDateTime.now(), pageable);
+        orderService.listOrders(new OrderFilter(null, null, null, "USER001", List.of(OrderStatus.PAYMENT_CONFIRMED), LocalDateTime.now().minusDays(1), LocalDateTime.now()), pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    private static Stream<Arguments> provideListOrdersStringFilters() {
+        return Stream.of(
+            Arguments.of(new OrderFilter("search-term", null, null, null, null, null, null), "query"),
+            Arguments.of(new OrderFilter(null, "ORD001", null, null, null, null, null), "orderId"),
+            Arguments.of(new OrderFilter(null, null, "John Doe", null, null, null, null), "customerName")
+        );
+    }
+
+    @ParameterizedTest(name = "listOrders with filter: {1}")
+    @MethodSource("provideListOrdersStringFilters")
+    void listOrders_WithStringFilter_ShouldDelegateToRepository(OrderFilter filter, @SuppressWarnings("unused") String description) {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(filter, pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    @Test
+    void listOrders_WithMultipleStatuses_ShouldFilterByStatuses() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        OrderFilter filter = new OrderFilter(null, null, null, null, List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_CONFIRMED), null, null);
+
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(filter, pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    @Test
+    void listOrders_WithDateRange_ShouldFilterByDates() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        OrderFilter filter = new OrderFilter(null, null, null, null, null, LocalDateTime.now().minusDays(7), LocalDateTime.now());
+
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(filter, pageable);
 
         verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
     }
@@ -1496,18 +1547,18 @@ class OrderServiceTest {
     }
 
     @Test
-    void hasOpenIssues_WithReopenedIssue_ShouldReturnTrue() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
+        void hasOpenIssues_WithClosedIssue_ShouldReturnFalse() {
+                Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
         when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(issue));
 
-        assertTrue(orderService.hasOpenIssues("ORD001"));
+                assertFalse(orderService.hasOpenIssues("ORD001"));
     }
 
     @Test
-    void hasOpenIssues_WithOnlyResolvedAndClosedIssues_ShouldReturnFalse() {
-        Issue resolved = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
-        Issue closed = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
-        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(resolved, closed));
+        void hasOpenIssues_WithOnlyClosedIssues_ShouldReturnFalse() {
+                Issue closed1 = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
+                Issue closed2 = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
+                when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(closed1, closed2));
 
         assertFalse(orderService.hasOpenIssues("ORD001"));
     }
@@ -1582,7 +1633,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkAndCloseOrder_WhenReopenedIssues_ShouldNotClose() {
+        void checkAndCloseOrder_WhenClosedIssues_ShouldClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1590,19 +1641,21 @@ class OrderServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        Issue reopenedIssue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
+                Issue closedIssue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(reopenedIssue));
+                when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(closedIssue));
+                when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         orderService.checkAndCloseOrder("ORD001");
 
-        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
-        verify(orderRepository, never()).save(any(Order.class));
+                assertEquals(OrderStatus.CLOSED, order.getStatus());
+                assertNotNull(order.getClosedAt());
+                verify(orderRepository).save(order);
     }
 
     @Test
-    void checkAndCloseOrder_WhenOnlyResolvedClosedIssues_ShouldClose() {
+        void checkAndCloseOrder_WhenOnlyClosedIssues_ShouldClose() {
         Order order = Order.builder()
                 .id("ORD001")
                 .customerId("USER001")
@@ -1610,11 +1663,11 @@ class OrderServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        Issue resolved = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
-        Issue closed = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
+                Issue closed1 = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
+                Issue closed2 = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
 
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(resolved, closed));
+                when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(closed1, closed2));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         orderService.checkAndCloseOrder("ORD001");

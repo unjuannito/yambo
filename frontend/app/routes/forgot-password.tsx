@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { AuthLayout } from "~/routes/AuthLayout";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -7,15 +8,18 @@ import { AuthService } from "~/services/authService";
 import { ApiError } from "~/types/error";
 import toast from "react-hot-toast";
 import type { Route } from "./+types/forgot-password";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
 
 export const ssr = false;
 
 export function meta({}: Route.MetaArgs) {
+    const { t } = useTranslation();
     return [
-        { title: "Yambo - Restablecer contraseña" },
+        { title: t('forgotPassword.pageTitle') },
         {
             name: "description",
-            content: "Solicita un enlace para restablecer tu contraseña.",
+            content: t('forgotPassword.pageDesc'),
         },
     ];
 }
@@ -23,6 +27,7 @@ export function meta({}: Route.MetaArgs) {
 const authService = new AuthService();
 
 export default function ForgotPassword() {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
     const emailRef = useRef<HTMLInputElement>(null);
@@ -32,7 +37,7 @@ export default function ForgotPassword() {
         const email = emailRef.current?.value ?? "";
 
         if (!email) {
-            toast.error("¡Eh, que se te olvida el email!");
+            toast.error(t('forgotPassword.emailRequired'));
             return;
         }
 
@@ -40,16 +45,16 @@ export default function ForgotPassword() {
             setLoading(true);
             await authService.forgotPassword(email);
             setSent(true);
-            toast.success("Si el email existe, recibirás un enlace para restablecer tu contraseña.");
+            toast.success(t('forgotPassword.successMessage'));
         } catch (err) {
             if (err instanceof ApiError && err.isType("NETWORK_ERROR")) {
-                toast.error("Parece que internet se fue de vacaciones. ¡Revisa tu conexión!");
+                toast.error(t('forgotPassword.errorNetwork'));
             } else if (err instanceof ApiError && err.isServerError()) {
-                toast.error("Nuestro servidor necesita un respiro. Vuelve en un ratito");
+                toast.error(t('forgotPassword.errorServer'));
             } else {
                 // Still show success to prevent user enumeration
                 setSent(true);
-                toast.success("Si el email existe, recibirás un enlace para restablecer tu contraseña.");
+                toast.success(t('forgotPassword.successMessage'));
             }
         } finally {
             setLoading(false);
@@ -59,26 +64,26 @@ export default function ForgotPassword() {
     const footer = (
         <p className="text-xs text-center text-gray-400">
             <Link to="/login" className="text-yambo-green-600 hover:underline font-medium">
-                Volver al inicio de sesión
+                {t('forgotPassword.backToLogin')}
             </Link>
         </p>
     );
 
     return (
         <AuthLayout
-            title="Restablecer contraseña"
-            subtitle="Ingresa tu email y te enviaremos un enlace para restablecer tu contraseña"
+            title={t('forgotPassword.title')}
+            subtitle={t('forgotPassword.subtitle')}
             footer={footer}
         >
             {sent ? (
                 <div className="space-y-4">
                     <div className="p-4 bg-yambo-green-50 border border-yambo-green-200 rounded-2xl">
-                        <p className="text-sm text-yambo-green-700 font-semibold">
-                            📧 Correo enviado
+                        <p className="text-sm text-yambo-green-700 font-semibold flex items-center gap-2">
+                            <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4" />
+                            {t('forgotPassword.emailSentTitle')}
                         </p>
                         <p className="text-sm text-yambo-green-600 mt-1">
-                            Si existe una cuenta con ese email, recibirás un enlace para restablecer tu contraseña.
-                            Revisa también la carpeta de spam.
+                            {t('forgotPassword.emailSentDesc')}
                         </p>
                     </div>
                     <ButtonComponent
@@ -86,7 +91,7 @@ export default function ForgotPassword() {
                         className="w-full"
                         onClick={() => setSent(false)}
                     >
-                        Enviar de nuevo
+                        {t('forgotPassword.sendAgain')}
                     </ButtonComponent>
                 </div>
             ) : (
@@ -94,7 +99,7 @@ export default function ForgotPassword() {
                     <InputComponent
                         ref={emailRef}
                         name="email"
-                        label="Correo electrónico"
+                        label={t('forgotPassword.emailLabel')}
                         type="email"
                         required
                     />
@@ -104,7 +109,7 @@ export default function ForgotPassword() {
                         className="w-full"
                         isLoading={loading}
                     >
-                        Enviar enlace
+                        {t('forgotPassword.sendButton')}
                     </ButtonComponent>
                 </form>
             )}

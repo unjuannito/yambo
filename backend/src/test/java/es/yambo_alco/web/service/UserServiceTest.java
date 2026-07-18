@@ -5,6 +5,7 @@ import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
@@ -15,6 +16,7 @@ import org.mockito.Mockito;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -59,10 +61,62 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(null, null, null, null, (List<String>) null, (List<String>) null, null,
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("a@b.com");
+    }
+
+    @Test
+    void listUsers_WithNameQuery_ShouldFilterByName() {
+        User u = User.builder().id("U0000001").email("john@example.com").name("John").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter(null, null, "John", null, null, null, null, null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getName()).isEqualTo("John");
+    }
+
+    @Test
+    void listUsers_WithQuery_ShouldUseQueryContains() {
+        User u = User.builder().id("U0000001").email("test@example.com").name("Test User").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter("test@", null, null, null, null, null, null, null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getEmail()).isEqualTo("test@example.com");
+    }
+
+    @Test
+    void listUsers_WithEnabledFilter_ShouldFilterByEnabled() {
+        User u = User.builder().id("U0000001").email("enabled@example.com").name("Enabled User").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, true, null, null, null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).isEnabled()).isTrue();
+    }
+
+    @Test
+    void listUsers_WithRoleFilter_ShouldFilterByRole() {
+        User u = User.builder().id("U0000001").email("monitor@example.com").name("Monitor").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, "MONITOR"),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getEmail()).isEqualTo("monitor@example.com");
     }
 
     @Test
@@ -538,5 +592,120 @@ public class UserServiceTest {
         assertThat(result.isIssueComments()).isFalse();
         assertThat(result.isIssueStatus()).isTrue();
         verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateProfile_WithPhotoBioFunFact_ShouldUpdateFields() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .build();
+
+        User updatedUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("New Name")
+                .photo("new-photo.jpg")
+                .bio("New bio")
+                .funFact("New fun fact")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+
+        // When
+        User result = userService.updateProfile("U0000001", "New Name", "user@example.com",
+                "new-photo.jpg", "New bio", "New fun fact");
+
+        // Then
+        assertThat(result.getPhoto()).isEqualTo("new-photo.jpg");
+        assertThat(result.getBio()).isEqualTo("New bio");
+        assertThat(result.getFunFact()).isEqualTo("New fun fact");
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateProfile_WithEmptyPhotoBioFunFact_ShouldSetNull() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .build();
+
+        User updatedUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+
+        // When
+        User result = userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                "", "", "");
+
+        // Then
+        assertThat(result.getPhoto()).isNull();
+        assertThat(result.getBio()).isNull();
+        assertThat(result.getFunFact()).isNull();
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateProfile_WithSameEmail_ShouldNotThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateProfile("U0000001", "New Name", "user@example.com", null, null, null);
+
+        // Then
+        assertThat(result.getName()).isEqualTo("New Name");
+        verify(userRepository, never()).existsByEmail(anyString());
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void listUsers_WithInvalidSortField_ShouldUseDefaultSort() {
+        // Given
+        User u = User.builder().id("U0000001").email("a@b.com").name("User").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        PageRequest pageable = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("invalidField"));
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null), pageable);
+
+        // Then
+        assertThat(res.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void listUsers_WithPermissionsFilter_ShouldApplySpec() {
+        // Given
+        User u = User.builder().id("U0000002").email("b@c.com").name("User 2").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        // When
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, List.of("PERM001"), null),
+                PageRequest.of(0, 10));
+
+        // Then
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getId()).isEqualTo("U0000002");
     }
 }

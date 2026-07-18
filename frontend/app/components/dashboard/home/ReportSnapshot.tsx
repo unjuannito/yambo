@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -89,21 +90,22 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
     CANCELED: "#ff6b6b",
 };
 
-const ORDER_STATUS_LABELS: Record<string, string> = {
-    PENDING_PAYMENT: "Pte. Pago",
-    CONFIRMING_PAYMENT: "Confirmando",
-    PAYMENT_CONFIRMED: "Confirmado",
-    PENDING_PRODUCTS: "Pte. Prod.",
-    CLOSED: "Cerrado",
-    CANCELED: "Cancelado",
-};
-
-function MiniDoughnut({ data }: { data: Record<string, number> }) {
+function MiniDoughnut({ data, t }: { data: Record<string, number>; t: (key: string) => string }) {
     const keys = Object.keys(data);
     if (keys.length === 0) return null;
 
     const chartData = {
-        labels: keys.map((k) => ORDER_STATUS_LABELS[k] || k),
+        labels: keys.map((k) => {
+            const statusLabels: Record<string, string> = {
+                PENDING_PAYMENT: t("report.statusPendingPayment"),
+                CONFIRMING_PAYMENT: t("report.statusConfirmingPayment"),
+                PAYMENT_CONFIRMED: t("report.statusPaymentConfirmed"),
+                PENDING_PRODUCTS: t("report.statusPendingProducts"),
+                CLOSED: t("report.statusClosed"),
+                CANCELED: t("report.statusCanceled"),
+            };
+            return statusLabels[k] || k;
+        }),
         datasets: [
             {
                 data: Object.values(data),
@@ -190,6 +192,7 @@ interface ReportSnapshotProps {
 }
 
 export default function ReportSnapshot({ data }: ReportSnapshotProps) {
+    const { t } = useTranslation();
     const { orders, users, issues, products } = data;
 
     return (
@@ -197,21 +200,21 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold font-display text-yambo-black flex items-center gap-2.5">
                     <FontAwesomeIcon icon={faChartLine} className="w-4 h-4 text-yambo-purple-500" />
-                    Resumen últimos 30 días
+                    {t('dashboard.summary30Days')}
                 </h3>
                 <Link
                     to="/mi-espacio/admin/informes"
                     className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-semibold inline-flex items-center gap-1.5 transition-colors"
                 >
-                    Ver informes completos
+                    {t('dashboard.viewFullReports')}
                     <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
                 </Link>
             </div>
 
             {/* Key metrics row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatTile
-                    label="Pedidos"
+                    label={t('dashboard.ordersLabel')}
                     value={orders.totalOrders}
                     icon={faShoppingCart}
                     color="green"
@@ -219,7 +222,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     sparklineColor="#33a35e"
                 />
                 <StatTile
-                    label="Ingresos"
+                    label={t('dashboard.revenueLabel')}
                     value={`${orders.totalRevenue.toFixed(0)} €`}
                     icon={faMoneyBillWave}
                     color="green"
@@ -227,13 +230,13 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     sparklineColor="#10b981"
                 />
                 <StatTile
-                    label="Usuarios"
+                    label={t('dashboard.usersLabel')}
                     value={users.totalUsers}
                     icon={faUsers}
                     color="purple"
                 />
                 <StatTile
-                    label="Usr. Activos"
+                    label={t('dashboard.activeUsersLabel')}
                     value={users.activeUsers}
                     icon={faUsers}
                     color="purple"
@@ -241,7 +244,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     sparklineColor="#906bac"
                 />
                 <StatTile
-                    label="Incidencias"
+                    label={t('dashboard.issuesLabel')}
                     value={issues.totalIssues}
                     icon={faExclamationTriangle}
                     color="yellow"
@@ -249,13 +252,13 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     sparklineColor="#f59e0b"
                 />
                 <StatTile
-                    label="Tiempo Resol."
-                    value={issues.averageResolutionHours != null ? `${issues.averageResolutionHours}h` : "N/A"}
+                    label={t('dashboard.resolutionTimeLabel')}
+                    value={issues.averageResolutionHours != null ? `${issues.averageResolutionHours}h` : t('common.notAvailable')}
                     icon={faClock}
                     color="red"
                 />
                 <StatTile
-                    label="Prod. Vendidos"
+                    label={t('dashboard.productsSoldLabel')}
                     value={products.totalProductsSold}
                     icon={faCubes}
                     color="purple"
@@ -263,7 +266,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                     sparklineColor="#906bac"
                 />
                 <StatTile
-                    label="Ingresos Prod."
+                    label={t('dashboard.productRevenueLabel')}
                     value={`${products.totalProductRevenue.toFixed(0)} €`}
                     icon={faMoneyBillWave}
                     color="green"
@@ -277,17 +280,17 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                 {/* Orders over time */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                     <h4 className="text-sm font-semibold text-yambo-black mb-3">
-                        Pedidos (tendencia)
+                        {t('dashboard.ordersTrend')}
                     </h4>
                     {orders.ordersOverTime.length > 1 ? (
                         <SparklineChart
                             data={orders.ordersOverTime}
-                            label="Pedidos"
+                            label={t('dashboard.ordersLabel')}
                             color="#33a35e"
                         />
                     ) : (
                         <p className="text-gray-300 text-xs text-center py-8">
-                            Sin datos suficientes
+                            {t('dashboard.notEnoughData')}
                         </p>
                     )}
                 </div>
@@ -295,13 +298,13 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                 {/* Orders by status */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                     <h4 className="text-sm font-semibold text-yambo-black mb-3">
-                        Pedidos por estado
+                        {t('dashboard.ordersByStatus')}
                     </h4>
                     {Object.keys(orders.ordersByStatus).length > 0 ? (
-                        <MiniDoughnut data={orders.ordersByStatus} />
+                        <MiniDoughnut data={orders.ordersByStatus} t={t} />
                     ) : (
                         <p className="text-gray-300 text-xs text-center py-8">
-                            Sin datos
+                            {t('dashboard.noData')}
                         </p>
                     )}
                 </div>
@@ -309,7 +312,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                 {/* Top products */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                     <h4 className="text-sm font-semibold text-yambo-black mb-3">
-                        Top productos vendidos
+                        {t('dashboard.topProducts')}
                     </h4>
                     {products.topProductsByQuantity.length > 0 ? (
                         <MiniBarChart
@@ -318,7 +321,7 @@ export default function ReportSnapshot({ data }: ReportSnapshotProps) {
                         />
                     ) : (
                         <p className="text-gray-300 text-xs text-center py-8">
-                            Sin datos
+                            {t('dashboard.noData')}
                         </p>
                     )}
                 </div>

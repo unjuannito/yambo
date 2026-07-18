@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCloudUploadAlt,
@@ -69,6 +70,7 @@ export default function FileUploader({
   label,
   compact = false,
 }: FileUploaderProps) {
+  const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export default function FileUploader({
           onUpload?.(uploaded);
         }
       } catch (err) {
-        setError(getErrorMessage(err, "Error al subir el archivo"));
+        setError(getErrorMessage(err, t("component.fileUpload.uploadError")));
       } finally {
         setUploading(false);
         if (fileInputRef.current) {
@@ -103,7 +105,7 @@ export default function FileUploader({
         }
       }
     },
-    [multiple, onUpload]
+    [multiple, onUpload, t]
   );
 
   const handleDelete = useCallback(
@@ -113,10 +115,10 @@ export default function FileUploader({
         setFiles((prev) => prev.filter((f) => f.id !== fileId));
         onDelete?.(fileId);
       } catch (err) {
-        setError(getErrorMessage(err, "Error al eliminar el archivo"));
+        setError(getErrorMessage(err, t("component.fileUpload.deleteError")));
       }
     },
-    [onDelete]
+    [onDelete, t]
   );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -154,6 +156,16 @@ export default function FileUploader({
   if (compact && !multiple) {
     const currentFile = files[0];
     const isCurrentImage = currentFile && isImage(currentFile.contentType);
+    const uploadButtonLabel = uploading ? (
+      <>
+        <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
+        {t("component.fileUpload.uploading")}
+      </>
+    ) : currentFile ? (
+      t("component.fileUpload.changeFile")
+    ) : (
+      t("component.fileUpload.uploadFile")
+    );
     return (
       <div className={`flex items-center gap-4 ${className}`}>
         {currentFile ? (
@@ -176,7 +188,7 @@ export default function FileUploader({
               type="button"
               onClick={() => handleDelete(currentFile.id)}
               className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-              title="Eliminar"
+              title={t("component.fileUpload.delete")}
             >
               <FontAwesomeIcon icon={faTimes} />
             </button>
@@ -201,16 +213,7 @@ export default function FileUploader({
             disabled={uploading}
             className="text-sm text-yambo-green-600 hover:text-yambo-green-800 disabled:text-gray-400 font-medium transition-colors"
           >
-            {uploading ? (
-              <>
-                <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
-                Subiendo...
-              </>
-            ) : currentFile ? (
-              "Cambiar archivo"
-            ) : (
-              "Subir archivo"
-            )}
+            {uploadButtonLabel}
           </button>
           {error && (
             <p className="text-xs text-red-500 mt-1">{error}</p>
@@ -240,6 +243,9 @@ export default function FileUploader({
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={openFilePicker}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFilePicker(); } }}
+        role="button"
+        tabIndex={0}
         className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 hover-lift ${
           dragActive
             ? "border-yambo-green-500 bg-yambo-green-50"
@@ -253,7 +259,7 @@ export default function FileUploader({
               spin
               className="text-yambo-green-500 text-2xl"
             />
-            <p className="text-sm text-gray-500">Subiendo...</p>
+            <p className="text-sm text-gray-500">{t("component.fileUpload.uploading")}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
@@ -262,12 +268,12 @@ export default function FileUploader({
               className="text-yambo-green-300 text-3xl"
             />
             <p className="text-sm text-gray-500">
-              Arrastra un archivo o{" "}
+              {t("component.fileUpload.dragOr")}
               <span className="text-yambo-green-600 font-semibold">
-                haz clic para seleccionar
+                {t("component.fileUpload.clickToSelect")}
               </span>
             </p>
-            <p className="text-xs text-gray-400">Máx. {maxSizeMb}MB</p>
+            <p className="text-xs text-gray-400">{t("component.fileUpload.maxSize", { size: maxSizeMb })}</p>
           </div>
         )}
       </div>
@@ -315,7 +321,7 @@ export default function FileUploader({
                     handleDelete(f.id);
                   }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
-                  title="Eliminar"
+                  title={t("component.fileUpload.delete")}
                 >
                   <FontAwesomeIcon icon={faTrash} />
                 </button>

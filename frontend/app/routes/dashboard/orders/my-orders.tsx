@@ -17,14 +17,15 @@ import type { Route } from "./+types/my-orders";
 import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
-import { IssueStatusBadge, CreateIssueModal } from "~/components/issues";
+import { IssueStatusBadge } from "~/components/issues/IssueStatusBadge";
+import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { ConfirmDeliveryButton } from "~/components/orders/ConfirmDeliveryButton";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClipboard, faTriangleExclamation, faUpload, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faBox, faClipboard, faTriangleExclamation, faUpload, faClock, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
@@ -244,17 +245,13 @@ export default function MyOrdersPage() {
   };
 
   return (
-    <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+    <main className="flex min-h-full flex-1 flex-col p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2">Mis Pedidos 📦</h1>
-        <p className="text-gray-400">Resumen de tus pedidos y sus incidencias</p>
+        <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
+            <FontAwesomeIcon icon={faBox} className="text-yambo-green-500" />
+            Mis Pedidos
+        </h1>
       </div>
-
-      <StatusWorkflow
-        title="Flujo de estados del pedido"
-        config={ORDER_STATUS_CONFIG}
-        transitions={ORDER_WORKFLOW_TRANSITIONS}
-      />
 
       <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -285,18 +282,18 @@ export default function MyOrdersPage() {
       )}
 
       {!isLoading && !error && orders.length === 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-12 text-center">
           <FontAwesomeIcon
             icon={faClipboard}
             className="w-24 h-24 mx-auto mb-4 text-gray-300"
           />
           <h2 className="text-2xl font-bold font-display text-yambo-black mb-2">No tienes pedidos aún</h2>
-          <p className="text-gray-400 mb-6">Explora nuestro merch y realiza tu primer pedido</p>
+          <p className="text-gray-400 mb-6">Explora nuestros artículos y realiza tu primer pedido</p>
           <ButtonComponent
             variant="primary"
-            onClick={() => navigate("/mi-espacio/merch")}
+            onClick={() => navigate("/mi-espacio/articulos")}
           >
-            Ir al merch
+            Ir a los artículos
           </ButtonComponent>
         </div>
       )}
@@ -305,89 +302,101 @@ export default function MyOrdersPage() {
         <div className="grid gap-4">
           {orders
             .filter((order) => selectedStatuses.length === 0 || selectedStatuses.includes(order.status))
-            .map((order) => (
-            <div key={order.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm text-gray-400">
-                    Pedido <span className="font-mono font-medium text-yambo-black">#{order.id}</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">{formatDate(order.createdAt)}</p>
+            .map((order) => {
+              const total = getOrderTotal(order);
+              const numProducts = order.products.length;
+              const firstProduct = order.products[0];
+              const firstProductName = firstProduct?.productName || firstProduct?.productId || "";
+              const restCount = numProducts - 1;
+              const issuesCount = orderIssues[order.id]?.length || 0;
+
+              return (
+            <div
+              key={order.id}
+              onClick={() => openOrderDetail(order)}
+              className="bg-white rounded-xl border border-gray-100 p-3.5 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-[0.99]"
+            >
+              {/* Línea 1: ID + Total + Status + chevron */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-bold text-yambo-black truncate">#{order.id}</span>
+                  <span className="text-xs text-gray-400 shrink-0">·</span>
+                  <span className="text-sm font-bold text-yambo-green-600 shrink-0">{total.toFixed(2)} €</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {order.hasOpenIssues && (
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
-                      Incidencias Pendientes
-                    </span>
-                  )}
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                     ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
                   }`}>
-                    {ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.label || order.status}
+                    {ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]?.shortLabel || order.status}
                   </span>
+                  <FontAwesomeIcon icon={faChevronRight} className="w-2.5 h-2.5 text-gray-300" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                <div className="rounded-xl bg-yambo-green-50/30 px-3 py-2">
-                  <p className="text-xs text-gray-400">Productos</p>
-                  <p className="text-lg font-semibold text-yambo-black">{order.products.length}</p>
-                </div>
-                <div className="rounded-xl bg-yambo-green-50/30 px-3 py-2">
-                  <p className="text-xs text-gray-400">Incidencias</p>
-                  <p className="text-lg font-semibold text-yambo-black">{orderIssues[order.id]?.length || 0}</p>
-                </div>
-                <div className="rounded-xl bg-yambo-green-50/30 px-3 py-2">
-                  <p className="text-xs text-gray-400">Total</p>
-                  <p className="text-lg font-semibold text-yambo-green-600">{getOrderTotal(order).toFixed(2)} €</p>
-                </div>
+              {/* Línea 2: Fecha + resumen de productos */}
+              <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-400">
+                <span>{new Date(order.createdAt).toLocaleDateString("es-ES")}</span>
+                <span>·</span>
+                <span className="truncate">
+                  {firstProductName}
+                  {restCount > 0
+                    ? ` + ${restCount} ${restCount === 1 ? "producto" : "productos"}`
+                    : ""}
+                </span>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                <ButtonComponent
-                  variant="primary"
-                  size="sm"
-                  onClick={() => openOrderDetail(order)}
-                >
-                  Ver detalles
-                </ButtonComponent>
+              {/* Línea 3: Botones de acción compactos */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
-                  <ButtonComponent
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleShowPaymentInstructions(order)}
-                  >
-                    Instrucciones de pago
-                  </ButtonComponent>
-                )}
-                {order.status === "PENDING_PAYMENT" && (
                   <button
-                    onClick={() => setUploadReceiptOrder(order)}
-                    className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
+                    onClick={(e) => { e.stopPropagation(); handleShowPaymentInstructions(order); }}
+                    className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                   >
-                    <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
-                    Subir justificante
+                    Pago
                   </button>
                 )}
+                {order.status === "PENDING_PAYMENT" && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setUploadReceiptOrder(order); }}
+                      className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                    >
+                      <FontAwesomeIcon icon={faUpload} className="w-3 h-3" />
+                      Justificante
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOrderToCancel(order); }}
+                      disabled={cancelingOrderId === order.id}
+                      className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {cancelingOrderId === order.id ? "..." : "Cancelar"}
+                    </button>
+                  </>
+                )}
                 {order.status === "CONFIRMING_PAYMENT" && (
-                  <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-medium flex items-center gap-2">
-                    <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
-                    Verificando justificante...
+                  <span className="text-xs text-orange-600 font-medium flex items-center gap-1 px-1">
+                    <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
+                    Verificando...
                   </span>
                 )}
-                {order.status === "PENDING_PAYMENT" && (
-                  <ButtonComponent
-                    variant="danger-text"
-                    size="sm"
-                    onClick={() => setOrderToCancel(order)}
-                    isLoading={cancelingOrderId === order.id}
-                  >
-                    Cancelar pedido
-                  </ButtonComponent>
+                {order.status === "PENDING_PRODUCTS" && (
+                  <ConfirmDeliveryButton
+                    orderId={order.id}
+                    onConfirmed={handleOrderUpdated}
+                  />
                 )}
               </div>
+
+              {/* Línea 4: Incidencias como texto plano (solo si hay) */}
+              {order.hasOpenIssues && issuesCount > 0 && (
+                <p className="mt-1.5 text-xs text-amber-600 font-medium flex items-center gap-1">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="w-3 h-3" />
+                  {issuesCount} {issuesCount === 1 ? "incidencia abierta" : "incidencias abiertas"}
+                </p>
+              )}
             </div>
-          ))}
+              );
+            })}
         </div>
       )}
 
@@ -398,10 +407,10 @@ export default function MyOrdersPage() {
         size="lg"
       >
         {orderDetail && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-4 sm:space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <p className="text-sm text-gray-400">Creado el {formatDate(orderDetail.createdAt)}</p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <button
                   onClick={() => openIssueWindow(orderDetail)}
                   disabled={!!issueWindow}
@@ -431,8 +440,8 @@ export default function MyOrdersPage() {
                 const hasIssue = productIssues.length > 0;
 
                 return (
-                  <div key={`${orderDetail.id}-${product.productId}-${idx}`} className="rounded-2xl border border-gray-100 p-4">
-                    <div className="flex items-start justify-between gap-4">
+                  <div key={`${orderDetail.id}-${product.productId}-${idx}`} className="rounded-2xl border border-gray-100 p-3.5 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                       <div className="flex-1">
                         <p className="font-medium text-yambo-black">{product.productName || product.productId}</p>
                         {productDrop && (
@@ -454,15 +463,15 @@ export default function MyOrdersPage() {
 
                         {product.configuration && product.configuration !== "{}" && (
                           <p className="text-sm text-gray-400 mt-1">
-                            <span className="font-medium">Configuración:</span> {formatConfiguration(product.configuration)}
+                            {formatConfiguration(product.configuration)}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-400">
                           <span>Cantidad: {product.quantity}</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className="font-medium text-yambo-green-600">{product.price.toFixed(2)} € c/u</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             ORDER_STATUS_CONFIG[product.status as keyof typeof ORDER_STATUS_CONFIG]?.className || "bg-gray-100 text-gray-800"
                           }`}>
@@ -481,7 +490,7 @@ export default function MyOrdersPage() {
                             {productIssues.map(issue => (
                               <div key={issue.id} className="flex items-center gap-2">
                                 <IssueStatusBadge status={issue.status} />
-                                <span className="text-sm text-gray-700 flex-1 truncate">{issue.title}</span>
+                                <span className="min-w-0 flex-1 truncate text-sm text-gray-700">{issue.title}</span>
                                 <button
                                   onClick={() => navigate(`/mi-espacio/incidencias/${issue.id}`)}
                                   className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium shrink-0"
@@ -502,7 +511,7 @@ export default function MyOrdersPage() {
                           </button>
                         )}
                       </div>
-                      <div className="text-right">
+                      <div className="min-w-[88px] self-start text-left sm:self-auto sm:text-right">
                         <p className="text-sm text-gray-400">Subtotal</p>
                         <p className="text-lg font-bold text-yambo-black">
                           {(product.price * product.quantity).toFixed(2)} €
@@ -515,18 +524,18 @@ export default function MyOrdersPage() {
             </div>
 
             {orderDetail.status === "PENDING_PAYMENT" && (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <ButtonComponent
                   variant="primary"
                   size="sm"
                   onClick={() => handleShowPaymentInstructions(orderDetail)}
-                  className="flex-1"
+                  className="w-full sm:flex-1"
                 >
                   Ver instrucciones de pago
                 </ButtonComponent>
                 <button
                   onClick={() => setUploadReceiptOrder(orderDetail)}
-                  className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center gap-2"
+                  className="w-full px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center justify-center gap-2 sm:w-auto"
                 >
                   <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
                   Subir justificante
@@ -536,31 +545,32 @@ export default function MyOrdersPage() {
                   size="sm"
                   onClick={() => setOrderToCancel(orderDetail)}
                   isLoading={cancelingOrderId === orderDetail.id}
+                  className="w-full justify-center sm:w-auto"
                 >
                   Cancelar pedido
                 </ButtonComponent>
               </div>
             )}
             {orderDetail.status === "CONFIRMING_PAYMENT" && (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <ButtonComponent
                   variant="primary"
                   size="sm"
                   onClick={() => handleShowPaymentInstructions(orderDetail)}
-                  className="flex-1"
+                  className="w-full sm:flex-1"
                 >
                   Ver instrucciones de pago
                 </ButtonComponent>
-                <span className="px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-medium flex items-center gap-2">
+                <span className="w-full px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-medium flex items-center justify-center gap-2 sm:w-auto sm:justify-start">
                   <FontAwesomeIcon icon={faClock} className="w-4 h-4" />
                   Verificando justificante...
                 </span>
               </div>
             )}
 
-            <div className="flex justify-between items-center border-t border-gray-100 pt-3">
+            <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
               <span className="text-yambo-black font-medium">Total del pedido</span>
-              <span className="text-2xl font-bold text-yambo-green-600">
+              <span className="text-xl font-bold text-yambo-green-600 sm:text-2xl">
                 {getOrderTotal(orderDetail).toFixed(2)} €
               </span>
             </div>

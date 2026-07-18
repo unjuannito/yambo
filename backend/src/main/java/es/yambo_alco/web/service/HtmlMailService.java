@@ -97,9 +97,11 @@ public class HtmlMailService implements MailService {
     }
 
     private String extractInvitationLink(String body) {
-        if (body == null) return "";
+        if (body == null)
+            return "";
         for (String word : body.split("\\s+")) {
-            if (word.startsWith("http://") || word.startsWith("https://")) return word;
+            if (word.startsWith("http://") || word.startsWith("https://"))
+                return word;
         }
         return "";
     }
@@ -139,7 +141,8 @@ public class HtmlMailService implements MailService {
             LocalDateTime orderDate, List<OrderProductInfo> products,
             BigDecimal totalPrice, boolean canceledByAdmin) {
 
-        String subject = OrderStatus.CANCELED.getEmailSubject() + " #" + orderId + " - " + settingsService.getOrganizationName();
+        String subject = OrderStatus.CANCELED.getEmailSubject() + " #" + orderId + " - "
+                + settingsService.getOrganizationName();
 
         send(to, subject, "emails/order-cancelled",
                 Map.ofEntries(
@@ -181,7 +184,8 @@ public class HtmlMailService implements MailService {
                         Map.entry("headerColor", IssueStatus.OPEN.getColor()),
                         Map.entry("headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon())),
                         Map.entry("issueLink", buildIssueLink(issueId))),
-                buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt, description));
+                buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt,
+                        description));
     }
 
     @Async("mailExecutor")
@@ -208,7 +212,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("commentDate", commentDate),
                         Map.entry("statusChanged", statusChanged),
                         Map.entry("oldStatusText", oldStatus != null ? oldStatus.getLabel() : ""),
-                        Map.entry("newStatusText", newStatus != null ? newStatus.getLabel() : ""),
+                        Map.entry("newStatusText", toIssueEmailStatusText(oldStatus, newStatus)),
                         Map.entry("statusColor", newStatus != null ? newStatus.getColor() : "#3498db"),
                         Map.entry("headerColor", "#3498db"),
                         Map.entry("headerIcon", EmailIcons.get("comments")),
@@ -232,7 +236,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("issueTitle", issueTitle),
                         Map.entry("productName", productName),
                         Map.entry("oldStatusText", oldStatus.getLabel()),
-                        Map.entry("newStatusText", newStatus.getLabel()),
+                        Map.entry("newStatusText", toIssueEmailStatusText(oldStatus, newStatus)),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
                         Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
@@ -242,27 +246,28 @@ public class HtmlMailService implements MailService {
                 buildStatusChangedPlainText(userName, issueId, issueTitle, oldStatus, newStatus, changedBy, changedAt));
     }
 
-            @Async("mailExecutor")
-            @Override
-            public void sendIssueWatcherAdded(String to, String userName, String issueId, String issueTitle,
-                String productName, String threadMarkdown, LocalDateTime sentAt) {
+    @Async("mailExecutor")
+    @Override
+    public void sendIssueWatcherAdded(String to, String userName, String issueId, String issueTitle,
+            String productName, String threadMarkdown, LocalDateTime sentAt) {
 
-            String subject = "Has sido añadido como seguidor de la incidencia #" + issueId + " - " + settingsService.getOrganizationName();
-            String threadHtml = markdownService.toSafeHtml(threadMarkdown);
+        String subject = "Has sido añadido como seguidor de la incidencia #" + issueId + " - "
+                + settingsService.getOrganizationName();
+        String threadHtml = markdownService.toSafeHtml(threadMarkdown);
 
-            send(to, subject, "emails/issue-watcher-added",
+        send(to, subject, "emails/issue-watcher-added",
                 Map.ofEntries(
-                    Map.entry("userName", userName),
-                    Map.entry("issueId", issueId),
-                    Map.entry("issueTitle", issueTitle),
-                    Map.entry("productName", productName),
-                    Map.entry("threadHtml", threadHtml),
-                    Map.entry("sentAt", sentAt),
-                    Map.entry("headerColor", "#2563eb"),
-                    Map.entry("headerIcon", EmailIcons.get("comments")),
-                    Map.entry("issueLink", buildIssueLink(issueId))),
+                        Map.entry("userName", userName),
+                        Map.entry("issueId", issueId),
+                        Map.entry("issueTitle", issueTitle),
+                        Map.entry("productName", productName),
+                        Map.entry("threadHtml", threadHtml),
+                        Map.entry("sentAt", sentAt),
+                        Map.entry("headerColor", "#2563eb"),
+                        Map.entry("headerIcon", EmailIcons.get("comments")),
+                        Map.entry("issueLink", buildIssueLink(issueId))),
                 buildWatcherAddedPlainText(userName, issueId, issueTitle, threadMarkdown, sentAt));
-            }
+    }
 
     // ── Password Reset ───────────────────────────────────────────────────
 
@@ -398,7 +403,7 @@ public class HtmlMailService implements MailService {
             sb.append("Cambio de estado: ")
                     .append(oldStatus.getLabel())
                     .append(" → ")
-                    .append(newStatus.getLabel())
+                    .append(toIssueEmailStatusText(oldStatus, newStatus))
                     .append("\n\n");
         }
         sb.append("Fecha: ").append(commentDate).append("\n\n");
@@ -416,10 +421,20 @@ public class HtmlMailService implements MailService {
                 + "ID: " + issueId + "\n"
                 + "Título: " + issueTitle + "\n\n"
                 + "Cambio de estado por " + changedBy + ":\n"
-                + oldStatus.getLabel() + " → " + newStatus.getLabel() + "\n"
+                + oldStatus.getLabel() + " → " + toIssueEmailStatusText(oldStatus, newStatus) + "\n"
                 + "Fecha: " + changedAt + "\n\n"
                 + "Puedes ver todos los detalles desde tu panel de control.\n\n"
                 + "¡Gracias!\n";
+    }
+
+    private String toIssueEmailStatusText(IssueStatus oldStatus, IssueStatus newStatus) {
+        if (oldStatus == null || newStatus == null) {
+            return "";
+        }
+        if (oldStatus == IssueStatus.CLOSED && newStatus == IssueStatus.OPEN) {
+            return "Reabierto";
+        }
+        return newStatus.getLabel();
     }
 
     private String buildWatcherAddedPlainText(String userName, String issueId, String issueTitle,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
@@ -8,6 +9,7 @@ import type {
 } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import ListPageShell from "~/components/common/ListPageShell";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import {
@@ -37,6 +39,7 @@ const EMPTY_FORM: ProfileForm = {
 };
 
 export default function Profiles() {
+    const { t } = useTranslation();
     const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,7 +57,7 @@ export default function Profiles() {
             const permissionsData = await profileService.getAllPermissions();
             setAllPermissions(permissionsData);
         } catch (err) {
-            toast.error(getErrorMessage(err, "Los permisos no quieren cooperar"));
+            toast.error(getErrorMessage(err, t("profiles.loadError")));
         } finally {
             setLoading(false);
         }
@@ -63,7 +66,7 @@ export default function Profiles() {
     const fetchProfilesData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
             return await profileService.listProfiles({
-                id: filters.name,
+                query: filters.q,
                 permissions: filters.permissions,
                 page,
                 size,
@@ -95,7 +98,7 @@ export default function Profiles() {
 
     const handleSave = async () => {
         if (!form.name.trim()) {
-            toast.error("¡El perfil necesita un nombre!");
+            toast.error(t("profiles.nameRequired"));
             return;
         }
 
@@ -107,18 +110,18 @@ export default function Profiles() {
                     form.name,
                     form.permissionIds,
                 );
-                toast.success("Perfil actualizado correctamente");
+                toast.success(t("profiles.updated"));
             } else {
                 await profileService.createProfile({
                     name: form.name,
                     permissionIds: form.permissionIds,
                 });
-                toast.success("Perfil creado correctamente");
+                toast.success(t("profiles.created"));
             }
             resetForm();
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "¡El perfil se resiste! No pudimos guardarlo"),
+                getErrorMessage(err, t("profiles.saveError")),
             );
         } finally {
             setSaving(false);
@@ -126,16 +129,16 @@ export default function Profiles() {
     };
 
     const handleDelete = async (profileId: string) => {
-        if (!confirm(`¿Estás seguro de eliminar el perfil "${profileId}"?`)) {
+        if (!confirm(t("profiles.confirmDelete", { id: profileId }))) {
             return;
         }
 
         try {
             await profileService.deleteProfile(profileId);
-            toast.success("Perfil eliminado correctamente");
+            toast.success(t("profiles.deleted"));
         } catch (err) {
             toast.error(
-                getErrorMessage(err, "¡El perfil se aferra a la vida!"),
+                getErrorMessage(err, t("profiles.deleteError")),
             );
         }
     };
@@ -153,18 +156,18 @@ export default function Profiles() {
         () => [
             {
                 key: "name",
-                header: "Nombre",
+                header: t("common.name"),
                 filter: {
                     enabled: true,
                     type: "search",
-                    placeholder: "Buscar por nombre...",
+                    placeholder: t("profiles.searchByName"),
                 },
                 render: (profile) => (
                     <span className="font-medium text-yambo-black">
                         {profile.name}
                         {profile.system && (
                             <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
-                                Sistema
+                                {t("profiles.system")}
                             </span>
                         )}
                     </span>
@@ -172,11 +175,11 @@ export default function Profiles() {
             },
             {
                 key: "permissions",
-                header: "Permisos",
+                header: t("profiles.name"),
                 filter: {
                     enabled: true,
                     type: "multi-select",
-                    placeholder: "Seleccionar permisos...",
+                    placeholder: t("profiles.selectPermissions"),
                     options: permissionOptions,
                 },
                 render: (profile) => (
@@ -194,12 +197,12 @@ export default function Profiles() {
                                 ))
                         ) : (
                             <span className="text-gray-400 text-xs italic">
-                                Sin permisos
+                                {t("profiles.noPermissions")}
                             </span>
                         )}
                         {profile.permissions.length > 3 && (
                             <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                                +{profile.permissions.length - 3} más
+                                {t("profiles.morePermissions", { count: profile.permissions.length - 3 })}
                             </span>
                         )}
                     </div>
@@ -207,7 +210,8 @@ export default function Profiles() {
             },
             {
                 key: "actions",
-                header: "Acciones",
+                header: t("common.actions"),
+                requiredPerms: [{ obj: "profile", action: "update" }],
                 render: (profile) => (
                     <div className="flex gap-2">
                         {!profile.system && (
@@ -217,14 +221,14 @@ export default function Profiles() {
                                     size="sm"
                                     onClick={() => startEdit(profile)}
                                 >
-                                    Editar
+                                    {t("common.edit")}
                                 </ButtonComponent>
                                 <ButtonComponent
                                     variant="destructive"
                                     size="sm"
                                     onClick={() => handleDelete(profile.id)}
                                 >
-                                    Eliminar
+                                    {t("common.delete")}
                                 </ButtonComponent>
                             </>
                         )}
@@ -232,16 +236,16 @@ export default function Profiles() {
                 ),
             },
         ],
-        [permissionOptions],
+        [permissionOptions, t],
     );
 
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Perfiles</h1>
+                <main className="flex flex-col p-4 md:p-6 w-full">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("profiles.title")}</h1>
                     <div className="flex justify-center py-12">
-                        <LoadingSpinner size="lg" message="Cargando perfiles..." />
+                        <LoadingSpinner size="lg" message={t("profiles.loading")} />
                     </div>
                 </main>
             </RequirePermission>
@@ -250,36 +254,28 @@ export default function Profiles() {
 
     return (
         <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Perfiles</h1>
-                    <RequirePermission
-                        permission={{ obj: "profile", action: "create" }}
-                        redirect={false}
-                    >
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={openCreateModal}
-                        >
-                            + Nuevo Perfil
+            <ListPageShell<Profile>
+                title={t("profiles.title")}
+                actions={
+                    <RequirePermission permission={{ obj: "profile", action: "create" }} redirect={false}>
+                        <ButtonComponent variant="primary" onClick={openCreateModal}>
+                            {t("profiles.createNew")}
                         </ButtonComponent>
                     </RequirePermission>
-                </div>
-
-                <FilterableTable
-                    columns={columns}
-                    keyField="id"
-                    display={{
-                        emptyMessage: "No se encontraron perfiles",
-                        loadingMessage: "Cargando perfiles...",
-                    }}
-                    serverSide={{ fetchData: fetchProfilesData }}
-                />
-
-                <Modal
-                    isOpen={isModalOpen}
-                    onClose={resetForm}
-                    title={editing ? "Editar Perfil" : "Nuevo Perfil"}
+                }
+                columns={columns}
+                keyField="id"
+                display={{
+                    emptyMessage: t("profiles.noProfiles"),
+                    loadingMessage: t("profiles.loading"),
+                }}
+                features={{ globalSearch: true }}
+                serverSide={{ fetchData: fetchProfilesData }}
+            />
+            <Modal
+                isOpen={isModalOpen}
+                onClose={resetForm}
+                title={editing ? t("profiles.editTitle") : t("profiles.newTitle")}
                     size="lg"
                     footer={
                         <>
@@ -288,35 +284,35 @@ export default function Profiles() {
                                 variant="neutral"
                                 disabled={saving}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleSave}
                                 variant="primary"
                                 disabled={saving}
                             >
-                                {saving ? "Guardando..." : "Guardar"}
+                                {saving ? t("common.saving") : t("common.save")}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="grid gap-6">
                         <InputComponent
-                            label="Nombre del Perfil"
+                            label={t("profiles.nameLabel")}
                             value={form.name}
                             onChange={(e) =>
                                 setForm({ ...form, name: e.target.value })
                             }
-                            placeholder="Ej: Administrador, Usuario, Gerente..."
+                            placeholder={t("profiles.namePlaceholder")}
                             required
                         />
 
                         <MultiSelectComponent
-                            label="Permisos"
+                            label={t("profiles.name")}
                             name="permissionIds"
                             value={form.permissionIds}
                             options={permissionOptions}
-                            placeholder="Seleccionar permisos..."
+                            placeholder={t("profiles.selectPermissions")}
                             onChange={(e) => {
                                 const selected = Array.from(
                                     (e.target as HTMLSelectElement).selectedOptions,
@@ -330,7 +326,6 @@ export default function Profiles() {
                         />
                     </div>
                 </Modal>
-            </main>
         </RequirePermission>
     );
 }

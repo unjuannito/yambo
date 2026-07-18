@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "~/i18n/config";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { useAuth } from "~/hooks/useAuth";
 import { FilterableTable } from "~/components/common/FilterableTable";
@@ -8,11 +10,14 @@ import { WatcherManager } from "~/components/common/WatcherManager";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import ListPageShell from "~/components/common/ListPageShell";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { projectService, type Project } from "~/services/projectService";
 import { getErrorMessage } from "~/types/error";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBell } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
@@ -20,8 +25,8 @@ import toast from "react-hot-toast";
 
 export function meta() {
     return [
-        { title: "Yambo - Drops" },
-        { name: "Yambo - Drops", content: "Yambo - Drops" },
+        { title: i18n.t("merch.dropMetaTitle") },
+        { name: "description", content: i18n.t("merch.dropMetaTitle") },
     ];
 }
 
@@ -40,6 +45,7 @@ const EMPTY_FORM: DropForm = {
 };
 
 export default function MerchFamilies() {
+    const { t } = useTranslation();
     const { hasPermission } = useAuth();
     const canUpdate = hasPermission({ obj: "family_product", action: "update" });
     const canDelete = hasPermission({ obj: "family_product", action: "delete" });
@@ -87,11 +93,11 @@ export default function MerchFamilies() {
             setDrops(dropsResponse.content);
             setProjects(projectsResponse.content);
         } catch (err) {
-            setError(getErrorMessage(err, "¡Los drops se hacen de rogar!"));
+            setError(getErrorMessage(err, t("merch.collectionDataError")));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         void loadData();
@@ -112,15 +118,15 @@ export default function MerchFamilies() {
 
     const handleSave = async () => {
         if (!form.name.trim()) {
-            toast.error("¡El nombre no puede estar vacío!");
+            toast.error(t("merch.collectionNameRequired"));
             return;
         }
         if (!form.endTms) {
-            toast.error("¡La fecha de fin no puede faltar!");
+            toast.error(t("merch.collectionEndRequired"));
             return;
         }
         if (!form.startTms) {
-            toast.error("¡La fecha de inicio no puede faltar!");
+            toast.error(t("merch.collectionStartRequired"));
             return;
         }
 
@@ -133,7 +139,7 @@ export default function MerchFamilies() {
                     endTms: form.endTms,
                     projectIds: form.projectIds,
                 });
-                toast.success("Drop actualizado correctamente");
+                toast.success(t("merch.collectionUpdated"));
             } else {
                 await familyProductService.createFamilyProduct({
                     name: form.name,
@@ -141,12 +147,12 @@ export default function MerchFamilies() {
                     endTms: form.endTms,
                     projectIds: form.projectIds,
                 });
-                toast.success("Drop creado correctamente");
+                toast.success(t("merch.collectionCreated"));
             }
             resetForm();
             await loadData();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El drop se nos escapa! No pudimos guardarlo"));
+            toast.error(getErrorMessage(err, t("merch.collectionCreateError")));
         } finally {
             setSaving(false);
         }
@@ -164,23 +170,23 @@ export default function MerchFamilies() {
     };
 
     const handleDelete = async (drop: FamilyProduct) => {
-        if (!confirm(`¿Eliminar el drop "${drop.name}"?`)) return;
+        if (!confirm(`${t("common.delete")} "${drop.name}"?`)) return;
         try {
             await familyProductService.deleteFamilyProduct(drop.id);
-            toast.success("Drop eliminado correctamente");
+            toast.success(t("merch.collectionDeleted"));
             await loadData();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El drop se aferra a la vida!"));
+            toast.error(getErrorMessage(err, t("merch.collectionDeleteError")));
         }
     };
 
     const handleStatusChange = async (drop: FamilyProduct, newStatus: string) => {
         try {
             await familyProductService.updateFamilyProductStatus(drop.id, newStatus);
-            toast.success("Estado del drop actualizado");
+            toast.success(t("merch.collectionUpdatedStatus"));
             await loadData();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El estado no quiere cambiar!"));
+            toast.error(getErrorMessage(err, t("merch.collectionStatusError")));
         }
     };
 
@@ -192,17 +198,17 @@ export default function MerchFamilies() {
     const columns: FilterableColumn<FamilyProduct>[] = useMemo(() => [
         {
             key: "name",
-            header: "Nombre",
+            header: t("merch.collectionName"),
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Buscar por nombre...",
+                placeholder: t("merch.searchByName"),
             },
             render: (drop) => <span className="font-medium text-yambo-black">{drop.name}</span>,
         },
         {
             key: "endTms",
-            header: "Fin",
+            header: t("merch.collectionEnd"),
             render: (drop) => (
                 <span className="text-sm text-gray-400">
                     {drop.endTms ? new Date(drop.endTms).toLocaleString() : "-"}
@@ -211,7 +217,7 @@ export default function MerchFamilies() {
         },
         {
             key: "startTms",
-            header: "Inicio",
+            header: t("merch.collectionStart"),
             render: (drop) => (
                 <span className="text-sm text-gray-400">
                     {drop.startTms ? new Date(drop.startTms).toLocaleString() : "-"}
@@ -220,7 +226,7 @@ export default function MerchFamilies() {
         },
         {
             key: "projectIds",
-            header: "Proyectos",
+            header: t("merch.collectionProjects"),
             render: (drop) => {
                 const names = (drop.projectIds ?? [])
                     .map((id) => projects.find((p) => p.id === id)?.name || id)
@@ -234,7 +240,7 @@ export default function MerchFamilies() {
         },
         {
             key: "status",
-            header: "Estado",
+            header: t("merch.collectionStatus"),
             render: (drop) => {
                 const statusKey = drop.status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG;
                 const statusConfig = statusKey ? FAMILY_PRODUCT_STATUS_CONFIG[statusKey] : null;
@@ -270,7 +276,8 @@ export default function MerchFamilies() {
         },
         {
             key: "id",
-            header: "Acciones",
+            header: t("merch.actions"),
+            requiredPerms: [{ obj: "family_product", action: "update" }],
             render: (drop) => (
                 <div className="flex gap-2">
                     {canUpdate && (
@@ -278,10 +285,10 @@ export default function MerchFamilies() {
                             variant="neutral"
                             size="sm"
                             onClick={() => openWatchers(drop)}
-                            title="Gestionar seguidores"
-                            aria-label="Gestionar seguidores"
+                            title={t("merch.manageWatchers")}
+                            aria-label={t("merch.manageWatchers")}
                         >
-                            🔔
+                            <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
                         </ButtonComponent>
                     )}
                     {canUpdate && (
@@ -290,7 +297,7 @@ export default function MerchFamilies() {
                             size="sm"
                             onClick={() => startEdit(drop)}
                         >
-                            Editar
+                            {t("common.edit")}
                         </ButtonComponent>
                     )}
                     {canDelete && (
@@ -299,62 +306,55 @@ export default function MerchFamilies() {
                             size="sm"
                             onClick={() => handleDelete(drop)}
                         >
-                            Eliminar
+                            {t("common.delete")}
                         </ButtonComponent>
                     )}
                 </div>
             ),
         },
-    ], [projects, canUpdate, canDelete]);
+    ], [projects, canUpdate, canDelete, t]);
 
     return (
-        <RequirePermission permission={{ obj: "family_product", action: "read" }} redirectTo="/mi-espacio/merch">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Drops de Merch</h1>
+        <RequirePermission permission={{ obj: "family_product", action: "read" }} redirectTo="/mi-espacio/articulos">
+            <ListPageShell<FamilyProduct>
+                title={t("merch.collectionsTitle")}
+                actions={
                     <RequirePermission permission={{ obj: "family_product", action: "create" }} redirect={false}>
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={openCreateModal}
-                        >
-                            Crear Drop
+                        <ButtonComponent variant="primary" onClick={openCreateModal}>
+                            {t("merch.createCollection")}
                         </ButtonComponent>
                     </RequirePermission>
-                </div>
-
+                }
+                columns={columns}
+                keyField="id"
+                data={drops}
+                display={{
+                    emptyMessage: t("merch.noCollections"),
+                    loadingMessage: t("merch.loadingCollections"),
+                }}
+                features={{
+                    enablePagination: false,
+                }}
+            >
                 <StatusWorkflow
-                    title="Flujo de estados del drop"
+                    title={t("merch.workflowTitle")}
                     config={FAMILY_PRODUCT_STATUS_CONFIG}
                     transitions={FAMILY_PRODUCT_WORKFLOW_TRANSITIONS}
                 />
+                {loading && (
+                    <div className="flex justify-center py-8">
+                        <LoadingSpinner size="md" message={t("merch.loadingCollections")} />
+                    </div>
+                )}
+                {error && (
+                    <ErrorMessage message={error} onRetry={loadData} />
+                )}
+            </ListPageShell>
 
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    {loading ? (
-                        <div className="flex justify-center py-8">
-                            <LoadingSpinner size="md" message="Cargando drops..." />
-                        </div>
-                    ) : error ? (
-                        <ErrorMessage message={error} onRetry={loadData} />
-                    ) : (
-                        <FilterableTable
-                            columns={columns}
-                            keyField="id"
-                            data={drops}
-                            display={{
-                                emptyMessage: "No se encontraron drops",
-                                loadingMessage: "Cargando drops...",
-                            }}
-                            features={{
-                                enablePagination: false,
-                            }}
-                        />
-                    )}
-                </section>
-
-                <Modal
+            <Modal
                     isOpen={isModalOpen}
                     onClose={resetForm}
-                    title={editing ? "Editar Drop" : "Crear Drop"}
+                    title={editing ? t("merch.editCollection") : t("merch.newCollection")}
                     size="lg"
                     footer={
                         <>
@@ -363,37 +363,37 @@ export default function MerchFamilies() {
                                 variant="neutral"
                                 disabled={saving}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleSave}
                                 variant="primary"
                                 disabled={saving}
                             >
-                                {saving ? "Guardando..." : (editing ? "Guardar Cambios" : "Crear")}
+                                {saving ? t("merch.saving") : (editing ? t("merch.saveChanges") : t("common.create"))}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="flex flex-col gap-4">
                         <InputComponent
-                            label="Nombre"
+                            label={t("merch.collectionName")}
                             type="text"
                             value={form.name}
                             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                            placeholder="Nombre del drop"
+                            placeholder={t("merch.collectionNamePlaceholder")}
                             required
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputComponent
-                                label="Inicio del drop"
+                                label={t("merch.collectionStartLabel")}
                                 type="datetime-local"
                                 value={form.startTms}
                                 onChange={(e) => setForm((prev) => ({ ...prev, startTms: e.target.value }))}
                                 required
                             />
                             <InputComponent
-                                label="Fin del drop"
+                                label={t("merch.collectionEndLabel")}
                                 type="datetime-local"
                                 value={form.endTms}
                                 onChange={(e) => setForm((prev) => ({ ...prev, endTms: e.target.value }))}
@@ -402,12 +402,12 @@ export default function MerchFamilies() {
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Proyectos
+                                {t("merch.collectionProjectsLabel")}
                             </label>
                             <MultiSelectComponent
                                 value={form.projectIds}
                                 options={projectOptions}
-                                placeholder="Seleccionar proyectos..."
+                                placeholder={t("merch.selectProjects")}
                                 name="projectIds"
                                 onChange={(e) => {
                                     const selected = Array.from(
@@ -425,7 +425,7 @@ export default function MerchFamilies() {
                 <Modal
                     isOpen={!!watchersDrop}
                     onClose={closeWatchers}
-                    title={watchersDrop ? `Seguidores — ${watchersDrop.name}` : "Seguidores"}
+                    title={watchersDrop ? t("merch.watchersTitle", { name: watchersDrop.name }) : t("merch.watchersGenericTitle")}
                     size="sm"
                 >
                     {watchersDrop && (
@@ -443,7 +443,6 @@ export default function MerchFamilies() {
                         />
                     )}
                 </Modal>
-            </main>
         </RequirePermission>
     );
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { DataTable, type TableColumn } from "~/components/common/DataTable";
@@ -12,22 +13,23 @@ export interface UsersTableProps {
 }
 
 export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableProps) {
+    const { t } = useTranslation();
     const columns: TableColumn[] = [
         {
             key: 'id',
-            header: 'ID',
+            header: t('common.id'),
         },
         {
             key: 'name',
-            header: 'Nombre',
+            header: t('users.name'),
         },
         {
             key: 'email',
-            header: 'Email',
+            header: t('users.email'),
         },
         {
             key: 'profiles',
-            header: 'Perfiles',
+            header: t('profiles.title'),
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
                     {user.profiles.map((profile) => (
@@ -40,18 +42,18 @@ export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableP
         },
         {
             key: 'enabled',
-            header: 'Estado',
+            header: t('users.status'),
             render: (user: User) => (
                 <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     user.enabled ? 'bg-yambo-green-100 text-yambo-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                    {user.enabled ? 'Activo' : 'Inactivo'}
+                    {user.enabled ? t('common.active') : t('common.inactive')}
                 </span>
             ),
         },
         {
             key: 'actions',
-            header: 'Acciones',
+            header: t('users.actions'),
             render: (user: User) => (
                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                     <div className="flex space-x-2">
@@ -60,7 +62,7 @@ export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableP
                             size="sm"
                             onClick={() => onEdit(user)}
                         >
-                            Editar
+                            {t('common.edit')}
                         </ButtonComponent>
                         {currentUser && user.email !== currentUser.email && (
                             <ButtonComponent
@@ -68,7 +70,7 @@ export function UsersTable({ users, currentUser, onEdit, onDelete }: UsersTableP
                                 size="sm"
                                 onClick={() => onDelete(user.id)}
                             >
-                                Eliminar
+                                {t('common.delete')}
                             </ButtonComponent>
                         )}
                     </div>

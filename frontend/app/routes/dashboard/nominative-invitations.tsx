@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "~/i18n/config";
 import type { Route } from "./+types/nominative-invitations";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -7,6 +9,7 @@ import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import ListPageShell from "~/components/common/ListPageShell";
 import InputComponent from "~/components/common/forms/InputComponent";
 import { nominativeInvitationService } from "~/services/nominativeInvitationService";
 import type {
@@ -22,12 +25,13 @@ import toast from "react-hot-toast";
 
 export function meta({}: Route.MetaArgs) {
     return [
-        { title: "Yambo - Invitaciones Nominativas" },
-        { name: "Yambo - Invitaciones Nominativas", content: "Yambo - Invitaciones Nominativas" },
+        { title: i18n.t("invitations.nominativeMetaTitle") },
+        { name: "description", content: i18n.t("invitations.nominativeMetaTitle") },
     ];
 }
 
 export default function NominativeInvitations() {
+    const { t } = useTranslation();
     const [invitations, setInvitations] = useState<NominativeInvitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -63,11 +67,11 @@ export default function NominativeInvitations() {
             }));
             setProfileOptions(options);
         } catch (err) {
-            setError(getErrorMessage(err, "¡Los datos se hacen de rogar!"));
+            setError(getErrorMessage(err, t("invitations.dataLoadingError")));
         } finally {
             setLoading(false);
         }
-    }, [activeTab]);
+    }, [activeTab, t]);
 
     useEffect(() => {
         void fetchData();
@@ -85,20 +89,20 @@ export default function NominativeInvitations() {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm("¿Estás seguro de que quieres eliminar esta invitación?")) {
+        if (confirm(t("invitations.deleteConfirm"))) {
             try {
                 await nominativeInvitationService.deleteInvitation(id);
                 setInvitations((prev) => prev.filter((inv) => inv.id !== id));
-                toast.success("Invitación eliminada correctamente");
+                toast.success(t("invitations.deleteSuccess"));
             } catch (err) {
-                toast.error(getErrorMessage(err, "¡La invitación no quiere irse!"));
+                toast.error(getErrorMessage(err, t("invitations.deleteError")));
             }
         }
     };
 
     const handleSave = async () => {
         if (!form.email.trim()) {
-            toast.error("¡Sin email no hay trato!");
+            toast.error(t("invitations.emailRequired"));
             return;
         }
 
@@ -106,10 +110,10 @@ export default function NominativeInvitations() {
             setSaving(true);
             const newInvitation = await nominativeInvitationService.createInvitation(form);
             setInvitations((prev) => [newInvitation, ...prev]);
-            toast.success("Invitación creada correctamente");
+            toast.success(t("invitations.createNominativeSuccess"));
             resetForm();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡La invitación se nos complica!"));
+            toast.error(getErrorMessage(err, t("invitations.createNominativeError")));
         } finally {
             setSaving(false);
         }
@@ -130,19 +134,19 @@ export default function NominativeInvitations() {
 
     const handleBatchSave = async () => {
         const emails = batchEmails
-            .split(/[,\n]+/)
+            .split(/[,\\n]+/)
             .map((e) => e.trim())
             .filter((e) => e.length > 0);
 
         if (emails.length === 0) {
-            toast.error("¡Introduce al menos un email, anda!");
+            toast.error(t("invitations.atLeastOneEmail"));
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const invalid = emails.filter((e) => !emailRegex.test(e));
         if (invalid.length > 0) {
-            toast.error(`¡Estos emails no nos convencen: ${invalid.join(", ")}!`);
+            toast.error(t("invitations.invalidEmails", { invalid: invalid.join(", ") }));
             return;
         }
 
@@ -154,11 +158,11 @@ export default function NominativeInvitations() {
             });
             setInvitations((prev) => [...result.invitations, ...prev]);
             toast.success(
-                `${result.invitations.length} invitaciones creadas. Enviando emails...`,
+                t("invitations.batchCreated", { count: result.invitations.length }),
             );
             closeBatchModal();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡Las invitaciones se nos rebelan!"));
+            toast.error(getErrorMessage(err, t("invitations.batchError")));
         } finally {
             setBatchSaving(false);
         }
@@ -167,33 +171,39 @@ export default function NominativeInvitations() {
     const invitationColumns: FilterableColumn<NominativeInvitation & { usedLabel: string }>[] = [
         {
             key: "id",
-            header: "ID",
+            header: t("invitations.nominativeId"),
+            className: "hidden md:table-cell",
             render: (invitation) => (
                 <span className="font-mono text-xs text-gray-400">{invitation.id}</span>
             ),
         },
         {
             key: "email",
-            header: "Email",
+            header: t("invitations.email"),
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Buscar email...",
+                placeholder: t("invitations.searchEmail"),
             },
             render: (invitation) => (
-                <span className="font-medium text-yambo-black">{invitation.email}</span>
+                <div>
+                    <span className="font-medium text-yambo-black">{invitation.email}</span>
+                    <p className="text-xs text-gray-400 sm:hidden">{invitation.invitedByUser?.name || t("invitations.freeEntry")}</p>
+                </div>
             ),
         },
         {
             key: "invitedByUser" as any,
-            header: "Invitado por",
+            header: t("invitations.invitedBy"),
+            className: "hidden sm:table-cell",
             render: (invitation) => (
-                <span className="text-gray-500">{invitation.invitedByUser?.name || "N/A"}</span>
+                <span className="text-gray-500">{invitation.invitedByUser?.name || t("invitations.freeEntry")}</span>
             ),
         },
         {
             key: "createdAt",
-            header: "Creado",
+            header: t("invitations.createdAt"),
+            className: "hidden sm:table-cell",
             render: (invitation) => (
                 <span className="text-sm text-gray-400">
                     {new Date(invitation.createdAt).toLocaleDateString()}
@@ -202,7 +212,8 @@ export default function NominativeInvitations() {
         },
         {
             key: "expiresAt",
-            header: "Expira",
+            header: t("invitations.expiresAt"),
+            className: "hidden md:table-cell",
             render: (invitation) => (
                 <span className="text-sm text-gray-400">
                     {new Date(invitation.expiresAt).toLocaleDateString()}
@@ -211,15 +222,15 @@ export default function NominativeInvitations() {
         },
         {
             key: "usedLabel",
-            header: "Usado",
+            header: t("invitations.used"),
             filter: {
                 enabled: true,
                 type: "select",
-                placeholder: "Todos",
+                placeholder: t("invitations.filterAll"),
                 options: [
-                    { value: "", label: "Todos" },
-                    { value: "Sí", label: "Sí" },
-                    { value: "No", label: "No" },
+                    { value: "", label: t("invitations.filterAll") },
+                    { value: t("invitations.usedYes"), label: t("invitations.usedYes") },
+                    { value: t("invitations.usedNo"), label: t("invitations.usedNo") },
                 ],
             },
             render: (invitation) => (
@@ -230,13 +241,14 @@ export default function NominativeInvitations() {
                             : "bg-coral/10 text-coral"
                     }`}
                 >
-                    {invitation.used ? "Sí" : "No"}
+                    {invitation.used ? t("invitations.usedYes") : t("invitations.usedNo")}
                 </span>
             ),
         },
         {
-            key: "actions" as any,
-            header: "Acciones",
+            key: "id",
+            header: t("invitations.actions"),
+            requiredPerms: [{ obj: "invitation", action: "update" }],
             render: (invitation) => (
                 <ButtonComponent
                     variant="destructive"
@@ -244,15 +256,15 @@ export default function NominativeInvitations() {
                     onClick={() => handleDelete(invitation.id)}
                     disabled={invitation.used}
                 >
-                    Eliminar
+                    {t("invitations.deleteButton")}
                 </ButtonComponent>
             ),
         },
     ];
 
     const enrichedInvitations = useMemo(
-        () => invitations.map((inv) => ({ ...inv, usedLabel: inv.used ? "Sí" : "No" })),
-        [invitations],
+        () => invitations.map((inv) => ({ ...inv, usedLabel: inv.used ? t("invitations.computedUsedYes") : t("invitations.computedUsedNo") })),
+        [invitations, t],
     );
 
     return (
@@ -260,61 +272,49 @@ export default function NominativeInvitations() {
             permission={{ obj: "invitation", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">
-                        Invitaciones Nominativas
-                    </h1>
+            <ListPageShell<NominativeInvitation & { usedLabel: string }>
+                title={t("invitations.nominativeTitle")}
+                actions={
                     <RequirePermission
                         permission={{ obj: "invitation", action: "create" }}
                         redirect={false}
                     >
                         <div className="flex gap-2">
-                            <ButtonComponent
-                                variant="primary"
-                                onClick={openBatchModal}
-                            >
-                                + Invitar en Lote
+                            <ButtonComponent variant="primary" onClick={openBatchModal}>
+                                {t("invitations.nominativeBatch")}
                             </ButtonComponent>
-                            <ButtonComponent
-                                variant="primary"
-                                onClick={openCreateModal}
-                            >
-                                + Nueva Invitación
+                            <ButtonComponent variant="primary" onClick={openCreateModal}>
+                                {t("invitations.nominativeNew")}
                             </ButtonComponent>
                         </div>
                     </RequirePermission>
-                </div>
+                }
+                columns={invitationColumns}
+                keyField="id"
+                data={enrichedInvitations}
+                display={{
+                    emptyMessage: t("invitations.noInvitations"),
+                    loadingMessage: t("invitations.loading"),
+                }}
+                features={{
+                    enableFilters: true,
+                    enablePagination: true,
+                }}
+            >
+                {loading && (
+                    <div className="flex justify-center py-8">
+                        <LoadingSpinner size="md" message={t("invitations.loading")} />
+                    </div>
+                )}
+                {error && (
+                    <ErrorMessage message={error} onRetry={fetchData} />
+                )}
+            </ListPageShell>
 
-                <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-                <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    {loading ? (
-                        <div className="flex justify-center py-8">
-                            <LoadingSpinner size="md" message="Cargando invitaciones..." />
-                        </div>
-                    ) : error ? (
-                        <ErrorMessage message={error} onRetry={fetchData} />
-                    ) : (
-                        <FilterableTable
-                            columns={invitationColumns}
-                            data={enrichedInvitations}
-                            keyField="id"
-                            display={{
-                                emptyMessage: "No hay invitaciones que coincidan con los filtros",
-                            }}
-                            features={{
-                                enableFilters: true,
-                                enablePagination: true,
-                            }}
-                        />
-                    )}
-                </section>
-
-                <Modal
+            <Modal
                     isOpen={isModalOpen}
                     onClose={resetForm}
-                    title="Nueva Invitación Nominativa"
+                    title={t("invitations.newNominative")}
                     footer={
                         <>
                             <ButtonComponent
@@ -322,21 +322,21 @@ export default function NominativeInvitations() {
                                 variant="neutral"
                                 disabled={saving}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleSave}
                                 variant="primary"
                                 disabled={saving}
                             >
-                                {saving ? "Guardando..." : "Crear"}
+                                {saving ? t("invitations.nominativeSaving") : t("common.create")}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="flex flex-col gap-4">
                         <InputComponent
-                            label="Email"
+                            label={t("invitations.email")}
                             type="email"
                             value={form.email}
                             onChange={(e) =>
@@ -348,7 +348,7 @@ export default function NominativeInvitations() {
                             required
                         />
                         <MultiSelectComponent
-                            label="Perfiles"
+                            label={t("invitations.profiles")}
                             name="profileIds"
                             value={form.profileIds}
                             options={profileOptions}
@@ -362,7 +362,7 @@ export default function NominativeInvitations() {
                                     profileIds: selected,
                                 }));
                             }}
-                            placeholder="Seleccionar perfiles..."
+                            placeholder={t("invitations.selectProfilesPlaceholder")}
                         />
                     </div>
                 </Modal>
@@ -370,7 +370,7 @@ export default function NominativeInvitations() {
                 <Modal
                     isOpen={isBatchModalOpen}
                     onClose={closeBatchModal}
-                    title="Invitar en Lote"
+                    title={t("invitations.batchTitle")}
                     footer={
                         <>
                             <ButtonComponent
@@ -378,14 +378,14 @@ export default function NominativeInvitations() {
                                 variant="neutral"
                                 disabled={batchSaving}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleBatchSave}
                                 variant="primary"
                                 disabled={batchSaving}
                             >
-                                {batchSaving ? "Creando..." : "Enviar Invitaciones"}
+                                {batchSaving ? t("invitations.batchSaving") : t("invitations.batchTitle")}
                             </ButtonComponent>
                         </>
                     }
@@ -393,18 +393,18 @@ export default function NominativeInvitations() {
                     <div className="flex flex-col gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Emails (uno por línea o separados por comas)
+                                {t("invitations.emailPlaceholder")}
                             </label>
                             <textarea
                                 className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 transition-colors"
                                 rows={6}
                                 value={batchEmails}
                                 onChange={(e) => setBatchEmails(e.target.value)}
-                                placeholder={"usuario1@ejemplo.com\nusuario2@ejemplo.com\nusuario3@ejemplo.com"}
+                                placeholder={t("invitations.emailPlaceholderExample")}
                             />
                         </div>
                         <MultiSelectComponent
-                            label="Perfiles"
+                            label={t("invitations.profiles")}
                             name="batchProfileIds"
                             value={batchProfileIds}
                             options={profileOptions}
@@ -415,11 +415,10 @@ export default function NominativeInvitations() {
                                 );
                                 setBatchProfileIds(selected);
                             }}
-                            placeholder="Seleccionar perfiles..."
+                            placeholder={t("invitations.selectProfilesPlaceholder")}
                         />
                     </div>
                 </Modal>
-            </main>
         </RequirePermission>
     );
 }

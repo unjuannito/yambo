@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
+import i18n from "~/i18n/config";
 import { useAuth } from "~/hooks/useAuth";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -14,12 +16,13 @@ import PaymentInstructions from "~/components/shop/PaymentInstructions";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Yambo - Cesta" },
-    { name: "description", content: "Resumen de tu pedido" },
+    { title: i18n.t("merch.cartMetaTitle") },
+    { name: "description", content: i18n.t("merch.cartMetaDesc") },
   ];
 }
 
 export default function CartPage() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { items, removeItem, updateQuantity, clearCart, getTotalItems, getTotalPrice } = useCart();
@@ -35,12 +38,12 @@ export default function CartPage() {
         const response = await familyProductService.listFamilyProducts(0, 200);
         setDrops(response.content);
       } catch (err) {
-        toast.error(getErrorMessage(err, "¡Los drops se hacen de rogar!"));
+        toast.error(getErrorMessage(err, t("merch.cartDataError")));
       }
     };
 
     loadDrops();
-  }, []);
+  }, [t]);
 
   const generateConfigKey = (configuration: Record<string, any>): string => {
     return JSON.stringify(
@@ -73,7 +76,7 @@ export default function CartPage() {
 
   const handleSubmitOrder = async () => {
     if (!isAuthenticated()) {
-      toast.error("¡Eh, que no has iniciado sesión!");
+      toast.error(t("merch.authRequired"));
       return;
     }
 
@@ -102,11 +105,11 @@ export default function CartPage() {
       setOrderTotal(totalPrice);
 
       clearCart();
-      toast.success("¡Pedido realizado con éxito!");
+      toast.success(t("merch.orderSuccess"));
 
       setShowPaymentInstructions(true);
     } catch (err) {
-      const errorMessage = getErrorMessage(err, "¡El pedido se nos complica!");
+      const errorMessage = getErrorMessage(err, t("merch.orderError"));
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -121,9 +124,9 @@ export default function CartPage() {
   if (showPaymentInstructions && completedOrderId) {
     return (
       <>
-        <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
+        <main className="flex flex-col p-3 sm:p-6 w-full">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
-            <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-2">Procesando pedido...</h2>
+            <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-2">{t("merch.processingOrder")}</h2>
           </div>
         </main>
         <PaymentInstructions
@@ -137,16 +140,16 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
+      <main className="flex flex-col p-3 sm:p-6 w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center">
           <FontAwesomeIcon
             icon={faBagShopping}
             className="w-24 h-24 mx-auto mb-4 text-gray-300"
           />
-          <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-2">Tu cesta está vacía</h2>
-          <p className="text-gray-400 mb-6">Añade artículos desde el merch</p>
-          <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio/merch")}>
-            Ir al merch
+          <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-2">{t("merch.emptyCart")}</h2>
+          <p className="text-gray-400 mb-6">{t("merch.emptyCartHint")}</p>
+          <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio/articulos")}>
+            {t("merch.goToMerch")}
           </ButtonComponent>
         </div>
       </main>
@@ -154,18 +157,18 @@ export default function CartPage() {
   }
 
   return (
-    <main className="flex flex-col p-4 sm:p-8 w-full md:w-[calc(100vw-16rem)]">
+    <main className="flex flex-col p-3 sm:p-6 w-full">
       <div className="mb-6">
         <ButtonComponent
           variant="ghost"
           size="sm"
-          onClick={() => navigate("/mi-espacio/merch")}
+          onClick={() => navigate("/mi-espacio/articulos")}
         >
-          ← Volver al merch
+          {t("merch.backToMerch")}
         </ButtonComponent>
       </div>
 
-      <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Tu Cesta</h1>
+      <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("merch.cartTitle")}</h1>
 
       <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Items List */}
@@ -190,7 +193,7 @@ export default function CartPage() {
                       />
                     ) : (
                       <div className="w-20 h-20 sm:w-32 sm:h-32 bg-gray-100 rounded-xl flex items-center justify-center">
-                        <span className="text-gray-400 text-xs sm:text-sm">Sin imagen</span>
+                        <span className="text-gray-400 text-xs sm:text-sm">{t("merch.noImage")}</span>
                       </div>
                     )}
                   </div>
@@ -198,9 +201,16 @@ export default function CartPage() {
                   {/* Details + Subtotal */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="text-base sm:text-lg font-bold font-display text-yambo-black">{item.product.name}</h3>
+                      <h3 className="text-base sm:text-lg font-bold font-display">
+                        <a
+                          href={`/mi-espacio/articulos/${item.product.id}`}
+                          className="text-yambo-black hover:text-yambo-green-600 transition-colors text-left"
+                        >
+                          {item.product.name}
+                        </a>
+                      </h3>
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-xs text-gray-400">Subtotal</p>
+                        <p className="text-xs text-gray-400">{t("merch.itemSubtotal")}</p>
                         <p className="text-base sm:text-xl font-extrabold text-yambo-black whitespace-nowrap">
                           {(item.price * item.quantity).toFixed(2)} €
                         </p>
@@ -214,7 +224,7 @@ export default function CartPage() {
                         </span>
                         {itemDrop.endTms && (
                           <p className="text-xs text-gray-400 mt-1">
-                            Disponible hasta: {new Date(itemDrop.endTms).toLocaleDateString('es-ES', {
+                            {t("merch.availableUntil")} {new Date(itemDrop.endTms).toLocaleDateString('es-ES', {
                               day: 'numeric',
                               month: 'long',
                               year: 'numeric'
@@ -226,7 +236,7 @@ export default function CartPage() {
 
                     {configText && (
                       <p className="text-xs sm:text-sm text-gray-400 mb-2">
-                        <span className="font-medium text-gray-500">Configuración:</span> {configText}
+                        <span className="font-medium text-gray-500">{t("merch.configuration")}</span> {configText}
                       </p>
                     )}
 
@@ -254,7 +264,7 @@ export default function CartPage() {
                         size="sm"
                         onClick={() => removeItem(item.product.id, configKey)}
                       >
-                        Eliminar
+                        {t("common.delete")}
                       </ButtonComponent>
                     </div>
                   </div>
@@ -266,22 +276,22 @@ export default function CartPage() {
 
         {/* Order Summary */}
         <div className="lg:sticky lg:top-24 h-fit">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Resumen del pedido</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+            <h2 className="text-xl font-bold font-display text-yambo-black mb-4">{t("merch.orderSummary")}</h2>
 
             <div className="space-y-3 mb-4">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Artículos ({getTotalItems()})</span>
+                <span className="text-gray-400">{t("merch.itemsCount", { count: getTotalItems() })}</span>
                 <span className="font-medium text-yambo-black">{getTotalPrice().toFixed(2)} €</span>
               </div>
             </div>
 
             <div className="border-t border-gray-100 pt-4 mb-6">
               <div className="flex justify-between text-lg font-extrabold">
-                <span className="text-yambo-black">Total</span>
+                <span className="text-yambo-black">{t("merch.totalLabel")}</span>
                 <span className="text-yambo-green-600">{getTotalPrice().toFixed(2)} €</span>
               </div>
-              <p className="text-xs text-gray-400 mt-2">Coste sin beneficio para la asociación</p>
+              <p className="text-xs text-gray-400 mt-2">{t("merch.costNote")}</p>
             </div>
 
             <ButtonComponent
@@ -290,20 +300,20 @@ export default function CartPage() {
               onClick={handleSubmitOrder}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Procesando..." : "Finalizar pedido"}
+              {isSubmitting ? t("merch.processing") : t("merch.submitOrder")}
             </ButtonComponent>
 
             <ButtonComponent
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (confirm("¿Estás seguro de que quieres vaciar la cesta?")) {
+                if (confirm(t("merch.clearCartConfirm"))) {
                   clearCart();
                 }
               }}
               className="w-full"
             >
-              Vaciar cesta
+              {t("merch.clearCart")}
             </ButtonComponent>
           </div>
         </div>
@@ -320,3 +330,4 @@ export default function CartPage() {
     </main>
   );
 }
+export const handle = { sidebar: false };

@@ -85,7 +85,7 @@ public class ProductService {
     }
 
     public Product createProduct(@NonNull String name, String familyProductId, @NonNull BigDecimal basePrice,
-            List<ProductOption> options, List<String> images, String description) {
+            List<ProductOption> options, List<String> images, String description, String shortDescription) {
         authService.getCurrentUser(true);
         // TODO: check if user can create in this family
 
@@ -107,13 +107,14 @@ public class ProductService {
                 .images(images != null ? images : new ArrayList<>())
                 .familyProduct(familyProduct)
                 .description(description)
+                .shortDescription(shortDescription)
                 .build();
 
         return productRepository.save(product);
     }
 
     public Product updateProduct(@NonNull String productId, String name, Boolean active, List<String> images,
-            List<ProductOption> options, BigDecimal basePrice, String familyProductId, String description) {
+            List<ProductOption> options, BigDecimal basePrice, String familyProductId, String description, String shortDescription) {
         Product product = getProductById(productId);
         // TODO: check if user can update
 
@@ -153,6 +154,10 @@ public class ProductService {
 
         if (description != null) {
             product.setDescription(description);
+        }
+
+        if (shortDescription != null) {
+            product.setShortDescription(shortDescription);
         }
 
         return productRepository.save(product);

@@ -35,6 +35,9 @@ export interface Activity {
     id: string;
     name: string;
     description: string | null;
+    image: string | null;
+    location: string | null;
+    price: number | null;
     date: string | null;
     endDate: string | null;
     status: ActivityStatusInfo | null;

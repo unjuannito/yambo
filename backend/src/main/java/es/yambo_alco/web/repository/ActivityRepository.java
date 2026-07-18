@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import java.util.List;
 
 public interface ActivityRepository extends JpaRepository<Activity, String>, JpaSpecificationExecutor<Activity> {
-    List<Activity> findByIsPublicTrueOrderByDateAsc();
+    List<Activity> findByIsPublicTrueOrderByDateDesc();
     List<Activity> findByProjectIdOrderByDateAsc(String projectId);
+    java.util.Optional<Activity> findByIdAndIsPublicTrue(String id);
 }

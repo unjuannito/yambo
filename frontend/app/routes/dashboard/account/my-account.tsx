@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import type { Route } from "./+types/my-account";
 import { useAuth } from "~/hooks/useAuth";
 import { useApiMutation } from "~/hooks/useApiMutation";
 import { userService } from "~/services/userService";
+import { fileService } from "~/services/fileService";
+import { useTranslation } from "react-i18next";
 import type { UpdateProfileRequest, ChangePasswordRequest } from "~/services/userService";
 import type { CurrentUser } from "~/types/userType";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLock, faTrash, faCircleExclamation, faBell } from "@fortawesome/free-solid-svg-icons";
-import FileUploader from "~/components/common/FileUploader";
+import { faUser, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
@@ -38,6 +39,7 @@ function getInitials(name: string): string {
 export default function MyAccount() {
   const navigate = useNavigate();
   const { user, reload, logout } = useAuth();
+  const { t } = useTranslation();
 
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
@@ -54,6 +56,34 @@ export default function MyAccount() {
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const openPhotoPicker = () => photoInputRef.current?.click();
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoError("La imagen no puede superar los 2 MB");
+      return;
+    }
+
+    setPhotoError(null);
+    setPhotoUploading(true);
+    try {
+      const uploaded = await fileService.upload(file);
+      setProfileData((prev) => ({ ...prev, photo: uploaded.url }));
+    } catch (err) {
+      setPhotoError("Error al subir la imagen. Inténtalo de nuevo.");
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>({
     orderStatus: true,
@@ -128,12 +158,12 @@ export default function MyAccount() {
     setPasswordError(null);
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError("Las contraseñas no coinciden");
+              setPasswordError(t('myAccount.passwordMismatch'));
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      setPasswordError("La contraseña debe tener al menos 8 caracteres");
+      setPasswordError(t('myAccount.passwordMinLength'));
       return;
     }
 
@@ -184,14 +214,14 @@ export default function MyAccount() {
                 <UserIcon />
               </div>
               <div>
-                <h2 className="text-lg font-bold font-display text-yambo-black">Información personal</h2>
-                <p className="text-sm text-gray-400">Actualiza tu nombre y correo electrónico</p>
+                <h2 className="text-lg font-bold font-display text-yambo-black">{t('myAccount.personalInfo')}</h2>
+                <p className="text-sm text-gray-400">{t('myAccount.personalInfoDesc')}</p>
               </div>
             </div>
           </div>
           <form onSubmit={handleProfileSubmit} className="p-6 space-y-5">
             <InputComponent
-              label="Nombre completo"
+              label={t('myAccount.fullName')}
               name="name"
               type="text"
               value={profileData.name}
@@ -201,10 +231,10 @@ export default function MyAccount() {
               required
               minLength={2}
               maxLength={100}
-              placeholder="Tu nombre completo"
+              placeholder={t('myAccount.fullNamePlaceholder')}
             />
             <InputComponent
-              label="Correo electrónico"
+              label={t('myAccount.email')}
               name="email"
               type="email"
               value={profileData.email}
@@ -214,15 +244,57 @@ export default function MyAccount() {
               required
               placeholder="tu@email.com"
             />
-            <FileUploader
-              compact
-              multiple={false}
-              label="Foto de perfil"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onUpload={(file) =>
-                setProfileData((prev) => ({ ...prev, photo: file.url }))
-              }
-            />
+            <div className="space-y-4">
+              <div className="flex items-center gap-5">
+                {profileData.photo ? (
+                  <div className="relative group">
+                    <img
+                      src={profileData.photo}
+                      alt="Foto de perfil"
+                      className="w-24 h-24 rounded-full object-cover shadow-md ring-4 ring-yambo-green-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setProfileData((prev) => ({ ...prev, photo: "" }))}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
+                      title="Eliminar foto"
+                    >
+                      <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 flex items-center justify-center text-white text-3xl font-bold shadow-md ring-4 ring-yambo-green-100">
+                    {getInitials(profileData.name || "?")}
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-700">{t('myAccount.profilePhoto')}</label>
+                  <div className="flex gap-2">
+                    <ButtonComponent type="button" variant="primary" size="sm" onClick={openPhotoPicker} disabled={photoUploading}>
+                      {photoUploading ? (
+                        <><FontAwesomeIcon icon={faSpinner} spin className="mr-1" /> Subiendo...</>
+                      ) : (
+                        <><FontAwesomeIcon icon={faCamera} className="mr-1" /> {profileData.photo ? "Cambiar foto" : "Subir foto"}</>
+                      )}
+                    </ButtonComponent>
+                    {profileData.photo && (
+                      <ButtonComponent type="button" variant="danger-text" size="sm" onClick={() => setProfileData((prev) => ({ ...prev, photo: "" }))}>
+                        <FontAwesomeIcon icon={faTrash} className="mr-1" /> Eliminar
+                      </ButtonComponent>
+                    )}
+                  </div>
+                  {photoError && <p className="text-xs text-red-500">{photoError}</p>}
+                  <p className="text-xs text-gray-400">JPEG, PNG, WebP. Máx 2 MB.</p>
+                </div>
+              </div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+            </div>
             {user?.groupRoles && user.groupRoles.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Roles en Grupos</label>
@@ -244,7 +316,7 @@ export default function MyAccount() {
                     onChange={(e) =>
                       setProfileData((prev) => ({ ...prev, bio: e.target.value }))
                     }
-                    placeholder="Cuéntanos algo sobre ti..."
+                    placeholder={t('myAccount.bioPlaceholder')}
                     rows={3}
                     maxLength={500}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-all"
@@ -260,7 +332,7 @@ export default function MyAccount() {
                     onChange={(e) =>
                       setProfileData((prev) => ({ ...prev, funFact: e.target.value }))
                     }
-                    placeholder="Un dato curioso sobre ti..."
+                    placeholder={t('myAccount.funFactPlaceholder')}
                     maxLength={100}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 transition-all"
                   />
@@ -274,7 +346,7 @@ export default function MyAccount() {
                 variant="primary"
                 isLoading={updateProfileMutation.isLoading}
               >
-                Guardar cambios
+                {t('myAccount.saveChanges')}
               </ButtonComponent>
             </div>
           </form>
@@ -288,14 +360,14 @@ export default function MyAccount() {
                 <LockIcon />
               </div>
               <div>
-                <h2 className="text-lg font-bold font-display text-yambo-black">Seguridad</h2>
-                <p className="text-sm text-gray-400">Actualiza tu contraseña regularmente</p>
+                <h2 className="text-lg font-bold font-display text-yambo-black">{t('myAccount.security')}</h2>
+                <p className="text-sm text-gray-400">{t('myAccount.securityDesc')}</p>
               </div>
             </div>
           </div>
           <form onSubmit={handlePasswordSubmit} className="p-6 space-y-5">
             <InputComponent
-              label="Contraseña actual"
+              label={t('myAccount.currentPassword')}
               name="oldPassword"
               type="password"
               value={passwordData.oldPassword}
@@ -309,7 +381,7 @@ export default function MyAccount() {
               placeholder="••••••••"
             />
             <InputComponent
-              label="Nueva contraseña"
+              label={t('myAccount.newPassword')}
               name="newPassword"
               type="password"
               value={passwordData.newPassword}
@@ -322,11 +394,11 @@ export default function MyAccount() {
               required
               minLength={8}
               pattern=".{8,}"
-              title="La contraseña debe tener al menos 8 caracteres"
-              placeholder="Mínimo 8 caracteres"
+              title={t('myAccount.passwordMinLength')}
+              placeholder={t('myAccount.newPasswordPlaceholder')}
             />
             <InputComponent
-              label="Confirmar nueva contraseña"
+              label={t('myAccount.confirmNewPassword')}
               name="confirmPassword"
               type="password"
               value={passwordData.confirmPassword}
@@ -338,7 +410,7 @@ export default function MyAccount() {
               }
               required
               minLength={8}
-              placeholder="Repite la nueva contraseña"
+              placeholder={t('myAccount.confirmNewPasswordPlaceholder')}
             />
             {passwordError && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
@@ -352,7 +424,7 @@ export default function MyAccount() {
                 variant="primary"
                 isLoading={changePasswordMutation.isLoading}
               >
-                Cambiar contraseña
+                {t('myAccount.changePassword')}
               </ButtonComponent>
             </div>
           </form>
@@ -366,39 +438,39 @@ export default function MyAccount() {
                 <BellIcon />
               </div>
               <div>
-                <h2 className="text-lg font-bold font-display text-yambo-black">Notificaciones</h2>
-                <p className="text-sm text-gray-400">Elige qué correos electrónicos deseas recibir</p>
+                <h2 className="text-lg font-bold font-display text-yambo-black">{t('myAccount.notifications')}</h2>
+                <p className="text-sm text-gray-400">{t('myAccount.notificationsDesc')}</p>
               </div>
             </div>
           </div>
           <form onSubmit={handleNotifPrefsSubmit} className="p-6 space-y-4">
             <NotifToggle
-              label="Actualizaciones de pedidos"
-              description="Recibe un correo cuando cambie el estado de tu pedido"
+              label={t('myAccount.notifOrderUpdates')}
+              description={t('myAccount.notifOrderUpdatesDesc')}
               checked={notifPrefs.orderStatus}
               onChange={(v) => setNotifPrefs((p) => ({ ...p, orderStatus: v }))}
             />
             <NotifToggle
-              label="Cancelaciones de pedidos"
-              description="Recibe un correo cuando se cancele un pedido"
+              label={t('myAccount.notifOrderCancellations')}
+              description={t('myAccount.notifOrderCancellationsDesc')}
               checked={notifPrefs.orderCancelled}
               onChange={(v) => setNotifPrefs((p) => ({ ...p, orderCancelled: v }))}
             />
             <NotifToggle
-              label="Nuevas incidencias"
-              description="Recibe un correo cuando se cree una incidencia en tu pedido"
+              label={t('myAccount.notifNewIssues')}
+              description={t('myAccount.notifNewIssuesDesc')}
               checked={notifPrefs.issueCreated}
               onChange={(v) => setNotifPrefs((p) => ({ ...p, issueCreated: v }))}
             />
             <NotifToggle
-              label="Comentarios en incidencias"
-              description="Recibe un correo cuando alguien comente en tu incidencia"
+              label={t('myAccount.notifIssueComments')}
+              description={t('myAccount.notifIssueCommentsDesc')}
               checked={notifPrefs.issueComments}
               onChange={(v) => setNotifPrefs((p) => ({ ...p, issueComments: v }))}
             />
             <NotifToggle
-              label="Cambios de estado de incidencias"
-              description="Recibe un correo cuando cambie el estado de tu incidencia"
+              label={t('myAccount.notifIssueStatusChanges')}
+              description={t('myAccount.notifIssueStatusChangesDesc')}
               checked={notifPrefs.issueStatus}
               onChange={(v) => setNotifPrefs((p) => ({ ...p, issueStatus: v }))}
             />
@@ -408,7 +480,7 @@ export default function MyAccount() {
                 variant="primary"
                 isLoading={updateNotifPrefsMutation.isLoading}
               >
-                Guardar preferencias
+                {t('myAccount.savePreferences')}
               </ButtonComponent>
             </div>
           </form>
@@ -422,17 +494,15 @@ export default function MyAccount() {
                 <TrashIcon />
               </div>
               <div>
-                <h2 className="text-lg font-bold font-display text-red-700">Zona de peligro</h2>
-                <p className="text-sm text-red-400">Acciones irreversibles</p>
+                <h2 className="text-lg font-bold font-display text-red-700">{t('myAccount.dangerZone')}</h2>
+                <p className="text-sm text-red-400">{t('myAccount.dangerZoneDesc')}</p>
               </div>
             </div>
           </div>
           <div className="p-6">
             <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4">
               <p className="text-gray-700 text-sm leading-relaxed">
-                <strong className="text-red-700">Atención:</strong> Una vez que elimines tu cuenta,
-                tendrás <strong>30 días</strong> para revertir esta acción contactando con soporte.
-                Pasado ese tiempo, tu cuenta y todos tus datos serán eliminados permanentemente.
+                {t('myAccount.deleteWarning')}
               </p>
             </div>
             <ButtonComponent
@@ -442,7 +512,7 @@ export default function MyAccount() {
               className="w-full sm:w-auto"
             >
               <TrashIcon />
-              <span className="ml-2">Eliminar mi cuenta</span>
+              <span className="ml-2">{t('myAccount.deleteAccount')}</span>
             </ButtonComponent>
           </div>
         </section>
@@ -452,9 +522,9 @@ export default function MyAccount() {
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDeleteAccount}
-        title="¿Eliminar tu cuenta?"
-        message="Esta acción es irreversible. Tu cuenta será programada para eliminación y se eliminará permanentemente después de 30 días. Durante este periodo puedes contactar con soporte para cancelar la eliminación."
-        confirmLabel="Sí, eliminar mi cuenta"
+        title={t('myAccount.deleteConfirmTitle')}
+        message={t('myAccount.deleteConfirmMessage')}
+        confirmLabel={t('myAccount.deleteConfirmLabel')}
         cancelLabel="Cancelar"
         variant="danger"
         isLoading={deleteAccountMutation.isLoading}

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import java.util.Set;
 
 public final class UserSpecifications {
@@ -25,6 +26,17 @@ public final class UserSpecifications {
 
     public static Specification<User> emailContains(String email) {
         return (root, query, cb) -> email == null ? null : cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase() + "%");
+    }
+
+    public static Specification<User> queryContains(String query) {
+        return (root, q, cb) -> {
+            if (query == null || query.isBlank()) return null;
+            String pattern = "%" + query.toLowerCase() + "%";
+            Predicate idPred = cb.like(cb.lower(root.get("id")), pattern);
+            Predicate namePred = cb.like(cb.lower(root.get("name")), pattern);
+            Predicate emailPred = cb.like(cb.lower(root.get("email")), pattern);
+            return cb.or(idPred, namePred, emailPred);
+        };
     }
 
     public static Specification<User> enabledEquals(Boolean enabled) {

@@ -5,7 +5,7 @@ import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
 import { adminUserService } from "~/services/adminUserService";
 import type { GroupRoleResponse } from "~/services/adminUserService";
-import { projectService } from "~/services/projectService";
+import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
@@ -63,25 +63,7 @@ export default function Crew() {
     useEffect(() => {
         const fetchGroups = async () => {
             try {
-                const projectsRes = await projectService.listProjects(0, 100, undefined, true);
-                const allOptions: { value: string; label: string }[] = [];
-                for (const project of projectsRes.content) {
-                    const groups = await projectService.listGroups(project.id);
-                    const namedGroups = groups.filter(g => g.name);
-                    const defaultGroup = groups.find(g => !g.name);
-
-                    if (namedGroups.length === 0) {
-                        const value = defaultGroup ? defaultGroup.id : `project:${project.id}`;
-                        allOptions.push({ value, label: project.name });
-                    } else {
-                        const projectValue = defaultGroup ? defaultGroup.id : `project:${project.id}`;
-                        allOptions.push({ value: projectValue, label: `${project.name} (sin grupo)` });
-                        for (const g of namedGroups) {
-                            allOptions.push({ value: g.id, label: `${g.name} (${project.name})` });
-                        }
-                    }
-                }
-                setGroupOptions(allOptions);
+                setGroupOptions(await loadAssignableGroupOptions());
             } catch (err) {
                 toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
             }
@@ -91,8 +73,7 @@ export default function Crew() {
 
     const fetchCrewData = useCallback(async ({ page, size, filters }: FetchDataParams) => {
         return await adminUserService.listUsers({
-            name: filters.name,
-            email: filters.email,
+            query: filters.name || filters.email,
             role: "ANY",
             page,
             size,
@@ -234,7 +215,7 @@ export default function Crew() {
         const timer = setTimeout(async () => {
             try {
                 const res = await adminUserService.listUsers({
-                    name: trimmed,
+                    query: trimmed,
                     page: 0,
                     size: 10,
                 });
@@ -276,18 +257,23 @@ export default function Crew() {
                     {user.photo && (
                         <img src={user.photo} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
                     )}
-                    <span className="font-medium text-yambo-black">{user.name}</span>
+                    <div>
+                        <span className="font-medium text-yambo-black">{user.name}</span>
+                        <p className="text-xs text-gray-400 sm:hidden truncate max-w-[160px]">{user.email}</p>
+                    </div>
                 </div>
             ),
         },
         {
             key: "email",
             header: "Correo Electrónico",
+            className: "hidden sm:table-cell",
             filter: { enabled: true, type: "search", placeholder: "Buscar por email..." },
         },
         {
             key: "groupRoles",
             header: "Roles",
+            className: "hidden md:table-cell",
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
                     {user.groupRoles && user.groupRoles.length > 0 ? (
@@ -318,6 +304,7 @@ export default function Crew() {
         {
             key: "actions",
             header: "Acciones",
+            requiredPerms: [{ obj: "user", action: "update" }],
             render: (user: User) => (
                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                     <ButtonComponent onClick={() => startEdit(user)} variant="primary" size="sm">
@@ -330,7 +317,7 @@ export default function Crew() {
 
     return (
         <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-4 md:p-6 w-full">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black">Equipo</h1>
                     <div className="flex gap-2">
@@ -493,7 +480,7 @@ export default function Crew() {
                                         }}
                                         className="text-coral hover:text-red-700 text-sm px-2"
                                     >
-                                        ✕
+                                        x
                                     </button>
                                 </div>
                             ))}

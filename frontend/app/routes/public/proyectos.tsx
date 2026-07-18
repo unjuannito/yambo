@@ -1,4 +1,5 @@
 import { useLoaderData } from "react-router";
+import { useTranslation } from "react-i18next";
 import { getActiveProjects } from "~/services/publicService.server";
 import type { ActiveProject } from "~/services/publicService";
 import { projectColor } from "~/utils/projectColor";
@@ -9,14 +10,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({ data }: Route.MetaArgs) {
+  const { t } = useTranslation();
   const siteUrl = data?.siteUrl ?? "";
-  const title = "Yambo - Proyectos | Asociación Juvenil en Alcobendas";
-  const description = "Descubre todos los proyectos de Yambo, asociación juvenil en Alcobendas (Madrid). Actividades de ocio educativo y tiempo libre para niños y adolescentes.";
+  const title = t('public.projectsPageTitle');
+  const description = t('public.projectsMetaDescription');
 
   return [
     { title },
     { name: "description", content: description },
-    { name: "keywords", content: "proyectos juveniles, Yambo, Alcobendas, Madrid, actividades juveniles, ocio educativo, tiempo libre" },
+    { name: "keywords", content: t('public.projectsKeywords') },
     { tagName: "link", rel: "canonical", href: `${siteUrl}/proyectos` },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
@@ -25,8 +27,8 @@ export function meta({ data }: Route.MetaArgs) {
     { name: "robots", content: "index, follow" },
     { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/proyectos` }) },
     { "script:ld+json": breadcrumbJsonLd([
-        { name: "Inicio", url: siteUrl },
-        { name: "Proyectos", url: `${siteUrl}/proyectos` },
+        { name: t('nav.home'), url: siteUrl },
+        { name: t('public.projectsTitle'), url: `${siteUrl}/proyectos` },
     ]) },
   ];
 }
@@ -37,15 +39,16 @@ export async function loader() {
 }
 
 export default function Proyectos() {
+  const { t } = useTranslation();
   const { projects } = useLoaderData<typeof loader>();
 
   return (
-    <section className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen pt-24 pb-16">
-      <div className="max-w-6xl mx-auto px-4">
+    <section className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen pt-12 pb-16">
+      <div className="max-w-8xl mx-auto px-4">
         <div className="fade-up">
-          <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display">Proyectos</h1>
+          <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display">{t('public.projectsTitle')}</h1>
           <p className="text-gray-500 mb-10">
-            Conoce todos los proyectos en los que trabajamos 🚀
+            {t('public.projectsSubtitle')}
           </p>
         </div>
 
@@ -74,7 +77,7 @@ export default function Proyectos() {
                       <img
                         src={project.image}
                         alt={project.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                       />
                     </div>
                   ) : (
@@ -102,7 +105,7 @@ export default function Proyectos() {
                       </p>
                     )}
                     <span className="inline-flex items-center gap-1 text-sm font-semibold transition-colors [color:var(--pc-text)] group-hover:[color:var(--pc-text-hover)]">
-                      Ver proyecto →
+                      {t('public.projectsView')}
                     </span>
                   </div>
                 </div>
@@ -112,9 +115,9 @@ export default function Proyectos() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <p className="text-6xl mb-4">📁</p>
+            <p className="text-6xl mb-4">-</p>
             <p className="text-gray-400 text-lg">
-              No hay proyectos disponibles en este momento.
+              {t('public.projectsEmpty')}
             </p>
           </div>
         )}

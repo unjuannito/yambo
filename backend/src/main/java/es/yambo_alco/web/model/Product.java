@@ -60,6 +60,9 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "family_product_id")
     private FamilyProduct familyProduct;

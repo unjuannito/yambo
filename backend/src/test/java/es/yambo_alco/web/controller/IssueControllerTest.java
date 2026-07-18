@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Issue;
 import es.yambo_alco.web.model.IssueComment;
+import es.yambo_alco.web.model.IssueWatcher;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
@@ -18,6 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -35,8 +40,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -358,5 +365,179 @@ class IssueControllerTest {
                 .andExpect(jsonPath("$.issueId").value("ISS00001"))
                 .andExpect(jsonPath("$.text").value("Comentario válido"))
                 .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+    }
+
+    @Test
+    @WithMockUser
+    void listIssues_ShouldReturnPagedResults() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        Issue issue = Issue.builder()
+                .id("ISS00001")
+                .title("Issue listado")
+                .description("Descripción")
+                .status(IssueStatus.OPEN)
+                .createdBy("USR001")
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        OrderProduct related = OrderProduct.builder()
+                .id(orderedProductId)
+                .orderId("ORD00001")
+                .productId("PROD0001")
+                .build();
+
+        Page<Issue> page = new PageImpl<>(List.of(issue));
+        when(issueService.listIssues(any(), any(Pageable.class))).thenReturn(page);
+        when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
+
+        mockMvc.perform(get("/issues"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value("ISS00001"))
+                .andExpect(jsonPath("$.content[0].status").value("OPEN"));
+    }
+
+    @Test
+    @WithMockUser
+    void listIssues_WithQueryParams_ShouldFilter() throws Exception {
+        Page<Issue> emptyPage = new PageImpl<>(List.of());
+        when(issueService.listIssues(any(), any(Pageable.class))).thenReturn(emptyPage);
+
+        mockMvc.perform(get("/issues")
+                        .param("query", "test")
+                        .param("status", "OPEN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0));
+    }
+
+    @Test
+    @WithMockUser
+    void getMyIssues_ShouldReturnUserIssues() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        Issue issue = Issue.builder()
+                .id("ISS00001")
+                .title("Mi incidencia")
+                .description("Descripción")
+                .status(IssueStatus.OPEN)
+                .createdBy("USR001")
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        OrderProduct related = OrderProduct.builder()
+                .id(orderedProductId)
+                .orderId("ORD00001")
+                .productId("PROD0001")
+                .build();
+
+        Page<Issue> page = new PageImpl<>(List.of(issue));
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+        when(issueService.listIssues(any(), any(Pageable.class))).thenReturn(page);
+        when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
+
+        mockMvc.perform(get("/issues/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value("ISS00001"));
+    }
+
+    @Test
+    @WithMockUser
+    void updateIssueProducts_ShouldReturnUpdatedIssue() throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        Issue issue = Issue.builder()
+                .id("ISS00001")
+                .title("Updated")
+                .description("Updated desc")
+                .status(IssueStatus.OPEN)
+                .createdBy("USR001")
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        UUID newProductId = UUID.fromString("44444444-4444-4444-4444-444444444444");
+        OrderProduct related = OrderProduct.builder()
+                .id(newProductId)
+                .orderId("ORD00001")
+                .productId("PROD0001")
+                .build();
+
+        when(issueService.updateIssueProducts("ISS00001", List.of(newProductId))).thenReturn(issue);
+        when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
+        when(issueService.getIssueComments("ISS00001")).thenReturn(List.of());
+
+        String requestBody = """
+                {
+                    "orderedProductIds": ["44444444-4444-4444-4444-444444444444"]
+                }
+                """;
+
+        mockMvc.perform(put("/issues/ISS00001/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ISS00001"))
+                .andExpect(jsonPath("$.orderedProductIds[0]").value("44444444-4444-4444-4444-444444444444"));
+    }
+
+    @Test
+    @WithMockUser
+    void getWatchers_ShouldReturnList() throws Exception {
+        IssueWatcher watcher = IssueWatcher.builder()
+                .id(UUID.fromString("55555555-5555-5555-5555-555555555555"))
+                .issueId("ISS00001")
+                .email("watcher@test.com")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(issueWatcherService.getWatchers("ISS00001")).thenReturn(List.of(watcher));
+
+        mockMvc.perform(get("/issues/ISS00001/watchers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].email").value("watcher@test.com"));
+    }
+
+    @Test
+    @WithMockUser
+    void addWatcher_ShouldReturnCreated() throws Exception {
+        IssueWatcher watcher = IssueWatcher.builder()
+                .id(UUID.fromString("55555555-5555-5555-5555-555555555555"))
+                .issueId("ISS00001")
+                .email("new@test.com")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(issueWatcherService.addWatcher("ISS00001", "new@test.com", null)).thenReturn(watcher);
+
+        String requestBody = """
+                {
+                    "email": "new@test.com"
+                }
+                """;
+
+        mockMvc.perform(post("/issues/ISS00001/watchers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("new@test.com"));
+    }
+
+    @Test
+    @WithMockUser
+    void removeWatcher_ShouldReturnNoContent() throws Exception {
+        String requestBody = """
+                {
+                    "email": "remove@test.com"
+                }
+                """;
+
+        mockMvc.perform(delete("/issues/ISS00001/watchers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isNoContent());
+
+        verify(issueWatcherService).removeWatcher("ISS00001", "remove@test.com");
     }
 }

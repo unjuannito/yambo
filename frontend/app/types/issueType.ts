@@ -1,9 +1,7 @@
 export enum IssueStatus {
     OPEN = 'OPEN',
     IN_PROGRESS = 'IN_PROGRESS',
-    RESOLVED = 'RESOLVED',
-    CLOSED = 'CLOSED',
-    REOPENED = 'REOPENED'
+    CLOSED = 'CLOSED'
 }
 
 export interface IssueComment {
@@ -28,6 +26,7 @@ export interface Issue {
 }
 
 export interface IssueDetail extends Issue {
+    userName?: string;
     comments: IssueComment[];
     relatedProducts?: IssueRelatedProduct[];
 }
@@ -74,26 +73,16 @@ export const ISSUE_STATUS_CONFIG = {
         label: "En Progreso",
         className: "bg-orange-100 text-orange-800"
     },
-    RESOLVED: {
-        label: "Resuelto",
-        className: "bg-green-100 text-green-800"
-    },
     CLOSED: {
         label: "Cerrado",
         className: "bg-gray-200 text-gray-800"
-    },
-    REOPENED: {
-        label: "Reabierto",
-        className: "bg-violet-100 text-violet-800"
     }
 } as const;
 
 export const ISSUE_WORKFLOW_TRANSITIONS: Record<IssueStatus, IssueStatus[]> = {
-    [IssueStatus.OPEN]: [IssueStatus.IN_PROGRESS, IssueStatus.RESOLVED, IssueStatus.CLOSED],
-    [IssueStatus.IN_PROGRESS]: [IssueStatus.OPEN, IssueStatus.RESOLVED, IssueStatus.CLOSED],
-    [IssueStatus.RESOLVED]: [IssueStatus.CLOSED, IssueStatus.REOPENED],
-    [IssueStatus.REOPENED]: [IssueStatus.IN_PROGRESS, IssueStatus.RESOLVED, IssueStatus.CLOSED],
-    [IssueStatus.CLOSED]: [IssueStatus.REOPENED],
+    [IssueStatus.OPEN]: [IssueStatus.IN_PROGRESS, IssueStatus.CLOSED],
+    [IssueStatus.IN_PROGRESS]: [IssueStatus.OPEN, IssueStatus.CLOSED],
+    [IssueStatus.CLOSED]: [IssueStatus.OPEN],
 };
 
 export interface IssueWatcher {

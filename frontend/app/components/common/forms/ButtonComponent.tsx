@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -58,6 +59,7 @@ export default function ButtonComponent({
   ...props
 }: ButtonProps) {
   const busy = isLoading;
+  const { t } = useTranslation();
   return (
     <button
       disabled={disabled || busy}
@@ -75,7 +77,7 @@ export default function ButtonComponent({
       {busy ? (
         <span className="flex items-center gap-2">
           <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          Procesando...
+          {t("component.buttonLoading")}
         </span>
       ) : (
         children

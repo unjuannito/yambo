@@ -16,6 +16,7 @@ import type {
     ContactSettings,
 } from "./publicService";
 import type { Activity } from "~/types/activity";
+import type { LegalPage } from "./legalPageService";
 
 const BACKEND_URL =
     process.env.BACKEND_INTERNAL_URL || "http://localhost:8080/api";
@@ -61,4 +62,16 @@ export async function getProjectDetail(id: string): Promise<ProjectDetail> {
 
 export async function getPublicActivities(): Promise<Activity[]> {
     return fetchJson("/public/activities");
+}
+
+export async function getPublicActivity(id: string): Promise<Activity> {
+    return fetchJson(`/public/activities/${encodeURIComponent(id)}`);
+}
+
+export async function getPublishedLegalPages(): Promise<LegalPage[]> {
+    return fetchJson("/public/legal");
+}
+
+export async function getPublishedLegalPage(id: string): Promise<LegalPage> {
+    return fetchJson(`/public/legal/${encodeURIComponent(id)}`);
 }

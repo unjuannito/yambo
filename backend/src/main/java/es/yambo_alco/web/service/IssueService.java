@@ -180,14 +180,13 @@ public class IssueService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Issue> listIssues(String issueId, String title, String userId, List<IssueStatus> statuses,
-                                   LocalDateTime startDate, LocalDateTime endDate,
-                                   Pageable pageable) {
-        Specification<Issue> spec = Specification.where(IssueSpecifications.idContains(issueId))
-                .and(IssueSpecifications.titleContains(title))
-                .and(IssueSpecifications.createdByEquals(userId))
-                .and(IssueSpecifications.statusIn(statuses))
-                .and(IssueSpecifications.createdBetween(startDate, endDate));
+    public Page<Issue> listIssues(IssueFilter filter, Pageable pageable) {
+        Specification<Issue> spec = Specification.where(IssueSpecifications.queryContains(filter.query()))
+                .and(IssueSpecifications.idContains(filter.issueId()))
+                .and(IssueSpecifications.titleContains(filter.title()))
+                .and(IssueSpecifications.createdByEquals(filter.userId()))
+                .and(IssueSpecifications.statusIn(filter.statuses()))
+                .and(IssueSpecifications.createdBetween(filter.startDate(), filter.endDate()));
         return issueRepository.findAll(spec, pageable);
     }
 
@@ -209,9 +208,10 @@ public class IssueService {
         if (status != null) {
             validateStatusTransition(previousStatus, status);
             issue.setStatus(status);
-            issue.setUpdatedAt(LocalDateTime.now());
-            issueRepository.save(issue);
         }
+        // Always update updatedAt when there's activity (comment = update too)
+        issue.setUpdatedAt(LocalDateTime.now());
+        issueRepository.save(issue);
 
         IssueComment comment = IssueComment.builder()
                 .issueId(issueId)
@@ -359,11 +359,9 @@ public class IssueService {
         }
 
         EnumSet<IssueStatus> allowedTransitions = switch (currentStatus) {
-            case OPEN -> EnumSet.of(IssueStatus.IN_PROGRESS, IssueStatus.RESOLVED, IssueStatus.CLOSED);
-            case IN_PROGRESS -> EnumSet.of(IssueStatus.OPEN, IssueStatus.RESOLVED, IssueStatus.CLOSED);
-            case RESOLVED -> EnumSet.of(IssueStatus.CLOSED, IssueStatus.REOPENED);
-            case REOPENED -> EnumSet.of(IssueStatus.IN_PROGRESS, IssueStatus.RESOLVED, IssueStatus.CLOSED);
-            case CLOSED -> EnumSet.of(IssueStatus.REOPENED);
+            case OPEN -> EnumSet.of(IssueStatus.IN_PROGRESS, IssueStatus.CLOSED);
+            case IN_PROGRESS -> EnumSet.of(IssueStatus.OPEN, IssueStatus.CLOSED);
+            case CLOSED -> EnumSet.of(IssueStatus.OPEN);
         };
 
         if (!allowedTransitions.contains(newStatus)) {

@@ -7,6 +7,7 @@ namespace: yambo-pr-PLACEHOLDER
 
 resources:
   - ../../base
+  - preview-uploads-pvc.yaml
 
 # Image tags are set by the CI pipeline:
 #   kustomize edit set image \

@@ -13,6 +13,9 @@ import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -23,6 +26,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -530,9 +538,9 @@ class IssueServiceTest {
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Reapertura inválida", "USR001", IssueStatus.OPEN));
+                () -> issueService.addComment("ISS001", "Cambio inválido", "USR001", IssueStatus.IN_PROGRESS));
 
-        assertEquals("Invalid issue status transition: CLOSED -> OPEN", exception.getMessage());
+        assertEquals("Invalid issue status transition: CLOSED -> IN_PROGRESS", exception.getMessage());
         verify(issueCommentRepository, never()).save(any());
     }
 
@@ -578,7 +586,7 @@ class IssueServiceTest {
         assertNotNull(result);
         assertEquals("Just a comment", result.getText());
         assertNull(result.getStatus());
-        verify(issueRepository, never()).save(any(Issue.class));
+        verify(issueRepository, times(1)).save(any(Issue.class));
         verify(issueCommentRepository).save(any(IssueComment.class));
     }
 
@@ -687,19 +695,6 @@ class IssueServiceTest {
     }
 
     @Test
-    void statusTransition_OpenToResolved_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        IssueComment result = issueService.addComment("ISS001", "Fixed directly", "USR001", IssueStatus.RESOLVED);
-
-        assertNotNull(result);
-        assertEquals(IssueStatus.RESOLVED, result.getStatus());
-    }
-
-    @Test
     void statusTransition_OpenToClosed_ShouldSucceed() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
@@ -713,13 +708,16 @@ class IssueServiceTest {
     }
 
     @Test
-    void statusTransition_OpenToReopened_ShouldFail() {
+    void statusTransition_OpenToSameStatus_ShouldSucceed() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
+        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.REOPENED));
+        IssueComment result = issueService.addComment("ISS001", "Sin cambios", "USR001", IssueStatus.OPEN);
+
+        assertNotNull(result);
+        assertEquals(IssueStatus.OPEN, result.getStatus());
     }
 
     // Valid transitions from IN_PROGRESS
@@ -737,18 +735,6 @@ class IssueServiceTest {
     }
 
     @Test
-    void statusTransition_InProgressToResolved_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        IssueComment result = issueService.addComment("ISS001", "Fixed", "USR001", IssueStatus.RESOLVED);
-
-        assertNotNull(result);
-    }
-
-    @Test
     void statusTransition_InProgressToClosed_ShouldSucceed() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
@@ -761,130 +747,30 @@ class IssueServiceTest {
     }
 
     @Test
-    void statusTransition_InProgressToReopened_ShouldFail() {
+    void statusTransition_InProgressToSameStatus_ShouldSucceed() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-
-        assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.REOPENED));
-    }
-
-    // Valid transitions from RESOLVED
-    @Test
-    void statusTransition_ResolvedToClosed_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        IssueComment result = issueService.addComment("ISS001", "Closing resolved", "USR001", IssueStatus.CLOSED);
+        IssueComment result = issueService.addComment("ISS001", "Sigue en curso", "USR001", IssueStatus.IN_PROGRESS);
 
         assertNotNull(result);
-    }
-
-    @Test
-    void statusTransition_ResolvedToReopened_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        IssueComment result = issueService.addComment("ISS001", "Reopening", "USR001", IssueStatus.REOPENED);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    void statusTransition_ResolvedToOpen_ShouldFail() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-
-        assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.OPEN));
-    }
-
-    @Test
-    void statusTransition_ResolvedToInProgress_ShouldFail() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.RESOLVED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-
-        assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.IN_PROGRESS));
-    }
-
-    // Valid transitions from REOPENED
-    @Test
-    void statusTransition_ReopenedToInProgress_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        IssueComment result = issueService.addComment("ISS001", "Working again", "USR001", IssueStatus.IN_PROGRESS);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    void statusTransition_ReopenedToResolved_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        IssueComment result = issueService.addComment("ISS001", "Fixed again", "USR001", IssueStatus.RESOLVED);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    void statusTransition_ReopenedToClosed_ShouldSucceed() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        IssueComment result = issueService.addComment("ISS001", "Closing", "USR001", IssueStatus.CLOSED);
-
-        assertNotNull(result);
-    }
-
-    @Test
-    void statusTransition_ReopenedToOpen_ShouldFail() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.REOPENED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-
-        assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.OPEN));
+        assertEquals(IssueStatus.IN_PROGRESS, result.getStatus());
     }
 
     // Valid transitions from CLOSED
     @Test
-    void statusTransition_ClosedToReopened_ShouldSucceed() {
+    void statusTransition_ClosedToOpen_ShouldSucceed() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        IssueComment result = issueService.addComment("ISS001", "Reopening", "USR001", IssueStatus.REOPENED);
+        IssueComment result = issueService.addComment("ISS001", "Reopening", "USR001", IssueStatus.OPEN);
 
         assertNotNull(result);
-        assertEquals(IssueStatus.REOPENED, result.getStatus());
-    }
-
-    @Test
-    void statusTransition_ClosedToOpen_ShouldFail() {
-        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
-        when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
-        when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
-
-        BadRequestException ex = assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.OPEN));
-        assertEquals("Invalid issue status transition: CLOSED -> OPEN", ex.getMessage());
+        assertEquals(IssueStatus.OPEN, result.getStatus());
     }
 
     @Test
@@ -898,13 +784,16 @@ class IssueServiceTest {
     }
 
     @Test
-    void statusTransition_ClosedToResolved_ShouldFail() {
+    void statusTransition_ClosedToSameStatus_ShouldSucceed() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("USR001")).thenReturn(Optional.of(User.builder().id("USR001").build()));
+        when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThrows(BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Invalid", "USR001", IssueStatus.RESOLVED));
+        IssueComment result = issueService.addComment("ISS001", "No status change", "USR001", IssueStatus.CLOSED);
+
+        assertNotNull(result);
+        assertEquals(IssueStatus.CLOSED, result.getStatus());
     }
 
     // ==================== Issue Products Tests ====================
@@ -1038,5 +927,41 @@ class IssueServiceTest {
 
         assertNotNull(result);
         verify(mailService, never()).sendIssueCommentAdded(any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    // ==================== List Issues Tests ====================
+
+    private static Stream<Arguments> provideListIssuesFilters() {
+        return Stream.of(
+            Arguments.of(new IssueFilter(null, null, null, null, null, null, null), "all nulls"),
+            Arguments.of(new IssueFilter("search-term", null, null, null, null, null, null), "query"),
+            Arguments.of(new IssueFilter(null, null, "Test Title", null, null, null, null), "title")
+        );
+    }
+
+    @ParameterizedTest(name = "listIssues with filter: {1}")
+    @MethodSource("provideListIssuesFilters")
+    void listIssues_ShouldDelegateToRepository(IssueFilter filter, @SuppressWarnings("unused") String description) {
+        Pageable pageable = mock(Pageable.class);
+        Page<Issue> page = mock(Page.class);
+        when(issueRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<Issue> result = issueService.listIssues(filter, pageable);
+
+        assertSame(page, result);
+        verify(issueRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    void listIssues_WithStatuses_ShouldFilterByStatuses() {
+        IssueFilter filter = new IssueFilter(null, null, null, null, List.of(IssueStatus.OPEN, IssueStatus.IN_PROGRESS), null, null);
+        Pageable pageable = mock(Pageable.class);
+        Page<Issue> page = mock(Page.class);
+        when(issueRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        Page<Issue> result = issueService.listIssues(filter, pageable);
+
+        assertSame(page, result);
+        verify(issueRepository).findAll(any(Specification.class), eq(pageable));
     }
 }

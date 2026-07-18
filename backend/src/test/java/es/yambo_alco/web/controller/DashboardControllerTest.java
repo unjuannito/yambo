@@ -132,6 +132,9 @@ class DashboardControllerTest {
                 .id("ACT001")
                 .name("Test Activity")
                 .description("Activity description")
+                .image("/uploads/test-activity.jpg")
+                .location("Test Location")
+                .price(new java.math.BigDecimal("10.00"))
                 .date(LocalDateTime.now())
                 .status(ActivityStatus.PLANNED)
                 .isPublic(true)
@@ -166,7 +169,10 @@ class DashboardControllerTest {
                 .andExpect(jsonPath("$.admin.totalProjects").value(10))
                 .andExpect(jsonPath("$.admin.totalProducts").value(25))
                 .andExpect(jsonPath("$.admin.recentActivities[0].id").value("ACT001"))
-                .andExpect(jsonPath("$.admin.recentActivities[0].name").value("Test Activity"));
+                .andExpect(jsonPath("$.admin.recentActivities[0].name").value("Test Activity"))
+                .andExpect(jsonPath("$.admin.recentActivities[0].image").value("/uploads/test-activity.jpg"))
+                .andExpect(jsonPath("$.admin.recentActivities[0].location").value("Test Location"))
+                .andExpect(jsonPath("$.admin.recentActivities[0].price").value(10.0));
     }
 
     @Test

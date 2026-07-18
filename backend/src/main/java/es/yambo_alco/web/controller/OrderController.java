@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
+import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.OrderStatus;
@@ -70,6 +71,7 @@ public class OrderController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Page<OrderResponse>> listOrders(
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String orderId,
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) String customerId,
@@ -77,7 +79,7 @@ public class OrderController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
-        Page<Order> orders = orderService.listOrders(orderId, customerName, customerId, status, startDate, endDate, pageable);
+        Page<Order> orders = orderService.listOrders(new OrderFilter(query, orderId, customerName, customerId, status, startDate, endDate), pageable);
         Page<OrderResponse> response = orders.map(order -> {
             List<OrderProduct> products = orderService.getOrderProducts(order.getId());
             return new OrderResponse(order, products, userRepository, productRepository, orderService);
@@ -142,7 +144,7 @@ public class OrderController {
             Pageable pageable) {
         User user = authService.getCurrentUser(true);
 
-        Page<Order> orders = orderService.listOrders(null, null, user.getId(), status, startDate, endDate, pageable);
+        Page<Order> orders = orderService.listOrders(new OrderFilter(null, null, null, user.getId(), status, startDate, endDate), pageable);
         Page<OrderResponse> response = orders.map(order -> {
             List<OrderProduct> products = orderService.getOrderProducts(order.getId());
             return new OrderResponse(order, products, userRepository, productRepository, orderService);

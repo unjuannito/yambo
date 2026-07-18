@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React from "react";
 import LabelComponent from "./LabelComponent";
 import { twMerge } from "tailwind-merge";
@@ -41,12 +42,14 @@ function Toggle({ className = "", ...props }: any) {
 
 export default function CheckboxComponent({
   label,
-  description = "Mostrar solo los habilitados",
+  description,
   className = "",
   variantType = "checkbox",
   variant = "right",
   ...props
 }: CheckboxProps) {
+  const { t } = useTranslation();
+  const effectiveDescription = description ?? t("component.filterEnabled");
   const CheckboxInput = variantType === "checkbox" ? Checkbox : Toggle;
 
   if (!label) return <CheckboxInput className={className} {...props} />;
@@ -106,7 +109,7 @@ export default function CheckboxComponent({
           {label}
         </span>
         {description && variant.includes("description") && (
-          <span className={descClass[variant]}>{description}</span>
+          <span className={descClass[variant]}>{effectiveDescription}</span>
         )}
       </div>
       <CheckboxInput className={inputClass[variant]} {...props} />

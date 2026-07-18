@@ -1,4 +1,5 @@
 import React, { Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import SummaryCards from "~/components/dashboard/home/SummaryCards";
 import RecentActivitiesList from "~/components/dashboard/home/RecentActivitiesList";
 import { ADMIN_CARDS } from "~/data/summaries";
@@ -16,6 +17,7 @@ interface AdminStatsSectionProps {
 }
 
 export default function AdminStatsSection({ data, reportSnapshot }: AdminStatsSectionProps) {
+    const { t } = useTranslation();
     const { hasPermission } = useAuth();
 
     const hasAnyAdminPerm =
@@ -36,18 +38,19 @@ export default function AdminStatsSection({ data, reportSnapshot }: AdminStatsSe
     };
 
     return (
-        <div className="space-y-8">
-            <div className="border-t-2 border-yambo-green-200 pt-8">
-                <h2 className="text-2xl font-extrabold font-display text-yambo-black mb-6 flex items-center gap-3">
-                    <span className="inline-block w-2 h-8 rounded-full bg-gradient-to-b from-yambo-green-400 to-yambo-green-600" />
-                    Administración
+        <div className="space-y-4">
+            <div className="border-t border-yambo-green-200 pt-4">
+                <h2 className="text-base font-bold font-display text-yambo-black mb-3 flex items-center gap-2">
+                    <span className="inline-block w-1.5 h-4 rounded-full bg-gradient-to-b from-yambo-green-400 to-yambo-green-600" />
+                    {t('dashboard.adminSection')}
                 </h2>
 
-                <div className="space-y-8">
+                <div className="space-y-4">
                     <SummaryCards
                         cards={ADMIN_CARDS}
                         counts={counts}
-                        title="Resumen de la plataforma"
+                        title={t('dashboard.platformSummary')}
+                        columns={3}
                     />
 
                     {reportSnapshot && (

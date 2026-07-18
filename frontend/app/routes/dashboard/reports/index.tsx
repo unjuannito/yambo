@@ -51,17 +51,13 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
 const ISSUE_STATUS_LABELS: Record<string, string> = {
     OPEN: "Abierto",
     IN_PROGRESS: "En Progreso",
-    RESOLVED: "Resuelto",
     CLOSED: "Cerrado",
-    REOPENED: "Reabierto",
 };
 
 const ISSUE_STATUS_COLORS: Record<string, string> = {
     OPEN: "#ffa07a",
     IN_PROGRESS: "#4ecdc4",
-    RESOLVED: "#33a35e",
     CLOSED: "#6b7280",
-    REOPENED: "#906bac",
 };
 
 const ORDER_PRODUCT_STATUS_COLORS: Record<string, string> = {
@@ -98,7 +94,7 @@ export default function ReportsPage() {
     } = useReportData();
 
     return (
-        <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+        <main className="flex flex-col p-4 md:p-6 w-full">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black flex items-center gap-3">
@@ -106,7 +102,7 @@ export default function ReportsPage() {
                             icon={faChartLine}
                             className="text-yambo-green-500"
                         />
-                        Informes 📊
+                        Informes
                     </h1>
                     <p className="text-gray-400 mt-1">
                         Analíticas y métricas de la plataforma

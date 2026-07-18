@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BurgerButton } from "~/components/common/BurgerButton";
 import { fireConfettiAt } from "~/utils/confetti";
 
 export default function Header() {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoSpinning, setLogoSpinning] = useState(false);
   const [showLogoMessage, setShowLogoMessage] = useState(false);
@@ -10,11 +12,11 @@ export default function Header() {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const links = [
-    { label: "Inicio", href: "/" },
-    { label: "Proyectos", href: "/proyectos" },
-    { label: "Actividades", href: "/actividades" },
-    { label: "Monitores", href: "/monitores" },
-    { label: "Contacto", href: "/contacto" },
+    { label: t('nav.home'), href: "/" },
+    { label: t('nav.projects'), href: "/proyectos" },
+    { label: t('nav.activities'), href: "/actividades" },
+    { label: t('nav.crew'), href: "/monitores" },
+    { label: t('nav.contact'), href: "/contacto" },
   ];
 
   function handleLogoClick(e: React.MouseEvent) {
@@ -42,22 +44,21 @@ export default function Header() {
   }
 
   return (
-    <header className="w-full glass fixed top-0 z-50 border-b border-white/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+    <header className="w-full glass sticky top-0 z-50 border-b border-white/20">
+      <div className="max-w-8xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         <a
-          href="#"
-          className="relative flex items-center space-x-2 group"
+          href="/"
+          className="relative flex items-center space-x-1.5 sm:space-x-2 group shrink-0"
           onClick={handleLogoClick}
         >
           <img
             src="/logo.png"
             alt="Yambo logo"
-            className={`h-9 w-auto transition-transform duration-300 group-hover:scale-110 ${logoSpinning ? "ee-spin" : ""}`}
+            className={`h-8 sm:h-9 w-auto transition-transform duration-300 group-hover:scale-110 ${logoSpinning ? "ee-spin" : ""}`}
           />
-          <span className="text-2xl font-bold gradient-text font-display">Yambo</span>
           {showLogoMessage && (
             <span className="ee-message ee-slide-down text-sm bg-gradient-to-r from-yambo-green-500 to-yambo-purple-500 text-white px-4 py-1.5 rounded-full shadow-lg mt-2 font-semibold">
-              ¡Yambo te quiere! ❤️
+              ¡Yambo te quiere!
             </span>
           )}
         </a>
@@ -67,7 +68,7 @@ export default function Header() {
             <a
               key={link.label}
               href={link.href}
-              className="px-3 py-2 text-gray-600 hover:text-yambo-black font-medium rounded-full hover:bg-yambo-green-50 transition-all duration-200 underline-grow"
+              className="px-3 py-2 text-gray-600 hover:text-yambo-black font-medium rounded-full transition-all duration-200 underline-grow"
             >
               {link.label}
             </a>
@@ -76,7 +77,7 @@ export default function Header() {
             href="/mi-espacio"
             className="ml-3 px-5 py-2 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full font-semibold hover:shadow-lg hover:shadow-yambo-green-200 transition-all duration-200 whitespace-nowrap hover-pop"
           >
-            Acceder
+            {t('auth.login')}
           </a>
         </nav>
 
@@ -92,6 +93,7 @@ export default function Header() {
         <div
           className="fixed inset-0 bg-yambo-black/40 backdrop-blur-sm z-40"
           onClick={() => setMenuOpen(false)}
+          role="presentation"
         />
       )}
 
@@ -105,16 +107,15 @@ export default function Header() {
         onClick={(e) => e.stopPropagation()}
       >
         <nav className="space-y-2">
-          <a href="#" className="flex items-center space-x-2 mb-6">
+          <a href="/" className="flex items-center space-x-2 mb-6">
             <img src="/logo.png" alt="Yambo logo" className="h-9 w-auto" />
-            <span className="text-2xl font-bold gradient-text font-display">Yambo</span>
           </a>
 
           {links.map(link => (
             <a
               key={link.label}
               href={link.href}
-              className="block text-gray-600 hover:text-yambo-black hover:bg-yambo-green-50 px-4 py-2.5 rounded-xl font-medium transition-all duration-200"
+              className="block text-gray-600 hover:text-yambo-black px-4 py-2.5 rounded-xl font-medium transition-all duration-200"
               onClick={() => setMenuOpen(false)}
             >
               {link.label}
@@ -126,7 +127,7 @@ export default function Header() {
               className="block w-full px-4 py-2.5 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full text-center font-semibold shadow-md"
               onClick={() => setMenuOpen(false)}
             >
-              Acceder
+              {t('auth.login')}
             </a>
           </div>
         </nav>

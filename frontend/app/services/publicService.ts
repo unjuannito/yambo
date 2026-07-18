@@ -96,6 +96,10 @@ export class PublicService extends ApiService {
     public async getPublicActivities(): Promise<Activity[]> {
         return await this.get('/public/activities');
     }
+
+    public async getPublicActivity(id: string): Promise<Activity> {
+        return await this.get(`/public/activities/${encodeURIComponent(id)}`);
+    }
 }
 
 export const publicService = new PublicService();

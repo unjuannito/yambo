@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { StaffMember } from "~/services/publicService";
 import { projectColor } from "~/utils/projectColor";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -11,6 +12,7 @@ interface MonitorCardProps {
 }
 
 export default function MonitorCard({ monitor, roleLabel, projectName }: MonitorCardProps) {
+    const { t } = useTranslation();
     const [isFlipped, setIsFlipped] = useState(false);
     const hasFunFact = !!monitor.funFact;
 
@@ -80,13 +82,13 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
 
                 {/* Back face */}
                 <div className="ee-card-back rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-yambo-green-500 to-yambo-purple-500 text-white flex flex-col items-center justify-center p-6 text-center">
-                    <div className="text-5xl mb-4">🤫</div>
+                    <div className="text-4xl mb-4">...</div>
                     <h3 className="text-lg font-bold mb-2">{monitor.name}</h3>
                     <p className="text-base leading-relaxed opacity-90">
                         {monitor.funFact}
                     </p>
                     <p className="text-xs mt-6 opacity-50">
-                        Doble clic para volver
+                        {t('common.close')}
                     </p>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { settingsService } from "~/services/settingsService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -16,6 +17,7 @@ export default function PaymentInstructions({
     totalAmount,
     onClose,
 }: PaymentInstructionsProps) {
+    const { t } = useTranslation();
     const [iban, setIban] = useState<string>("");
     const [legalName, setLegalName] = useState<string>("");
     const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function PaymentInstructions({
 
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
-        toast.success(`${label} copiado al portapapeles`);
+        toast.success(`${label} ${t('common.copied')}`);
     };
 
     if (loading) {
@@ -68,7 +70,7 @@ export default function PaymentInstructions({
                     <div className="text-center py-12">
                         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-yambo-green-500 mx-auto"></div>
                         <p className="mt-4 text-gray-400">
-                            Cargando información de pago...
+                            {t('orders.loading')}
                         </p>
                     </div>
                 </div>
@@ -88,10 +90,10 @@ export default function PaymentInstructions({
                         />
                     </div>
                     <h2 className="text-2xl font-extrabold font-display text-center">
-                        ¡Pedido realizado con éxito!
+                        {t('orders.orderSuccess') || "¡Pedido realizado con éxito!"}
                     </h2>
                     <p className="text-center text-green-100 mt-2">
-                        ID del pedido: {orderId}
+                        {t('orders.orderNumber')}: {orderId}
                     </p>
                 </div>
 
@@ -105,12 +107,10 @@ export default function PaymentInstructions({
                             />
                             <div>
                                 <h3 className="font-bold text-yambo-black mb-1">
-                                    Instrucciones de pago
+                                    {t('orders.paymentInstructions') || "Instrucciones de pago"}
                                 </h3>
                                 <p className="text-sm text-gray-600">
-                                    Para completar tu pedido, realiza una
-                                    transferencia bancaria con los siguientes
-                                    datos:
+                                    {t('orders.paymentInstructionsDesc') || "Para completar tu pedido, realiza una transferencia bancaria con los siguientes datos:"}
                                 </p>
                             </div>
                         </div>
@@ -123,7 +123,7 @@ export default function PaymentInstructions({
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-gray-400 font-semibold">
-                                        Importe
+                                        {t('orders.totalAmount') || "Importe"}
                                     </p>
                                     <p className="text-3xl font-extrabold font-display text-yambo-black mt-1">
                                         {totalAmount.toFixed(2)} €
@@ -135,11 +135,11 @@ export default function PaymentInstructions({
                                     onClick={() =>
                                         copyToClipboard(
                                             totalAmount.toFixed(2),
-                                            "Importe",
+                                            t('orders.totalAmount') || "Importe",
                                         )
                                     }
                                 >
-                                    Copiar
+                                    {t('common.copy')}
                                 </ButtonComponent>
                             </div>
                         </div>
@@ -150,7 +150,7 @@ export default function PaymentInstructions({
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
                                         <p className="text-sm text-gray-400 font-semibold mb-1">
-                                            Beneficiario
+                                            {t('orders.beneficiary') || "Beneficiario"}
                                         </p>
                                         <p className="text-lg font-bold text-yambo-black">
                                             {legalName}
@@ -162,11 +162,11 @@ export default function PaymentInstructions({
                                         onClick={() =>
                                             copyToClipboard(
                                                 legalName,
-                                                "Beneficiario",
+                                                t('orders.beneficiary') || "Beneficiario",
                                             )
                                         }
                                     >
-                                        Copiar
+                                        {t('common.copy')}
                                     </ButtonComponent>
                                 </div>
                             </div>
@@ -192,7 +192,7 @@ export default function PaymentInstructions({
                                         }
                                         className="ml-2"
                                     >
-                                        Copiar
+                                        {t('common.copy')}
                                     </ButtonComponent>
                                 </div>
                             </div>
@@ -204,7 +204,7 @@ export default function PaymentInstructions({
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                         <p className="text-sm text-yambo-black font-bold">
-                                            Concepto (IMPORTANTE)
+                                            {t('orders.concept') || "Concepto (IMPORTANTE)"}
                                         </p>
                                         <FontAwesomeIcon
                                             icon={faTriangleExclamation}
@@ -215,20 +215,19 @@ export default function PaymentInstructions({
                                         {paymentReference}
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                        Es imprescindible incluir este concepto
-                                        para identificar tu pago
+                                        {t('orders.conceptHint') || "Es imprescindible incluir este concepto para identificar tu pago"}
                                     </p>
                                 </div>
                                 <button
                                     onClick={() =>
                                         copyToClipboard(
                                             paymentReference,
-                                            "Concepto",
+                                            t('orders.concept') || "Concepto",
                                         )
                                     }
                                     className="px-4 py-2 text-sm bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-full hover:from-amber-500 hover:to-amber-600 transition-all font-semibold flex-shrink-0"
                                 >
-                                    Copiar
+                                    {t('common.copy')}
                                 </button>
                             </div>
                         </div>
@@ -237,26 +236,14 @@ export default function PaymentInstructions({
                     {/* Additional Info */}
                     <div className="bg-gray-50/50 rounded-2xl p-5 space-y-2 border border-gray-100">
                         <h4 className="font-bold text-yambo-black">
-                            Información adicional:
+                            {t('orders.additionalInfo') || "Información adicional:"}
                         </h4>
                         <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-                            <li>
-                                El pedido se procesará una vez confirmemos el
-                                pago
-                            </li>
-                            <li>
-                                Recibirás estas instrucciones y actualizaciones
-                                por correo electrónico
-                            </li>
-                            <li>
-                                Puedes consultar el estado de tu pedido en "Mis
-                                Pedidos"
-                            </li>
-                            <li>
-                                Las instrucciones de pago también están
-                                disponibles en la web
-                            </li>
-                            <li>Si tienes dudas, contacta con nosotros</li>
+                            <li>{t('orders.infoProcessed') || "El pedido se procesará una vez confirmemos el pago"}</li>
+                            <li>{t('orders.infoEmail') || "Recibirás estas instrucciones y actualizaciones por correo electrónico"}</li>
+                            <li>{t('orders.infoStatus') || 'Puedes consultar el estado de tu pedido en "Mis Pedidos"'}</li>
+                            <li>{t('orders.infoWeb') || "Las instrucciones de pago también están disponibles en la web"}</li>
+                            <li>{t('orders.infoContact') || "Si tienes dudas, contacta con nosotros"}</li>
                         </ul>
                     </div>
 
@@ -269,13 +256,10 @@ export default function PaymentInstructions({
                             />
                             <div>
                                 <h3 className="font-bold text-yambo-black mb-1">
-                                    Recuerda subir tu justificante de pago
+                                    {t('orders.uploadReceiptReminder') || "Recuerda subir tu justificante de pago"}
                                 </h3>
                                 <p className="text-sm text-gray-600">
-                                    Una vez realizada la transferencia, sube el
-                                    justificante de pago desde{" "}
-                                    <strong>"Mis Pedidos"</strong> para que
-                                    podamos verificar tu pago lo antes posible.
+                                    {t('orders.uploadReceiptHint') || 'Una vez realizada la transferencia, sube el justificante de pago desde <strong>"Mis Pedidos"</strong> para que podamos verificar tu pago lo antes posible.'}
                                 </p>
                             </div>
                         </div>
@@ -289,7 +273,7 @@ export default function PaymentInstructions({
                             onClick={onClose}
                             className="w-full"
                         >
-                            Ir a Mis Pedidos
+                            {t('orders.goToMyOrders') || "Ir a Mis Pedidos"}
                         </ButtonComponent>
                     </div>
                 </div>

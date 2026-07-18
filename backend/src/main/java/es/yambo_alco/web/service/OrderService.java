@@ -3,7 +3,15 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.*;
+import es.yambo_alco.web.model.Issue;
+import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.NotificationPreferences;
+import es.yambo_alco.web.model.Order;
+import es.yambo_alco.web.model.OrderFilter;
+import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.OrderStatusHistory;
+import es.yambo_alco.web.model.Product;
+import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.IssueRepository;
@@ -31,6 +39,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import jakarta.persistence.criteria.Subquery;
 
 @Service
 @RequiredArgsConstructor
@@ -134,25 +144,36 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
-    public Page<Order> listOrders(String orderId, String customerName, String customerId, List<OrderStatus> statuses,
-            LocalDateTime startDate, LocalDateTime endDate,
-            @NonNull Pageable pageable) {
+    public Page<Order> listOrders(OrderFilter filter, @NonNull Pageable pageable) {
         Specification<Order> spec = Specification.where(null);
 
-        if (orderId != null) {
-            spec = spec.and(OrderSpecifications.idContains(orderId));
+        if (filter.query() != null && !filter.query().isBlank()) {
+            String pattern = "%" + filter.query().toLowerCase() + "%";
+            spec = spec.and((root, q, cb) -> {
+                Subquery<String> nameSubquery = q.subquery(String.class);
+                jakarta.persistence.criteria.Root<User> userRoot = nameSubquery.from(User.class);
+                nameSubquery.select(userRoot.get("id"))
+                    .where(cb.like(cb.lower(userRoot.get("name")), pattern));
+                return cb.or(
+                    cb.like(cb.lower(root.get("id")), pattern),
+                    root.get("customerId").in(nameSubquery)
+                );
+            });
         }
-        if (customerName != null) {
-            spec = spec.and(OrderSpecifications.customerNameContains(customerName));
+        if (filter.orderId() != null) {
+            spec = spec.and(OrderSpecifications.idContains(filter.orderId()));
         }
-        if (customerId != null) {
-            spec = spec.and(OrderSpecifications.customerIdEquals(customerId));
+        if (filter.customerName() != null) {
+            spec = spec.and(OrderSpecifications.customerNameContains(filter.customerName()));
         }
-        if (statuses != null && !statuses.isEmpty()) {
-            spec = spec.and(OrderSpecifications.statusIn(statuses));
+        if (filter.customerId() != null) {
+            spec = spec.and(OrderSpecifications.customerIdEquals(filter.customerId()));
         }
-        if (startDate != null || endDate != null) {
-            spec = spec.and(OrderSpecifications.createdBetween(startDate, endDate));
+        if (filter.statuses() != null && !filter.statuses().isEmpty()) {
+            spec = spec.and(OrderSpecifications.statusIn(filter.statuses()));
+        }
+        if (filter.startDate() != null || filter.endDate() != null) {
+            spec = spec.and(OrderSpecifications.createdBetween(filter.startDate(), filter.endDate()));
         }
 
         return orderRepository.findAll(spec, pageable);
@@ -516,7 +537,7 @@ public class OrderService {
 
     private boolean isOpenIssue(Issue issue) {
         IssueStatus status = issue.getStatus();
-        return status == IssueStatus.OPEN || status == IssueStatus.IN_PROGRESS || status == IssueStatus.REOPENED;
+        return status == IssueStatus.OPEN || status == IssueStatus.IN_PROGRESS;
     }
 
     public record PendingOrderEmail(String orderId, OrderStatus newStatus) {}

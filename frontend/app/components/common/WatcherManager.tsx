@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { IssueWatcher, DropWatcher } from "~/types/issueType";
 import { adminUserService } from "~/services/adminUserService";
 import type { User } from "~/types/userType";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
+import { useAuth } from "~/hooks/useAuth";
 
 type Watcher = IssueWatcher | DropWatcher;
 
@@ -15,6 +17,8 @@ interface WatcherManagerProps {
 }
 
 export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: WatcherManagerProps) {
+    const { t } = useTranslation();
+    const { user } = useAuth();
     const [query, setQuery] = useState("");
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [userSuggestions, setUserSuggestions] = useState<User[]>([]);
@@ -28,6 +32,8 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
     const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
     const selectedUserLabel = selectedUser ? `${selectedUser.name} · ${selectedUser.email}` : "";
     const normalizedWatchers = watchers.map((watcher) => watcher.email.toLowerCase());
+    const ownEmail = user?.email?.trim().toLowerCase();
+    const isCurrentUserWatcher = ownEmail ? normalizedWatchers.includes(ownEmail) : false;
 
     const mergeUsers = (users: User[][]) => {
         const seen = new Set<string>();
@@ -52,8 +58,8 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
             setSuggestionsLoading(true);
             try {
                 const [byName, byEmail] = await Promise.all([
-                    adminUserService.listUsers({ name: trimmedQuery, size: 8 }),
-                    adminUserService.listUsers({ email: trimmedQuery, size: 8 }),
+                    adminUserService.listUsers({ query: trimmedQuery, size: 8 }),
+                    adminUserService.listUsers({ query: trimmedQuery, size: 8 }),
                 ]);
                 setUserSuggestions(mergeUsers([byName.content, byEmail.content]));
             } catch {
@@ -93,11 +99,11 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
         const selectedEmail = selectedUser ? selectedUser.email : query;
         const trimmed = selectedEmail.trim().toLowerCase();
         if (!isValidEmail(trimmed)) {
-            setError("Introduce un email válido");
+            setError(t("component.watcher.invalidEmail"));
             return;
         }
         if (normalizedWatchers.includes(trimmed)) {
-            setError("Este email ya está en la lista de seguidores");
+            setError(t("component.watcher.alreadyWatcher"));
             return;
         }
         setAddLoading(true);
@@ -106,7 +112,24 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
             setQuery("");
             setSelectedUser(null);
         } catch (err) {
-            setError(getErrorMessage(err, "Error al añadir seguidor"));
+            setError(getErrorMessage(err, t("component.watcher.addError")));
+        } finally {
+            setAddLoading(false);
+        }
+    };
+
+    const handleAddMyself = async () => {
+        setError(null);
+        if (!user?.email) {
+            setError(t("component.watcher.cantIdentify"));
+            return;
+        }
+
+        setAddLoading(true);
+        try {
+            await onAdd(user.email.trim().toLowerCase(), user.id);
+        } catch (err) {
+            setError(getErrorMessage(err, t("component.watcher.addError")));
         } finally {
             setAddLoading(false);
         }
@@ -117,7 +140,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
         try {
             await onRemove(watcherEmail);
         } catch (err) {
-            setError(getErrorMessage(err, "Error al eliminar seguidor"));
+            setError(getErrorMessage(err, t("component.watcher.removeError")));
         } finally {
             setRemoveLoading(null);
         }
@@ -127,9 +150,9 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
         <div className="space-y-4">
             {/* Current watchers */}
             {loading ? (
-                <p className="text-sm text-gray-400">Cargando seguidores...</p>
+                <p className="text-sm text-gray-400">{t("component.watcher.loading")}</p>
             ) : watchers.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">Sin seguidores aún</p>
+                <p className="text-sm text-gray-400 italic">{t("component.watcher.noWatchers")}</p>
             ) : (
                 <ul className="space-y-2">
                     {watchers.map((w) => (
@@ -153,7 +176,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                                 onClick={() => handleRemove(w.email)}
                                 disabled={removeLoading === w.email}
                                 className="text-gray-300 hover:text-red-500 transition-colors shrink-0 text-lg leading-none"
-                                aria-label={`Eliminar seguidor ${w.email}`}
+                                aria-label={t("component.watcher.removeWatcher", { email: w.email })}
                             >
                                 {removeLoading === w.email ? "…" : "×"}
                             </button>
@@ -161,15 +184,29 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                     ))}
                 </ul>
             )}
-
+            <hr className="border-t border-gray-100" />
             {/* Add watcher form */}
-            <div className="border-t border-gray-100 pt-4 space-y-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Añadir seguidor</p>
+            <div className="flex flex-row gap-2">
+                <div className="flex items-center justify-between gap-2">
+                    {/* <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Añadir seguidor</p> */}
+                    {user?.email && !isCurrentUserWatcher && (
+                        <ButtonComponent
+                            type="button"
+                            onClick={handleAddMyself}
+                            isLoading={addLoading}
+                            disabled={addLoading || loading}
+                            variant="neutral"
+                            size="sm"
+                        >
+                            {t("component.watcher.addMe")}
+                        </ButtonComponent>
+                    )}
+                </div>
 
-                <div className="relative" ref={suggestionsRef}>
+                <div className="relative flex-1" ref={suggestionsRef}>
                     <input
                         type="text"
-                        placeholder="Buscar usuario o escribir email..."
+                        placeholder={t("component.watcher.searchPlaceholder")}
                         value={query}
                         onChange={(e) => {
                             const nextValue = e.target.value;
@@ -187,7 +224,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                             type="button"
                             onClick={handleClearUser}
                             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600 text-lg"
-                            aria-label="Quitar usuario seleccionado"
+                            aria-label={t("component.watcher.clearUser")}
                         >
                             ×
                         </button>
@@ -195,7 +232,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                     {(userSuggestions.length > 0 || suggestionsLoading) && (
                         <div className="absolute z-20 mt-1 w-full rounded-xl border border-gray-100 bg-white shadow-lg overflow-hidden">
                             {suggestionsLoading ? (
-                                <p className="px-3 py-2 text-sm text-gray-400">Buscando...</p>
+                                <p className="px-3 py-2 text-sm text-gray-400">{t("component.watcher.searching")}</p>
                             ) : (
                                 userSuggestions.map((user) => (
                                     <button
@@ -218,7 +255,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
 
                 {query.trim() && !selectedUser && isValidEmail(query) && !normalizedWatchers.includes(query.trim().toLowerCase()) && (
                     <p className="text-xs text-gray-500">
-                        Se añadirá como seguidor por email: <span className="font-semibold text-yambo-black">{query.trim().toLowerCase()}</span>
+                        {t("component.watcher.willAddAs")} <span className="font-semibold text-yambo-black">{query.trim().toLowerCase()}</span>
                     </p>
                 )}
 
@@ -230,9 +267,9 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                     disabled={addLoading || !query.trim()}
                     variant="primary"
                     size="sm"
-                    className="w-full"
+                    className="p-0 w-8 h-8 flex rounded-sm items-center justify-center"
                 >
-                    {selectedUser ? "Añadir usuario" : "Añadir seguidor"}
+                    +
                 </ButtonComponent>
             </div>
         </div>

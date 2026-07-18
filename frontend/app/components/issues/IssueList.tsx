@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { Issue } from "~/types/issueType";
 import { issueService } from "~/services/issueService";
 import { IssueStatusBadge } from "./IssueStatusBadge";
@@ -18,6 +19,7 @@ export const IssueList: React.FC<IssueListProps> = ({
     orderedProducts = [],
     onSelectIssue,
 }) => {
+    const { t } = useTranslation();
     const [issues, setIssues] = useState<Issue[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export const IssueList: React.FC<IssueListProps> = ({
             setError(null);
         } catch (err) {
             setError(
-                getErrorMessage(err, "Error al cargar las incidencias"),
+                getErrorMessage(err, t('issues.loading')),
             );
         } finally {
             setLoading(false);
@@ -48,7 +50,7 @@ export const IssueList: React.FC<IssueListProps> = ({
     };
 
     if (loading) {
-        return <div className="text-center py-4 text-gray-400">Cargando incidencias...</div>;
+        return <div className="text-center py-4 text-gray-400">{t('issues.loading')}</div>;
     }
 
     return (
@@ -58,13 +60,13 @@ export const IssueList: React.FC<IssueListProps> = ({
             {issues.length === 0 && !showForm ? (
                 <div className="bg-yambo-green-50/30 rounded-2xl p-8 text-center border border-gray-100">
                     <p className="text-gray-400 mb-4">
-                        No hay incidencias reportadas para este pedido
+                        {t('issues.noIssues')}
                     </p>
                     <ButtonComponent
                         onClick={() => setShowForm(true)}
                         variant="primary"
                     >
-                        Reportar incidencia
+                        {t('issues.createIssue')}
                     </ButtonComponent>
                 </div>
             ) : (
@@ -72,13 +74,13 @@ export const IssueList: React.FC<IssueListProps> = ({
                     {issues.length > 0 && (
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold font-display text-yambo-black">
-                                Incidencias reportadas ({issues.length})
+                                {t('issues.title')} ({issues.length})
                             </h2>
                             <ButtonComponent
                                 onClick={() => setShowForm(!showForm)}
                                 variant="primary"
                             >
-                                {showForm ? "Cancelar" : "Nueva incidencia"}
+                                {showForm ? t('common.cancel') : t('issues.createIssue')}
                             </ButtonComponent>
                         </div>
                     )}
@@ -99,6 +101,9 @@ export const IssueList: React.FC<IssueListProps> = ({
                                     onClick={() =>
                                         onSelectIssue && onSelectIssue(issue.id)
                                     }
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectIssue?.(issue.id); } }}
+                                    role="button"
+                                    tabIndex={0}
                                     className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
                                 >
                                     <div className="flex justify-between items-start mb-2">
@@ -113,7 +118,7 @@ export const IssueList: React.FC<IssueListProps> = ({
                                         {issue.description}
                                     </p>
                                     <div className="flex justify-between text-xs text-gray-400">
-                                        <span>ID: {issue.id}</span>
+                                        <span>{t('common.id')}: {issue.id}</span>
                                         <span>
                                             {new Date(
                                                 issue.createdAt,

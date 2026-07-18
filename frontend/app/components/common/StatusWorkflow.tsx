@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 interface StatusConfig {
   label: string;
   shortLabel?: string;
@@ -34,7 +36,18 @@ export function StatusWorkflow({
   config,
   transitions,
 }: StatusWorkflowProps) {
+  const { t } = useTranslation();
   const { flow, terminal } = deriveFlow(transitions);
+
+  const primaryEdges = new Set(
+    flow.slice(0, -1).map((from, idx) => `${from}->${flow[idx + 1]}`),
+  );
+
+  const extraEdges = Object.entries(transitions).flatMap(([from, toList]) =>
+    toList
+      .filter((to) => !primaryEdges.has(`${from}->${to}`))
+      .map((to) => ({ from, to })),
+  );
 
   return (
     <div className="mb-5 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -74,6 +87,23 @@ export function StatusWorkflow({
           </>
         )}
       </div>
+      {extraEdges.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <span className="font-semibold text-gray-400">{t("component.statusWorkflow.actions")}</span>
+          {extraEdges.map((edge) => {
+            const fromLabel = config[edge.from]?.shortLabel ?? config[edge.from]?.label ?? edge.from;
+            const toLabel = config[edge.to]?.shortLabel ?? config[edge.to]?.label ?? edge.to;
+            return (
+              <span
+                key={`${edge.from}->${edge.to}`}
+                className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1"
+              >
+                {fromLabel} -&gt; {toLabel}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -152,3 +152,68 @@ export function contactPageJsonLd(opts: {
         inLanguage: "es",
     };
 }
+
+/* ── Activity (Event) ────────────────────────────────────────────── */
+
+const STATUS_TO_SCHEMA: Record<string, string> = {
+    PLANNED: "EventScheduled",
+    OPEN_REGISTRATION: "EventScheduled",
+    REGISTRATION_CLOSED: "EventScheduled",
+    CLOSED: "EventCompleted",
+    CANCELLED: "EventCancelled",
+};
+
+export function activityJsonLd(
+    activity: Activity,
+    siteUrl: string,
+) {
+    const now = new Date();
+    const activityDate = activity.date ? new Date(activity.date) : null;
+    const isPast = activityDate ? activityDate < now : false;
+    const eventStatus = STATUS_TO_SCHEMA[activity.status?.value ?? "PLANNED"] ?? "EventScheduled";
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        name: activity.name,
+        description: activity.description ?? "",
+        url: `${siteUrl}/actividades/${activity.id}`,
+        ...(activity.date ? { startDate: activity.date } : {}),
+        ...(activity.endDate ? { endDate: activity.endDate } : {}),
+        eventStatus: `https://schema.org/${eventStatus}`,
+        eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+        ...(activity.location
+            ? {
+                  location: {
+                      "@type": "Place",
+                      name: activity.location,
+                      address: {
+                          "@type": "PostalAddress",
+                          addressLocality: "Alcobendas",
+                          addressRegion: "Madrid",
+                          addressCountry: "ES",
+                      },
+                  },
+              }
+            : {}),
+        ...(activity.price != null
+            ? {
+                  offers: {
+                      "@type": "Offer",
+                      price: activity.price,
+                      priceCurrency: "EUR",
+                      availability: isPast
+                          ? "https://schema.org/SoldOut"
+                          : "https://schema.org/InStock",
+                  },
+              }
+            : {}),
+        ...(activity.image ? { image: activity.image } : {}),
+        organizer: {
+            "@type": "NGO",
+            name: "Yambo",
+            url: siteUrl,
+        },
+        inLanguage: "es",
+    };
+}

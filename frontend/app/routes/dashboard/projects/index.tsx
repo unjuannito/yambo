@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
@@ -13,6 +14,12 @@ import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import FileUploader from "~/components/common/FileUploader";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faCalendarDays,
+    faPenToSquare,
+    faTrashCan,
+} from "@fortawesome/free-solid-svg-icons";
 
 export function meta() {
     return [
@@ -34,6 +41,7 @@ type ProjectForm = {
 const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false, signatureColor: "" };
 
 export default function Projects() {
+    const { t } = useTranslation();
     const { hasPermission } = useAuth();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,11 +69,11 @@ export default function Projects() {
             const response = await projectService.listProjects(0, 200);
             setProjects(response.content);
         } catch (err) {
-            setError(getErrorMessage(err, "¡Los proyectos se hacen de rogar!"));
+            setError(getErrorMessage(err, t("projects.loadError")));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         void loadProjects();
@@ -90,7 +98,7 @@ export default function Projects() {
 
     const handleSave = async () => {
         if (!form.name.trim()) {
-            toast.error("¡El nombre no puede estar vacío!");
+            toast.error(t("projects.nameRequired"));
             return;
         }
         try {
@@ -105,7 +113,7 @@ export default function Projects() {
                     featured: form.featured,
                     signatureColor: form.signatureColor || null,
                 });
-                toast.success("Proyecto actualizado correctamente");
+                toast.success(t("projects.updated"));
             } else {
                 await projectService.createProject({
                     name: form.name,
@@ -116,12 +124,12 @@ export default function Projects() {
                     featured: form.featured,
                     signatureColor: form.signatureColor || null,
                 });
-                toast.success("Proyecto creado correctamente");
+                toast.success(t("projects.created"));
             }
             resetForm();
             await loadProjects();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El proyecto se nos rebeló! No pudimos guardarlo"));
+            toast.error(getErrorMessage(err, t("projects.saveError")));
         } finally {
             setSaving(false);
         }
@@ -147,7 +155,7 @@ export default function Projects() {
             const data = await projectService.listGroups(projectId);
             setGroups(data);
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
+            toast.error(getErrorMessage(err, t("projects.groupsLoadError")));
         }
     };
 
@@ -158,9 +166,9 @@ export default function Projects() {
             const created = await projectService.createGroup(editing, newGroupName.trim());
             setGroups((prev) => [...prev, created]);
             setNewGroupName("");
-            toast.success("Grupo creado");
+            toast.success(t("projects.groupCreated"));
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El grupo se nos complica!"));
+            toast.error(getErrorMessage(err, t("projects.groupCreateError")));
         } finally {
             setSavingGroup(false);
         }
@@ -174,9 +182,9 @@ export default function Projects() {
             setGroups((prev) => prev.map((g) => (g.id === groupId ? updated : g)));
             setEditingGroupId(null);
             setEditingGroupName("");
-            toast.success("Grupo actualizado");
+            toast.success(t("projects.groupUpdated"));
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El grupo no coopera con la actualización!"));
+            toast.error(getErrorMessage(err, t("projects.groupUpdateError")));
         } finally {
             setSavingGroup(false);
         }
@@ -184,45 +192,46 @@ export default function Projects() {
 
     const handleDeleteGroup = async (groupId: string, groupName: string) => {
         if (!editing) return;
-        if (!confirm(`¿Eliminar el grupo "${groupName}"?`)) return;
+        if (!confirm(t("projects.confirmDeleteGroup", { name: groupName }))) return;
         try {
             await projectService.deleteGroup(editing, groupId);
             setGroups((prev) => prev.filter((g) => g.id !== groupId));
-            toast.success("Grupo eliminado");
+            toast.success(t("projects.groupDeleted"));
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El grupo se aferra a la vida!"));
+            toast.error(getErrorMessage(err, t("projects.groupDeleteError")));
         }
     };
 
     const handleDelete = async (project: Project) => {
-        if (!confirm(`¿Eliminar el proyecto "${project.name}"?`)) return;
+        if (!confirm(t("projects.confirmDelete", { name: project.name }))) return;
         try {
             await projectService.deleteProject(project.id);
-            toast.success("Proyecto eliminado correctamente");
+            toast.success(t("projects.deleted"));
             await loadProjects();
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El proyecto se aferra a la vida!"));
+            toast.error(getErrorMessage(err, t("projects.deleteError")));
         }
     };
 
     const columns: FilterableColumn<Project>[] = useMemo(() => [
         {
             key: "name",
-            header: "Nombre",
+            header: t("common.name"),
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Buscar por nombre...",
+                placeholder: t("projects.searchByName"),
             },
             render: (project) => <span className="font-medium text-yambo-black">{project.name}</span>,
         },
         {
             key: "season",
-            header: "Temporada",
+            header: t("common.season"),
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Temporada...",
+                placeholder: t("projects.seasonFilter"),
             },
             render: (project) => (
                 <span className="text-sm text-gray-400">{project.season || "-"}</span>
@@ -230,7 +239,8 @@ export default function Projects() {
         },
         {
             key: "active",
-            header: "Activo",
+            header: t("common.active"),
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "checkbox",
@@ -239,13 +249,14 @@ export default function Projects() {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     project.active ? "bg-yambo-green-50 text-yambo-green-700" : "bg-coral/10 text-coral"
                 }`}>
-                    {project.active ? "Activo" : "Inactivo"}
+                    {project.active ? t("common.active") : t("common.inactive")}
                 </span>
             ),
         },
         {
             key: "featured" as keyof Project,
-            header: "Destacado",
+            header: t("common.featured"),
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "checkbox",
@@ -254,13 +265,14 @@ export default function Projects() {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     project.featured ? "bg-gold/20 text-yellow-800" : "bg-gray-100 text-gray-500"
                 }`}>
-                    {project.featured ? "Sí" : "No"}
+                    {project.featured ? t("common.yes") : t("common.no")}
                 </span>
             ),
         },
         {
             key: "id",
-            header: "Acciones",
+            header: t("common.actions"),
+            requiredPerms: [{ obj: "project", action: "update" }],
             render: (project) => (
                 <div className="flex gap-2">
                     {canUpdate && (
@@ -269,7 +281,8 @@ export default function Projects() {
                             size="sm"
                             onClick={() => startEdit(project)}
                         >
-                            Editar
+                            <span className="sm:hidden"><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></span>
+                            <span className="hidden sm:inline">{t("common.edit")}</span>
                         </ButtonComponent>
                     )}
                     {canDelete && (
@@ -278,22 +291,23 @@ export default function Projects() {
                             size="sm"
                             onClick={() => handleDelete(project)}
                         >
-                            Eliminar
+                            <span className="sm:hidden"><FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" /></span>
+                            <span className="hidden sm:inline">{t("common.delete")}</span>
                         </ButtonComponent>
                     )}
                 </div>
             ),
         },
-    ], [canDelete, canUpdate]);
+    ], [canDelete, canUpdate, t]);
 
     return (
         <RequirePermission permission={{ obj: "project", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Proyectos</h1>
+            <main className="flex flex-col p-4 md:p-6 w-full">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">{t("projects.title")}</h1>
                     {canCreate && (
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
-                            + Nuevo Proyecto
+                            + {t("projects.createNew")}
                         </ButtonComponent>
                     )}
                 </div>
@@ -301,7 +315,7 @@ export default function Projects() {
                 <section className="bg-white rounded-2xl border border-gray-100 p-6">
                     {loading ? (
                         <div className="flex justify-center py-8">
-                            <LoadingSpinner size="md" message="Cargando proyectos..." />
+                            <LoadingSpinner size="md" message={t("projects.loading")} />
                         </div>
                     ) : error ? (
                         <ErrorMessage message={error} onRetry={loadProjects} />
@@ -311,8 +325,41 @@ export default function Projects() {
                             keyField="id"
                             data={projects}
                             display={{
-                                emptyMessage: "No se encontraron proyectos",
-                                loadingMessage: "Cargando proyectos...",
+                                emptyMessage: t("projects.noProjects"),
+                                loadingMessage: t("projects.loading"),
+                                renderMobileCard: (project: Project) => (
+                                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <span className="font-bold text-yambo-black text-sm leading-tight line-clamp-2 flex-1">{project.name}</span>
+                                            <div className="flex gap-1 shrink-0">
+                                                {!project.active && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-coral/10 text-coral">Inactivo</span>
+                                                )}
+                                                {project.featured && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gold/20 text-yellow-800">Destacado</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {project.season && (
+                                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                                                <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3 text-gray-400" />
+                                                Temporada: {project.season}
+                                            </div>
+                                        )}
+                                        <div className="flex gap-1.5 pt-1">
+                                            <button
+                                                onClick={() => startEdit(project)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                                                title={t("common.edit")}
+                                            ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
+                                            <button
+                                                onClick={() => handleDelete(project)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                                title={t("common.delete")}
+                                            ><FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                    </div>
+                                ),
                             }}
                             features={{
                                 enablePagination: false,
@@ -324,7 +371,7 @@ export default function Projects() {
                 <Modal
                     isOpen={isModalOpen}
                     onClose={resetForm}
-                    title={editing ? "Editar Proyecto" : "Nuevo Proyecto"}
+                    title={editing ? t("projects.editTitle") : t("projects.newTitle")}
                     footer={
                         <>
                             <ButtonComponent
@@ -332,33 +379,33 @@ export default function Projects() {
                                 variant="neutral"
                                 disabled={saving}
                             >
-                                Cancelar
+                                {t("common.cancel")}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleSave}
                                 variant="primary"
                                 disabled={saving}
                             >
-                                {saving ? "Guardando..." : (editing ? "Guardar Cambios" : "Crear")}
+                                {saving ? t("common.saving") : (editing ? t("common.saveChanges") : t("common.create"))}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="grid gap-4">
                         <InputComponent
-                            label="Nombre"
+                            label={t("common.name")}
                             value={form.name}
                             onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                         />
                         <InputComponent
-                            label="Temporada"
+                            label={t("common.season")}
                             value={form.season}
                             onChange={(e) => setForm((prev) => ({ ...prev, season: e.target.value }))}
                         />
                         <FileUploader
                             compact
                             multiple={false}
-                            label="Imagen del proyecto"
+                            label={t("projects.image")}
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             onUpload={(file) =>
                                 setForm((prev) => ({ ...prev, image: file.url }))
@@ -368,39 +415,39 @@ export default function Projects() {
                             <div className="mt-2">
                                 <img
                                     src={form.image}
-                                    alt="Vista previa"
+                                    alt={t("projects.preview")}
                                     className="h-20 w-20 object-cover rounded-xl border border-gray-100"
                                 />
                             </div>
                         )}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("common.description")}</label>
                             <textarea
                                 className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-y"
                                 rows={3}
                                 maxLength={1000}
                                 value={form.description}
-                                placeholder="Descripción del proyecto..."
+                                placeholder={t("projects.descriptionPlaceholder")}
                                 onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
                             />
                             <p className="text-xs text-gray-400 text-right mt-1">{form.description.length}/1000</p>
                         </div>
                         <div className="flex gap-6">
                             <CheckboxComponent
-                                label="Activo"
+                                label={t("common.active")}
                                 variant="left"
                                 checked={form.active}
                                 onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))}
                             />
                             <CheckboxComponent
-                                label="Destacado en la página principal"
+                                label={t("projects.featuredOnHome")}
                                 variant="left"
                                 checked={form.featured}
                                 onChange={(e) => setForm((prev) => ({ ...prev, featured: e.target.checked }))}
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Color identificativo</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("projects.signatureColor")}</label>
                             <div className="flex items-center gap-3">
                                 <input
                                     type="color"
@@ -427,7 +474,7 @@ export default function Projects() {
 
                         {editing && (
                             <div className="border-t border-gray-100 pt-4 mt-2">
-                                <h3 className="text-sm font-semibold text-yambo-black mb-3">Grupos del proyecto</h3>
+                                <h3 className="text-sm font-semibold text-yambo-black mb-3">{t("projects.groupsTitle")}</h3>
 
                                 {/* Existing named groups */}
                                 {groups.filter(g => g.name).length > 0 ? (
@@ -453,14 +500,14 @@ export default function Projects() {
                                                             onClick={() => handleUpdateGroup(group.id)}
                                                             disabled={savingGroup}
                                                         >
-                                                            ✓
+                                                            {t("common.save")}
                                                         </ButtonComponent>
                                                         <ButtonComponent
                                                             variant="neutral"
                                                             size="sm"
                                                             onClick={() => { setEditingGroupId(null); setEditingGroupName(""); }}
                                                         >
-                                                            ✗
+                                                            {t("common.cancel")}
                                                         </ButtonComponent>
                                                     </>
                                                 ) : (
@@ -474,7 +521,7 @@ export default function Projects() {
                                                                 size="sm"
                                                                 onClick={() => { setEditingGroupId(group.id); setEditingGroupName(group.name ?? ''); }}
                                                             >
-                                                                Editar
+                                                                {t("common.edit")}
                                                             </ButtonComponent>
                                                         )}
                                                         {canDelete && (
@@ -483,7 +530,7 @@ export default function Projects() {
                                                                 size="sm"
                                                                 onClick={() => handleDeleteGroup(group.id, group.name ?? '')}
                                                             >
-                                                                Eliminar
+                                                                {t("common.delete")}
                                                             </ButtonComponent>
                                                         )}
                                                     </>
@@ -492,7 +539,7 @@ export default function Projects() {
                                         ))}
                                     </ul>
                                 ) : (
-                                    <p className="text-sm text-gray-400 italic mb-3">Sin grupos</p>
+                                    <p className="text-sm text-gray-400 italic mb-3">{t("projects.noGroups")}</p>
                                 )}
 
                                 {/* Add new group */}
@@ -501,7 +548,7 @@ export default function Projects() {
                                         <input
                                             type="text"
                                             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
-                                            placeholder="Nombre del nuevo grupo..."
+                                            placeholder={t("projects.newGroupPlaceholder")}
                                             value={newGroupName}
                                             onChange={(e) => setNewGroupName(e.target.value)}
                                             onKeyDown={(e) => { if (e.key === "Enter") handleAddGroup(); }}
@@ -512,7 +559,7 @@ export default function Projects() {
                                             onClick={handleAddGroup}
                                             disabled={savingGroup || !newGroupName.trim()}
                                         >
-                                            + Añadir
+                                            {t("projects.addGroup")}
                                         </ButtonComponent>
                                     </div>
                                 )}

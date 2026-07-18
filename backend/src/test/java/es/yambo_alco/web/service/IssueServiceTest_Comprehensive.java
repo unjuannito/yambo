@@ -436,14 +436,14 @@ class IssueServiceTest_Comprehensive {
                 .id(UUID.randomUUID())
                 .issueId("ISS001")
                 .text("Fixed")
-                .status(IssueStatus.RESOLVED)
+            .status(IssueStatus.CLOSED)
                 .build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("COMMENTER01")).thenReturn(Optional.of(commenter));
         when(issueCommentRepository.save(any(IssueComment.class))).thenReturn(savedComment);
 
-        IssueComment result = issueService.addComment("ISS001", "Fixed", "COMMENTER01", IssueStatus.RESOLVED);
+        IssueComment result = issueService.addComment("ISS001", "Fixed", "COMMENTER01", IssueStatus.CLOSED);
 
         assertNotNull(result);
         assertEquals("Fixed", result.getText());
@@ -530,8 +530,8 @@ class IssueServiceTest_Comprehensive {
     }
 
     @Test
-    @DisplayName("Should allow transition from IN_PROGRESS to RESOLVED")
-    void statusTransition_ProgressToResolved_Success() {
+    @DisplayName("Should allow transition from IN_PROGRESS to CLOSED")
+    void statusTransition_ProgressToClosed_Success() {
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
         User commenter = User.builder().id("COMMENTER01").build();
 
@@ -539,27 +539,32 @@ class IssueServiceTest_Comprehensive {
         when(userRepository.findById("COMMENTER01")).thenReturn(Optional.of(commenter));
         when(issueCommentRepository.save(any(IssueComment.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        IssueComment result = issueService.addComment("ISS001", "Fixed", "COMMENTER01", IssueStatus.RESOLVED);
+        IssueComment result = issueService.addComment("ISS001", "Fixed", "COMMENTER01", IssueStatus.CLOSED);
 
         assertNotNull(result);
     }
 
     @Test
-    @DisplayName("Should reject invalid status transition")
+    @DisplayName("Should allow reopening a closed issue")
     void statusTransition_Invalid_Fails() {
-        // CLOSED does not allow transition to OPEN
+        // CLOSED allows transition to OPEN
         Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
         User commenter = User.builder().id("COMMENTER01").build();
+        IssueComment savedComment = IssueComment.builder()
+                .id(UUID.randomUUID())
+                .issueId("ISS001")
+                .text("Reopening")
+                .status(IssueStatus.OPEN)
+                .build();
 
         when(issueRepository.findById("ISS001")).thenReturn(Optional.of(issue));
         when(userRepository.findById("COMMENTER01")).thenReturn(Optional.of(commenter));
+        when(issueCommentRepository.save(any(IssueComment.class))).thenReturn(savedComment);
 
-        assertThrows(
-                BadRequestException.class,
-                () -> issueService.addComment("ISS001", "Reopening", "COMMENTER01", IssueStatus.OPEN)
-        );
+        IssueComment result = issueService.addComment("ISS001", "Reopening", "COMMENTER01", IssueStatus.OPEN);
 
-        verify(issueCommentRepository, never()).save(any());
+        assertNotNull(result);
+        assertEquals(IssueStatus.OPEN, result.getStatus());
     }
 
     // ==================== Comment Retrieval Tests ====================

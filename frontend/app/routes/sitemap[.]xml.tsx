@@ -1,4 +1,5 @@
 import { getActiveProjects } from "~/services/publicService.server";
+import { getPublicActivities } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
 
 /**
@@ -35,6 +36,32 @@ export async function loader() {
         // If the backend is unreachable we still serve the static pages
     }
 
+    // ── Dynamic activity pages ──────────────────────────────────────────
+    let activityEntries: string[] = [];
+    try {
+        const activities = await getPublicActivities();
+        const now = new Date();
+        activityEntries = activities
+            .filter(
+                (a) =>
+                    a.status?.value !== "CANCELLED" &&
+                    a.status?.value !== "CLOSED" &&
+                    a.date &&
+                    new Date(a.date) >= now,
+            )
+            .map(
+                (a) => `
+  <url>
+    <loc>${escapeXml(siteUrl)}/actividades/${escapeXml(a.id)}</loc>
+    <lastmod>${a.date ? new Date(a.date).toISOString().split("T")[0] : ""}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`,
+            );
+    } catch {
+        // Backend unreachable → skip activity entries
+    }
+
     // ── Build XML ───────────────────────────────────────────────────────
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -48,6 +75,7 @@ ${staticPages
     )
     .join("\n")}
 ${projectEntries.join("\n")}
+${activityEntries.join("\n")}
 </urlset>`;
 
     return new Response(xml.trim(), {

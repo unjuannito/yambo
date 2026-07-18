@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import InputComponent from "~/components/common/forms/InputComponent";
 import SelectComponent from "~/components/common/forms/SelectComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
@@ -21,6 +22,7 @@ export function FiltersSection({
   onFiltersChange,
   title,
 }: FiltersSectionProps) {
+  const { t } = useTranslation();
   const mdCols: 1 | 2 = fields.length > 2 ? 2 : (fields.length as 1 | 2);
   const lgCols: 1 | 2 | 3 | 4 =
     fields.length >= 4 ? 4 : (fields.length as 1 | 2 | 3);
@@ -85,7 +87,7 @@ export function FiltersSection({
                 }
                 placeholder={
                   field.placeholder ||
-                  `Buscar ${field.label.toLowerCase()}...`
+                  t("component.filters.searchPlaceholder", { label: field.label.toLowerCase() })
                 }
                 className="block w-full pl-10 pr-3 text-sm py-2 border border-gray-200 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 transition-all duration-200"
                 aria-label={field.label}
@@ -131,7 +133,7 @@ export function FiltersSection({
             options={field.options || []}
             placeholder={
               field.placeholder ??
-              `Seleccionar ${field.label.toLowerCase()}`
+              t("component.filters.selectPlaceholder", { label: field.label.toLowerCase() })
             }
             onChange={(e) => {
               const selectedValues = Array.from(

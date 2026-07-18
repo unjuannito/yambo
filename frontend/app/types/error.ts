@@ -63,7 +63,7 @@ const ERROR_TRANSLATIONS: Record<string, string> = {
   "Email, password and name are required": "¡Necesitamos email, contraseña y nombre!",
   // Products & drops
   "Product name already exists": "¡Ese nombre de producto ya está pillado!",
-  "Family product name already exists": "¡Ese nombre de drop ya está pillado!",
+  "Family product name already exists": "¡Ese nombre de la colección ya está pillado!",
   "Start date must be before end date": "¡La fecha de inicio tiene que ir antes que la de fin!",
   // Issues
   "At least one ordered product is required": "¡Selecciona al menos un producto del pedido!",

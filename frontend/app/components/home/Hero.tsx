@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useKonamiCode } from "~/hooks/useKonamiCode";
 import { fireFireworks } from "~/utils/confetti";
 
@@ -6,87 +7,100 @@ interface HeroProps {
     title?: string;
     subtitle?: string;
     image?: string;
-    loading?: boolean;
 }
 
-const DEFAULT_TITLE = "Vive, Aprende y Crece con Yambo";
-const DEFAULT_SUBTITLE = "La asociación juvenil de Alcobendas para impulsar tu talento y pasiones.";
 const DEFAULT_IMAGE = "/heroImage.jpg";
-const SECRET_TITLE = "¡Has encontrado el secreto de Yambo! 🎉";
-const SECRET_SUBTITLE = "Eres oficialmente un/a Yambero de élite ✨";
 
-export default function Hero({ title, subtitle, image, loading }: HeroProps) {
+export default function Hero({ title, subtitle, image }: HeroProps) {
+    const { t } = useTranslation();
+    const DEFAULT_TITLE = t('home.heroTitle');
+    const DEFAULT_SUBTITLE = t('home.heroSubtitle');
+    const SECRET_TITLE = t('home.secretTitle');
+    const SECRET_SUBTITLE = t('home.secretSubtitle');
     const konamiActivated = useKonamiCode(5000);
     const [showSecret, setShowSecret] = useState(false);
 
     useEffect(() => {
-        if (konamiActivated) {
-            setShowSecret(true);
-            fireFireworks();
-            const timer = setTimeout(() => setShowSecret(false), 5000);
-            return () => clearTimeout(timer);
-        }
+        if (!konamiActivated) return;
+
+        setShowSecret(true);
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        fireFireworks();
+
+        const unlockTimer = setTimeout(() => {
+            document.body.style.overflow = originalOverflow;
+        }, 1500);
+
+        return () => {
+            clearTimeout(unlockTimer);
+            document.body.style.overflow = originalOverflow;
+        };
     }, [konamiActivated]);
+
+
+    useEffect(() => {
+        if (!showSecret) return;
+
+        const secretTimer = setTimeout(() => {
+            setShowSecret(false);
+        }, 5000);
+
+        return () => clearTimeout(secretTimer);
+    }, [showSecret]);
 
     return (
         <section
-            className={`relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden ${showSecret ? "ee-hero-secret" : ""}`}
+            className={`w-full min-h-[calc(100vh-64px)] flex flex-col items-center justify-center text-center px-4 bg-cover bg-center bg-no-repeat overflow-hidden`}
+            style={{
+                backgroundImage: `
+                    linear-gradient(to bottom right,
+                        rgb(0 0 0 / 0.7),
+                        rgb(0 0 0 / 0.5),
+                        rgb(88 28 135 / 0.2)
+                    ),
+                    url(${image || DEFAULT_IMAGE})
+                `,
+            }}
         >
-            {/* Background image */}
-            <img
-                src={image || DEFAULT_IMAGE}
-                className="absolute inset-0 w-full h-full object-cover ee-hero-overlay transition-all duration-500"
-            />
+            {showSecret ? (
+                <>
+                    <h1 className="text-4xl md:text-6xl font-extrabold mb-5 text-white leading-tight transition-all duration-500 font-display scale-110 max-w-3xl">
+                        {SECRET_TITLE}
+                    </h1>
+                    <p className="text-lg md:text-xl mb-8 transition-all duration-500 text-yambo-gold max-w-3xl">
+                        {SECRET_SUBTITLE}
+                    </p>
+                    <p className="text-sm text-white/50 ee-slide-down max-w-3xl">
+                        ↑↑↓↓←→←→BA — ¡Lo lograste!
+                    </p>
+                </>
+            ) : (
+                <>
+                    <h1 className="text-4xl md:text-6xl font-extrabold mb-5 text-white leading-tight transition-all duration-500 font-display fade-up max-w-3xl">
+                        {title || DEFAULT_TITLE}
+                    </h1>
+                    <p className="text-lg md:text-xl mb-8 transition-all duration-500 fade-up text-white/80 max-w-3xl" style={{ animationDelay: "0.15s" }}>
+                        {subtitle || DEFAULT_SUBTITLE}
+                    </p>
+                    <menu className="fade-up flex flex-wrap justify-center gap-3 max-w-3xl" style={{ animationDelay: "0.3s" }} >
+                        <a href="/proyectos" className="px-7 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full font-semibold shadow-lg hover:shadow-yambo-green-400/30 hover:shadow-xl transition-all hover-pop" >
+                            {t("public.ctaProjects")}
+                        </a>
 
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-yambo-black/70 via-yambo-black/50 to-yambo-purple-900/40" />
-
-            {/* Decorative floating blobs */}
-            <div className="absolute top-20 left-10 w-64 h-64 bg-yambo-green-500/10 rounded-full blur-3xl float-anim" />
-            <div className="absolute bottom-20 right-10 w-48 h-48 bg-yambo-purple-500/10 rounded-full blur-3xl float-anim" style={{ animationDelay: "1.5s" }} />
-
-            <div className="relative z-10 text-center max-w-3xl px-4">
-                {loading ? (
-                    <>
-                        <div className="h-14 w-3/4 mx-auto mb-4 bg-white/20 rounded-2xl animate-pulse" />
-                        <div className="h-7 w-1/2 mx-auto mb-6 bg-white/20 rounded-xl animate-pulse" />
-                    </>
-                ) : (
-                    <>
-                        <h1
-                            className={`text-4xl md:text-6xl font-extrabold mb-5 text-white leading-tight transition-all duration-500 font-display ${showSecret ? "scale-110" : "fade-up"}`}
-                        >
-                            {showSecret ? SECRET_TITLE : (title || DEFAULT_TITLE)}
-                        </h1>
-                        <p
-                            className={`text-lg md:text-xl mb-8 transition-all duration-500 fade-up ${showSecret ? "text-yambo-gold" : "text-white/80"}`}
-                            style={{ animationDelay: "0.15s" }}
-                        >
-                            {showSecret ? SECRET_SUBTITLE : (subtitle || DEFAULT_SUBTITLE)}
-                        </p>
-                        {showSecret ? (
-                            <p className="text-sm text-white/50 ee-slide-down">
-                                ↑↑↓↓←→←→BA — ¡Lo lograste!
-                            </p>
-                        ) : (
-                            <div className="fade-up flex flex-wrap justify-center gap-3" style={{ animationDelay: "0.3s" }}>
-                                <a
-                                    href="/proyectos"
-                                    className="px-7 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full font-semibold shadow-lg hover:shadow-yambo-green-400/30 hover:shadow-xl transition-all hover-pop"
-                                >
-                                    Descubre proyectos
-                                </a>
-                                <a
-                                    href="/contacto"
-                                    className="px-7 py-3 bg-white/15 backdrop-blur-sm text-white border border-white/30 rounded-full font-semibold hover:bg-white/25 transition-all hover-pop"
-                                >
-                                    Contáctanos
-                                </a>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
+                        <a href="/contacto" className="px-7 py-3 bg-white/15 backdrop-blur-sm text-white border border-white/30 rounded-full font-semibold hover:bg-white/25 transition-all hover-pop" >
+                            {t("public.ctaContact")}
+                        </a>
+                    </menu>
+                </>
+            )}
 
             {/* Scroll indicator */}
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 float-anim">

@@ -225,8 +225,8 @@ class EmailRenderTest {
         assertCommonStructure(html);
         assertThat(html).contains("admin_juan");
         assertThat(html).contains("Hemos verificado el error");
-        assertThat(html).contains("ABIERTO");
-        assertThat(html).contains("EN PROGRESO");
+        assertThat(html).contains("Abierto");
+        assertThat(html).contains("En Progreso");
         assertThat(html).contains("Ver Conversación");
 
         writePreview("issue-comment-status-change", html);
@@ -312,11 +312,35 @@ class EmailRenderTest {
 
         assertCommonStructure(html);
         assertThat(html).contains(newStatus.getLabel());
-        assertThat(html).contains("ABIERTO");                   // old status
+        assertThat(html).contains("Abierto");                   // old status
         assertThat(html).contains(newStatus.getColor());         // colour in style
         assertThat(html).contains("admin_juan");
 
         writePreview("issue-status-" + newStatus.name().toLowerCase(), html);
+    }
+
+    @Test
+    void renderIssueStatusChanged_ReopenedLabelForClosedToOpen() {
+        Context ctx = baseContext();
+        ctx.setVariable("userName", USER_NAME);
+        ctx.setVariable("issueId", ISSUE_ID);
+        ctx.setVariable("issueTitle", ISSUE_TITLE);
+        ctx.setVariable("productName", PRODUCT);
+        ctx.setVariable("oldStatusText", IssueStatus.CLOSED.getLabel());
+        ctx.setVariable("newStatusText", "Reabierto");
+        ctx.setVariable("statusColor", IssueStatus.OPEN.getColor());
+        ctx.setVariable("headerColor", IssueStatus.OPEN.getColor());
+        ctx.setVariable("headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon()));
+        ctx.setVariable("changedBy", "admin_juan");
+        ctx.setVariable("changedAt", LocalDateTime.of(2026, 2, 20, 10, 0));
+        ctx.setVariable("issueLink", FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
+
+        String html = engine.process("emails/issue-status-changed", ctx);
+
+        assertCommonStructure(html);
+        assertThat(html)
+            .contains("Cerrado")
+            .contains("Reabierto");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

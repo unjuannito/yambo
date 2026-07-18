@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,7 +32,7 @@ public class ActivityController {
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'create')")
     public ResponseEntity<ActivityResponse> createActivity(@Valid @RequestBody CreateActivityRequest request) {
         Activity activity = activityService.createActivity(
-                request.getName(), request.getDescription(), request.getDate(), request.getEndDate(),
+            request.getName(), request.getDescription(), request.getImage(), request.getLocation(), request.getPrice(), request.getDate(), request.getEndDate(),
                 request.getStatus(), request.getIsPublic(),
                 request.getProjectId(), request.getManagerId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ActivityResponse(activity));
@@ -65,7 +66,7 @@ public class ActivityController {
             @PathVariable String id,
             @Valid @RequestBody UpdateActivityRequest request) {
         Activity activity = activityService.updateActivity(
-                id, request.getName(), request.getDescription(), request.getDate(), request.getEndDate(),
+            id, request.getName(), request.getDescription(), request.getImage(), request.getLocation(), request.getPrice(), request.getDate(), request.getEndDate(),
                 request.getStatus(), request.getIsPublic(),
                 request.getProjectId(), request.getManagerId());
         return ResponseEntity.ok(new ActivityResponse(activity));
@@ -75,6 +76,16 @@ public class ActivityController {
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'read')")
     public ResponseEntity<List<ManagerSummary>> getProjectMonitors(@PathVariable String projectId) {
         List<User> staff = activityService.getStaffByProject(projectId);
+        List<ManagerSummary> response = staff.stream()
+                .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getPhoto()))
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('activity', 'read')")
+    public ResponseEntity<List<ManagerSummary>> getAllStaff() {
+        List<User> staff = activityService.getAllStaff();
         List<ManagerSummary> response = staff.stream()
                 .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getPhoto()))
                 .toList();
@@ -96,6 +107,9 @@ public class ActivityController {
         private String name;
 
         private String description;
+        private String image;
+        private String location;
+        private BigDecimal price;
         private LocalDateTime date;
         private LocalDateTime endDate;
         private ActivityStatus status;
@@ -112,6 +126,9 @@ public class ActivityController {
     public static class UpdateActivityRequest {
         private String name;
         private String description;
+        private String image;
+        private String location;
+        private BigDecimal price;
         private LocalDateTime date;
         private LocalDateTime endDate;
         private ActivityStatus status;
@@ -126,6 +143,9 @@ public class ActivityController {
         private String id;
         private String name;
         private String description;
+        private String image;
+        private String location;
+        private BigDecimal price;
         private LocalDateTime date;
         private LocalDateTime endDate;
         private StatusInfo status;
@@ -138,6 +158,9 @@ public class ActivityController {
             this.id = activity.getId();
             this.name = activity.getName();
             this.description = activity.getDescription();
+            this.image = activity.getImage();
+            this.location = activity.getLocation();
+            this.price = activity.getPrice();
             this.date = activity.getDate();
             this.endDate = activity.getEndDate();
             this.status = activity.getStatus() != null

@@ -83,7 +83,7 @@ class ActivityControllerTest {
         // Given
         Activity activity = createTestActivity();
         when(activityService.createActivity(
-                anyString(), anyString(), any(), any(), any(), any(), anyString(), anyString()))
+                anyString(), anyString(), any(), any(), any(), any(), any(), any(), any(), anyString(), anyString()))
                 .thenReturn(activity);
 
         String json = """
@@ -124,7 +124,7 @@ class ActivityControllerTest {
         Activity activity = createTestActivity();
         activity.setStatus(null);
         when(activityService.createActivity(
-                anyString(), any(), any(), any(), isNull(), any(), anyString(), any()))
+                anyString(), any(), any(), any(), isNull(), any(), any(), isNull(), any(), anyString(), any()))
                 .thenReturn(activity);
 
         String json = """
@@ -228,7 +228,7 @@ class ActivityControllerTest {
         updated.setName("Updated Workshop");
         updated.setStatus(ActivityStatus.CLOSED);
         when(activityService.updateActivity(
-                eq("ACT00001"), anyString(), any(), any(), any(), any(), any(), any(), any()))
+                eq("ACT00001"), anyString(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(updated);
 
         String json = """
@@ -295,7 +295,7 @@ class ActivityControllerTest {
         Activity activity = createTestActivity();
         activity.setEndDate(LocalDateTime.of(2026, 3, 18, 18, 0));
         when(activityService.createActivity(
-                anyString(), anyString(), any(), any(), any(), any(), anyString(), any()))
+                anyString(), anyString(), any(), any(), any(), any(), any(), any(), any(), anyString(), any()))
                 .thenReturn(activity);
 
         String json = """

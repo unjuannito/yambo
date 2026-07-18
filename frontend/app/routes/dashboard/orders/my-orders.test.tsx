@@ -79,8 +79,15 @@ vi.mock('~/components/common/FileUploader', () => ({
     )),
 }));
 
-vi.mock('~/components/issues', () => ({
-    IssueStatusBadge: () => null,
+vi.mock('~/components/issues', async () => {
+    const actual = await vi.importActual<typeof import('~/components/issues')>('~/components/issues');
+    return {
+        ...actual,
+        IssueStatusBadge: () => null,
+    };
+});
+
+vi.mock('~/components/issues/CreateIssueModal', () => ({
     CreateIssueModal: vi.fn(({ issueWindow, onClose, onSuccess }: { issueWindow: any; onClose: () => void; onSuccess: () => void }) =>
         issueWindow ? (
             <div data-testid="create-issue-modal">
@@ -177,6 +184,8 @@ describe('my-orders route', () => {
             renderPage();
             await waitFor(() => {
                 expect(screen.getByText('#ORD001')).toBeInTheDocument();
+                // Short status label appears
+                expect(screen.getByText('Pagado')).toBeInTheDocument();
             });
         });
 
@@ -241,10 +250,10 @@ describe('my-orders route', () => {
             expect(screen.queryByText('Nueva incidencia (varios productos)')).not.toBeInTheDocument();
         });
 
-        it('opens order details when "Ver detalles" is clicked', async () => {
+        it('opens order details when the order card is clicked', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => {
                 expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument();
             });
@@ -254,8 +263,8 @@ describe('my-orders route', () => {
     describe('create issue modal', () => {
         it('opens CreateIssueModal when "Nueva incidencia" button is clicked inside order detail', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument());
             fireEvent.click(screen.getByText('Nueva incidencia (varios productos)'));
             await waitFor(() => {
@@ -265,8 +274,8 @@ describe('my-orders route', () => {
 
         it('closes the modal when cancel is clicked', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument());
             fireEvent.click(screen.getByText('Nueva incidencia (varios productos)'));
             await waitFor(() => expect(screen.getByTestId('create-issue-modal')).toBeInTheDocument());
@@ -278,8 +287,8 @@ describe('my-orders route', () => {
 
         it('reloads issues and closes modal when issue is created', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument());
             fireEvent.click(screen.getByText('Nueva incidencia (varios productos)'));
             await waitFor(() => expect(screen.getByTestId('create-issue-modal')).toBeInTheDocument());
@@ -296,8 +305,8 @@ describe('my-orders route', () => {
 
         it('passes correct issueWindow to CreateIssueModal', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument());
             fireEvent.click(screen.getByText('Nueva incidencia (varios productos)'));
 
@@ -316,8 +325,8 @@ describe('my-orders route', () => {
 
         it('opens CreateIssueModal with product pre-selected when "Reportar incidencia" is clicked', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => expect(screen.getByText('Reportar incidencia')).toBeInTheDocument());
             fireEvent.click(screen.getByText('Reportar incidencia'));
 
@@ -347,7 +356,8 @@ describe('my-orders route', () => {
                 expect(screen.getByText('CUSTOM_STATUS')).toBeInTheDocument();
             });
 
-            fireEvent.click(screen.getByText('Ver detalles'));
+            // Click the card to open detail
+            fireEvent.click(screen.getByText('#ORD-EMPTY'));
 
             await waitFor(() => {
                 expect(screen.getByText('Nueva incidencia (varios productos)')).toBeInTheDocument();
@@ -364,10 +374,11 @@ describe('my-orders route', () => {
     describe('order detail product rendering', () => {
         it('shows product name and price inside order detail', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => {
-                expect(screen.getByText('Test Product')).toBeInTheDocument();
+                // Product name appears both in card summary and in modal
+                expect(screen.getAllByText('Test Product').length).toBeGreaterThanOrEqual(2);
                 expect(screen.getByText('25.00 € c/u')).toBeInTheDocument();
             });
         });
@@ -383,8 +394,8 @@ describe('my-orders route', () => {
             }] as any);
 
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
+            await waitFor(() => expect(screen.getByText('#ORD001')).toBeInTheDocument());
+            fireEvent.click(screen.getByText('#ORD001'));
             await waitFor(() => {
                 expect(screen.getByText('Broken product')).toBeInTheDocument();
                 expect(screen.getByText('Ver incidencia')).toBeInTheDocument();
@@ -401,11 +412,10 @@ describe('my-orders route', () => {
             vi.mocked(orderService.getMyOrders).mockResolvedValue({ content: [pendingOrder], page: { totalElements: 1, totalPages: 1, number: 0, size: 50 } });
         });
 
-        it('opens upload receipt modal when "Subir justificante" is clicked', async () => {
+        it('opens upload receipt modal when "Justificante" is clicked', async () => {
             renderPage();
-            await waitFor(() => expect(screen.getAllByText('Subir justificante').length).toBeGreaterThan(0));
-            // Click the one in the card view (first match)
-            fireEvent.click(screen.getAllByText('Subir justificante')[0]);
+            await waitFor(() => expect(screen.getAllByText('Justificante').length).toBeGreaterThan(0));
+            fireEvent.click(screen.getAllByText('Justificante')[0]);
             await waitFor(() => {
                 expect(screen.getByTestId('file-uploader')).toBeInTheDocument();
             });
@@ -415,8 +425,8 @@ describe('my-orders route', () => {
             vi.mocked(orderService.uploadReceipt).mockResolvedValue({ ...pendingOrder, status: 'CONFIRMING_PAYMENT' } as any);
 
             renderPage();
-            await waitFor(() => expect(screen.getAllByText('Subir justificante').length).toBeGreaterThan(0));
-            fireEvent.click(screen.getAllByText('Subir justificante')[0]);
+            await waitFor(() => expect(screen.getAllByText('Justificante').length).toBeGreaterThan(0));
+            fireEvent.click(screen.getAllByText('Justificante')[0]);
             await waitFor(() => expect(screen.getByTestId('file-uploader')).toBeInTheDocument());
 
             fireEvent.click(screen.getByText('upload-file'));
@@ -426,15 +436,13 @@ describe('my-orders route', () => {
             });
         });
 
-        it('shows "Verificando justificante..." in detail modal for CONFIRMING_PAYMENT status', async () => {
+        it('shows "Verificando..." in card for CONFIRMING_PAYMENT status', async () => {
             const confirmingOrder: Order = { ...mockOrder, status: 'CONFIRMING_PAYMENT' };
             vi.mocked(orderService.getMyOrders).mockResolvedValue({ content: [confirmingOrder], page: { totalElements: 1, totalPages: 1, number: 0, size: 50 } });
 
             renderPage();
-            await waitFor(() => expect(screen.getByText('Ver detalles')).toBeInTheDocument());
-            fireEvent.click(screen.getByText('Ver detalles'));
             await waitFor(() => {
-                expect(screen.getAllByText('Verificando justificante...').length).toBeGreaterThan(0);
+                expect(screen.getByText('Verificando...')).toBeInTheDocument();
             });
         });
     });

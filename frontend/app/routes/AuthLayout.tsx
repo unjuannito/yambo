@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import ButtonComponent from "../components/common/forms/ButtonComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
@@ -13,6 +14,7 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children, title, subtitle, banner, footer }: AuthLayoutProps) {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     return (
         <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-100 via-yambo-purple-100 to-yambo-green-50 py-12 px-4 relative overflow-hidden">
@@ -26,7 +28,7 @@ export function AuthLayout({ children, title, subtitle, banner, footer }: AuthLa
                 <button
                     onClick={() => navigate("/")}
                     className="absolute top-5 left-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-yambo-green-50 text-gray-400 hover:text-yambo-green-600 transition-all flex items-center justify-center"
-                    aria-label="Volver a inicio"
+                    aria-label={t('common.back')}
                 >
                     <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
                 </button>

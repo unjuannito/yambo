@@ -10,6 +10,7 @@ import {
     faMagnifyingGlass,
     faChartLine,
     faPeopleGroup,
+    faGavel,
 } from "@fortawesome/free-solid-svg-icons";
 
 export interface NavSection {
@@ -25,14 +26,14 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Administración",
-        items: ["settings", "mainPage", "users", "profiles",  "invitations", "nominativeInvitations", "orders", "adminIssues", "seo", "reports"]
+        items: ["settings", "mainPage", "users", "profiles",  "invitations", "nominativeInvitations", "orders", "adminIssues", "seo", "legal", "reports"]
     },
     {
         title: "Proyectos",
         items: ["crew", "projects", "activities"]
     },
     {
-        title: "Merch",
+        title: "Artículos",
         items: ["merch", "merchFamilies", "myOrders", "cart", "issues"]
     }
 ];
@@ -50,6 +51,7 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     orders: <FontAwesomeIcon icon={faClipboard} className="w-5 h-5" />,
     adminIssues: <FontAwesomeIcon icon={faCommentDots} className="w-5 h-5" />,
     seo: <FontAwesomeIcon icon={faMagnifyingGlass} className="w-5 h-5" />,
+    legal: <FontAwesomeIcon icon={faGavel} className="w-5 h-5" />,
     reports: <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />,
     projects: <FontAwesomeIcon icon={faFolder} className="w-5 h-5" />,
     crew: <FontAwesomeIcon icon={faPeopleGroup} className="w-5 h-5" />,

@@ -6,14 +6,16 @@ import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
 import { adminUserService } from "~/services/adminUserService";
 import { profileService } from "~/services/profileService";
-import { projectService } from "~/services/projectService";
-import type { Project, ProjectGroup } from "~/services/projectService";
+import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import ListPageShell from "~/components/common/ListPageShell";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUsers } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -73,25 +75,7 @@ export default function Users() {
         };
         const fetchGroups = async () => {
             try {
-                const projectsRes = await projectService.listProjects(0, 100, undefined, true);
-                const allOptions: { value: string; label: string }[] = [];
-                for (const project of projectsRes.content) {
-                    const groups = await projectService.listGroups(project.id);
-                    const namedGroups = groups.filter(g => g.name);
-                    const defaultGroup = groups.find(g => !g.name);
-
-                    if (namedGroups.length === 0) {
-                        const value = defaultGroup ? defaultGroup.id : `project:${project.id}`;
-                        allOptions.push({ value, label: project.name });
-                    } else {
-                        const projectValue = defaultGroup ? defaultGroup.id : `project:${project.id}`;
-                        allOptions.push({ value: projectValue, label: `${project.name} (sin grupo)` });
-                        for (const g of namedGroups) {
-                            allOptions.push({ value: g.id, label: `${g.name} (${project.name})` });
-                        }
-                    }
-                }
-                setGroupOptions(allOptions);
+                setGroupOptions(await loadAssignableGroupOptions());
             } catch (err) {
                 toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
             }
@@ -102,10 +86,9 @@ export default function Users() {
 
     const fetchUsersData = useCallback(async ({ page, size, filters }: FetchDataParams) => {
         return await adminUserService.listUsers({
-            id: filters.id,
-            name: filters.name,
-            email: filters.email,
+            query: filters.q,
             profiles: filters.profiles,
+            enabled: filters.enabled,
             page,
             size,
         });
@@ -200,6 +183,7 @@ export default function Users() {
         {
             key: "id",
             header: "ID",
+            className: "hidden md:table-cell",
             filter: {
                 enabled: true,
                 type: "search",
@@ -218,19 +202,23 @@ export default function Users() {
                 placeholder: "Buscar por nombre...",
             },
             render: (user: User) => (
-                <span className="font-medium text-yambo-black">
-                    {user.name}
-                    {user.system && (
-                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
-                            Sistema
-                        </span>
-                    )}
-                </span>
+                <div>
+                    <span className="font-medium text-yambo-black">
+                        {user.name}
+                        {user.system && (
+                            <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
+                                Sistema
+                            </span>
+                        )}
+                    </span>
+                    <p className="text-xs text-gray-400 sm:hidden truncate max-w-[180px]">{user.email}</p>
+                </div>
             ),
         },
         {
             key: "email",
             header: "Correo Electrónico",
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "search",
@@ -275,6 +263,7 @@ export default function Users() {
         {
             key: "groupRoles",
             header: "Roles / Grupos",
+            className: "hidden lg:table-cell",
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
                     {user.groupRoles && user.groupRoles.length > 0 ? (
@@ -305,6 +294,7 @@ export default function Users() {
         {
             key: "createdAt",
             header: "Creado El",
+            className: "hidden md:table-cell",
             render: (user: User) => (
                 <span>{new Date(user.createdAt).toLocaleDateString()}</span>
             ),
@@ -312,6 +302,7 @@ export default function Users() {
         {
             key: "enabled",
             header: "Habilitado",
+            className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "checkbox",
@@ -328,6 +319,7 @@ export default function Users() {
         {
             key: "actions",
             header: "Acciones",
+            requiredPerms: [{ obj: "user", action: "update" }],
             render: (user: User) => (
                 <div className="flex gap-2">
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
@@ -357,22 +349,26 @@ export default function Users() {
 
     return (
         <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">Usuarios 👥</h1>
-                <FilterableTable
-                    columns={userTableColumns}
-                    keyField="id"
-                    display={{
-                        emptyMessage: "No se encontraron usuarios",
-                        loadingMessage: "Cargando usuarios...",
-                    }}
-                    serverSide={{ fetchData: fetchUsersData }}
-                />
-
-                <Modal
-                    isOpen={isModalOpen}
-                    onClose={resetForm}
-                    title="Editar Usuario"
+            <ListPageShell<User>
+                title={
+                    <span className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUsers} className="text-yambo-green-500" />
+                        Usuarios
+                    </span>
+                }
+                columns={userTableColumns}
+                keyField="id"
+                display={{
+                    emptyMessage: "No se encontraron usuarios",
+                    loadingMessage: "Cargando usuarios...",
+                }}
+                features={{ globalSearch: true }}
+                serverSide={{ fetchData: fetchUsersData }}
+            />
+            <Modal
+                isOpen={isModalOpen}
+                onClose={resetForm}
+                title="Editar Usuario"
                     size="md"
                     footer={
                         <>
@@ -413,7 +409,7 @@ export default function Users() {
                             required
                         />
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="user-profiles" className="block text-sm font-medium text-gray-700 mb-1">
                                 Perfiles *
                             </label>
                             <MultiSelectComponent
@@ -432,7 +428,7 @@ export default function Users() {
                             />
                         </div>
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="user-group-roles" className="block text-sm font-medium text-gray-700 mb-1">
                                 Roles en Grupos
                             </label>
                             {form.groupRoles.map((gr, idx) => (
@@ -471,7 +467,7 @@ export default function Users() {
                                         }}
                                         className="text-coral hover:text-coral/80 text-sm px-2"
                                     >
-                                        ✕
+                                        x
                                     </button>
                                 </div>
                             ))}
@@ -496,8 +492,9 @@ export default function Users() {
                         {form.groupRoles.length > 0 && (
                             <>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                                    <label htmlFor="user-bio" className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
                                     <textarea
+                                        id="user-bio"
                                         name="bio"
                                         value={form.bio}
                                         onChange={(e) => setForm({ ...form, bio: e.target.value })}
@@ -523,7 +520,6 @@ export default function Users() {
                         )}
                     </div>
                 </Modal>
-            </main>
         </RequirePermission>
     );
 }

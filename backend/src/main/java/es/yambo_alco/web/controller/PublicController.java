@@ -82,11 +82,19 @@ public class PublicController {
 
     @GetMapping("/activities")
     public ResponseEntity<List<PublicActivityResponse>> getPublicActivities() {
-        List<Activity> activities = activityRepository.findByIsPublicTrueOrderByDateAsc();
+        List<Activity> activities = activityRepository.findByIsPublicTrueOrderByDateDesc();
         List<PublicActivityResponse> response = activities.stream()
                 .map(PublicActivityResponse::new)
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/activities/{id}")
+    public ResponseEntity<PublicActivityDetailResponse> getPublicActivity(@PathVariable String id) {
+        Activity activity = activityRepository.findByIdAndIsPublicTrue(id)
+                .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Activity not found"));
+        SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, id).orElse(null);
+        return ResponseEntity.ok(new PublicActivityDetailResponse(activity, seo));
     }
 
     @GetMapping("/projects/{id}")
@@ -242,6 +250,9 @@ public class PublicController {
         private String id;
         private String name;
         private String description;
+        private String image;
+        private String location;
+        private java.math.BigDecimal price;
         private java.time.LocalDateTime date;
         private java.time.LocalDateTime endDate;
         private ActivityController.StatusInfo status;
@@ -252,6 +263,9 @@ public class PublicController {
             this.id = activity.getId();
             this.name = activity.getName();
             this.description = activity.getDescription();
+            this.image = activity.getImage();
+            this.location = activity.getLocation();
+            this.price = activity.getPrice();
             this.date = activity.getDate();
             this.endDate = activity.getEndDate();
             this.status = activity.getStatus() != null
@@ -276,6 +290,45 @@ public class PublicController {
         public ActivityProjectSummary(String id, String name) {
             this.id = id;
             this.name = name;
+        }
+    }
+
+    @Data
+    public static class PublicActivityDetailResponse {
+        private String id;
+        private String name;
+        private String description;
+        private String image;
+        private String location;
+        private java.math.BigDecimal price;
+        private java.time.LocalDateTime date;
+        private java.time.LocalDateTime endDate;
+        private ActivityController.StatusInfo status;
+        private ActivityProjectSummary project;
+        private ActivityManagerSummary manager;
+        private SeoMetadataResponse seo;
+
+        public PublicActivityDetailResponse(Activity activity, SeoMetadata seo) {
+            this.id = activity.getId();
+            this.name = activity.getName();
+            this.description = activity.getDescription();
+            this.image = activity.getImage();
+            this.location = activity.getLocation();
+            this.price = activity.getPrice();
+            this.date = activity.getDate();
+            this.endDate = activity.getEndDate();
+            this.status = activity.getStatus() != null
+                    ? new ActivityController.StatusInfo(activity.getStatus().name(), activity.getStatus().getLabel(), activity.getStatus().getColor())
+                    : null;
+            if (activity.getProject() != null) {
+                this.project = new ActivityProjectSummary(
+                        activity.getProject().getId(), activity.getProject().getName());
+            }
+            if (activity.getManager() != null) {
+                this.manager = new ActivityManagerSummary(
+                        activity.getManager().getName(), activity.getManager().getPhoto());
+            }
+            this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }
     }
 

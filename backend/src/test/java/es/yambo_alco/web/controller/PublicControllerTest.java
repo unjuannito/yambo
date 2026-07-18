@@ -179,7 +179,7 @@ class PublicControllerTest {
                 .project(project).manager(manager)
                 .build();
 
-        when(activityRepository.findByIsPublicTrueOrderByDateAsc())
+        when(activityRepository.findByIsPublicTrueOrderByDateDesc())
                 .thenReturn(List.of(singleDay, multiDay));
 
         // When / Then
@@ -203,11 +203,146 @@ class PublicControllerTest {
     @WithAnonymousUser
     void getPublicActivities_WhenEmpty_ShouldReturnEmptyList() throws Exception {
         // Given
-        when(activityRepository.findByIsPublicTrueOrderByDateAsc()).thenReturn(List.of());
+        when(activityRepository.findByIsPublicTrueOrderByDateDesc()).thenReturn(List.of());
 
         // When / Then
         mockMvc.perform(get("/public/activities"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // ── GET /public/activities/{id} ─────────────────────────────────────
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_WhenFound_ShouldReturnActivityDetail() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User manager = User.builder().id("U0001").name("Monitor")
+                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+
+        Activity activity = Activity.builder()
+                .id("ACT001").name("Taller de Navidad").description("Un taller navideño")
+                .image("/uploads/act.jpg").location("Local Yambo").price(new java.math.BigDecimal("5.00"))
+                .date(LocalDateTime.of(2026, 12, 20, 10, 0))
+                .endDate(LocalDateTime.of(2026, 12, 20, 18, 0))
+                .status(ActivityStatus.PLANNED).isPublic(true)
+                .project(project).manager(manager)
+                .build();
+
+        SeoMetadata seo = SeoMetadata.builder()
+                .id("SEO002").entityType(SeoEntityType.ACTIVITY).entityId("ACT001")
+                .metaDescription("Taller de Navidad en Yambo Alcobendas")
+                .keywords("[\"Navidad\",\"Yambo\",\"Alcobendas\"]")
+                .ogDescription("Ven al taller navideño de Yambo")
+                .slug("taller-de-navidad")
+                .build();
+
+        when(activityRepository.findByIdAndIsPublicTrue("ACT001")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT001")).thenReturn(Optional.of(seo));
+
+        // When / Then
+        mockMvc.perform(get("/public/activities/ACT001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ACT001"))
+                .andExpect(jsonPath("$.name").value("Taller de Navidad"))
+                .andExpect(jsonPath("$.description").value("Un taller navideño"))
+                .andExpect(jsonPath("$.image").value("/uploads/act.jpg"))
+                .andExpect(jsonPath("$.location").value("Local Yambo"))
+                .andExpect(jsonPath("$.price").value(5.00))
+                .andExpect(jsonPath("$.date").value("2026-12-20T10:00:00"))
+                .andExpect(jsonPath("$.endDate").value("2026-12-20T18:00:00"))
+                .andExpect(jsonPath("$.status.value").value("PLANNED"))
+                .andExpect(jsonPath("$.project.id").value("PRJ001"))
+                .andExpect(jsonPath("$.manager.name").value("Monitor"))
+                .andExpect(jsonPath("$.seo.metaDescription").value("Taller de Navidad en Yambo Alcobendas"))
+                .andExpect(jsonPath("$.seo.keywords[0]").value("Navidad"))
+                .andExpect(jsonPath("$.seo.slug").value("taller-de-navidad"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_WhenNotFound_ShouldReturn404() throws Exception {
+        // Given
+        when(activityRepository.findByIdAndIsPublicTrue("ACT404")).thenReturn(Optional.empty());
+
+        // When / Then
+        mockMvc.perform(get("/public/activities/ACT404"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_WithoutSeo_ShouldReturnNullSeo() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User manager = User.builder().id("U0001").name("Monitor")
+                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+
+        Activity activity = Activity.builder()
+                .id("ACT003").name("Sin SEO").description("Sin metadata")
+                .date(LocalDateTime.of(2026, 5, 1, 10, 0))
+                .status(ActivityStatus.OPEN_REGISTRATION).isPublic(true)
+                .project(project).manager(manager)
+                .build();
+
+        when(activityRepository.findByIdAndIsPublicTrue("ACT003")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT003")).thenReturn(Optional.empty());
+
+        // When / Then
+        mockMvc.perform(get("/public/activities/ACT003"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ACT003"))
+                .andExpect(jsonPath("$.seo").doesNotExist());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_WhenCancelled_ShouldReturnActivity() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User manager = User.builder().id("U0001").name("Monitor")
+                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+
+        Activity activity = Activity.builder()
+                .id("ACT004").name("Cancelada").description("Actividad cancelada")
+                .date(LocalDateTime.of(2026, 1, 15, 10, 0))
+                .status(ActivityStatus.CANCELLED).isPublic(true)
+                .project(project).manager(manager)
+                .build();
+
+        when(activityRepository.findByIdAndIsPublicTrue("ACT004")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT004")).thenReturn(Optional.empty());
+
+        // When / Then
+        mockMvc.perform(get("/public/activities/ACT004"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ACT004"))
+                .andExpect(jsonPath("$.status.value").value("CANCELLED"));
+    }
+
+    // ── GET /public/activities/{id} — public access ─────────────────────
+
+    @Test
+    void getPublicActivity_WithoutAuth_ShouldStillReturnOk() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User manager = User.builder().id("U0001").name("Monitor")
+                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+
+        Activity activity = Activity.builder()
+                .id("ACT005").name("Pública").description("Acceso público")
+                .date(LocalDateTime.of(2026, 6, 1, 10, 0))
+                .status(ActivityStatus.OPEN_REGISTRATION).isPublic(true)
+                .project(project).manager(manager)
+                .build();
+
+        when(activityRepository.findByIdAndIsPublicTrue("ACT005")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT005")).thenReturn(Optional.empty());
+
+        // When / Then (no @WithAnonymousUser — verifies no auth is required)
+        mockMvc.perform(get("/public/activities/ACT005"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ACT005"));
     }
 }

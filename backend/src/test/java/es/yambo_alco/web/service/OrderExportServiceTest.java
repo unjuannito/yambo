@@ -411,7 +411,7 @@ class OrderExportServiceTest {
             boolean foundDrops = false;
             for (int r = 0; r <= summary.getLastRowNum(); r++) {
                 String val = cellValue(summary, r, 0);
-                if (val != null && val.contains("Drops:") && val.contains("Drop Verano 2025")) {
+                if (val != null && val.contains("Colecciones:") && val.contains("Drop Verano 2025")) {
                     foundDrops = true;
                     break;
                 }

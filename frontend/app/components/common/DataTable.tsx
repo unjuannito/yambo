@@ -1,11 +1,15 @@
-import React from "react";
+import React, { useContext } from "react";
+import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
+import { AuthContext } from "~/context/AuthContext";
+import type { RequiredPermission } from "~/types/authContextType";
 
 export interface TableColumn<T = any> {
   key: string;
   header: React.ReactNode;
   render?: (item: T) => React.ReactNode;
   className?: string;
+  requiredPerms?: RequiredPermission[];
 }
 
 interface DataTableProps<T> {
@@ -23,6 +27,17 @@ export function DataTable<T>({
   className = "",
   onRowClick,
 }: DataTableProps<T>) {
+  const authCtx = useContext(AuthContext);
+
+  const visibleColumns = authCtx
+    ? columns.filter((col) => {
+        if (!col.requiredPerms || col.requiredPerms.length === 0) return true;
+        return col.requiredPerms.every((perm) =>
+          authCtx.hasPermission(perm)
+        );
+      })
+    : columns;
+
   return (
     <div
       className={twMerge(
@@ -32,13 +47,13 @@ export function DataTable<T>({
       <table className="min-w-full divide-y divide-gray-100">
         <thead className="bg-yambo-green-50/50">
           <tr>
-            {columns.map((column) => (
+            {visibleColumns.map((column) => (
               <th
                 key={column.key}
-                className={
-                  column.className ||
-                  "px-6 py-3 text-left text-xs font-bold text-yambo-green-700 uppercase tracking-wider"
-                }
+                className={twMerge(
+                  "px-4 py-2.5 text-left text-xs font-bold text-yambo-green-700 uppercase tracking-wider",
+                  column.className
+                )}
               >
                 {column.header}
               </th>
@@ -52,10 +67,10 @@ export function DataTable<T>({
               className={`transition-colors duration-150 hover:bg-yambo-green-50/30 ${onRowClick ? "cursor-pointer" : ""}`}
               onClick={() => onRowClick?.(item)}
             >
-              {columns.map((column) => (
+              {visibleColumns.map((column) => (
                 <td
                   key={column.key}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+                  className={twMerge("px-4 py-2.5 text-sm text-gray-700", column.className)}
                 >
                   {column.render
                     ? column.render(item)

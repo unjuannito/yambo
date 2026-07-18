@@ -2,11 +2,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WatcherManager } from './WatcherManager';
 import type { IssueWatcher } from '~/types/issueType';
+import { useAuth } from '~/hooks/useAuth';
 
 vi.mock('~/services/adminUserService', () => ({
     adminUserService: {
         listUsers: vi.fn(),
     },
+}));
+
+vi.mock('~/hooks/useAuth', () => ({
+    useAuth: vi.fn(),
 }));
 
 const mockWatcher: IssueWatcher = {
@@ -23,6 +28,14 @@ describe('WatcherManager', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(useAuth).mockReturnValue({
+            user: {
+                id: 'USER001',
+                email: 'self@example.com',
+                name: 'Self User',
+                permissions: [],
+            },
+        } as any);
     });
 
     it('shows empty state when there are no watchers', () => {
@@ -75,8 +88,7 @@ describe('WatcherManager', () => {
         const input = screen.getByRole('textbox');
         fireEvent.change(input, { target: { value: 'not-a-valid-email' } });
 
-        const addButton = screen.getByRole('button', { name: /añadir/i });
-        fireEvent.click(addButton);
+        fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
             expect(screen.getByText('Introduce un email válido')).toBeInTheDocument();
@@ -98,8 +110,7 @@ describe('WatcherManager', () => {
         const input = screen.getByRole('textbox');
         fireEvent.change(input, { target: { value: 'new@example.com' } });
 
-        const addButton = screen.getByRole('button', { name: /añadir/i });
-        fireEvent.click(addButton);
+        fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
             expect(mockOnAdd).toHaveBeenCalledWith('new@example.com', undefined);
@@ -118,12 +129,42 @@ describe('WatcherManager', () => {
         const input = screen.getByRole('textbox');
         fireEvent.change(input, { target: { value: 'watcher@example.com' } });
 
-        const addButton = screen.getByRole('button', { name: /añadir/i });
-        fireEvent.click(addButton);
+        fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
             expect(screen.getByText('Este email ya está en la lista de seguidores')).toBeInTheDocument();
         });
+        expect(mockOnAdd).not.toHaveBeenCalled();
+    });
+
+    it('adds current user as watcher when clicking "Añadirme"', async () => {
+        mockOnAdd.mockResolvedValue(undefined);
+
+        render(
+            <WatcherManager
+                watchers={[]}
+                onAdd={mockOnAdd}
+                onRemove={mockOnRemove}
+            />
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Añadirme' }));
+
+        await waitFor(() => {
+            expect(mockOnAdd).toHaveBeenCalledWith('self@example.com', 'USER001');
+        });
+    });
+
+    it('does not show "Añadirme" when current user is already a watcher', () => {
+        render(
+            <WatcherManager
+                watchers={[{ ...mockWatcher, email: 'self@example.com' }]}
+                onAdd={mockOnAdd}
+                onRemove={mockOnRemove}
+            />
+        );
+
+        expect(screen.queryByRole('button', { name: 'Añadirme' })).not.toBeInTheDocument();
         expect(mockOnAdd).not.toHaveBeenCalled();
     });
 });

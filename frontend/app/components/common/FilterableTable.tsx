@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { DataTable } from "./DataTable";
 import type { TableColumn } from "./DataTable";
@@ -14,6 +15,8 @@ import { ErrorMessage } from "./ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import { twMerge } from "tailwind-merge";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown, faChevronUp, faSlidersH, faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
 
 export interface FilterableColumn<T = any> extends TableColumn<T> {
   filter?: ColumnFilter;
@@ -49,6 +52,8 @@ export interface DisplayConfig<T> {
   renderItem?: (item: T) => React.ReactNode;
   gridClassName?: string;
   onRowClick?: (item: T) => void;
+  /** Renders a card for each item on mobile (<768px). Table is shown on desktop. */
+  renderMobileCard?: (item: T) => React.ReactNode;
 }
 
 export interface FeaturesConfig {
@@ -56,6 +61,7 @@ export interface FeaturesConfig {
   enablePagination?: boolean;
   enableLoadMore?: boolean;
   loadMoreLabel?: string;
+  globalSearch?: boolean;
 }
 
 export interface FilterableTableProps<T> {
@@ -94,20 +100,23 @@ export function FilterableTable<T>({
   renderEmptyState,
   filterFn,
 }: FilterableTableProps<T>) {
+  const { t } = useTranslation();
   const {
     type: viewMode = "table",
-    emptyMessage = "No se encontraron resultados",
-    loadingMessage = "Cargando datos...",
+    emptyMessage = t('common.noResults'),
+    loadingMessage = t('table.loadingMessage') || "Cargando datos...",
     renderItem: renderGridItem,
     gridClassName = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4",
     onRowClick,
+    renderMobileCard,
   } = display;
 
   const {
     enableFilters = true,
     enablePagination = true,
     enableLoadMore = false,
-    loadMoreLabel = "Cargar más",
+    loadMoreLabel = t('common.showMore'),
+    globalSearch = false,
   } = features;
 
   const isServerSide = Boolean(serverSide);
@@ -131,6 +140,11 @@ export function FilterableTable<T>({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const skipNextFetchRef = useRef(false);
+
+  // Collapsible filters: default collapsed on mobile (< 768px), expanded on desktop
+  const [filtersCollapsed, setFiltersCollapsed] = useState(
+    typeof window !== "undefined" && window.innerWidth < 768
+  );
 
   const [clientPage, setClientPage] = useState(0);
   const [clientFilters, setClientFilters] =
@@ -252,6 +266,40 @@ export function FilterableTable<T>({
     return columnFilters;
   }, [columns, extraFilters]);
 
+  // Global search state — defined after filterFields to avoid TDZ issues
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const globalSearchRef = useRef<HTMLInputElement>(null);
+
+  const globalSearchFields = useMemo(() => {
+    if (!globalSearch) return [];
+    return filterFields.filter((f) => f.type === "search" || f.type === "text");
+  }, [globalSearch, filterFields]);
+
+  const handleGlobalSearch = useCallback(
+    (value: string) => {
+      setGlobalSearchQuery(value);
+      const newFilters: FilterValues = {};
+      if (isServerSide) {
+        // Server-side: send a single 'q' key for cross-field search
+        newFilters.q = value;
+      } else {
+        // Client-side: spread to all searchable fields for local filtering
+        for (const field of globalSearchFields) {
+          newFilters[field.key] = value;
+        }
+      }
+      if (isServerSide) {
+        setServerData([]);
+        setFilters(newFilters);
+        setPageInfo((prev) => ({ ...prev, number: 0 }));
+      } else {
+        setClientFilters(newFilters);
+        setClientPage(0);
+      }
+    },
+    [globalSearchFields, isServerSide]
+  );
+
   const filteredData = useMemo(() => {
     if (isServerSide) return data;
     let result = [...data];
@@ -278,7 +326,7 @@ export function FilterableTable<T>({
         if (value === undefined || value === "" || value === null) return;
         if (Array.isArray(value)) {
           if (value.length === 0) return;
-          result = result.filter((item) => {
+          const matchesArrayFilter = (item: T) => {
             const itemValue = item[key as keyof T];
             if (Array.isArray(itemValue)) {
               return itemValue.some((obj: any) => {
@@ -287,15 +335,17 @@ export function FilterableTable<T>({
               });
             }
             return value.includes(String(itemValue));
-          });
+          };
+          result = result.filter(matchesArrayFilter);
         } else {
           const lowered = String(value).toLowerCase();
-          result = result.filter((item) => {
+          const matchesTextFilter = (item: T) => {
             const itemValue = item[key as keyof T];
             return String(itemValue ?? "")
               .toLowerCase()
               .includes(lowered);
-          });
+          };
+          result = result.filter(matchesTextFilter);
         }
       });
     }
@@ -331,6 +381,16 @@ export function FilterableTable<T>({
       };
 
   const activeFilters = isServerSide ? filters : clientFilters;
+
+  const activeFilterCount = useMemo(() => {
+    return Object.values(activeFilters).filter(
+      (v) =>
+        v !== undefined &&
+        v !== "" &&
+        v !== null &&
+        !(Array.isArray(v) && v.length === 0)
+    ).length;
+  }, [activeFilters]);
 
   const clearAllFilters = useCallback(() => {
     handleFiltersChange(EMPTY_FILTERS);
@@ -392,6 +452,9 @@ export function FilterableTable<T>({
               <div
                 key={String(item[keyField])}
                 onClick={() => onRowClick?.(item)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick?.(item); } }}
+                role="button"
+                tabIndex={0}
                 className={onRowClick ? "cursor-pointer" : ""}
               >
                 {renderGridItem(item)}
@@ -409,7 +472,7 @@ export function FilterableTable<T>({
             <div className="flex flex-col items-center gap-2 py-2">
               {loadMoreInfo && (
                 <span className="text-xs text-gray-400">
-                  Mostrando {loadMoreInfo.shown} de {loadMoreInfo.total}
+                  {t('table.showing') || "Mostrando"} {loadMoreInfo.shown} {t('common.of')} {loadMoreInfo.total}
                 </span>
               )}
               <ButtonComponent
@@ -427,12 +490,30 @@ export function FilterableTable<T>({
 
     return (
       <>
-        <DataTable
-          data={paginatedData}
-          columns={columns}
-          keyField={keyField}
-          onRowClick={onRowClick}
-        />
+        {renderMobileCard && (
+          <div className="block md:hidden space-y-3">
+            {paginatedData.map((item) => (
+              <div
+                key={String(item[keyField])}
+                onClick={() => onRowClick?.(item)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick?.(item); } }}
+                role="button"
+                tabIndex={0}
+                className={onRowClick ? "cursor-pointer" : ""}
+              >
+                {renderMobileCard(item)}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className={renderMobileCard ? "hidden md:block" : ""}>
+          <DataTable
+            data={paginatedData}
+            columns={columns}
+            keyField={keyField}
+            onRowClick={onRowClick}
+          />
+        </div>
         {enablePagination && !enableLoadMore && (
           <Pagination
             page={displayPageInfo.number}
@@ -444,7 +525,7 @@ export function FilterableTable<T>({
           <div className="flex flex-col items-center gap-2 py-2">
             {loadMoreInfo && (
               <span className="text-xs text-gray-400">
-                Mostrando {loadMoreInfo.shown} de {loadMoreInfo.total}
+                {t('table.showing') || "Mostrando"} {loadMoreInfo.shown} {t('common.of')} {loadMoreInfo.total}
               </span>
             )}
             <ButtonComponent
@@ -461,13 +542,61 @@ export function FilterableTable<T>({
   };
 
   return (
-    <div className={twMerge(`flex flex-col gap-4 min-w-0 ${className}`)}>
+    <div className={twMerge(`flex flex-col gap-3 min-w-0 ${className}`)}>
       {enableFilters && filterFields.length > 0 && (
-        <FiltersSection
-          filters={activeFilters}
-          fields={filterFields}
-          onFiltersChange={handleFiltersChange}
-        />
+        <div className="flex flex-col gap-2">
+          {globalSearch ? (
+            /* ── Global search bar ── */
+            <div className="relative">
+              <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                ref={globalSearchRef}
+                type="text"
+                value={globalSearchQuery}
+                onChange={(e) => handleGlobalSearch(e.target.value)}
+                placeholder={t('table.globalSearch')}
+                className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yambo-green-300 focus:bg-white transition-all border border-gray-100 focus:border-yambo-green-400 placeholder:text-gray-400"
+              />
+              {globalSearchQuery && (
+                <button
+                  onClick={() => handleGlobalSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ) : (
+            /* ── Per-column filters (collapsible) ── */
+            <>
+            <button
+            type="button"
+            onClick={() => setFiltersCollapsed((c) => !c)}
+            className="flex items-center gap-2 self-start px-3 py-1.5 rounded-lg text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <FontAwesomeIcon icon={faSlidersH} className="w-3.5 h-3.5" />
+            <span>{t('common.filter')}</span>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-yambo-green-500 text-white text-[10px] font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+            <FontAwesomeIcon
+              icon={filtersCollapsed ? faChevronDown : faChevronUp}
+              className="w-3 h-3 text-gray-400 ml-0.5"
+            />
+          </button>
+          {/* Collapsible filter panel */}
+          {!filtersCollapsed && (
+            <FiltersSection
+              filters={activeFilters}
+              fields={filterFields}
+              onFiltersChange={handleFiltersChange}
+            />
+          )}
+            </>
+          )}
+        </div>
       )}
       {error && (
         <ErrorMessage

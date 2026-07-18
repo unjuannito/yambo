@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ImageCarouselProps {
   images: string[];
@@ -15,6 +16,7 @@ export default function ImageCarousel({
   onImageClick,
   showArrowsOnHover = true,
 }: ImageCarouselProps) {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -52,7 +54,7 @@ export default function ImageCarousel({
       <div
         className={`w-full h-48 bg-yambo-green-50 rounded-2xl flex items-center justify-center ${className}`}
       >
-        <span className="text-gray-400">Sin imagen</span>
+        <span className="text-gray-400">{t("component.imageCarousel.noImage")}</span>
       </div>
     );
   }
@@ -72,8 +74,11 @@ export default function ImageCarousel({
             key={index}
             src={image}
             alt={`${alt} ${index + 1}`}
-            className={`w-full h-full object-cover flex-shrink-0 ${onImageClick ? "cursor-pointer" : ""}`}
+            className={`w-full h-full object-contain flex-shrink-0 ${onImageClick ? "cursor-pointer" : ""}`}
             onClick={() => onImageClick?.(index)}
+            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onImageClick) { e.preventDefault(); onImageClick(index); } }}
+            role={onImageClick ? "button" : undefined}
+            tabIndex={onImageClick ? 0 : undefined}
           />
         ))}
       </div>
@@ -99,7 +104,7 @@ export default function ImageCarousel({
         <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1.5">
           {images.map((_, index) => (
             <button
-              key={index}
+              key={`dot-${index}`}
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-all duration-200 ${
                 index === currentIndex

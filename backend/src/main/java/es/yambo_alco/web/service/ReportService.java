@@ -190,9 +190,9 @@ public class ReportService {
                         TreeMap::new,
                         Collectors.counting()));
 
-        // Average resolution time (for resolved/closed issues)
+        // Average resolution time (for closed issues)
         List<Issue> resolvedIssues = issues.stream()
-                .filter(i -> i.getStatus() == IssueStatus.RESOLVED || i.getStatus() == IssueStatus.CLOSED)
+                .filter(i -> i.getStatus() == IssueStatus.CLOSED)
                 .toList();
 
         Double averageResolutionHours = null;
@@ -200,11 +200,11 @@ public class ReportService {
             double totalHours = 0;
             int count = 0;
             for (Issue issue : resolvedIssues) {
-                // Find first comment with RESOLVED status to get resolution time
+                // Find first comment with CLOSED status to get resolution time
                 List<IssueComment> comments = issueCommentRepository
                         .findByIssueIdOrderByCreatedAtDescWithUser(issue.getId());
                 Optional<IssueComment> resolvedComment = comments.stream()
-                        .filter(c -> c.getStatus() == IssueStatus.RESOLVED)
+                        .filter(c -> c.getStatus() == IssueStatus.CLOSED)
                         .min(Comparator.comparing(IssueComment::getCreatedAt));
 
                 if (resolvedComment.isPresent()) {
@@ -218,14 +218,13 @@ public class ReportService {
             }
         }
 
-        // Open vs resolved ratio
+        // Open vs closed ratio
         long openCount = issues.stream()
                 .filter(i -> i.getStatus() == IssueStatus.OPEN
-                        || i.getStatus() == IssueStatus.IN_PROGRESS
-                        || i.getStatus() == IssueStatus.REOPENED)
+                        || i.getStatus() == IssueStatus.IN_PROGRESS)
                 .count();
         long closedCount = issues.stream()
-                .filter(i -> i.getStatus() == IssueStatus.RESOLVED || i.getStatus() == IssueStatus.CLOSED)
+                .filter(i -> i.getStatus() == IssueStatus.CLOSED)
                 .count();
 
         return new IssueMetrics(

@@ -2,10 +2,10 @@ import {
   useState,
   useRef,
   useEffect,
-  useId,
   useCallback,
   useLayoutEffect,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 
 import LabelComponent from "./LabelComponent";
@@ -31,13 +31,15 @@ export default function MultiSelectComponent({
   label,
   value,
   options = [],
-  placeholder = "Seleccionar...",
+  placeholder,
   className = "",
   required,
   name,
   defaultValue,
   ...selectProps
 }: MultiSelectProps) {
+  const { t } = useTranslation();
+  const effectivePlaceholder = placeholder ?? t("component.multiSelectPlaceholder");
   const isControlled = value !== undefined;
 
   const [internalValue, setInternalValue] = useState<string[]>(
@@ -53,7 +55,6 @@ export default function MultiSelectComponent({
   const multiSelectRef = useRef<HTMLDivElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const inputId = useId();
 
   const [maxVisibleTags, setMaxVisibleTags] = useState(3);
 
@@ -189,6 +190,9 @@ export default function MultiSelectComponent({
             `w-full border rounded-xl border-gray-200 text-sm pl-3 pr-2 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 flex justify-between items-center cursor-pointer gap-1 font-normal transition-all duration-200 ${className}`
           )}
           onClick={() => setIsOpen(!isOpen)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsOpen(!isOpen); } }}
+          role="button"
+          tabIndex={0}
         >
           <span className="w-full justify-start text-gray-400 text-ellipsis truncate flex gap-1 select-none overflow-hidden">
             {selectedValues.length > 0 ? (
@@ -217,12 +221,14 @@ export default function MultiSelectComponent({
                 ))}
                 {selectedValues.length > maxVisibleTags && (
                   <span className="inline-flex items-center bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full flex-shrink-0 select-none">
-                    +{selectedValues.length - maxVisibleTags} más
+                    {t("component.moreTags", { count: selectedValues.length - maxVisibleTags })}
                   </span>
                 )}
               </span>
             ) : (
-              placeholder
+              <span className="text-gray-400 text-ellipsis truncate">
+                {effectivePlaceholder}
+              </span>
             )}
           </span>
           <span
@@ -243,7 +249,7 @@ export default function MultiSelectComponent({
             >
               <input
                 name={`${label}-search`}
-                placeholder="Buscar..."
+                placeholder={t("component.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus={isOpen}
@@ -270,7 +276,7 @@ export default function MultiSelectComponent({
                   ))
                 ) : (
                   <div className="px-4 py-3 text-sm text-gray-400">
-                    No se encontraron resultados
+                    {t("component.noSearchResults")}
                   </div>
                 )}
               </ul>

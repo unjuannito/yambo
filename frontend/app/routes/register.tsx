@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { nominativeInvitationService } from "~/services/nominativeInvitationService";
 import { invitationService } from "~/services/invitationService";
 import { ApiError, getErrorMessage } from "~/types/error";
@@ -8,20 +9,24 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import { AuthLayout } from "~/routes/AuthLayout";
 import { useAuth } from "~/hooks/useAuth";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
 
 export const ssr = false;
 
 export function meta() {
+    const { t } = useTranslation();
     return [
-        { title: "Yambo - Registro de usuario" },
+        { title: t('register.pageTitle') },
         {
             name: "description",
-            content: "Completa tu registro para acceder a la plataforma Yambo.",
+            content: t('register.pageDesc'),
         },
     ];
 }
 
 export default function Register() {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { reload, login: authLogin, isAuthenticated } = useAuth();
@@ -41,10 +46,10 @@ export default function Register() {
     useEffect(() => {
         if (!invitationToken && !inviteToken && !hasRedirected.current) {
             hasRedirected.current = true;
-            toast.error("¡Alto ahí! No tenemos un token de invitación válido");
+            toast.error(t('register.noToken'));
             navigate("/login", { replace: true });
         }
-    }, [invitationToken, inviteToken, navigate]);
+    }, [invitationToken, inviteToken, navigate, t]);
 
     useEffect(() => {
         const applyInvitationIfLoggedIn = async () => {
@@ -56,23 +61,23 @@ export default function Register() {
             setLoading(true);
             try {
                 await invitationService.acceptInvitation(inviteToken);
-                toast.success("Invitación aplicada correctamente.");
+                toast.success(t('register.inviteSuccess'));
                 await reload();
                 navigate("/mi-espacio", { replace: true });
             } catch (err) {
                 if (err instanceof ApiError) {
                     switch (err.message) {
                         case "Invitation not found":
-                            toast.error("¡Ese token de invitación no nos suena!");
+                            toast.error(t('register.inviteNotFound'));
                             break;
                         case "Invitation expired":
-                            toast.error("¡Llegaste tarde! El token ha caducado");
+                            toast.error(t('register.inviteExpired'));
                             break;
                         default:
-                            toast.error("¡Vaya! La invitación se nos resiste");
+                            toast.error(t('register.inviteError'));
                     }
                 } else {
-                    toast.error("¡Vaya! La invitación se nos resiste");
+                    toast.error(t('register.inviteError'));
                 }
             } finally {
                 setLoading(false);
@@ -80,33 +85,33 @@ export default function Register() {
         };
 
         void applyInvitationIfLoggedIn();
-    }, [isAuthenticated, navigate, inviteToken, reload]);
+    }, [isAuthenticated, navigate, inviteToken, reload, t]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
         if (!formData.name.trim()) {
-            toast.error("¡Oye, necesitamos saber cómo te llamas!");
+            toast.error(t('register.nameRequired'));
             return;
         }
 
         if (isInvite && !formData.email.trim()) {
-            toast.error("Sin email no hay paraíso... ¡escríbelo!");
+            toast.error(t('register.emailRequired'));
             return;
         }
 
         if (!formData.password.trim()) {
-            toast.error("¡La contraseña no se va a escribir sola!");
+            toast.error(t('register.passwordRequired'));
             return;
         }
 
         if (formData.password.length < 6) {
-            toast.error("Tu contraseña es muy cortita, ¡ponle al menos 6 caracteres!");
+            toast.error(t('register.passwordTooShort'));
             return;
         }
 
         if (formData.password !== formData.passwordConfirm) {
-            toast.error("¡Las contraseñas no se ponen de acuerdo! Deben coincidir");
+            toast.error(t('register.passwordMismatch'));
             return;
         }
 
@@ -121,7 +126,7 @@ export default function Register() {
                         name: formData.name,
                     }
                 );
-                toast.success("Registro exitoso. Iniciando sesión...");
+                toast.success(t('register.success'));
                 await authLogin(formData.email, formData.password);
                 navigate("/mi-espacio", { replace: true });
             } else {
@@ -132,7 +137,7 @@ export default function Register() {
                         name: formData.name,
                     }
                 );
-                toast.success("Registro exitoso. Iniciando sesión...");
+                toast.success(t('register.success'));
                 await reload();
                 navigate("/mi-espacio", { replace: true });
             }
@@ -140,22 +145,22 @@ export default function Register() {
             if (err instanceof ApiError) {
                 switch (err.message) {
                     case "Invitation already used":
-                        toast.error("¡Ese token ya dio su último baile! Ya fue utilizado");
+                        toast.error(t('register.tokenAlreadyUsed'));
                         break;
                     case "Invitation expired":
-                        toast.error("¡Llegaste tarde! El token ha caducado");
+                        toast.error(t('register.inviteExpired'));
                         break;
                     case "Email already registered":
-                        toast.error("Ese email ya tiene dueño. ¿Ya tienes cuenta?");
+                        toast.error(t('register.emailAlreadyRegistered'));
                         break;
                     case "Invitation not found":
-                        toast.error("¡Ese token de invitación no nos suena!");
+                        toast.error(t('register.inviteNotFound'));
                         break;
                     default:
-                        toast.error("¡Vaya! El registro se nos complicó");
+                        toast.error(t('register.registerError'));
                 }
             } else {
-                toast.error("¡Vaya! El registro se nos complicó");
+                toast.error(t('register.registerError'));
             }
         } finally {
             setLoading(false);
@@ -168,8 +173,9 @@ export default function Register() {
 
     const invitationBanner = isInvite ? (
         <div className="p-3 bg-yambo-purple-50 border border-yambo-purple-200 rounded-2xl">
-            <p className="text-xs text-yambo-purple-700 font-medium">
-                ✨ Registro con invitación
+            <p className="text-xs text-yambo-purple-700 font-medium flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faEnvelope} className="w-3.5 h-3.5" />
+                {t('register.withInvitation')}
             </p>
         </div>
     ) : undefined;
@@ -177,7 +183,7 @@ export default function Register() {
     const footer = isInvite ? (
         <>
             <p className="text-sm text-center text-gray-500 mb-3">
-                ¿Ya tienes una cuenta?
+                {t('register.alreadyHaveAccount')}
             </p>
             <ButtonComponent
                 variant="neutral"
@@ -187,15 +193,15 @@ export default function Register() {
                 }}
                 disabled={loading}
             >
-                Iniciar sesión y aplicar invitación
+                {t('register.loginAndApply')}
             </ButtonComponent>
         </>
     ) : undefined;
 
     return (
         <AuthLayout
-            title="Registro"
-            subtitle="Completa tu registro para acceder a la plataforma."
+            title={t('register.title')}
+            subtitle={t('register.subtitle')}
             banner={invitationBanner}
             footer={footer}
         >
@@ -211,7 +217,7 @@ export default function Register() {
                     onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
                     }
-                    label="Nombre Completo"
+                    label={t('register.nameLabel')}
                     required
                     disabled={loading}
                 />
@@ -222,7 +228,7 @@ export default function Register() {
                         onChange={(e) =>
                             setFormData({ ...formData, email: e.target.value })
                         }
-                        label="Correo Electrónico"
+                        label={t('register.emailLabel')}
                         required
                         disabled={loading}
                     />
@@ -236,7 +242,7 @@ export default function Register() {
                             password: e.target.value,
                         })
                     }
-                    label="Contraseña"
+                    label={t('register.passwordLabel')}
                     required
                     disabled={loading}
                 />
@@ -249,7 +255,7 @@ export default function Register() {
                             passwordConfirm: e.target.value,
                         })
                     }
-                    label="Confirmar Contraseña"
+                    label={t('register.confirmPasswordLabel')}
                     required
                     disabled={loading}
                 />
@@ -268,7 +274,7 @@ export default function Register() {
                     }
                     suppressHydrationWarning
                 >
-                    Registrarse
+                    {t('register.registerButton')}
                 </ButtonComponent>
             </form>
         </AuthLayout>

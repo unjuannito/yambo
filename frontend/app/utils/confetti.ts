@@ -21,7 +21,7 @@ export function fireConfettiAt(x: number, y: number) {
 }
 
 /** Rain of emoji-shaped confetti */
-export function fireEmojiRain(emoji: string = "🎉") {
+export function fireEmojiRain(emoji: string = "*") {
   const scalar = 2;
   const shape = confetti.shapeFromText({ text: emoji, scalar });
 

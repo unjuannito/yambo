@@ -62,7 +62,7 @@ class ProductControllerTest {
                 .images(List.of("img.png"))
                 .build();
 
-        when(productService.createProduct(eq("Merch 1"), eq("FAM001"), eq(BigDecimal.TEN), any(), any(), any()))
+        when(productService.createProduct(eq("Merch 1"), eq("FAM001"), eq(BigDecimal.TEN), any(), any(), any(), any()))
                 .thenReturn(product);
 
         String payload = """
@@ -131,7 +131,7 @@ class ProductControllerTest {
                 .basePrice(BigDecimal.valueOf(12))
                 .build();
 
-        when(productService.updateProduct(eq("PROD001"), eq("Merch Updated"), eq(false), any(), any(), eq(BigDecimal.valueOf(12)), eq(null), any()))
+        when(productService.updateProduct(eq("PROD001"), eq("Merch Updated"), eq(false), any(), any(), eq(BigDecimal.valueOf(12)), eq(null), any(), any()))
                 .thenReturn(product);
 
         String payload = """

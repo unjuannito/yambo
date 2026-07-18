@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useLoaderData } from "react-router";
+import { useTranslation } from "react-i18next";
 import { getProjectDetail } from "~/services/publicService.server";
 import type { ProjectDetail, StaffMember, ProjectGroupDetail } from "~/services/publicService";
-import MonitorCard from "~/components/home/MonitorCard";
+import MonitorCard from "~/components/MonitorCard";
 import { projectColor } from "~/utils/projectColor";
 import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
@@ -20,12 +21,13 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 export function meta({ data }: Route.MetaArgs) {
+  const { t } = useTranslation();
   const project = data?.project;
   const seo = project?.seo;
   const siteUrl = data?.siteUrl ?? "";
 
-  const title = project ? `Yambo - ${project.name}` : "Yambo - Proyecto";
-  const description = seo?.metaDescription ?? project?.description ?? "Detalle del proyecto";
+  const title = project ? `Yambo - ${project.name}` : t('public.projectNotFound');
+  const description = seo?.metaDescription ?? project?.description ?? t('common.description');
   const pageUrl = project ? `${siteUrl}/proyectos/${project.id}` : `${siteUrl}/proyectos`;
 
   return [
@@ -42,8 +44,8 @@ export function meta({ data }: Route.MetaArgs) {
     ...(project ? [
       { "script:ld+json": projectJsonLd(project, siteUrl) },
       { "script:ld+json": breadcrumbJsonLd([
-          { name: "Inicio", url: siteUrl },
-          { name: "Proyectos", url: `${siteUrl}/proyectos` },
+          { name: t('nav.home'), url: siteUrl },
+          { name: t('public.projectsTitle'), url: `${siteUrl}/proyectos` },
           { name: project.name, url: pageUrl },
       ]) },
     ] : []),
@@ -60,6 +62,7 @@ function getProjectRole(member: StaffMember, projectName: string): 'COORDINATOR'
 }
 
 export default function Proyecto() {
+  const { t } = useTranslation();
   const { project } = useLoaderData<typeof loader>();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -97,12 +100,12 @@ export default function Proyecto() {
 
   if (!project) {
     return (
-      <section className="w-full bg-yambo-white min-h-screen pt-24 pb-16">
+      <section className="w-full bg-yambo-white min-h-screen pt-12 pb-16">
         <div className="max-w-6xl mx-auto px-4 text-center py-20">
-          <p className="text-6xl mb-4">🔍</p>
-          <h1 className="text-2xl font-bold text-yambo-black mb-4">Proyecto no encontrado</h1>
+          <p className="text-6xl mb-4">-</p>
+          <h1 className="text-2xl font-bold text-yambo-black mb-4">{t('public.projectNotFound')}</h1>
           <a href="/proyectos" className="text-yambo-green-600 hover:underline font-semibold">
-            ← Volver a proyectos
+            {t('public.projectBackToProjects')}
           </a>
         </div>
       </section>
@@ -113,7 +116,7 @@ export default function Proyecto() {
 
   return (
     <section
-      className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen pt-24 pb-16"
+      className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen pt-12 pb-16"
       style={{
         '--pc-text': pc.text,
         '--pc-text-hover': pc.textHover,
@@ -121,9 +124,9 @@ export default function Proyecto() {
         '--pc-border': pc.border,
       } as React.CSSProperties}
     >
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-8xl mx-auto px-4">
         <a href="/proyectos" className="inline-flex items-center gap-1 text-sm font-semibold mb-6 transition-colors [color:var(--pc-text)] hover:[color:var(--pc-text-hover)]">
-          ← Todos los proyectos
+          {t('public.projectBackToList')}
         </a>
 
         {/* Project header */}
@@ -157,7 +160,7 @@ export default function Proyecto() {
         {/* Coordinators */}
         {filteredCoordinators.length > 0 && (
           <div className="mb-10 fade-up" style={{ animationDelay: "0.2s" }}>
-            <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">Coordinación</h2>
+            <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">{t('public.projectCoordination')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 stagger">
               {filteredCoordinators.map((coord) => (
                 <MonitorCard key={coord.id} monitor={coord} projectName={project.name} />
@@ -168,7 +171,7 @@ export default function Proyecto() {
 
         {/* Monitors */}
         <div className="mb-6 fade-up" style={{ animationDelay: "0.3s" }}>
-          <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">Equipo de Monitores</h2>
+          <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">{t('public.projectMonitorsTeam')}</h2>
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -177,7 +180,7 @@ export default function Proyecto() {
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Buscar monitor..."
+                placeholder={t('public.projectSearch')}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 outline-none bg-white shadow-sm transition-all"
               />
               <FontAwesomeIcon
@@ -196,7 +199,7 @@ export default function Proyecto() {
                       : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  Todos
+                  {t('common.all')}
                 </button>
                 {namedGroups.map((group) => {
                   const colors = projectColor(group.id);
@@ -223,14 +226,13 @@ export default function Proyecto() {
           {(selectedGroupId || searchText.trim()) && (
             <div className="flex items-center gap-2 mb-4 text-sm text-gray-400">
               <span>
-                {filteredMonitors.length} {filteredMonitors.length === 1 ? "monitor" : "monitores"}
-                {" encontrado" + (filteredMonitors.length === 1 ? "" : "s")}
+                {t('public.projectFilteredResult', { count: filteredMonitors.length })}
               </span>
               <button
                 onClick={() => { setSelectedGroupId(null); setSearchText(""); }}
                 className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
               >
-                Limpiar filtros
+                {t('public.projectClearFilters')}
               </button>
             </div>
           )}
@@ -243,11 +245,11 @@ export default function Proyecto() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-6xl mb-4">👥</p>
+              <p className="text-6xl mb-4">-</p>
               <p className="text-gray-400">
                 {monitors.length === 0
-                  ? "Este proyecto aún no tiene monitores asignados."
-                  : "No se encontraron monitores con los filtros seleccionados."}
+                  ? t('public.projectNoMonitors')
+                  : t('public.projectNoMonitorsFiltered')}
               </p>
             </div>
           )}

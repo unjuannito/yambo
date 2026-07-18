@@ -25,7 +25,8 @@ import { exportService, type ExportReportType } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import type { IssueReportWindowModel } from "~/types/issueType";
-import { IssueStatusBadge, CreateIssueModal } from "~/components/issues";
+import { IssueStatusBadge } from "~/components/issues/IssueStatusBadge";
+import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
 import { useAuth } from "~/hooks/useAuth";
 import { useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -120,7 +121,7 @@ export default function Orders() {
                 setProducts(productsResponse.content);
                 setDrops(dropsResponse.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Los productos y drops no quieren salir"));
+                toast.error(getErrorMessage(err, "Los productos y colecciones no quieren salir"));
             }
         };
 
@@ -211,9 +212,10 @@ export default function Orders() {
             const result = await orderService.getAllOrders(
                 page,
                 size,
-                filters.id,
-                filters.customerName,
-                undefined,
+                filters.q,  // query
+                undefined,  // orderId
+                undefined,  // customerName
+                undefined,  // customerId
                 statusFilter,
                 effectiveStartDate,
                 effectiveEndDate,
@@ -325,7 +327,7 @@ export default function Orders() {
         try {
             await exportService.exportOrders(selectedDropIds, reportType);
 
-            const dropsLabel = selectedDropIds.length > 0 ? `${selectedDropIds.length} drops seleccionados` : 'todos los drops';
+            const dropsLabel = selectedDropIds.length > 0 ? `${selectedDropIds.length} colecciones seleccionadas` : 'todas las colecciones';
             toast.success(`${REPORT_TYPE_LABELS[reportType]} generado (${dropsLabel})`);
             setIsExportModalOpen(false);
             setReportType('FULL');
@@ -378,6 +380,7 @@ export default function Orders() {
         {
             key: "id",
             header: "ID",
+            className: "hidden md:table-cell",
             filter: {
                 enabled: true,
                 type: "search",
@@ -401,6 +404,7 @@ export default function Orders() {
                     <p className="text-gray-400 text-xs">
                         {order.user?.email || ""}
                     </p>
+                    <p className="text-gray-400 text-xs md:hidden font-mono truncate max-w-[120px]">{order.id}</p>
                 </div>
             ),
         },
@@ -439,6 +443,7 @@ export default function Orders() {
         {
             key: "dateRange",
             header: "Fecha",
+            className: "hidden md:table-cell",
             filter: {
                 enabled: true,
                 type: "date-range",
@@ -452,6 +457,7 @@ export default function Orders() {
         {
             key: "products",
             header: "Productos",
+            className: "hidden sm:table-cell",
             render: (order: Order) => (
                 <span className="text-sm text-gray-400">
                     {order.products.reduce((sum, p) => sum + p.quantity, 0) ||
@@ -479,6 +485,7 @@ export default function Orders() {
         {
             key: "actions",
             header: "Acciones",
+            requiredPerms: [{ obj: "order", action: "update" }],
             render: (order: Order) => (
                 <div className="flex items-center gap-2">
                     {(() => {
@@ -569,7 +576,7 @@ export default function Orders() {
             permission={{ obj: "order", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
+            <main className="flex flex-col p-4 md:p-6 w-full">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black">Pedidos</h1>
                     <div className="flex items-center gap-4">
@@ -594,16 +601,14 @@ export default function Orders() {
 
                 {/* Bulk Actions Toolbar */}
                 {selectedOrders.length > 0 && (
-                    <div className="bg-yambo-green-50/50 border border-yambo-green-200 rounded-2xl p-4 mb-4 flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-yambo-green-800">
-                                {selectedOrders.length} pedido
-                                {selectedOrders.length !== 1 ? "s" : ""}{" "}
-                                seleccionado
-                                {selectedOrders.length !== 1 ? "s" : ""}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-1">
+                    <div className="bg-yambo-green-50/50 border border-yambo-green-200 rounded-2xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span className="text-sm font-medium text-yambo-green-800 shrink-0">
+                            {selectedOrders.length} pedido
+                            {selectedOrders.length !== 1 ? "s" : ""}{" "}
+                            seleccionado
+                            {selectedOrders.length !== 1 ? "s" : ""}
+                        </span>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                             {(() => {
                                 const selectedOrderObjects = allOrdersOnPage.filter(o => selectedOrders.includes(o.id));
                                 const transitionSets = selectedOrderObjects.map(o => ORDER_WORKFLOW_TRANSITIONS[o.status as OrderStatus] || []);
@@ -659,7 +664,7 @@ export default function Orders() {
                         emptyMessage: "No se encontraron pedidos",
                         loadingMessage: "Cargando pedidos...",
                     }}
-                    features={{ enableLoadMore: true }}
+                    features={{ enableLoadMore: true, globalSearch: true }}
                     serverSide={{ fetchData: fetchOrdersData }}
                 />
             </main>
@@ -722,13 +727,13 @@ export default function Orders() {
                     </div>
 
                     <MultiSelectComponent
-                        label="Filtrar por Drops"
+                        label="Filtrar por Colecciones"
                         value={selectedDropIds}
                         options={drops.map((drop) => ({
                             value: drop.id,
                             label: drop.name,
                         }))}
-                        placeholder="Todos los drops"
+                        placeholder="Todas las colecciones"
                         name="selectedDrops"
                         onChange={(e) => {
                             const select = e.target as HTMLSelectElement;
@@ -1072,7 +1077,6 @@ export default function Orders() {
                 onSuccess={() => {
                     const orderId = issueWindow?.orderId;
                     setIssueWindow(null);
-                    toast.success("Incidencia creada correctamente");
                     if (orderId) {
                         issueService.getIssuesByOrder(orderId)
                             .then(setSelectedOrderIssues)

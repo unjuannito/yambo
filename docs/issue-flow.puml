@@ -17,14 +17,13 @@ title Flujo de estados — Incidencias
 [*] --> OPEN : Incidencia creada
 
 OPEN --> IN_PROGRESS : En revisión
-IN_PROGRESS --> RESOLVED : Resuelta
-IN_PROGRESS --> REOPENED : Reabierta
-RESOLVED --> CLOSED : Cerrada
-REOPENED --> IN_PROGRESS : En revisión
+IN_PROGRESS --> CLOSED : Cerrada
+IN_PROGRESS --> OPEN : Reabierta
+CLOSED --> OPEN : Reabrir
 
 CLOSED --> [*]
 
 state CLOSED #D4EDDA
-state REOPENED #FFF3CD
+state OPEN #FFF3CD
 
 @enduml

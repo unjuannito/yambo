@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { FilterableTable, type FilterableColumn, type FetchDataParams } from "~/components/common/FilterableTable";
+import { useTranslation } from "react-i18next";
+import ListPageShell from "~/components/common/ListPageShell";
+import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { issueService, type IssueListItem } from "~/services/issueService";
-import { StatCard } from "~/components/common/StatCard";
 import { IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { useViewTab } from "~/components/common/ViewTabs";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
 interface UserIssueRow {
@@ -17,19 +18,17 @@ interface UserIssueRow {
     orderId: string;
     productName: string;
     createdAt: string;
+    updatedAt: string;
 }
 
 export default function IssuesPage() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { activeTab, setActiveTab } = useViewTab("actual");
     const [refreshKey, setRefreshKey] = useState(0);
     const [stats, setStats] = useState({
-        total: 0,
         open: 0,
         inProgress: 0,
-        resolved: 0,
-        closed: 0,
-        reopened: 0,
     });
 
     const statusOptions = useMemo(
@@ -40,6 +39,11 @@ export default function IssuesPage() {
             })),
         [],
     );
+
+    const handleTabChange = useCallback((tab: "actual" | "historico") => {
+        setActiveTab(tab);
+        setRefreshKey((prev) => prev + 1);
+    }, [setActiveTab]);
 
     const fetchIssuesData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
@@ -66,12 +70,8 @@ export default function IssuesPage() {
             if (page === 0) {
                 const items = result.content;
                 setStats({
-                    total: result.page.totalElements,
                     open: items.filter((i) => i.status === IssueStatus.OPEN).length,
                     inProgress: items.filter((i) => i.status === IssueStatus.IN_PROGRESS).length,
-                    resolved: items.filter((i) => i.status === IssueStatus.RESOLVED).length,
-                    closed: items.filter((i) => i.status === IssueStatus.CLOSED).length,
-                    reopened: items.filter((i) => i.status === IssueStatus.REOPENED).length,
                 });
             }
 
@@ -84,6 +84,7 @@ export default function IssuesPage() {
                     orderId: item.orderId || "",
                     productName: item.productName || "",
                     createdAt: item.createdAt,
+                    updatedAt: item.updatedAt,
                 })),
                 page: result.page,
             };
@@ -95,31 +96,35 @@ export default function IssuesPage() {
         () => [
             {
                 key: "title",
-                header: "Incidencia",
+                header: t('issues.issueNumber'),
                 filter: {
                     enabled: true,
                     type: "search",
-                    placeholder: "Buscar por título...",
+                    placeholder: t('issues.searchByTitle'),
                 },
                 render: (row) => (
-                    <div>
-                        <p className="font-medium text-yambo-black">{row.title}</p>
-                        <p className="text-xs text-gray-400">ID: {row.id}</p>
+                    <div className="min-w-0">
+                        <p className="font-medium text-yambo-black truncate max-w-[200px] sm:max-w-none">{row.title}</p>
+                        <p className="text-xs text-gray-400 font-mono">#{row.id}</p>
+                        {row.orderId && <p className="text-xs text-gray-400 sm:hidden">{t('issues.orderId')} #{row.orderId}</p>}
+                        {row.productName && <p className="text-xs text-gray-400 sm:hidden truncate max-w-[160px]">{row.productName}</p>}
                     </div>
                 ),
             },
             {
                 key: "orderId",
-                header: "Pedido",
+                header: t('issues.orderId'),
+                className: "hidden sm:table-cell",
                 render: (row) => <span className="font-mono text-xs text-gray-500">#{row.orderId}</span>,
             },
             {
                 key: "productName",
-                header: "Producto",
+                header: t('issues.product'),
+                className: "hidden sm:table-cell",
             },
             {
                 key: "status",
-                header: "Estado",
+                header: t('issues.status'),
                 filter: {
                     enabled: true,
                     type: "multi-select",
@@ -129,86 +134,60 @@ export default function IssuesPage() {
             },
             {
                 key: "dateRange",
-                header: "Creada",
+                header: t('issues.updatedAt'),
+                className: "hidden md:table-cell",
                 filter: {
                     enabled: true,
                     type: "date-range",
                 },
-                render: (row) => <span className="text-sm text-gray-500">{new Date(row.createdAt).toLocaleString("es-ES")}</span>,
+                render: (row) => <span className="text-sm text-gray-500">{new Date(row.updatedAt).toLocaleString("es-ES")}</span>,
             },
             {
                 key: "actions",
-                header: "Acciones",
+                header: "",
                 render: (row) => (
                     <ButtonComponent
                         onClick={() => navigate(`/mi-espacio/incidencias/${row.id}`)}
                         size="sm"
                         variant="neutral"
                     >
-                        Ver incidencia completa
+                        <span className="hidden sm:inline">{t('issues.view')}</span>
+                        <span className="sm:hidden">{t('issues.viewShort')}</span>
                     </ButtonComponent>
                 ),
             },
         ],
-        [navigate, statusOptions],
+        [navigate, statusOptions, t],
     );
 
     return (
-        <main className="flex flex-col gap-6 p-6 md:p-8 w-full md:w-[calc(100vw-16rem)]">
-            <section className="rounded-[2rem] border border-gray-100 bg-white shadow-sm overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-50 via-white to-yambo-green-50/40 px-6 py-5 md:px-8 border-b border-gray-100">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mb-2">Your issues</p>
-                            <h1 className="text-3xl md:text-4xl font-extrabold font-display text-yambo-black mb-2">Incidencias</h1>
-                            <p className="text-gray-500 max-w-3xl">Consulta el estado de tus tickets, revisa su actividad reciente y entra al detalle con una vista más cercana a un panel de seguimiento.</p>
-                        </div>
-                        <ButtonComponent
-                            onClick={() => setRefreshKey((prev) => prev + 1)}
-                            variant="neutral"
-                        >
-                            Recargar
-                        </ButtonComponent>
-                    </div>
-                </div>
-
-                <div className="px-6 py-6 md:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                        <StatCard label="Total" value={stats.total} className="bg-slate-50 rounded-2xl" />
-                        <StatCard label="Abiertas" value={stats.open} className="bg-red-50 rounded-2xl" />
-                        <StatCard label="En progreso" value={stats.inProgress} className="bg-orange-50 rounded-2xl" />
-                        <StatCard label="Resueltas" value={stats.resolved} className="bg-yambo-green-50 rounded-2xl" />
-                        <StatCard label="Cerradas" value={stats.closed} className="bg-slate-100 rounded-2xl" />
-                        <StatCard label="Reabiertas" value={stats.reopened} className="bg-yambo-purple-50 rounded-2xl" />
-                    </div>
-                </div>
-            </section>
-
-            <section className="rounded-[2rem] border border-gray-100 bg-white shadow-sm p-6 md:p-8">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400 mb-1">Navigator</p>
-                        <h2 className="text-xl font-bold font-display text-yambo-black">Seguimiento de incidencias</h2>
-                    </div>
-                    <span className="text-sm text-gray-400">Filtra por estado, fecha y título sin salir de tu espacio</span>
-                </div>
-
-                <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
-
-                <FilterableTable<UserIssueRow>
-                    keyField="id"
-                    columns={columns}
-                    display={{
-                        emptyMessage: "No hay incidencias que coincidan con los filtros",
-                        loadingMessage: "Cargando incidencias...",
-                    }}
-                    features={{
-                        enableFilters: true,
-                        enablePagination: true,
-                    }}
-                    serverSide={{ fetchData: fetchIssuesData }}
-                />
-            </section>
-        </main>
+        <ListPageShell<UserIssueRow>
+            title={t('issues.title')}
+            subtitle={t('issues.myIssuesDesc')}
+            actions={
+                <ButtonComponent
+                    onClick={() => setRefreshKey((prev) => prev + 1)}
+                    variant="neutral"
+                    size="sm"
+                >
+                    {t('common.reload')}
+                </ButtonComponent>
+            }
+            compactStats={[
+                { label: t('issues.statOpen'), value: stats.open, color: "red" },
+                { label: t('issues.statInProgress'), value: stats.inProgress, color: "orange" },
+            ]}
+            tabs={{
+                activeTab,
+                onTabChange: handleTabChange,
+            }}
+            columns={columns}
+            keyField="id"
+            serverSide={{ fetchData: fetchIssuesData }}
+            features={{
+                enableFilters: true,
+                enablePagination: true,
+            }}
+        />
     );
 }

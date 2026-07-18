@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "~/types/error";
@@ -104,6 +105,82 @@ function SortableValueItem({ id, children }: {
     );
 }
 
+interface ValueItemRowProps {
+    value: OptionValue;
+    optionIndex: number;
+    valueIndex: number;
+    dragHandleProps: Record<string, any>;
+    moveValue: (optionIndex: number, valueIndex: number, dir: "up" | "down") => void;
+    updateValue: (optionIndex: number, valueIndex: number, updates: Partial<OptionValue>) => void;
+    removeValue: (optionIndex: number, valueIndex: number) => void;
+    valuesLength: number;
+}
+
+function ValueItemRow({ value, optionIndex, valueIndex, dragHandleProps, moveValue, updateValue, removeValue, valuesLength }: ValueItemRowProps) {
+    const { t } = useTranslation();
+    return (
+        <div className="flex gap-1 items-end">
+            <button
+                type="button"
+                {...dragHandleProps}
+                className="cursor-grab text-gray-300 hover:text-gray-500 p-1 self-center"
+                title={t('productEditor.dragToReorder')}
+            >
+                <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3" />
+            </button>
+            <div className="flex flex-col gap-0.5 self-center">
+                <button
+                    type="button"
+                    onClick={() => moveValue(optionIndex, valueIndex, "up")}
+                    disabled={valueIndex === 0}
+                    className="text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
+                    title={t('productEditor.moveUp')}
+                >
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => moveValue(optionIndex, valueIndex, "down")}
+                    disabled={valueIndex === valuesLength - 1}
+                    className="text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
+                    title={t('productEditor.moveDown')}
+                >
+                    <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3" />
+                </button>
+            </div>
+            <div className="flex-1">
+                <InputComponent
+                    label={t('productEditor.label')}
+                    type="text"
+                    value={value.label}
+                    onChange={(e) => updateValue(optionIndex, valueIndex, { label: e.target.value })}
+                    placeholder="ej. XL"
+                    className="text-sm"
+                />
+            </div>
+            <div className="w-24">
+                <InputComponent
+                    label={t('productEditor.price')}
+                    type="number"
+                    value={value.price || 0}
+                    onChange={(e) =>
+                        updateValue(optionIndex, valueIndex, {
+                            price: parseFloat(e.target.value) || 0,
+                        })
+                    }
+                    className="text-sm"
+                />
+            </div>
+            <button
+                onClick={() => removeValue(optionIndex, valueIndex)}
+                className="px-2 py-1 bg-coral text-white rounded-full hover:bg-red-500 text-sm transition-colors"
+            >
+                <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+            </button>
+        </div>
+    );
+}
+
 function emptyProduct(): Product {
     return {
         id: "",
@@ -115,6 +192,7 @@ function emptyProduct(): Product {
         options: [],
         images: [],
         description: "",
+        shortDescription: "",
     };
 }
 
@@ -139,10 +217,10 @@ function normalizeOption(option: ProductOption): ProductOption {
 
 export default function ProductEditor({ mode, productId }: ProductEditorProps) {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const isEditing = mode === "edit";
 
-    const [savedProducts, setSavedProducts] = useState<Product[]>([]);
     const [familyProducts, setFamilyProducts] = useState<FamilyProduct[]>([]);
     const [selectedProductId, setSelectedProductId] = useState<string>("");
     const [jsonInput, setJsonInput] = useState("");
@@ -216,10 +294,9 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 }
 
                 const response = await productService.getAllProducts(0, 100);
-                setSavedProducts(response.content);
             } catch (err) {
                 toast.error(getErrorMessage(err, "¡El producto se nos esconde!"));
-                navigate("/mi-espacio/merch");
+                navigate("/mi-espacio/articulos");
             } finally {
                 setLoading(false);
             }
@@ -406,11 +483,12 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     basePrice: product.basePrice,
                     familyProductId: normalizeOptionalId(product.familyProductId),
                     description: product.description,
+                    shortDescription: product.shortDescription,
                 };
 
                 await productService.updateProduct(productId, productData);
                 toast.success("Producto actualizado exitosamente");
-                navigate(`/mi-espacio/merch/${productId}`);
+                navigate(`/mi-espacio/articulos/${productId}`);
                 return;
             }
 
@@ -421,10 +499,11 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 options: product.options.map(normalizeOption),
                 images: product.images,
                 description: product.description,
+                shortDescription: product.shortDescription,
             });
 
             toast.success("Producto guardado exitosamente");
-            navigate("/mi-espacio/merch");
+            navigate("/mi-espacio/articulos");
         } catch (err) {
             toast.error(getErrorMessage(err, "¡El producto se resiste a guardarse!"));
         } finally {
@@ -450,26 +529,26 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                 <ButtonComponent
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate("/mi-espacio/merch")}
+                    onClick={() => navigate("/mi-espacio/articulos")}
                 >
-                    ← Volver al merch
+                    {t('productEditor.backToProducts')}
                 </ButtonComponent>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-                <h1 className="text-2xl font-extrabold font-display text-yambo-black mb-2">{isEditing ? "Editar Producto" : "Crear Nuevo Producto"}</h1>
+                <h1 className="text-2xl font-extrabold font-display text-yambo-black mb-2">{isEditing ? t('productEditor.editProduct') : t('productEditor.createNewProduct')}</h1>
                 <p className="text-gray-400">
-                    {isEditing ? "Modifica los detalles del producto" : "Crea un nuevo producto con todas sus opciones"}
+                    {isEditing ? t('productEditor.editProductDesc') : t('productEditor.createProductDesc')}
                 </p>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="space-y-6">
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Detalles del Producto</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">{t('productEditor.productDetails')}</h2>
                         <div className="space-y-4">
                             <InputComponent
-                                label="Nombre del Producto"
+                                label={t('productEditor.productName')}
                                 type="text"
                                 value={product.name}
                                 onChange={(e) => setProduct({ ...product, name: e.target.value })}
@@ -477,7 +556,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                             />
 
                             <SelectComponent
-                                label="Drop (Familia de productos)"
+                                label={t('productEditor.collection')}
                                 value={product.familyProductId || ""}
                                 onChange={(e) =>
                                     setProduct({
@@ -486,13 +565,13 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                     })
                                 }
                                 options={[
-                                    { value: "", label: "Sin drop" },
+                                    { value: "", label: "Sin colección" },
                                     ...familyProducts.map((family) => ({ value: family.id, label: family.name })),
                                 ]}
                             />
 
                             <InputComponent
-                                label="Precio Base (€)"
+                                label={t('productEditor.basePrice')}
                                 type="number"
                                 value={product.basePrice}
                                 onChange={(e) => setProduct({ ...product, basePrice: parseFloat(e.target.value) || 0 })}
@@ -500,7 +579,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                             />
 
                             <CheckboxComponent
-                                label="Activo"
+                                label={t('productEditor.active')}
                                 variantType="toggle"
                                 variant="right"
                                 checked={product.active}
@@ -514,7 +593,19 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Descripción del Producto</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">{t('productEditor.productDescription')}</h2>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción corta</label>
+                            <textarea
+                                value={product.shortDescription || ""}
+                                onChange={(e) => setProduct({ ...product, shortDescription: e.target.value })}
+                                placeholder="Breve resumen visible en la página del producto"
+                                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-y"
+                                rows={2}
+                                maxLength={300}
+                            />
+                            <p className="text-xs text-gray-400 text-right mt-1">{(product.shortDescription || '').length}/300</p>
+                        </div>
                         <MarkdownEditor
                             value={product.description || ""}
                             onChange={(value) => setProduct({ ...product, description: value })}
@@ -523,10 +614,10 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">Imágenes del Producto</h2>
+                        <h2 className="text-xl font-bold font-display text-yambo-black mb-4">{t('productEditor.productImages')}</h2>
                         <FileUploader
                             multiple
-                            label="Arrastra o haz clic para subir archivos"
+                            label={t('productEditor.dragOrClickToUpload')}
                             accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
                             onUpload={(file) =>
                                 setProduct((prev) => ({
@@ -562,13 +653,13 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
 
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold font-display text-yambo-black">Opciones del Producto</h2>
+                            <h2 className="text-xl font-bold font-display text-yambo-black">{t('productEditor.productOptions')}</h2>
                             <ButtonComponent
                                 variant="primary"
                                 size="sm"
                                 onClick={addOption}
                             >
-                                + Añadir Opción
+                                {t('productEditor.addOption')}
                             </ButtonComponent>
                         </div>
 
@@ -585,11 +676,11 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 type="button"
                                                 {...dragHandleProps}
                                                 className="cursor-grab text-gray-300 hover:text-gray-500 p-1"
-                                                title="Arrastrar para reordenar"
+                                                title={t('productEditor.dragToReorder')}
                                             >
                                                 <FontAwesomeIcon icon={faGripVertical} className="w-4 h-4" />
                                             </button>
-                                            <h3 className="font-bold text-lg text-yambo-black">Opción {optionIndex + 1}</h3>
+                                            <h3 className="font-bold text-lg text-yambo-black">{t('productEditor.option', {count: optionIndex + 1})}</h3>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <button
@@ -597,7 +688,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 onClick={() => moveOption(optionIndex, "up")}
                                                 disabled={optionIndex === 0}
                                                 className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title="Mover arriba"
+                                                title={t('productEditor.moveUp')}
                                             >
                                                 <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
                                             </button>
@@ -606,7 +697,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 onClick={() => moveOption(optionIndex, "down")}
                                                 disabled={optionIndex === product.options.length - 1}
                                                 className="p-1 text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title="Mover abajo"
+                                                title={t('productEditor.moveDown')}
                                             >
                                                 <FontAwesomeIcon icon={faArrowDown} className="w-4 h-4" />
                                             </button>
@@ -616,14 +707,14 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 onClick={() => removeOption(optionIndex)}
                                                 className="ml-2"
                                             >
-                                                Eliminar
+                                                {t('common.delete')}
                                             </ButtonComponent>
                                         </div>
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-4 mb-4">
                                         <InputComponent
-                                            label="Nombre"
+                                            label={t('productEditor.name')}
                                             type="text"
                                             value={option.name}
                                             onChange={(e) => updateOption(optionIndex, { name: e.target.value })}
@@ -631,7 +722,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                         />
 
                                         <SelectComponent
-                                            label="Tipo"
+                                            label={t('productEditor.type')}
                                             value={option.type}
                                             onChange={(e) =>
                                                 updateOption(optionIndex, {
@@ -639,16 +730,16 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                 })
                                             }
                                             options={[
-                                                { value: "select", label: "Selección" },
-                                                { value: "checkbox", label: "Checkbox" },
-                                                { value: "text_input", label: "Entrada de Texto" },
+                                                { value: "select", label: t('productEditor.selectOption') },
+                                                { value: "checkbox", label: t('productEditor.checkboxOption') },
+                                                { value: "text_input", label: t('productEditor.textInputOption') },
                                             ]}
                                         />
                                     </div>
 
                                     <div className="mb-4">
                                         <CheckboxComponent
-                                            label="Requerido"
+                                            label={t('productEditor.required')}
                                             variant="left"
                                             checked={!!option.required}
                                             onChange={(e) => updateOption(optionIndex, { required: e.target.checked })}
@@ -656,16 +747,16 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                     </div>
 
                                     <div className="mb-4">
-                                        <p className="text-xs font-medium text-gray-500 mb-2">Excluir de informes Excel</p>
+                                        <p className="text-xs font-medium text-gray-500 mb-2">{t('productEditor.excludeFromExcelReports')}</p>
                                         <div className="flex flex-col gap-2">
                                             <CheckboxComponent
-                                                label="Excluir del informe completo"
+                                                label={t('productEditor.excludeFromFull')}
                                                 variant="left"
                                                 checked={!!option.excludeFromFull}
                                                 onChange={(e) => updateOption(optionIndex, { excludeFromFull: e.target.checked || undefined })}
                                             />
                                             <CheckboxComponent
-                                                label="Excluir de los informes de producción (Fábrica y Almacén)"
+                                                label={t('productEditor.excludeFromProduction')}
                                                 variant="left"
                                                 checked={!!option.excludeFromProduction}
                                                 onChange={(e) => updateOption(optionIndex, { excludeFromProduction: e.target.checked || undefined })}
@@ -682,7 +773,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                                     size="sm"
                                                     onClick={() => addValue(optionIndex)}
                                                 >
-                                                    + Añadir Valor
+                                                    {t('productEditor.addValue')}
                                                 </ButtonComponent>
                                             </div>
 
@@ -691,65 +782,16 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                             {(option.values || []).map((value, valueIndex) => (
                                                 <SortableValueItem key={`val-${optionIndex}-${valueIndex}`} id={`val-${optionIndex}-${valueIndex}`}>
                                                     {({ dragHandleProps }) => (
-                                                <div className="flex gap-1 items-end">
-                                                    <button
-                                                        type="button"
-                                                        {...dragHandleProps}
-                                                        className="cursor-grab text-gray-300 hover:text-gray-500 p-1 self-center"
-                                                        title="Arrastrar para reordenar"
-                                                    >
-                                                        <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3" />
-                                                    </button>
-                                                    <div className="flex flex-col gap-0.5 self-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => moveValue(optionIndex, valueIndex, "up")}
-                                                            disabled={valueIndex === 0}
-                                                            className="text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
-                                                            title="Mover arriba"
-                                                        >
-                                                            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => moveValue(optionIndex, valueIndex, "down")}
-                                                            disabled={valueIndex === (option.values || []).length - 1}
-                                                            className="text-gray-300 hover:text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed leading-none"
-                                                            title="Mover abajo"
-                                                        >
-                                                            <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <InputComponent
-                                                            label="Etiqueta"
-                                                            type="text"
-                                                            value={value.label}
-                                                            onChange={(e) => updateValue(optionIndex, valueIndex, { label: e.target.value })}
-                                                            placeholder="ej. XL"
-                                                            className="text-sm"
+                                                        <ValueItemRow
+                                                            value={value}
+                                                            optionIndex={optionIndex}
+                                                            valueIndex={valueIndex}
+                                                            dragHandleProps={dragHandleProps}
+                                                            moveValue={moveValue}
+                                                            updateValue={updateValue}
+                                                            removeValue={removeValue}
+                                                            valuesLength={(option.values || []).length}
                                                         />
-                                                    </div>
-                                                    <div className="w-24">
-                                                        <InputComponent
-                                                            label="Precio"
-                                                            type="number"
-                                                            value={value.price || 0}
-                                                            onChange={(e) =>
-                                                                updateValue(optionIndex, valueIndex, {
-                                                                    price: parseFloat(e.target.value) || 0,
-                                                                })
-                                                            }
-                                                            className="text-sm"
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        onClick={() => removeValue(optionIndex, valueIndex)}
-                                                        className="px-2 py-1 bg-coral text-white rounded-full hover:bg-red-500 text-sm transition-colors"
-                                                    >
-                                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                                                    </button>
-                                                </div>
                                                     )}
                                                 </SortableValueItem>
                                             ))}
@@ -757,7 +799,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                             </DndContext>
 
                                             {(option.values || []).length === 0 && (
-                                                <p className="text-gray-400 text-sm">No hay valores añadidos aún.</p>
+                                                <p className="text-gray-400 text-sm">{t('productEditor.noValues')}</p>
                                             )}
                                         </div>
                                     )}
@@ -765,7 +807,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                                     {option.type === "text_input" && (
                                         <div className="mt-4">
                                             <InputComponent
-                                                label="Precio adicional (€)"
+                                                label={t('productEditor.additionalPrice')}
                                                 type="number"
                                                 value={option.price || 0}
                                                 onChange={(e) =>
@@ -784,7 +826,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
 
                             {product.options.length === 0 && (
                                 <p className="text-gray-400 text-sm text-center py-4">
-                                    No hay opciones añadidas aún. Haz clic en "Añadir Opción" para comenzar.
+                                    {t('productEditor.noOptions')}
                                 </p>
                             )}
                         </div>
@@ -799,7 +841,7 @@ export default function ProductEditor({ mode, productId }: ProductEditorProps) {
                         isLoading={saving}
                         className="w-full"
                     >
-                        {isEditing ? "Guardar Cambios" : "Crear Producto"}
+                        {isEditing ? t('productEditor.saveChanges') : t('productEditor.createProduct')}
                     </ButtonComponent>
                 </div>
             </div>

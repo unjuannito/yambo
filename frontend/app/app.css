@@ -49,6 +49,10 @@
   --radius-playful: 1rem;
   --radius-pill: 9999px;
   --radius-blob: 2rem;
+
+
+  --container-8xl: 96rem;
+
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -397,4 +401,9 @@ body {
 @media (max-width: 818px) {
   .custom-break { display: none; }
   .custom-break-button { display: inline-flex; }
+}
+
+/* Remove all default padding */
+.mdxeditor .markdown{
+    padding: 0 !important;
 }

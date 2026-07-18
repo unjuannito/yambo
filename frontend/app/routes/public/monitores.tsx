@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useLoaderData } from "react-router";
+import { useTranslation } from "react-i18next";
 import { getStaff, getActiveProjects } from "~/services/publicService.server";
 import type { StaffMember, ActiveProject } from "~/services/publicService";
-import MonitorCard from "~/components/home/MonitorCard";
+import MonitorCard from "~/components/MonitorCard";
 import { projectColor } from "~/utils/projectColor";
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
@@ -11,14 +12,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({ data }: Route.MetaArgs) {
+  const { t } = useTranslation();
   const siteUrl = data?.siteUrl ?? "";
-  const title = "Yambo - Equipo de Monitores | Asociación Juvenil en Alcobendas";
-  const description = "Conoce al equipo de monitores de Yambo en Alcobendas (Madrid). Profesionales dedicados al ocio educativo y tiempo libre para niños y adolescentes.";
+  const title = t('public.monitorsPageTitle');
+  const description = t('public.monitorsMetaDescription');
 
   return [
     { title },
     { name: "description", content: description },
-    { name: "keywords", content: "monitores Yambo, equipo educativo, Alcobendas, Madrid, educadores tiempo libre, ocio educativo" },
+    { name: "keywords", content: t('public.monitorsKeywords') },
     { tagName: "link", rel: "canonical", href: `${siteUrl}/monitores` },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
@@ -27,8 +29,8 @@ export function meta({ data }: Route.MetaArgs) {
     { name: "robots", content: "index, follow" },
     { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/monitores` }) },
     { "script:ld+json": breadcrumbJsonLd([
-        { name: "Inicio", url: siteUrl },
-        { name: "Monitores", url: `${siteUrl}/monitores` },
+        { name: t('nav.home'), url: siteUrl },
+        { name: t('public.monitorsTitle'), url: `${siteUrl}/monitores` },
     ]) },
   ];
 }
@@ -42,6 +44,7 @@ export async function loader() {
 }
 
 export default function Monitores() {
+  const { t } = useTranslation();
   const { monitors, projects } = useLoaderData<typeof loader>();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -66,11 +69,11 @@ export default function Monitores() {
   });
 
   return (
-    <section className="w-full bg-gradient-to-b from-yambo-green-50/30 to-yambo-white min-h-screen pt-24 pb-16">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display fade-up">Monitores</h1>
+    <section className="w-full bg-gradient-to-b from-yambo-green-50/30 to-yambo-white min-h-screen pt-12 pb-16">
+      <div className="max-w-8xl mx-auto px-4">
+        <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display fade-up">{t('public.monitorsTitle')}</h1>
         <p className="text-gray-500 text-lg mb-10 fade-up" style={{ animationDelay: "0.05s" }}>
-          Conoce al equipo de monitores que hacen posible nuestros proyectos. 💪
+          {t('public.monitorsSubtitle')}
         </p>
 
         {/* Filters */}
@@ -82,7 +85,7 @@ export default function Monitores() {
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Buscar monitor..."
+                placeholder={t('public.monitorsSearch')}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 outline-none bg-white shadow-sm transition-all"
               />
               <FontAwesomeIcon
@@ -102,7 +105,7 @@ export default function Monitores() {
                       : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  Todos
+                  {t('common.all')}
                 </button>
                 {projectsWithMonitors.map((project) => {
                   const colors = projectColor(project.id, project.signatureColor);
@@ -131,14 +134,13 @@ export default function Monitores() {
         {(selectedProjectId || searchText.trim()) && (
           <div className="flex items-center gap-2 mb-4 text-sm text-gray-400">
             <span>
-              {filteredMonitors.length} {filteredMonitors.length === 1 ? "monitor" : "monitores"}
-              {" encontrado" + (filteredMonitors.length === 1 ? "" : "s")}
+              {t('public.monitorsFilteredResult', { count: filteredMonitors.length })}
             </span>
             <button
               onClick={() => { setSelectedProjectId(null); setSearchText(""); }}
                 className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
             >
-              Limpiar filtros
+              {t('public.monitorsClearFilters')}
             </button>
           </div>
         )}
@@ -152,11 +154,11 @@ export default function Monitores() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-6xl mb-4">👥</p>
+            <p className="text-6xl mb-4">-</p>
             <p className="text-gray-400">
               {monitors.length === 0
-                ? "No hay monitores disponibles en este momento."
-                : "No se encontraron monitores con los filtros seleccionados."}
+                ? t('public.monitorsEmpty')
+                : t('public.monitorsEmptyFiltered')}
             </p>
           </div>
         )}

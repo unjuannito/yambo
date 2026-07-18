@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 
 interface ConfirmDialogProps {
@@ -24,11 +25,12 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmLabel = "Confirmar",
-  cancelLabel = "Cancelar",
+  confirmLabel,
+  cancelLabel,
   variant = "info",
   isLoading = false,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -44,14 +46,14 @@ export function ConfirmDialog({
             onClick={onClose}
             disabled={isLoading}
           >
-            {cancelLabel}
+            {cancelLabel || t("common.cancel")}
           </ButtonComponent>
           <ButtonComponent
             variant={confirmButtonVariant[variant] ?? "primary"}
             onClick={onConfirm}
             isLoading={isLoading}
           >
-            {confirmLabel}
+            {confirmLabel || t("common.confirm")}
           </ButtonComponent>
         </div>
       </div>

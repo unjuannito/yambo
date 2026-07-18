@@ -148,7 +148,7 @@ describe('ProductEditor', () => {
             expect(toast.error).toHaveBeenCalled();
         });
 
-        expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch');
+        expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/articulos');
         expect(productService.getProductById).not.toHaveBeenCalled();
     });
 
@@ -166,7 +166,7 @@ describe('ProductEditor', () => {
         await waitFor(() => {
             expect(productService.createProduct).toHaveBeenCalled();
             expect(toast.success).toHaveBeenCalledWith('Producto guardado exitosamente');
-            expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch');
+            expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/articulos');
         });
     });
 
@@ -199,7 +199,7 @@ describe('ProductEditor', () => {
                 familyProductId: undefined,
             }));
             expect(toast.success).toHaveBeenCalledWith('Producto actualizado exitosamente');
-            expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch/prod-123');
+            expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/articulos/prod-123');
         });
     });
 
@@ -219,7 +219,7 @@ describe('ProductEditor', () => {
             expect(toast.error).toHaveBeenCalled();
         });
 
-        expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/merch');
+        expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/articulos');
     });
 
     it('shows save error toast when updateProduct fails in edit mode', async () => {
@@ -249,7 +249,7 @@ describe('ProductEditor', () => {
             expect(toast.error).toHaveBeenCalled();
         });
 
-        expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/merch/prod-123');
+        expect(navigateMock).not.toHaveBeenCalledWith('/mi-espacio/articulos/prod-123');
     });
 
     it('allows configuring options and normalizes text_input options on create', async () => {
@@ -295,6 +295,6 @@ describe('ProductEditor', () => {
             expect(toast.error).toHaveBeenCalled();
         });
 
-        expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/merch');
+        expect(navigateMock).toHaveBeenCalledWith('/mi-espacio/articulos');
     });
 });

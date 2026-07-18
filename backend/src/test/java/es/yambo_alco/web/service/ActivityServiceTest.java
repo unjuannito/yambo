@@ -26,7 +26,6 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 public class ActivityServiceTest {
@@ -76,7 +75,7 @@ public class ActivityServiceTest {
 
         // When
         Activity result = activityService.createActivity(
-                "Workshop", "A description", date, null,
+            "Workshop", "A description", null, null, null, date, null,
                 ActivityStatus.PLANNED, true,
                 "PRJ00001", null);
 
@@ -102,7 +101,7 @@ public class ActivityServiceTest {
 
         // When
         Activity result = activityService.createActivity(
-                "Workshop", null, null, null,
+            "Workshop", null, null, null, null, null, null,
                 ActivityStatus.OPEN_REGISTRATION, false,
                 "PRJ00001", "U0000001");
 
@@ -120,7 +119,7 @@ public class ActivityServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> activityService.createActivity(
-                "Workshop", null, null, null,
+            "Workshop", null, null, null, null, null, null,
                 null, false, "PRJ00001", "U0000001"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("no pertenece al equipo del proyecto");
@@ -133,7 +132,7 @@ public class ActivityServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> activityService.createActivity(
-                "Workshop", null, null, null,
+            "Workshop", null, null, null, null, null, null,
                 null, false, "INVALID", null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Project not found");
@@ -147,7 +146,7 @@ public class ActivityServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> activityService.createActivity(
-                "Workshop", null, null, null,
+            "Workshop", null, null, null, null, null, null,
                 null, false, "PRJ00001", "INVALID"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Manager user not found");
@@ -164,7 +163,7 @@ public class ActivityServiceTest {
 
         // When
         Activity result = activityService.createActivity(
-                "Los Juegos de Yambo", "Campamento de 2 noches", start, end,
+            "Los Juegos de Yambo", "Campamento de 2 noches", null, null, null, start, end,
                 ActivityStatus.PLANNED, true,
                 "PRJ00001", null);
 
@@ -183,7 +182,7 @@ public class ActivityServiceTest {
 
         // When
         Activity result = activityService.createActivity(
-                "Workshop", null, null, null,
+            "Workshop", null, null, null, null, null, null,
                 null, null, "PRJ00001", null);
 
         // Then
@@ -229,14 +228,14 @@ public class ActivityServiceTest {
         // Given
         Activity a1 = Activity.builder().id("ACT00001").name("A").project(testProject).build();
         Activity a2 = Activity.builder().id("ACT00002").name("B").project(testProject).build();
-        when(activityRepository.findByIsPublicTrueOrderByDateAsc()).thenReturn(List.of(a1, a2));
+        when(activityRepository.findByIsPublicTrueOrderByDateDesc()).thenReturn(List.of(a1, a2));
 
         // When
         List<Activity> result = activityService.getPublicActivities();
 
         // Then
         assertThat(result).hasSize(2);
-        verify(activityRepository).findByIsPublicTrueOrderByDateAsc();
+        verify(activityRepository).findByIsPublicTrueOrderByDateDesc();
     }
 
     // ── listActivities ──────────────────────────────────────────────────
@@ -276,8 +275,8 @@ public class ActivityServiceTest {
 
         // When — only update name and status
         Activity result = activityService.updateActivity(
-                "ACT00001", "New Name", null, null, null,
-                ActivityStatus.CLOSED, null, null, null);
+            "ACT00001", "New Name", null, null, null, null,
+            null, null, ActivityStatus.CLOSED, null, null, null);
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -301,8 +300,8 @@ public class ActivityServiceTest {
 
         // When — empty string managerId clears manager
         Activity result = activityService.updateActivity(
-                "ACT00001", null, null, null, null,
-                null, null, null, "");
+            "ACT00001", null, null, null, null, null,
+            null, null, null, null, null, "");
 
         // Then
         assertThat(result.getManager()).isNull();
@@ -324,8 +323,8 @@ public class ActivityServiceTest {
 
         // When
         Activity result = activityService.updateActivity(
-                "ACT00001", null, null, null, null,
-                null, null, "PRJ00002", null);
+            "ACT00001", null, null, null, null, null,
+            null, null, null, null, "PRJ00002", null);
 
         // Then
         assertThat(result.getProject().getId()).isEqualTo("PRJ00002");
@@ -348,8 +347,8 @@ public class ActivityServiceTest {
 
         // When
         Activity result = activityService.updateActivity(
-                "ACT00001", null, null, null, endDate,
-                null, null, null, null);
+            "ACT00001", null, null, null, null, null,
+            null, endDate, null, null, null, null);
 
         // Then
         assertThat(result.getEndDate()).isEqualTo(endDate);
@@ -363,8 +362,8 @@ public class ActivityServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> activityService.updateActivity(
-                "INVALID", "Name", null, null, null,
-                null, null, null, null))
+            "INVALID", "Name", null, null, null, null,
+            null, null, null, null, null, null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Activity not found");
     }

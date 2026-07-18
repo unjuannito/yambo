@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,7 @@ import es.yambo_alco.web.exception.BadRequestException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,14 +67,33 @@ class ProfileServiceTest {
                 Profile.builder().id("USER").name("User").build()
         );
         Page<Profile> expectedPage = new PageImpl<>(profiles, pageable, profiles.size());
-        when(profileRepository.findAll(pageable)).thenReturn(expectedPage);
+        when(profileRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(expectedPage);
 
         // When
-        Page<Profile> result = profileService.listProfiles(null, null, pageable);
+        Page<Profile> result = profileService.listProfiles(null, null, null, pageable);
 
         // Then
         assertEquals(expectedPage, result);
-        verify(profileRepository).findAll(pageable);
+        verify(profileRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    @Test
+    void listProfiles_WithQuery_ShouldReturnFilteredProfiles() {
+        // Given
+        Pageable pageable = PageRequest.of(0, 10);
+        List<Profile> profiles = List.of(
+                Profile.builder().id("ADMIN").name("Administrator").build()
+        );
+        Page<Profile> expectedPage = new PageImpl<>(profiles, pageable, profiles.size());
+        when(profileRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(expectedPage);
+
+        // When
+        Page<Profile> result = profileService.listProfiles("admin", null, null, pageable);
+
+        // Then
+        assertEquals(1, result.getContent().size());
+        assertEquals("ADMIN", result.getContent().get(0).getId());
+        verify(profileRepository).findAll(any(Specification.class), eq(pageable));
     }
 
     @Test
@@ -84,15 +105,15 @@ class ProfileServiceTest {
                 Profile.builder().id("USER").name("User").build()
         );
         Page<Profile> allProfiles = new PageImpl<>(profiles, pageable, profiles.size());
-        when(profileRepository.findAll(pageable)).thenReturn(allProfiles);
+        when(profileRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(allProfiles);
 
         // When
-        Page<Profile> result = profileService.listProfiles("admin", null, pageable);
+        Page<Profile> result = profileService.listProfiles(null, "admin", null, pageable);
 
         // Then
         assertEquals(1, result.getContent().size());
         assertEquals("ADMIN", result.getContent().get(0).getId());
-        verify(profileRepository).findAll(pageable);
+        verify(profileRepository).findAll(any(Specification.class), eq(pageable));
     }
 
     @Test
@@ -107,15 +128,15 @@ class ProfileServiceTest {
                 Profile.builder().id("USER").name("User").permissions(Set.of(permission1)).build()
         );
         Page<Profile> allProfiles = new PageImpl<>(profiles, pageable, profiles.size());
-        when(profileRepository.findAll(pageable)).thenReturn(allProfiles);
+        when(profileRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(allProfiles);
 
         // When
-        Page<Profile> result = profileService.listProfiles(null, List.of("P002"), pageable);
+        Page<Profile> result = profileService.listProfiles(null, null, List.of("P002"), pageable);
 
         // Then
         assertEquals(1, result.getContent().size());
         assertEquals("ADMIN", result.getContent().get(0).getId());
-        verify(profileRepository).findAll(pageable);
+        verify(profileRepository).findAll(any(Specification.class), eq(pageable));
     }
 
     @Test
@@ -387,7 +408,7 @@ class ProfileServiceTest {
                 () -> profileService.deleteProfile(profileId));
         assertEquals("Profile not found: " + profileId, exception.getMessage());
         verify(profileRepository).findById(profileId);
-        verify(profileRepository, never()).delete(any());
+        verify(profileRepository, never()).delete(any(Profile.class));
     }
 
     @Test
@@ -403,7 +424,7 @@ class ProfileServiceTest {
                 () -> profileService.deleteProfile(profileId));
         assertEquals("Cannot delete a system profile", exception.getMessage());
         verify(profileRepository).findById(profileId);
-        verify(profileRepository, never()).delete(any());
+        verify(profileRepository, never()).delete(any(Profile.class));
     }
 
     @Test

@@ -7,13 +7,15 @@ import {
     ScrollRestoration,
 } from "react-router";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { DialogProvider } from "./context/DialogContext";
 import { Toaster } from "react-hot-toast";
 import { fireFireworks } from "./utils/confetti";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useBatchProgress } from "./hooks/useBatchProgress";
+import "./i18n/config";
+import { useTranslation } from "react-i18next";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -83,7 +85,9 @@ export default function Document() {
                 <AuthProvider>
                     <DialogProvider>
                         <WebSocketProvider>
-                            <Outlet />
+                            <Suspense fallback={null}>
+                                <Outlet />
+                            </Suspense>
                         </WebSocketProvider>
                     </DialogProvider>
                 </AuthProvider>
@@ -95,17 +99,18 @@ export default function Document() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-    let message = "¡Ups!";
-    let details = "Ha ocurrido un error inesperado.";
+    const { t } = useTranslation();
+    let message = t('errors.generic.title');
+    let details = t('errors.generic.message');
     let stack: string | undefined;
     let is404 = false;
 
     if (isRouteErrorResponse(error)) {
         is404 = error.status === 404;
-        message = is404 ? "Error 404" : "Error";
+        message = is404 ? t('errors.404.title') : t('errors.generic.title');
         details =
             error.status === 404
-                ? "No se ha encontrado esta página."
+                ? t('errors.404.message')
                 : error.statusText || details;
     } else if (import.meta.env.DEV && error && error instanceof Error) {
         details = error.message;
@@ -145,7 +150,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
                             href="/"
                             className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full font-semibold hover:shadow-lg transition-all hover-pop"
                         >
-                            Volver al inicio →
+                            {t('errors.goHome')}
                         </a>
                     </main>
                 )}
@@ -158,6 +163,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 // ── 404 Easter Egg: Catch the Logo Game ──────────────────────────────────
 
 function CatchTheLogoGame() {
+    const { t } = useTranslation();
     const [catches, setCatches] = useState(0);
     const [gameWon, setGameWon] = useState(false);
     const [position, setPosition] = useState({ top: 40, left: 40 });
@@ -197,11 +203,11 @@ function CatchTheLogoGame() {
             <div className="text-center pt-12 relative z-10">
                 <h1 className="text-7xl font-black gradient-text mb-3">404</h1>
                 <p className="text-xl text-gray-600 mb-2">
-                    ¡Ups! Esta página no existe...
+                    {t('errors.404.message')}
                 </p>
                 {!gameWon && (
                     <p className="text-sm text-yambo-green-600 font-semibold animate-pulse">
-                        🎯 ¡Atrapa el logo {TARGET_CATCHES} veces! ({catches}/{TARGET_CATCHES})
+                        {t('404game.subtitle', { catches, target: TARGET_CATCHES })}
                     </p>
                 )}
             </div>
@@ -216,6 +222,9 @@ function CatchTheLogoGame() {
                         transition: "top 0.5s ease-out, left 0.5s ease-out",
                     }}
                     onClick={handleCatch}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCatch(); } }}
+                    role="button"
+                    tabIndex={0}
                 >
                     <img
                         src="/logo.png"
@@ -230,18 +239,18 @@ function CatchTheLogoGame() {
             {gameWon && (
                 <div className="absolute inset-0 flex items-center justify-center z-20">
                     <div className="text-center bounce-in glass rounded-3xl p-10 shadow-2xl max-w-md mx-4">
-                        <div className="text-6xl mb-4">🏆</div>
+                        <div className="text-6xl mb-4">{t('404game.won')}</div>
                         <h2 className="text-3xl font-bold text-yambo-black mb-2">
-                            ¡Eres increíble!
+                            {t('404game.wonMessage')}
                         </h2>
                         <p className="text-gray-600 mb-6">
-                            Has atrapado el logo {TARGET_CATCHES} veces. Eres oficialmente un/a Yambero.
+                            {t('404game.title')} {TARGET_CATCHES} {t('common.times')}.
                         </p>
                         <a
                             href="/"
                             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-purple-500 text-white rounded-full font-semibold hover:shadow-lg transition-all hover-pop"
                         >
-                            Volver al inicio →
+                            {t('errors.goHome')}
                         </a>
                     </div>
                 </div>
@@ -251,7 +260,7 @@ function CatchTheLogoGame() {
             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                 {Array.from({ length: TARGET_CATCHES }).map((_, i) => (
                     <div
-                        key={i}
+                        key={`catch-dot-${i}`}
                         className={`w-4 h-4 rounded-full transition-all duration-300 ${
                             i < catches
                                 ? "bg-gradient-to-br from-yambo-green-400 to-yambo-purple-400 scale-110 shadow-md"
