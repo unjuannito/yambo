@@ -1,18 +1,20 @@
 import { useLoaderData } from "react-router";
 import { getPublishedLegalPage } from "~/services/publicService.server";
 import type { LegalPage } from "~/services/legalPageService";
-import { data } from "react-router";
+import { getSiteUrl } from "~/utils/env.server";
+import { webPageJsonLd } from "~/utils/jsonld";
 
 export async function loader({ params }: { params: { id: string } }) {
+    const siteUrl = getSiteUrl();
     try {
         const page = await getPublishedLegalPage(params.id);
-        return { page, notFound: false };
+        return { page, notFound: false, siteUrl };
     } catch {
-        return { page: null, notFound: true };
+        return { page: null, notFound: true, siteUrl };
     }
 }
 
-export function meta({ data: routeData }: { data: { page: LegalPage | null; notFound: boolean } }) {
+export function meta({ data: routeData }: { data: { page: LegalPage | null; notFound: boolean; siteUrl: string } }) {
     if (routeData.notFound || !routeData.page) {
         return [
             { title: "Página no encontrada - Yambo" },
@@ -24,6 +26,13 @@ export function meta({ data: routeData }: { data: { page: LegalPage | null; notF
     return [
         { title: `Yambo - ${page.title}` },
         { name: "description", content: page.title },
+        { tagName: "link", rel: "canonical", href: `${routeData.siteUrl}/legal/${page.type.toLowerCase()}` },
+        { name: "robots", content: "index, follow" },
+        { "script:ld+json": webPageJsonLd({
+            name: page.title,
+            description: page.title,
+            url: `${routeData.siteUrl}/legal/${page.type.toLowerCase()}`,
+        })},
     ];
 }
 
