@@ -1,0 +1,17 @@
+# Longer probe delays for frontend in preview environments:
+# - Backend may still be starting when frontend boots
+# - /health endpoint always returns 200, but give extra time for nginx+Node init
+- op: replace
+  path: /spec/template/spec/containers/0/startupProbe
+  value:
+    httpGet:
+      path: /health
+      port: 80
+    failureThreshold: 30
+    periodSeconds: 10
+- op: replace
+  path: /spec/template/spec/containers/0/readinessProbe/initialDelaySeconds
+  value: 30
+- op: replace
+  path: /spec/template/spec/containers/0/livenessProbe/initialDelaySeconds
+  value: 60

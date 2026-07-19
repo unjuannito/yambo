@@ -1,5 +1,6 @@
 import { getActiveProjects } from "~/services/publicService.server";
 import { getPublicActivities } from "~/services/publicService.server";
+import { getPublishedLegalPages } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
 
 /**
@@ -19,6 +20,22 @@ export async function loader() {
         { loc: "/monitores",   changefreq: "monthly", priority: "0.7" },
         { loc: "/contacto",    changefreq: "monthly", priority: "0.5" },
     ];
+
+    // ── Dynamic legal pages ────────────────────────────────────────────
+    let legalEntries: string[] = [];
+    try {
+        const legalPages = await getPublishedLegalPages();
+        legalEntries = legalPages.map(
+            (p) => `
+  <url>
+    <loc>${escapeXml(siteUrl)}/legal/${escapeXml(p.type)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>`,
+        );
+    } catch {
+        // Backend unreachable → skip legal entries
+    }
 
     // ── Dynamic project pages ───────────────────────────────────────────
     let projectEntries: string[] = [];
@@ -75,6 +92,7 @@ ${staticPages
   </url>`,
     )
     .join("\n")}
+${legalEntries.join("\n")}
 ${projectEntries.join("\n")}
 ${activityEntries.join("\n")}
 </urlset>`;

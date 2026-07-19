@@ -65,6 +65,11 @@ patches:
     target:
       kind: Deployment
       name: yambo-backend
+  # Frontend also needs longer startup delays — backend may not be ready yet
+  - path: patches/frontend-startup-delays.yaml
+    target:
+      kind: Deployment
+      name: yambo-frontend
   # Disable mail in preview environments via secrets patch
   - path: patches/preview-secrets.yaml
     target:

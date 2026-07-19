@@ -11,6 +11,7 @@ import {
     getFeaturedProjects,
     getStaff,
     getPublicActivities,
+    getContactSettings,
 } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
 import { organizationJsonLd, webSiteJsonLd } from "~/utils/jsonld";
@@ -21,6 +22,8 @@ export function meta({ data }: Route.MetaArgs) {
     const siteUrl = data?.siteUrl ?? "";
     const title = t("public.homeTitle");
     const description = t("public.homeDescription");
+    const instagram = data?.contactSettings?.["contact.instagram"];
+    const tiktok = data?.contactSettings?.["contact.tiktok"];
 
     return [
         { title },
@@ -39,7 +42,7 @@ export function meta({ data }: Route.MetaArgs) {
         { name: "twitter:description", content: description },
         { name: "robots", content: "index, follow" },
         { name: "author", content: t("public.homeAuthor") },
-        { "script:ld+json": organizationJsonLd(siteUrl) },
+        { "script:ld+json": organizationJsonLd(siteUrl, { instagram, tiktok }) },
         { "script:ld+json": webSiteJsonLd(siteUrl) },
     ];
 }
@@ -51,13 +54,14 @@ interface SectionConfig {
 }
 
 export async function loader() {
-    const [settings, projects, monitors, activities] = await Promise.all([
+    const [settings, contactSettings, projects, monitors, activities] = await Promise.all([
         getHomeSettings(),
+        getContactSettings(),
         getFeaturedProjects(),
         getStaff(),
         getPublicActivities(),
     ]);
-    return { settings, projects, monitors, activities, siteUrl: getSiteUrl() };
+    return { settings, contactSettings, projects, monitors, activities, siteUrl: getSiteUrl() };
 }
 
 const SECTION_COMPONENTS: Record<

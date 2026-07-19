@@ -11,7 +11,23 @@ import type { Activity } from "~/types/activity";
 
 /* ── Organisation ─────────────────────────────────────────────────── */
 
-export function organizationJsonLd(siteUrl: string) {
+export function organizationJsonLd(siteUrl: string, socialLinks?: { instagram?: string; tiktok?: string }) {
+    const sameAs: string[] = [];
+    if (socialLinks?.instagram) {
+        sameAs.push(
+            socialLinks.instagram.startsWith("http")
+                ? socialLinks.instagram
+                : `https://instagram.com/${socialLinks.instagram.replace("@", "")}`,
+        );
+    }
+    if (socialLinks?.tiktok) {
+        sameAs.push(
+            socialLinks.tiktok.startsWith("http")
+                ? socialLinks.tiktok
+                : `https://tiktok.com/@${socialLinks.tiktok.replace("@", "")}`,
+        );
+    }
+
     return {
         "@context": "https://schema.org",
         "@type": "NGO",
@@ -27,7 +43,7 @@ export function organizationJsonLd(siteUrl: string) {
             addressRegion: "Madrid",
             addressCountry: "ES",
         },
-        sameAs: [] as string[], // filled at call-site if social links exist
+        ...(sameAs.length > 0 ? { sameAs } : {}),
     };
 }
 
