@@ -18,6 +18,10 @@ export function meta({ data }: Route.MetaArgs) {
     const title = t("public.contactPageTitle");
     const description = t("public.contactMetaDescription");
 
+    const instagram = data?.settings?.["contact.instagram"];
+    const tiktok = data?.settings?.["contact.tiktok"];
+    const email = data?.settings?.["contact.email"];
+
     return [
         { title },
         { name: "description", content: description },
@@ -29,7 +33,7 @@ export function meta({ data }: Route.MetaArgs) {
         { property: "og:image", content: `${siteUrl}/logo.png` },
         { property: "og:type", content: "website" },
         { name: "robots", content: "index, follow" },
-        { "script:ld+json": contactPageJsonLd({ siteUrl }) },
+        { "script:ld+json": contactPageJsonLd({ siteUrl, email, instagram, tiktok }) },
         {
             "script:ld+json": breadcrumbJsonLd([
                 { name: t("nav.home"), url: siteUrl },
