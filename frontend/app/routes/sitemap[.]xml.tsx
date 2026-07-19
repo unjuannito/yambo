@@ -40,23 +40,25 @@ export async function loader() {
     let activityEntries: string[] = [];
     try {
         const activities = await getPublicActivities();
-        const now = new Date();
+        const today = new Date().toISOString().split("T")[0];
         activityEntries = activities
             .filter(
                 (a) =>
                     a.status?.value !== "CANCELLED" &&
                     a.status?.value !== "CLOSED" &&
-                    a.date &&
-                    new Date(a.date) >= now,
+                    a.date,
             )
             .map(
-                (a) => `
+                (a) => {
+                    const isPast = new Date(a.date) < new Date();
+                    return `
   <url>
     <loc>${escapeXml(siteUrl)}/actividades/${escapeXml(a.id)}</loc>
-    <lastmod>${a.date ? new Date(a.date).toISOString().split("T")[0] : ""}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>`,
+    <lastmod>${today}</lastmod>
+    <changefreq>${isPast ? "monthly" : "daily"}</changefreq>
+    <priority>${isPast ? "0.4" : "0.7"}</priority>
+  </url>`;
+                },
             );
     } catch {
         // Backend unreachable → skip activity entries
