@@ -141,9 +141,9 @@ export default function ActivityDetail() {
                     </div>
                 ) : (
                     <div className="w-2/5 fixed top-[calc(4rem+53px)] left-0 h-[calc(100vh-4rem-53px)] bg-yambo-purple-100 flex items-center justify-center p-10">
-                        <h1 className="text-4xl lg:text-5xl font-extrabold text-yambo-black font-display leading-tight">
+                        <div className="text-4xl lg:text-5xl font-extrabold text-yambo-black font-display leading-tight">
                             {activity.name}
-                        </h1>
+                        </div>
                     </div>
                 )}
 
@@ -287,16 +287,16 @@ export default function ActivityDetail() {
                             />
                         </div>
                     ) : (
-                        <h1 className="text-3xl font-extrabold text-yambo-black font-display leading-tight mb-5">
+                        <h2 className="text-3xl font-extrabold text-yambo-black font-display leading-tight mb-5">
                             {activity.name}
-                        </h1>
+                        </h2>
                     )}
 
                     {/* Title (when image exists) */}
                     {imageUrl && (
-                        <h1 className="text-2xl font-extrabold text-yambo-black font-display leading-tight mb-4">
+                        <h2 className="text-2xl font-extrabold text-yambo-black font-display leading-tight mb-4">
                             {activity.name}
-                        </h1>
+                        </h2>
                     )}
 
                     {/* Status badge — mobile */}

@@ -45,6 +45,7 @@ export function meta({ data }: Route.MetaArgs) {
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:url", content: `${siteUrl}/actividades` },
+        { property: "og:image", content: `${siteUrl}/logo.png` },
         { property: "og:type", content: "website" },
         { name: "robots", content: "index, follow" },
         { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/actividades` }) },

@@ -30,6 +30,7 @@ export function meta({ data }: Route.MetaArgs) {
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:url", content: siteUrl },
+        { property: "og:image", content: `${siteUrl}/logo.png` },
         { property: "og:type", content: "website" },
         { property: "og:site_name", content: "Yambo" },
         { property: "og:locale", content: "es_ES" },
