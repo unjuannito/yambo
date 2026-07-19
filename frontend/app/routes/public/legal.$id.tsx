@@ -26,12 +26,12 @@ export function meta({ data: routeData }: { data: { page: LegalPage | null; notF
     return [
         { title: `Yambo - ${page.title}` },
         { name: "description", content: page.title },
-        { tagName: "link", rel: "canonical", href: `${routeData.siteUrl}/legal/${page.type.toLowerCase()}` },
+        { tagName: "link", rel: "canonical", href: `${routeData.siteUrl}/legal/${page.id}` },
         { name: "robots", content: "index, follow" },
         { "script:ld+json": webPageJsonLd({
             name: page.title,
             description: page.title,
-            url: `${routeData.siteUrl}/legal/${page.type.toLowerCase()}`,
+            url: `${routeData.siteUrl}/legal/${page.id}`,
         })},
     ];
 }
