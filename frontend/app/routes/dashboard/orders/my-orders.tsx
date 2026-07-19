@@ -50,6 +50,7 @@ export default function MyOrdersPage() {
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [selectedOrderTotal, setSelectedOrderTotal] = useState<number>(0);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [issueWindow, setIssueWindow] = useState<IssueReportWindowModel | null>(null);
   const [orderDetail, setOrderDetail] = useState<Order | null>(null);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
@@ -222,6 +223,7 @@ export default function MyOrdersPage() {
     const total = order.products.reduce((sum, p) => sum + (p.price * p.quantity), 0);
     setSelectedOrderId(order.id);
     setSelectedOrderTotal(total);
+    setSelectedOrder(order);
     setShowPaymentInstructions(true);
   };
 
@@ -229,6 +231,22 @@ export default function MyOrdersPage() {
     setShowPaymentInstructions(false);
     setSelectedOrderId("");
     setSelectedOrderTotal(0);
+    setSelectedOrder(null);
+  };
+
+  const handleOpenTicketFromPayment = () => {
+    if (!selectedOrder) return;
+    setIssueWindow({
+      orderId: selectedOrder.id,
+      orderedProducts: selectedOrder.products.map((p) => ({
+        id: p.id,
+        name: p.productName || "Producto",
+        configuration: p.configuration,
+        quantity: p.quantity,
+        unitPrice: p.price,
+      })),
+    });
+    setShowPaymentInstructions(false);
   };
 
   const getOrderTotal = (order: Order) => {
@@ -584,6 +602,7 @@ export default function MyOrdersPage() {
           orderId={selectedOrderId}
           totalAmount={selectedOrderTotal}
           onClose={handleClosePaymentInstructions}
+          onOpenTicket={handleOpenTicketFromPayment}
         />
       )}
 
