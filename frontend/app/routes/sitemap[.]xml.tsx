@@ -28,7 +28,7 @@ export async function loader() {
         legalEntries = legalPages.map(
             (p) => `
   <url>
-    <loc>${escapeXml(siteUrl)}/legal/${escapeXml(p.type)}</loc>
+    <loc>${escapeXml(siteUrl)}/legal/${escapeXml(p.id)}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>`,

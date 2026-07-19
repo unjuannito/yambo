@@ -1,21 +1,53 @@
 import { useLoaderData } from "react-router";
 import { getPublishedLegalPage } from "~/services/publicService.server";
 import type { LegalPage } from "~/services/legalPageService";
+import { data } from "react-router";
 
 export async function loader({ params }: { params: { id: string } }) {
-    const page = await getPublishedLegalPage(params.id);
-    return page;
+    try {
+        const page = await getPublishedLegalPage(params.id);
+        return { page, notFound: false };
+    } catch {
+        return { page: null, notFound: true };
+    }
 }
 
-export function meta({ data }: { data: LegalPage }) {
+export function meta({ data: routeData }: { data: { page: LegalPage | null; notFound: boolean } }) {
+    if (routeData.notFound || !routeData.page) {
+        return [
+            { title: "Página no encontrada - Yambo" },
+            { name: "description", content: "La página legal solicitada no está disponible." },
+            { name: "robots", content: "noindex" },
+        ];
+    }
+    const page = routeData.page;
     return [
-        { title: `Yambo - ${data.title}` },
-        { name: "description", content: data.title },
+        { title: `Yambo - ${page.title}` },
+        { name: "description", content: page.title },
     ];
 }
 
 export default function LegalPageView() {
-    const page = useLoaderData<typeof loader>();
+    const { page, notFound } = useLoaderData<typeof loader>();
+
+    if (notFound || !page) {
+        return (
+            <div className="max-w-4xl mx-auto px-4 py-24 text-center">
+                <h1 className="text-4xl font-extrabold font-display text-yambo-black mb-4">
+                    Página no encontrada
+                </h1>
+                <p className="text-lg text-gray-600 mb-8">
+                    La página legal que buscas no está disponible o ha sido movida.
+                </p>
+                <a
+                    href="/"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white rounded-full font-semibold hover:shadow-lg transition-all"
+                >
+                    Volver al inicio →
+                </a>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
