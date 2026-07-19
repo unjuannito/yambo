@@ -45,7 +45,6 @@ export async function loader() {
             .filter(
                 (a) =>
                     a.status?.value !== "CANCELLED" &&
-                    a.status?.value !== "CLOSED" &&
                     a.date,
             )
             .map(
