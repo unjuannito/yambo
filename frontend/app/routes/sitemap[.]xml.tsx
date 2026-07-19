@@ -50,7 +50,7 @@ export async function loader() {
             )
             .map(
                 (a) => {
-                    const isPast = new Date(a.date) < new Date();
+                    const isPast = a.date && new Date(a.date!) < new Date();
                     return `
   <url>
     <loc>${escapeXml(siteUrl)}/actividades/${escapeXml(a.id)}</loc>
