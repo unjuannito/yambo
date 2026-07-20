@@ -142,7 +142,7 @@ export default function Proyecto() {
             )}
           </div>
           {project.description && (
-            <p className="text-gray-500 text-lg max-w-3xl">{project.description}</p>
+            <p className="text-gray-500 text-lg max-w-3xl text-justify whitespace-pre-line">{project.description}</p>
           )}
         </div>
 
