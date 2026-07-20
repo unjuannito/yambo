@@ -36,6 +36,8 @@ public interface MailService {
 
     void sendPasswordResetEmail(String to, String resetLink, long expirationHours);
 
+    void sendActivityOpenRegistration(String to, String activityName, String activityUrl);
+
     default String generatePaymentReference(LocalDateTime orderDate, String orderId) {
         return "merch " + orderDate.getYear() + " " + orderId;
     }

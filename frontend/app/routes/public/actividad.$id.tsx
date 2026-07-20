@@ -5,12 +5,19 @@ import { activityJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import type { Route } from "./+types/actividad.$id";
 import type { Activity } from "~/types/activity";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShareNodes, faCalendarDays, faMapPin, faEuroSign, faTag } from "@fortawesome/free-solid-svg-icons";
+import { faShareNodes, faCalendarDays, faMapPin, faEuroSign, faTag, faBell } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
+import { useState } from "react";
+import { publicService } from "~/services/publicService";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
     const backendUrl =
         process.env.BACKEND_INTERNAL_URL || "http://localhost:8080/api";
+
+    const cookie = request.headers.get("Cookie") || "";
+    const backendCookie = cookie.split(";")
+        .find(c => c.trim().startsWith("waitlist_email="))
+        ?.split("=")[1]?.trim();
 
     const [activityRes, contactRes] = await Promise.all([
         fetch(`${backendUrl}/public/activities/${params.id}`, {
@@ -30,7 +37,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
     const activity = await activityRes.json();
     const contactSettings = contactRes.ok ? await contactRes.json() : {};
-    return { activity, siteUrl: getSiteUrl(), contactEmail: contactSettings["contact.email"] || "yamboalcobendas@gmail.com" };
+    return { activity, siteUrl: getSiteUrl(), contactEmail: contactSettings["contact.email"] || "yamboalcobendas@gmail.com", savedEmail: backendCookie || "" };
 }
 
 export function meta({ data }: Route.MetaArgs) {
@@ -85,13 +92,36 @@ export function meta({ data }: Route.MetaArgs) {
 
 export default function ActivityDetail() {
     const { t } = useTranslation();
-    const { activity, contactEmail } = useLoaderData<typeof loader>();
+    const { activity, contactEmail, savedEmail } = useLoaderData<typeof loader>();
+    const [waitlistEmail, setWaitlistEmail] = useState(savedEmail);
+    const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+    const [waitlistDone, setWaitlistDone] = useState(false);
+    const [waitlistError, setWaitlistError] = useState("");
     const now = new Date();
     const activityDate = activity.date ? new Date(activity.date) : null;
     const isPast = activityDate ? activityDate < now : false;
     const cancelled = activity.status?.value === "CANCELLED";
     const canRegister = !isPast && !cancelled && activity.status?.value === "OPEN_REGISTRATION";
+    const canJoinWaitlist = !isPast && !cancelled && activity.status?.value === "PLANNED";
     const imageUrl = activity.image || null;
+
+    const handleWaitlistSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!waitlistEmail || !waitlistEmail.includes("@")) return;
+        setWaitlistSubmitting(true);
+        setWaitlistError("");
+        try {
+            await publicService.joinWaitlist(activity.id, waitlistEmail);
+            // Save email in cookie for 30 days
+            document.cookie = `waitlist_email=${encodeURIComponent(waitlistEmail)}; path=/; max-age=${60*60*24*30}; SameSite=Lax`;
+            setWaitlistDone(true);
+            toast(t('public.waitlistSuccess'), { duration: 4000 });
+        } catch (err: any) {
+            setWaitlistError(err.message || "Error de conexión");
+        } finally {
+            setWaitlistSubmitting(false);
+        }
+    };
 
     return (
         <section className="w-full bg-gradient-to-b from-yambo-purple-50/30 to-yambo-white min-h-screen">
@@ -271,6 +301,52 @@ export default function ActivityDetail() {
                             </a>
                         </div>
                     )}
+
+                    {/* Waitlist for planned activities */}
+                    {canJoinWaitlist && !waitlistDone && (
+                        <div className="bg-yambo-purple-50 border border-yambo-purple-200 rounded-2xl p-6 mb-6">
+                            <div className="flex items-start gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-full bg-yambo-purple-100 flex items-center justify-center text-yambo-purple-600 shrink-0">
+                                    <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-yambo-black text-base">{t('public.waitlistTitle')}</h3>
+                                    <p className="text-sm text-gray-600 mt-1">{t('public.waitlistDesc')}</p>
+                                </div>
+                            </div>
+                            <form onSubmit={handleWaitlistSubmit} className="flex gap-2 mt-3">
+                                <input
+                                    type="email"
+                                    value={waitlistEmail}
+                                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                                    placeholder={t('public.waitlistPlaceholder')}
+                                    required
+                                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-yambo-purple-400 focus:border-transparent"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={waitlistSubmitting}
+                                    className="px-5 py-2.5 bg-yambo-purple-600 hover:bg-yambo-purple-700 disabled:bg-yambo-purple-300 text-white font-bold rounded-xl transition-colors text-sm whitespace-nowrap"
+                                >
+                                    {waitlistSubmitting ? "..." : t('public.waitlistButton')}
+                                </button>
+                            </form>
+                            {waitlistError && (
+                                <p className="text-red-600 text-sm mt-2">{waitlistError}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {canJoinWaitlist && waitlistDone && (
+                        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                                    <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
+                                </div>
+                                <p className="font-semibold text-green-800 text-sm">{t('public.waitlistDone')}</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -403,6 +479,52 @@ export default function ActivityDetail() {
                         </div>
                     )}
                 </div>
+
+                {/* Waitlist for planned activities — mobile */}
+                    {canJoinWaitlist && !waitlistDone && (
+                        <div className="bg-yambo-purple-50 border border-yambo-purple-200 rounded-2xl p-5 mb-5">
+                            <div className="flex items-start gap-3 mb-3">
+                                <div className="w-9 h-9 rounded-full bg-yambo-purple-100 flex items-center justify-center text-yambo-purple-600 shrink-0">
+                                    <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-yambo-black text-sm">{t('public.waitlistTitle')}</h3>
+                                    <p className="text-xs text-gray-600 mt-0.5">{t('public.waitlistDesc')}</p>
+                                </div>
+                            </div>
+                            <form onSubmit={handleWaitlistSubmit} className="flex flex-col gap-2 mt-2">
+                                <input
+                                    type="email"
+                                    value={waitlistEmail}
+                                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                                    placeholder={t('public.waitlistPlaceholder')}
+                                    required
+                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-yambo-purple-400 focus:border-transparent"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={waitlistSubmitting}
+                                    className="w-full py-2.5 bg-yambo-purple-600 hover:bg-yambo-purple-700 disabled:bg-yambo-purple-300 text-white font-bold rounded-xl transition-colors text-sm"
+                                >
+                                    {waitlistSubmitting ? "..." : t('public.waitlistButton')}
+                                </button>
+                            </form>
+                            {waitlistError && (
+                                <p className="text-red-600 text-xs mt-2">{waitlistError}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {canJoinWaitlist && waitlistDone && (
+                        <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                                    <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
+                                </div>
+                                <p className="font-semibold text-green-800 text-xs">{t('public.waitlistDone')}</p>
+                            </div>
+                        </div>
+                    )}
 
                 {/* Floating CTA — mobile */}
                 {canRegister && (

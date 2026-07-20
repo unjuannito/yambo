@@ -100,6 +100,10 @@ export class PublicService extends ApiService {
     public async getPublicActivity(id: string): Promise<Activity> {
         return await this.get(`/public/activities/${encodeURIComponent(id)}`);
     }
+
+    public async joinWaitlist(activityId: string, email: string): Promise<void> {
+        await this.post(`/public/activities/${encodeURIComponent(activityId)}/waitlist`, { email });
+    }
 }
 
 export const publicService = new PublicService();

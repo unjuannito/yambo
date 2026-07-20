@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="87-activity-waitlist" author="cabrasky">
+        <comment>Add activity_waitlist table for users to register interest in planned activities</comment>
+
+        <createTable tableName="activity_waitlist">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="activity_id" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notified_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <createIndex indexName="idx_waitlist_activity" tableName="activity_waitlist">
+            <column name="activity_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint
+            baseTableName="activity_waitlist"
+            baseColumnNames="activity_id"
+            referencedTableName="activity"
+            referencedColumnNames="id"
+            constraintName="fk_waitlist_activity"
+            onDelete="CASCADE"/>
+
+        <addUniqueConstraint
+            tableName="activity_waitlist"
+            columnNames="activity_id, email"
+            constraintName="uq_waitlist_activity_email"/>
+    </changeSet>
+
+</databaseChangeLog>

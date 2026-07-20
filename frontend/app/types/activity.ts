@@ -44,4 +44,5 @@ export interface Activity {
     public: boolean;
     project: ActivityProject | null;
     manager: ActivityManager | null;
+    waitlistCount: number;
 }

@@ -290,6 +290,29 @@ public class HtmlMailService implements MailService {
                 plainText);
     }
 
+    // ── Activity Waitlist ────────────────────────────────────────────────
+
+    @Async("mailExecutor")
+    @Override
+    public void sendActivityOpenRegistration(String to, String activityName, String activityUrl) {
+        String orgName = settingsService.getOrganizationName();
+        String subject = "¡" + activityName + " ya está abierta! - " + orgName;
+
+        String plainText = "Hola,\n\n"
+                + "La actividad \"" + activityName + "\" ya tiene las inscripciones abiertas.\n\n"
+                + "Puedes apuntarte en el siguiente enlace:\n"
+                + activityUrl + "\n\n"
+                + "¡No esperes demasiado, las plazas son limitadas!\n\n"
+                + "Un saludo,\n"
+                + orgName;
+
+        send(to, subject, "emails/activity-open-registration",
+                Map.of(
+                        "activityName", activityName,
+                        "activityUrl", activityUrl),
+                plainText);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private String buildIssueLink(String issueId) {

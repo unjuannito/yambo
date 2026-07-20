@@ -13,8 +13,12 @@ import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import es.yambo_alco.web.service.ActivityWaitlistService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +40,7 @@ public class PublicController {
     private final ProjectGroupRepository projectGroupRepository;
     private final ActivityRepository activityRepository;
     private final SeoMetadataService seoMetadataService;
+    private final ActivityWaitlistService activityWaitlistService;
 
     @GetMapping("/settings/home")
     public ResponseEntity<Map<String, String>> getHomeSettings() {
@@ -95,6 +100,21 @@ public class PublicController {
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Activity not found"));
         SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, id).orElse(null);
         return ResponseEntity.ok(new PublicActivityDetailResponse(activity, seo));
+    }
+
+    @PostMapping("/activities/{id}/waitlist")
+    public ResponseEntity<Map<String, String>> joinWaitlist(
+            @PathVariable String id,
+            @Valid @RequestBody WaitlistRequest request) {
+        activityWaitlistService.register(id, request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "Te avisaremos cuando se abran las inscripciones"));
+    }
+
+    @Data
+    public static class WaitlistRequest {
+        @NotBlank(message = "El email es obligatorio")
+        @Email(message = "Email no válido")
+        private String email;
     }
 
     @GetMapping("/projects/{id}")

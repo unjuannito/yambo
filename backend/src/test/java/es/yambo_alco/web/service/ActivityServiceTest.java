@@ -34,6 +34,7 @@ public class ActivityServiceTest {
     private ProjectRepository projectRepository;
     private UserRepository userRepository;
     private ActivityService activityService;
+    private ActivityWaitlistService activityWaitlistService;
 
     private Project testProject;
     private User testManager;
@@ -43,7 +44,8 @@ public class ActivityServiceTest {
         activityRepository = Mockito.mock(ActivityRepository.class);
         projectRepository = Mockito.mock(ProjectRepository.class);
         userRepository = Mockito.mock(UserRepository.class);
-        activityService = new ActivityService(activityRepository, projectRepository, userRepository);
+        activityWaitlistService = Mockito.mock(ActivityWaitlistService.class);
+        activityService = new ActivityService(activityRepository, projectRepository, userRepository, activityWaitlistService);
 
         testProject = Project.builder()
                 .id("PRJ00001")

@@ -26,10 +26,18 @@
             WHERE email != LOWER(email);
         </sql>
 
+        <addColumn tableName="user_login_history">
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
         <sql>
-            UPDATE user_login_history
-            SET email = LOWER(email)
-            WHERE email != LOWER(email);
+            UPDATE user_login_history ulh
+            SET email = LOWER(u.email)
+            FROM public.user u
+            WHERE ulh.user_id = u.id
+              AND ulh.email IS NULL;
         </sql>
     </changeSet>
 

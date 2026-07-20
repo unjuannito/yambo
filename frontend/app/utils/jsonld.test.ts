@@ -17,6 +17,7 @@ const baseActivity: Activity = {
     public: true,
     project: { id: "PRJ001", name: "Barrio" },
     manager: { id: "U0001", name: "Ana", photo: "/uploads/ana.jpg" },
+    waitlistCount: 0,
 };
 
 describe("activityJsonLd", () => {
@@ -122,6 +123,7 @@ describe("activityJsonLd", () => {
             public: true,
             project: null,
             manager: null,
+            waitlistCount: 0,
         };
         const result = activityJsonLd(minimal, SITE_URL);
 

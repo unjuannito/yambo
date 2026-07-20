@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.service.ActivityService;
+import es.yambo_alco.web.service.ActivityWaitlistService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ class ActivityControllerTest {
 
     @MockitoBean
     private ActivityService activityService;
+
+    @MockitoBean
+    private ActivityWaitlistService activityWaitlistService;
 
     @MockitoBean
     private PermissionCheckService permissionCheckService;

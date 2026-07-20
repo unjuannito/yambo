@@ -26,6 +26,12 @@ vi.mock("react-i18next", () => ({
                 'public.activityPrice': 'Precio',
                 'public.activityProject': 'Proyecto',
                 'public.activityRegister': 'Quiero apuntarme',
+                'public.waitlistTitle': 'Avísame cuando se abra',
+                'public.waitlistDesc': 'Déjanos tu email y te avisaremos',
+                'public.waitlistPlaceholder': 'tu@email.com',
+                'public.waitlistButton': 'Avísame',
+                'public.waitlistSuccess': 'Te avisaremos',
+                'public.waitlistDone': 'Te hemos registrado',
                 'public.activityDescription': 'Descripción',
                 'public.activityUntil': 'hasta',
                 'public.backToList': 'Todas las actividades',
@@ -239,6 +245,7 @@ describe("actividad.$id — ActivityDetail component", () => {
             activity: mockActivity,
             siteUrl: MOCK_SITE_URL,
             contactEmail: "yamboalcobendas@gmail.com",
+            savedEmail: "",
         });
         vi.clearAllMocks();
     });
@@ -280,24 +287,28 @@ describe("actividad.$id — ActivityDetail component", () => {
             },
             siteUrl: MOCK_SITE_URL,
             contactEmail: "yamboalcobendas@gmail.com",
+            savedEmail: "",
         });
 
         render(<ActivityDetail />);
         expect(screen.queryByText("Quiero apuntarme")).not.toBeInTheDocument();
     });
 
-    it("hides CTA for future PLANNED (not open) activities", () => {
+    it("hides CTA but shows waitlist for future PLANNED activities", () => {
         mockUseLoaderData.mockReturnValue({
             activity: {
                 ...mockActivity,
-                status: { value: "PLANNED", label: "Planificada", color: "#f59e0b" },
+                status: { value: "PLANNED", label: "Planificada", color: "#3b82f6" },
             },
             siteUrl: MOCK_SITE_URL,
             contactEmail: "yamboalcobendas@gmail.com",
+            savedEmail: "",
         });
 
         render(<ActivityDetail />);
         expect(screen.queryByText("Quiero apuntarme")).not.toBeInTheDocument();
+        // Waitlist should be shown for PLANNED activities
+        expect(screen.getAllByText("Avísame cuando se abra").length).toBeGreaterThanOrEqual(1);
     });
 
     it("renders share button and copies link to clipboard", () => {
@@ -331,6 +342,7 @@ describe("actividad.$id — ActivityDetail component", () => {
             },
             siteUrl: MOCK_SITE_URL,
             contactEmail: "yamboalcobendas@gmail.com",
+            savedEmail: "",
         });
 
         render(<ActivityDetail />);

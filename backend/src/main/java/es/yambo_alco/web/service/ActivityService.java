@@ -28,6 +28,7 @@ public class ActivityService {
     private final ActivityRepository activityRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final ActivityWaitlistService activityWaitlistService;
 
     public Activity getActivityById(@NonNull String id) {
         return activityRepository.findById(id)
@@ -112,7 +113,13 @@ public class ActivityService {
             activity.setEndDate(endDate);
         }
         if (status != null) {
+            ActivityStatus oldStatus = activity.getStatus();
             activity.setStatus(status);
+
+            // Notify waitlist when activity changes from PLANNED to OPEN_REGISTRATION
+            if (oldStatus == ActivityStatus.PLANNED && status == ActivityStatus.OPEN_REGISTRATION) {
+                activityWaitlistService.notifyAll(id);
+            }
         }
         if (isPublic != null) {
             activity.setPublic(isPublic);

@@ -4,6 +4,7 @@ import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.service.ActivityService;
+import es.yambo_alco.web.service.ActivityWaitlistService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -27,6 +28,7 @@ import java.util.List;
 public class ActivityController {
 
     private final ActivityService activityService;
+    private final ActivityWaitlistService activityWaitlistService;
 
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'create')")
@@ -35,7 +37,9 @@ public class ActivityController {
             request.getName(), request.getDescription(), request.getImage(), request.getLocation(), request.getPrice(), request.getDate(), request.getEndDate(),
                 request.getStatus(), request.getIsPublic(),
                 request.getProjectId(), request.getManagerId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new ActivityResponse(activity));
+        ActivityResponse response = new ActivityResponse(activity);
+        response.setWaitlistCount(activityWaitlistService.getCount(activity.getId()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
@@ -50,14 +54,20 @@ public class ActivityController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
         Page<Activity> activities = activityService.listActivities(name, status, isPublic, projectId, managerId, startDate, endDate, pageable);
-        return ResponseEntity.ok(activities.map(ActivityResponse::new));
+        return ResponseEntity.ok(activities.map(a -> {
+            ActivityResponse resp = new ActivityResponse(a);
+            resp.setWaitlistCount(activityWaitlistService.getCount(a.getId()));
+            return resp;
+        }));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'read')")
     public ResponseEntity<ActivityResponse> getActivity(@PathVariable String id) {
         Activity activity = activityService.getActivityById(id);
-        return ResponseEntity.ok(new ActivityResponse(activity));
+        ActivityResponse response = new ActivityResponse(activity);
+        response.setWaitlistCount(activityWaitlistService.getCount(activity.getId()));
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
@@ -69,7 +79,9 @@ public class ActivityController {
             id, request.getName(), request.getDescription(), request.getImage(), request.getLocation(), request.getPrice(), request.getDate(), request.getEndDate(),
                 request.getStatus(), request.getIsPublic(),
                 request.getProjectId(), request.getManagerId());
-        return ResponseEntity.ok(new ActivityResponse(activity));
+        ActivityResponse response = new ActivityResponse(activity);
+        response.setWaitlistCount(activityWaitlistService.getCount(activity.getId()));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/projects/{projectId}/monitors")
@@ -153,6 +165,7 @@ public class ActivityController {
         private boolean isPublic;
         private ProjectSummary project;
         private ManagerSummary manager;
+        private long waitlistCount;
 
         public ActivityResponse(Activity activity) {
             this.id = activity.getId();

@@ -11,6 +11,7 @@ import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
+import es.yambo_alco.web.service.ActivityWaitlistService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,9 @@ class PublicControllerTest {
 
     @MockitoBean
     private SeoMetadataService seoMetadataService;
+
+    @MockitoBean
+    private ActivityWaitlistService activityWaitlistService;
 
     @Test
     @WithAnonymousUser

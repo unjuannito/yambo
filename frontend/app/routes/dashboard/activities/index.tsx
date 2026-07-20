@@ -14,6 +14,7 @@ import {
     faCopy,
     faPenToSquare,
     faEye,
+    faBell,
 } from "@fortawesome/free-solid-svg-icons";
 import {
     FilterableTable,
@@ -183,6 +184,17 @@ export default function ActivitiesAdminPage() {
                 ) : (
                     <span className="text-gray-400">-</span>
                 ),
+        },
+        {
+            key: "waitlistCount",
+            header: t("activities.waitlist"),
+            className: "hidden sm:table-cell",
+            render: (a: Activity) => (
+                <span className="inline-flex items-center gap-1 text-gray-600">
+                    <FontAwesomeIcon icon={faBell} className="text-yambo-purple-500" />
+                    {a.waitlistCount ?? 0}
+                </span>
+            ),
         },
         {
             key: "project",
