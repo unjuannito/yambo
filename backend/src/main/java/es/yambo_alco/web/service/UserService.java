@@ -94,10 +94,11 @@ public class UserService {
 			user.setName(name.trim());
 		}
 		if (!email.trim().isEmpty()) {
-			if (!email.equals(user.getEmail()) && userRepository.existsByEmail(email)) {
+			String normalizedEmail = email.trim().toLowerCase();
+			if (!normalizedEmail.equals(user.getEmail()) && userRepository.existsByEmail(normalizedEmail)) {
 				throw new BadRequestException("Email already in use");
 			}
-			user.setEmail(email.trim());
+			user.setEmail(normalizedEmail);
 		}
 
 		if (photo != null) {
@@ -235,7 +236,7 @@ public class UserService {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-		if (!user.getEmail().equals(email)) {
+		if (!user.getEmail().equals(email.toLowerCase())) {
 			Optional<User> existingUser = userRepository.findByEmail(email);
 			if (existingUser.isPresent()) {
 				throw new BadRequestException("Email is already in use");
@@ -243,7 +244,7 @@ public class UserService {
 		}
 
 		user.setName(name);
-		user.setEmail(email);
+		user.setEmail(email.toLowerCase());
 
 		if (profileIds != null && !profileIds.isEmpty()) {
 			// Filter out role-managed profiles

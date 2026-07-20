@@ -12,14 +12,16 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, String>, JpaSpecificationExecutor<User> {
 
+    @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)")
     @EntityGraph(attributePaths = {"profiles", "profiles.permissions", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project"})
-    Optional<User> findByEmail(String email);
+    Optional<User> findByEmail(@Param("email") String email);
 
     @Override
     @EntityGraph(attributePaths = {"profiles", "profiles.permissions", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project"})
     Optional<User> findById(@org.springframework.lang.NonNull String id);
 
-    boolean existsByEmail(String email);
+    @Query("SELECT COUNT(u) > 0 FROM User u WHERE LOWER(u.email) = LOWER(:email)")
+    boolean existsByEmail(@Param("email") String email);
 
     @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project"})
     @Query("SELECT DISTINCT u FROM User u JOIN u.groupRoles gr WHERE gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.MONITOR AND u.enabled = true")

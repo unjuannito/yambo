@@ -38,14 +38,15 @@ public class PasswordResetService {
 
     @Transactional
     public void requestPasswordReset(String email) {
-        Optional<User> userOpt = userRepository.findByEmail(email);
+        String normalizedEmail = email.toLowerCase().trim();
+        Optional<User> userOpt = userRepository.findByEmail(normalizedEmail);
         if (userOpt.isEmpty()) {
-            log.info("Password reset requested for unknown email: {}", email);
+            log.info("Password reset requested for unknown email: {}", normalizedEmail);
             return; // Silent return to prevent user enumeration
         }
 
         // Invalidate any previous unused tokens for this email
-        List<PasswordResetToken> previousTokens = passwordResetTokenRepository.findByEmailAndUsedFalse(email);
+        List<PasswordResetToken> previousTokens = passwordResetTokenRepository.findByEmailAndUsedFalse(normalizedEmail);
         for (PasswordResetToken t : previousTokens) {
             t.setUsed(true);
         }
@@ -55,7 +56,7 @@ public class PasswordResetService {
         String token = generateToken();
         LocalDateTime now = LocalDateTime.now();
         PasswordResetToken resetToken = PasswordResetToken.builder()
-                .email(email)
+                .email(normalizedEmail)
                 .token(token)
                 .createdAt(now)
                 .expiresAt(now.plusHours(expirationHours))
@@ -65,9 +66,9 @@ public class PasswordResetService {
 
         // Send email
         String resetLink = settingsService.getDomain() + "/reset-password?token=" + token;
-        mailService.sendPasswordResetEmail(email, resetLink, expirationHours);
+        mailService.sendPasswordResetEmail(normalizedEmail, resetLink, expirationHours);
 
-        log.info("Password reset token generated for: {}", email);
+        log.info("Password reset token generated for: {}", normalizedEmail);
     }
 
     @Transactional

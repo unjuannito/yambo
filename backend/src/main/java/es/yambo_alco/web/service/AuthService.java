@@ -42,7 +42,8 @@ public class AuthService implements UserDetailsService {
     }
 
     public String authenticate(String email, String password) {
-        UserDetails user = loadUserByEmail(email);
+        String normalizedEmail = email.toLowerCase();
+        UserDetails user = loadUserByEmail(normalizedEmail);
         if (passwordEncoder.matches(password, user.getPassword())) {
             return jwtService.generateToken(user);
         }
@@ -52,7 +53,8 @@ public class AuthService implements UserDetailsService {
     @Transactional
     public void recordLogin(String email, String ipAddress, String userAgent) {
         try {
-            User user = userRepository.findByEmail(email).orElse(null);
+            String normalizedEmail = email.toLowerCase();
+            User user = userRepository.findByEmail(normalizedEmail).orElse(null);
             if (user == null) return;
 
             LocalDateTime now = LocalDateTime.now();

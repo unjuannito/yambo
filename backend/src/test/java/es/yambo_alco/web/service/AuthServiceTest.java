@@ -114,6 +114,36 @@ class AuthServiceTest {
     }
 
     @Test
+    void authenticate_WithUpperCaseEmail_ShouldMatchCaseInsensitive() {
+        // Given — user stored with lowercase "testuser", login with "TESTUSER"
+        when(userRepository.findByEmail("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn(TEST_TOKEN);
+
+        // When
+        String token = authService.authenticate("TESTUSER", TEST_PASSWORD);
+
+        // Then
+        assertNotNull(token);
+        assertEquals(TEST_TOKEN, token);
+    }
+
+    @Test
+    void authenticate_WithMixedCaseEmail_ShouldMatchCaseInsensitive() {
+        // Given — user stored with lowercase "testuser", login with "TestUser"
+        when(userRepository.findByEmail("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn(TEST_TOKEN);
+
+        // When
+        String token = authService.authenticate("TestUser", TEST_PASSWORD);
+
+        // Then
+        assertNotNull(token);
+        assertEquals(TEST_TOKEN, token);
+    }
+
+    @Test
     void getCurrentUser_WhenAuthenticated_ShouldReturnUser() {
         // Given
         SecurityContext securityContext = mock(SecurityContext.class);

@@ -39,7 +39,8 @@ public class NominativeInvitationService {
     private long expirationHours;
 
     public NominativeInvitation createInvitation(String email, String invitedBy, Set<String> profileIds) {
-        if (userRepository.existsByEmail(email)) {
+        String normalizedEmail = email.toLowerCase().trim();
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new BadRequestException("Email already registered");
         }
 
@@ -48,7 +49,7 @@ public class NominativeInvitationService {
         String token = generateToken();
         LocalDateTime now = LocalDateTime.now();
         NominativeInvitation inv = NominativeInvitation.builder()
-                .email(email)
+                .email(normalizedEmail)
                 .token(token)
                 .createdAt(now)
                 .expiresAt(now.plusHours(expirationHours))
@@ -57,7 +58,7 @@ public class NominativeInvitationService {
                 .profiles(profiles)
                 .build();
 
-        sendInvitationEmail(email, token, expirationHours);
+        sendInvitationEmail(normalizedEmail, token, expirationHours);
 
         return nominativeInvitationRepository.save(inv);
     }
@@ -79,7 +80,8 @@ public class NominativeInvitationService {
         List<String> skipped = new ArrayList<>();
 
         for (String email : emails) {
-            if (userRepository.existsByEmail(email)) {
+            String normalizedEmail = email.toLowerCase().trim();
+            if (userRepository.existsByEmail(normalizedEmail)) {
                 skipped.add(email);
                 continue;
             }
@@ -87,7 +89,7 @@ public class NominativeInvitationService {
             String token = generateToken();
             LocalDateTime now = LocalDateTime.now();
             NominativeInvitation inv = NominativeInvitation.builder()
-                    .email(email)
+                    .email(normalizedEmail)
                     .token(token)
                     .createdAt(now)
                     .expiresAt(now.plusHours(expirationHours))
