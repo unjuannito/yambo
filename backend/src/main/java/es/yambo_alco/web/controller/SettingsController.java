@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.MailConfig;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.service.SettingsService;
+import es.yambo_alco.web.service.oauth.OAuthProviderRegistry;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +23,7 @@ public class SettingsController {
 
     private final SettingsService settingsService;
     private final MailConfig mailConfig;
+    private final OAuthProviderRegistry oauthProviderRegistry;
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
@@ -358,5 +360,61 @@ public class SettingsController {
     public static class OllamaConfigResponse {
         private String apiUrl;
         private String model;
+    }
+
+    // ── OAuth Settings ──
+
+    @GetMapping("/oauth")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
+    public ResponseEntity<List<OAuthProviderConfigResponse>> getOAuthConfigs() {
+        return ResponseEntity.ok(
+            oauthProviderRegistry.getAllProviders().stream()
+                .map(provider -> {
+                    OAuthProviderConfigResponse config = new OAuthProviderConfigResponse();
+                    config.setName(provider.getProviderName());
+                    config.setDisplayName(provider.getDisplayName());
+                    config.setEnabled(provider.isEnabled());
+                    config.setClientId(provider.getClientId());
+                    config.setClientSecret(""); // never expose secret
+                    return config;
+                })
+                .toList()
+        );
+    }
+
+    @PutMapping("/oauth/{provider}")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
+    public ResponseEntity<String> updateOAuthConfig(
+            @PathVariable String provider,
+            @Valid @RequestBody OAuthConfigRequest request) {
+        if (!oauthProviderRegistry.getProvider(provider).isPresent()) {
+            return ResponseEntity.badRequest().body("OAuth provider '" + provider + "' not found");
+        }
+        if (request.getEnabled() != null) {
+            settingsService.setOAuthProviderEnabled(provider, request.getEnabled());
+        }
+        if (request.getClientId() != null && !request.getClientId().isBlank()) {
+            settingsService.setOAuthProviderClientId(provider, request.getClientId());
+        }
+        if (request.getClientSecret() != null && !request.getClientSecret().isBlank()) {
+            settingsService.setOAuthProviderClientSecret(provider, request.getClientSecret());
+        }
+        return ResponseEntity.ok("OAuth configuration updated successfully");
+    }
+
+    @Data
+    public static class OAuthConfigRequest {
+        private Boolean enabled;
+        private String clientId;
+        private String clientSecret;
+    }
+
+    @Data
+    public static class OAuthProviderConfigResponse {
+        private String name;
+        private String displayName;
+        private boolean enabled;
+        private String clientId;
+        private String clientSecret;
     }
 }

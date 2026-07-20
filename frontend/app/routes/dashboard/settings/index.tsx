@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { settingsService, type EmailConfig, type UploadConfig, type OllamaConfig } from "~/services/settingsService";
+import { settingsService, type EmailConfig, type UploadConfig, type OllamaConfig, type OAuthProviderConfig } from "~/services/settingsService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faGear } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faGear, faEye, faEyeSlash, faExternalLinkAlt, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useTranslation } from "react-i18next";
 
 export function meta({}: Route.MetaArgs) {
@@ -19,7 +20,7 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-type SettingsTab = "organization" | "application" | "bank" | "email" | "contact" | "upload" | "ai";
+type SettingsTab = "organization" | "application" | "bank" | "email" | "contact" | "upload" | "ai" | "oauth";
 
 export default function Settings() {
     const { t } = useTranslation();
@@ -59,14 +60,18 @@ export default function Settings() {
         maxFileSizeMb: 5,
     });
 
-    // AI / Ollama settings
+    // AI settings
     const [ollamaConfig, setOllamaConfig] = useState<OllamaConfig>({
-        apiUrl: "http://localhost:11434",
-        model: "phi3:mini",
+        apiUrl: "",
+        model: "",
     });
 
-    // Advanced SMTP settings
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    // OAuth settings (array of providers)
+    const [oauthProviders, setOauthProviders] = useState<OAuthProviderConfig[]>([]);
+    const [showClientSecret, setShowClientSecret] = useState<Record<string, boolean>>({});
+
+    // SMTP settings
+    const [smtpAdvancedVisible, setSmtpAdvancedVisible] = useState(false);
     const [smtpConfig, setSmtpConfig] = useState({
         auth: true,
         starttlsEnable: true,
@@ -76,56 +81,51 @@ export default function Settings() {
         writeTimeout: 5000,
     });
 
-    const currentHost = typeof window !== "undefined" ? window.location.origin : "";
-
-    useEffect(() => {
-        loadSettings();
-    }, []);
-
-    const loadSettings = async () => {
+    // ── Load all settings ──
+    const loadSettings = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
-            const [allSettings, domainValue, ibanValue, emailConfigValue, smtpConfigValue, issueCreationWindowDaysValue, uploadConfigValue, ollamaConfigValue] = await Promise.all([
+
+            const [allSettings, emailCfg, smtpCfg, uploadCfg, ollamaCfg, oauthProvidersData] = await Promise.all([
                 settingsService.getAllSettings(),
-                settingsService.getDomain(),
-                settingsService.getIban(),
                 settingsService.getEmailConfig(),
-                settingsService.getSmtpAdvancedConfig(),
-                settingsService.getIssueCreationWindowDays(),
+                settingsService.getSmtpAdvancedConfig().catch(() => null),
                 settingsService.getUploadConfig(),
                 settingsService.getOllamaConfig(),
+                settingsService.getOAuthProviders().catch(() => []),
             ]);
 
-            // Load organization settings
-            const nameSetting = allSettings.find(s => s.key === "organization.name");
-            if (nameSetting) setOrganizationName(nameSetting.value);
+            const get = (key: string) => allSettings.find(s => s.key === key)?.value ?? "";
 
-            const legalNameSetting = allSettings.find(s => s.key === "organization.legal_name");
-            if (legalNameSetting) setOrganizationLegalName(legalNameSetting.value);
+            setOrganizationName(get("organization.name"));
+            setOrganizationLegalName(get("organization.legal_name"));
+            setDomain(get("app.domain"));
+            setIssueCreationWindowDays(get("issues.creation_window_days") || "30");
+            setIban(get("bank.iban"));
+            setContactEmail(get("contact.email"));
+            setContactInstagram(get("contact.instagram"));
+            setContactTiktok(get("contact.tiktok"));
 
-            // Contact settings
-            const contactEmailSetting = allSettings.find(s => s.key === "contact.email");
-            if (contactEmailSetting) setContactEmail(contactEmailSetting.value);
-            const contactInstagramSetting = allSettings.find(s => s.key === "contact.instagram");
-            if (contactInstagramSetting) setContactInstagram(contactInstagramSetting.value);
-            const contactTiktokSetting = allSettings.find(s => s.key === "contact.tiktok");
-            if (contactTiktokSetting) setContactTiktok(contactTiktokSetting.value);
+            setEmailConfig(emailCfg);
+            if (smtpCfg) setSmtpConfig(smtpCfg);
+            setUploadConfig(uploadCfg);
+            setOllamaConfig(ollamaCfg);
 
-            setDomain(domainValue);
-            setIban(ibanValue);
-            setEmailConfig(emailConfigValue);
-            setSmtpConfig(smtpConfigValue);
-            setIssueCreationWindowDays(String(issueCreationWindowDaysValue));
-            setUploadConfig(uploadConfigValue);
-            setOllamaConfig(ollamaConfigValue);
+            // OAuth providers
+            setOauthProviders(oauthProvidersData);
+            const secretVisibility: Record<string, boolean> = {};
+            oauthProvidersData.forEach(p => { secretVisibility[p.name] = false; });
+            setShowClientSecret(secretVisibility);
+
         } catch (err) {
             setError(getErrorMessage(err, "La configuración se nos resiste"));
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
+    // ── Save handlers ──
     const handleSaveOrganizationSettings = async () => {
         try {
             setSavingTab("organization");
@@ -233,6 +233,35 @@ export default function Settings() {
         }
     };
 
+    const handleSaveOAuthSettings = async () => {
+        try {
+            setSavingTab("oauth");
+            const updates = oauthProviders.filter(p => p.enabled || p.clientId);
+            if (updates.length === 0) {
+                toast.success("Configuración OAuth guardada correctamente");
+                return;
+            }
+            await Promise.all(
+                updates.map(p =>
+                    settingsService.updateOAuthProvider(p.name, {
+                        enabled: p.enabled,
+                        clientId: p.clientId,
+                        clientSecret: p.clientSecret,
+                    })
+                )
+            );
+            toast.success("Configuración OAuth guardada correctamente");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "¡La configuración OAuth se resiste!"));
+        } finally {
+            setSavingTab(null);
+        }
+    };
+
+    useEffect(() => {
+        loadSettings();
+    }, [loadSettings]);
+
     const tabItems: { key: SettingsTab; label: string }[] = [
         { key: "organization", label: t('settings.tabOrganization') },
         { key: "application", label: t('settings.tabApplication') },
@@ -241,6 +270,7 @@ export default function Settings() {
         { key: "contact", label: t('settings.tabContact') },
         { key: "upload", label: t('settings.tabUpload') },
         { key: "ai", label: t('settings.tabAI') },
+        { key: "oauth", label: "OAuth / Inicio de Sesión" },
     ];
 
     if (loading) {
@@ -305,9 +335,7 @@ export default function Settings() {
                             placeholder={t('settings.orgNamePlaceholder')}
                             required
                         />
-                        <p className="text-sm text-gray-400">
-                            {t('settings.orgNameHint')}
-                        </p>
+                        <p className="text-sm text-gray-400">{t('settings.orgNameHint')}</p>
                         <InputComponent
                             label={t('settings.orgLegalName')}
                             type="text"
@@ -316,16 +344,10 @@ export default function Settings() {
                             placeholder={t('settings.orgLegalNamePlaceholder')}
                             required
                         />
-                        <p className="text-sm text-gray-400">
-                            {t('settings.orgLegalNameHint')}
-                        </p>
+                        <p className="text-sm text-gray-400">{t('settings.orgLegalNameHint')}</p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveOrganizationSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveOrganizationSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "organization" ? t('common.saving') : t('settings.saveOrganization')}
                                 </ButtonComponent>
                             </div>
@@ -338,48 +360,15 @@ export default function Settings() {
                         <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionApplication')}</h2>
                         <div className="flex gap-2">
                             <div className="flex-1">
-                                <InputComponent
-                                    label={t('settings.appDomain')}
-                                    type="text"
-                                    value={domain}
-                                    onChange={(e) => setDomain(e.target.value)}
-                                    placeholder={t('settings.appDomainPlaceholder')}
-                                    required
-                                />
-                            </div>
-                            <div className="flex items-end">
-                                <ButtonComponent
-                                    onClick={() => setDomain(currentHost)}
-                                    variant="neutral"
-                                    disabled={savingTab !== null}
-                                >
-                                    {t('settings.useCurrentHost')}
-                                </ButtonComponent>
+                                <InputComponent label={t('settings.appDomain')} type="text" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder={t('settings.appDomainPlaceholder')} required />
                             </div>
                         </div>
-                        <p className="text-sm text-gray-400">
-                            {t('settings.appDomainHint')}
-                        </p>
-                        <InputComponent
-                            label={t('settings.issueCreationWindow')}
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={issueCreationWindowDays}
-                            onChange={(e) => setIssueCreationWindowDays(e.target.value)}
-                            placeholder="30"
-                            required
-                        />
-                        <p className="text-sm text-gray-400">
-                            {t('settings.issueCreationWindowHint')}
-                        </p>
+                        <p className="text-sm text-gray-400">{t('settings.appDomainHint')}</p>
+                        <InputComponent label={t('settings.issueCreationWindow')} type="number" value={issueCreationWindowDays} onChange={(e) => setIssueCreationWindowDays(e.target.value)} placeholder="30" required />
+                        <p className="text-sm text-gray-400">{t('settings.issueCreationWindowDaysHint')}</p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveApplicationSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveApplicationSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "application" ? t('common.saving') : t('settings.saveApplication')}
                                 </ButtonComponent>
                             </div>
@@ -390,21 +379,11 @@ export default function Settings() {
                 {activeTab === "bank" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                         <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionBank')}</h2>
-                        <InputComponent
-                            label={t('settings.iban')}
-                            type="text"
-                            value={iban}
-                            onChange={(e) => setIban(e.target.value)}
-                            placeholder={t('settings.ibanPlaceholder')}
-                            required
-                        />
+                        <InputComponent label={t('settings.bankIban')} type="text" value={iban} onChange={(e) => setIban(e.target.value)} placeholder={t('settings.bankIbanPlaceholder')} required />
+                        <p className="text-sm text-gray-400">{t('settings.bankIbanHint')}</p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveBankSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveBankSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "bank" ? t('common.saving') : t('settings.saveBank')}
                                 </ButtonComponent>
                             </div>
@@ -415,136 +394,44 @@ export default function Settings() {
                 {activeTab === "email" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                         <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionEmail')}</h2>
-
+                        <p className="text-sm text-gray-400">{t('settings.emailHint')}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InputComponent
-                                label={t('settings.smtpServer')}
-                                type="text"
-                                value={emailConfig.host}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, host: e.target.value })}
-                                placeholder={t('settings.smtpServerPlaceholder')}
-                                required
-                            />
-                            <InputComponent
-                                label={t('settings.smtpPort')}
-                                type="text"
-                                value={emailConfig.port}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, port: e.target.value })}
-                                placeholder={t('settings.smtpPortPlaceholder')}
-                                required
-                            />
+                            <InputComponent label={t('settings.emailHost')} type="text" value={emailConfig.host} onChange={(e) => setEmailConfig({ ...emailConfig, host: e.target.value })} placeholder={t('settings.emailHostPlaceholder')} required />
+                            <InputComponent label={t('settings.emailPort')} type="number" value={emailConfig.port} onChange={(e) => setEmailConfig({ ...emailConfig, port: String(e.target.value) })} placeholder="587" required />
                         </div>
-                        <InputComponent
-                            label={t('settings.smtpUser')}
-                            type="text"
-                            value={emailConfig.username}
-                            onChange={(e) => setEmailConfig({ ...emailConfig, username: e.target.value })}
-                            placeholder={t('settings.smtpUserPlaceholder')}
-                            required
-                        />
-                        <InputComponent
-                            label={t('settings.smtpPassword')}
-                            type="password"
-                            value={emailConfig.password}
-                            onChange={(e) => setEmailConfig({ ...emailConfig, password: e.target.value })}
-                            placeholder={t('settings.smtpPasswordPlaceholder')}
-                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InputComponent
-                                label={t('settings.senderEmail')}
-                                type="email"
-                                value={emailConfig.from}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })}
-                                placeholder={t('settings.senderEmailPlaceholder')}
-                                required
-                            />
-                            <InputComponent
-                                label={t('settings.senderName')}
-                                type="text"
-                                value={emailConfig.fromName || ""}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
-                                placeholder={t('settings.senderNamePlaceholder')}
-                            />
+                            <InputComponent label={t('settings.emailUsername')} type="text" value={emailConfig.username} onChange={(e) => setEmailConfig({ ...emailConfig, username: e.target.value })} placeholder={t('settings.emailUsernamePlaceholder')} />
+                            <InputComponent label={t('settings.emailPassword')} type="password" value={emailConfig.password} onChange={(e) => setEmailConfig({ ...emailConfig, password: e.target.value })} placeholder="••••••••" />
                         </div>
-
-                        <div className="border-t border-gray-100 pt-4 mt-2">
-                            <button
-                                type="button"
-                                onClick={() => setShowAdvanced(!showAdvanced)}
-                                className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-yambo-black transition-colors"
-                            >
-                                <FontAwesomeIcon
-                                    icon={faChevronRight}
-                                    className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
-                                />
-                                {t('settings.advancedSmtp')}
-                            </button>
-
-                            {showAdvanced && (
-                                <div className="mt-4 space-y-4 pl-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <label className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={smtpConfig.auth}
-                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, auth: e.target.checked })}
-                                                className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
-                                            />
-                                            <span className="text-sm">{t('settings.smtpAuth')}</span>
-                                        </label>
-                                        <label className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={smtpConfig.starttlsEnable}
-                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsEnable: e.target.checked })}
-                                                className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
-                                            />
-                                            <span className="text-sm">{t('settings.smtpStarttlsEnable')}</span>
-                                        </label>
-                                        <label className="flex items-center space-x-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={smtpConfig.starttlsRequired}
-                                                onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsRequired: e.target.checked })}
-                                                className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500/50"
-                                            />
-                                            <span className="text-sm">{t('settings.smtpStarttlsRequired')}</span>
-                                        </label>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <InputComponent
-                                            label={t('settings.connectionTimeout')}
-                                            type="number"
-                                            value={String(smtpConfig.connectionTimeout)}
-                                            onChange={(e) => setSmtpConfig({ ...smtpConfig, connectionTimeout: Number(e.target.value) })}
-                                            placeholder="5000"
-                                        />
-                                        <InputComponent
-                                            label={t('settings.readTimeout')}
-                                            type="number"
-                                            value={String(smtpConfig.timeout)}
-                                            onChange={(e) => setSmtpConfig({ ...smtpConfig, timeout: Number(e.target.value) })}
-                                            placeholder="5000"
-                                        />
-                                        <InputComponent
-                                            label={t('settings.writeTimeout')}
-                                            type="number"
-                                            value={String(smtpConfig.writeTimeout)}
-                                            onChange={(e) => setSmtpConfig({ ...smtpConfig, writeTimeout: Number(e.target.value) })}
-                                            placeholder="5000"
-                                        />
-                                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InputComponent label={t('settings.emailFrom')} type="email" value={emailConfig.from} onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })} placeholder={t('settings.emailFromPlaceholder')} required />
+                            <InputComponent label={t('settings.emailFromName')} type="text" value={emailConfig.fromName || ""} onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })} placeholder={t('settings.emailFromNamePlaceholder')} />
+                        </div>
+                        <button onClick={() => setSmtpAdvancedVisible(!smtpAdvancedVisible)} className="flex items-center gap-2 text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                            <FontAwesomeIcon icon={smtpAdvancedVisible ? faChevronUp : faChevronDown} className="w-3 h-3" />
+                            {t('settings.smtpAdvanced')}
+                        </button>
+                        {smtpAdvancedVisible && (
+                            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                        <input type="checkbox" checked={smtpConfig.auth} onChange={(e) => setSmtpConfig({ ...smtpConfig, auth: e.target.checked })} className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500" />
+                                        {t('settings.smtpAuth')}
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                        <input type="checkbox" checked={smtpConfig.starttlsEnable} onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsEnable: e.target.checked })} className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500" />
+                                        {t('settings.smtpStartTlsEnable')}
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                        <input type="checkbox" checked={smtpConfig.starttlsRequired} onChange={(e) => setSmtpConfig({ ...smtpConfig, starttlsRequired: e.target.checked })} className="rounded border-gray-300 text-yambo-green-600 focus:ring-yambo-green-500" />
+                                        {t('settings.smtpStartTlsRequired')}
+                                    </label>
                                 </div>
-                            )}
-                        </div>
-
+                            </div>
+                        )}
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveEmailSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveEmailSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "email" ? t('common.saving') : t('settings.saveEmail')}
                                 </ButtonComponent>
                             </div>
@@ -555,37 +442,13 @@ export default function Settings() {
                 {activeTab === "contact" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                         <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionContact')}</h2>
-                        <p className="text-sm text-gray-400">
-                            {t('settings.contactHint')}
-                        </p>
-                        <InputComponent
-                            label={t('settings.contactEmail')}
-                            type="email"
-                            value={contactEmail}
-                            onChange={(e) => setContactEmail(e.target.value)}
-                            placeholder={t('settings.contactEmailPlaceholder')}
-                        />
-                        <InputComponent
-                            label={t('settings.contactInstagram')}
-                            type="text"
-                            value={contactInstagram}
-                            onChange={(e) => setContactInstagram(e.target.value)}
-                            placeholder={t('settings.contactInstagramPlaceholder')}
-                        />
-                        <InputComponent
-                            label={t('settings.contactTiktok')}
-                            type="text"
-                            value={contactTiktok}
-                            onChange={(e) => setContactTiktok(e.target.value)}
-                            placeholder={t('settings.contactTiktokPlaceholder')}
-                        />
+                        <p className="text-sm text-gray-400">{t('settings.contactHint')}</p>
+                        <InputComponent label={t('settings.contactEmail')} type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t('settings.contactEmailPlaceholder')} />
+                        <InputComponent label={t('settings.contactInstagram')} type="text" value={contactInstagram} onChange={(e) => setContactInstagram(e.target.value)} placeholder={t('settings.contactInstagramPlaceholder')} />
+                        <InputComponent label={t('settings.contactTiktok')} type="text" value={contactTiktok} onChange={(e) => setContactTiktok(e.target.value)} placeholder={t('settings.contactTiktokPlaceholder')} />
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveContactSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveContactSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "contact" ? t('common.saving') : t('settings.saveContact')}
                                 </ButtonComponent>
                             </div>
@@ -596,29 +459,12 @@ export default function Settings() {
                 {activeTab === "upload" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                         <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionUpload')}</h2>
-                        <p className="text-sm text-gray-400">
-                            {t('settings.uploadHint')}
-                        </p>
-                        <InputComponent
-                            label={t('settings.maxFileSize')}
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={String(uploadConfig.maxFileSizeMb)}
-                            onChange={(e) => setUploadConfig({ ...uploadConfig, maxFileSizeMb: Number(e.target.value) })}
-                            placeholder="5"
-                            required
-                        />
-                        <p className="text-sm text-gray-400">
-                            {t('settings.maxFileSizeHint')}
-                        </p>
+                        <p className="text-sm text-gray-400">{t('settings.uploadHint')}</p>
+                        <InputComponent label={t('settings.maxFileSize')} type="number" min="1" step="1" value={String(uploadConfig.maxFileSizeMb)} onChange={(e) => setUploadConfig({ ...uploadConfig, maxFileSizeMb: Number(e.target.value) })} placeholder="5" required />
+                        <p className="text-sm text-gray-400">{t('settings.maxFileSizeHint')}</p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveUploadSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveUploadSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "upload" ? t('common.saving') : t('settings.saveUpload')}
                                 </ButtonComponent>
                             </div>
@@ -629,39 +475,129 @@ export default function Settings() {
                 {activeTab === "ai" && (
                     <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                         <h2 className="text-xl font-bold font-display text-yambo-black">{t('settings.sectionAI')}</h2>
-                        <p className="text-sm text-gray-400">
-                            {t('settings.aiHint')}
-                        </p>
-                        <InputComponent
-                            label={t('settings.ollamaApiUrl')}
-                            type="text"
-                            value={ollamaConfig.apiUrl}
-                            onChange={(e) => setOllamaConfig({ ...ollamaConfig, apiUrl: e.target.value })}
-                            placeholder={t('settings.ollamaApiUrlPlaceholder')}
-                            required
-                        />
-                        <p className="text-sm text-gray-400">
-                            {t('settings.ollamaApiUrlHint')}
-                        </p>
-                        <InputComponent
-                            label={t('settings.ollamaModel')}
-                            type="text"
-                            value={ollamaConfig.model}
-                            onChange={(e) => setOllamaConfig({ ...ollamaConfig, model: e.target.value })}
-                            placeholder={t('settings.ollamaModelPlaceholder')}
-                            required
-                        />
-                        <p className="text-sm text-gray-400">
-                            {t('settings.ollamaModelHint')}
-                        </p>
+                        <p className="text-sm text-gray-400">{t('settings.aiHint')}</p>
+                        <InputComponent label={t('settings.ollamaApiUrl')} type="text" value={ollamaConfig.apiUrl} onChange={(e) => setOllamaConfig({ ...ollamaConfig, apiUrl: e.target.value })} placeholder={t('settings.ollamaApiUrlPlaceholder')} required />
+                        <p className="text-sm text-gray-400">{t('settings.ollamaApiUrlHint')}</p>
+                        <InputComponent label={t('settings.ollamaModel')} type="text" value={ollamaConfig.model} onChange={(e) => setOllamaConfig({ ...ollamaConfig, model: e.target.value })} placeholder={t('settings.ollamaModelPlaceholder')} required />
+                        <p className="text-sm text-gray-400">{t('settings.ollamaModelHint')}</p>
                         <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
                             <div className="flex justify-end">
-                                <ButtonComponent
-                                    onClick={handleSaveOllamaSettings}
-                                    variant="primary"
-                                    disabled={savingTab !== null}
-                                >
+                                <ButtonComponent onClick={handleSaveOllamaSettings} variant="primary" disabled={savingTab !== null}>
                                     {savingTab === "ai" ? t('common.saving') : t('settings.saveAI')}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    </section>
+                )}
+
+                {activeTab === "oauth" && (
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
+                        <h2 className="text-xl font-bold font-display text-yambo-black flex items-center gap-2">
+                            <FontAwesomeIcon icon={faGoogle} className="text-blue-500 w-5 h-5" />
+                            OAuth / Inicio de Sesión
+                        </h2>
+                        <p className="text-sm text-gray-400">
+                            Configura los proveedores de inicio de sesión con servicios externos (Google, Apple, GitHub...).
+                            Los usuarios podrán iniciar sesión con estos métodos si están activados y configurados.
+                        </p>
+
+                        {oauthProviders.length === 0 ? (
+                            <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <FontAwesomeIcon icon={faGoogle} className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                                <p className="font-medium">No hay proveedores OAuth disponibles</p>
+                                <p className="text-sm mt-1">Implementa un OAuthProvider en el backend para que aparezca aquí.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {oauthProviders.map((provider) => (
+                                    <div key={provider.name} className="bg-gray-50 rounded-xl border border-gray-100 p-5 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center">
+                                                    {provider.name === "google" ? (
+                                                        <FontAwesomeIcon icon={faGoogle} className="text-blue-500 w-5 h-5" />
+                                                    ) : (
+                                                        <span className="text-lg font-bold text-gray-400">{provider.displayName[0]}</span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-semibold text-yambo-black">{provider.displayName}</h3>
+                                                    <p className="text-xs text-gray-400">{provider.name}</p>
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={provider.enabled}
+                                                    onChange={(e) => {
+                                                        setOauthProviders(prev =>
+                                                            prev.map(p => p.name === provider.name ? { ...p, enabled: e.target.checked } : p)
+                                                        );
+                                                    }}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yambo-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yambo-green-500"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                                                <input
+                                                    type="text"
+                                                    value={provider.clientId}
+                                                    onChange={(e) => {
+                                                        setOauthProviders(prev =>
+                                                            prev.map(p => p.name === provider.name ? { ...p, clientId: e.target.value } : p)
+                                                        );
+                                                    }}
+                                                    placeholder="123456789-xxxxx.apps.googleusercontent.com"
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-yambo-green-500 focus:border-transparent outline-none transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Client Secret</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showClientSecret[provider.name] ? "text" : "password"}
+                                                        value={provider.clientSecret}
+                                                        onChange={(e) => {
+                                                            setOauthProviders(prev =>
+                                                                prev.map(p => p.name === provider.name ? { ...p, clientSecret: e.target.value } : p)
+                                                            );
+                                                        }}
+                                                        placeholder="GOCSPX-..."
+                                                        className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-yambo-green-500 focus:border-transparent outline-none transition-all"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowClientSecret(prev => ({ ...prev, [provider.name]: !prev[provider.name] }))}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    >
+                                                        <FontAwesomeIcon icon={showClientSecret[provider.name] ? faEyeSlash : faEye} className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <a
+                                            href="/mi-espacio/admin/guias#oauth-google"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-xs text-yambo-green-600 hover:text-yambo-green-700 hover:underline font-medium"
+                                        >
+                                            <FontAwesomeIcon icon={faExternalLinkAlt} className="w-3 h-3" />
+                                            Guía paso a paso para obtener estas claves
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <RequirePermission permission={{ obj: "settings", action: "update" }} redirect={false}>
+                            <div className="flex justify-end">
+                                <ButtonComponent onClick={handleSaveOAuthSettings} variant="primary" disabled={savingTab !== null}>
+                                    {savingTab === "oauth" ? t('common.saving') : "Guardar configuración OAuth"}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>

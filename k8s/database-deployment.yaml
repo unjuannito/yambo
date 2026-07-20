@@ -85,6 +85,8 @@ kind: Service
 metadata:
   name: db
   namespace: yambo
+  labels:
+    app: postgres
 spec:
   selector:
     app: postgres

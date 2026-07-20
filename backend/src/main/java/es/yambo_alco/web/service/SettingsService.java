@@ -406,4 +406,75 @@ public class SettingsService {
             createSetting("ai.ollama_model", model, "Modelo de Ollama a utilizar", "ai");
         }
     }
+
+    // ── OAuth / Login Settings ──
+
+    public boolean isOAuthProviderEnabled(@NonNull String provider) {
+        return "true".equalsIgnoreCase(getSettingValue("oauth." + provider + ".enabled", "false"));
+    }
+
+    public String getOAuthProviderClientId(@NonNull String provider) {
+        return getSettingValue("oauth." + provider + ".client_id", "");
+    }
+
+    public String getOAuthProviderClientSecret(@NonNull String provider) {
+        return getSettingValue("oauth." + provider + ".client_secret", "");
+    }
+
+    public void setOAuthProviderEnabled(@NonNull String provider, boolean enabled) {
+        String key = "oauth." + provider + ".enabled";
+        String value = String.valueOf(enabled);
+        Optional<Settings> existing = findSettingByKey(key);
+        if (existing.isPresent()) {
+            updateSetting(key, value, null, null);
+        } else {
+            createSetting(key, value, "Habilitar inicio de sesión con " + provider, "oauth");
+        }
+    }
+
+    public void setOAuthProviderClientId(@NonNull String provider, @NonNull String clientId) {
+        String key = "oauth." + provider + ".client_id";
+        Optional<Settings> existing = findSettingByKey(key);
+        if (existing.isPresent()) {
+            updateSetting(key, clientId, null, null);
+        } else {
+            createSetting(key, clientId, provider + " OAuth Client ID", "oauth");
+        }
+    }
+
+    public void setOAuthProviderClientSecret(@NonNull String provider, @NonNull String clientSecret) {
+        String key = "oauth." + provider + ".client_secret";
+        Optional<Settings> existing = findSettingByKey(key);
+        if (existing.isPresent()) {
+            updateSetting(key, clientSecret, null, null);
+        } else {
+            createSetting(key, clientSecret, provider + " OAuth Client Secret", "oauth");
+        }
+    }
+
+    // ── Backward-compatible Google helpers ──
+
+    public boolean isOAuthGoogleEnabled() {
+        return isOAuthProviderEnabled("google");
+    }
+
+    public String getOAuthGoogleClientId() {
+        return getOAuthProviderClientId("google");
+    }
+
+    public String getOAuthGoogleClientSecret() {
+        return getOAuthProviderClientSecret("google");
+    }
+
+    public void setOAuthGoogleEnabled(boolean enabled) {
+        setOAuthProviderEnabled("google", enabled);
+    }
+
+    public void setOAuthGoogleClientId(@NonNull String clientId) {
+        setOAuthProviderClientId("google", clientId);
+    }
+
+    public void setOAuthGoogleClientSecret(@NonNull String clientSecret) {
+        setOAuthProviderClientSecret("google", clientSecret);
+    }
 }

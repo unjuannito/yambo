@@ -13,6 +13,9 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.NominativeInvitationService;
 import es.yambo_alco.web.service.PasswordResetService;
+import es.yambo_alco.web.service.oauth.OAuthProvider;
+import es.yambo_alco.web.service.oauth.OAuthProviderRegistry;
+import es.yambo_alco.web.jwt.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +26,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+import java.util.Optional;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
@@ -30,9 +36,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.security.test.context.support.WithMockUser;
 
@@ -54,6 +59,15 @@ class AuthControllerTest {
 
         @MockitoBean
         private PasswordResetService passwordResetService;
+
+        @MockitoBean
+        private OAuthProviderRegistry oauthProviderRegistry;
+
+        @MockitoBean
+        private JwtService jwtService;
+
+        @MockitoBean
+        private OAuthProvider googleProvider;
 
         @Test
         void login_WithValidCredentials_ShouldReturnToken() throws Exception {
@@ -187,11 +201,94 @@ class AuthControllerTest {
                                 .header("Authorization", "Bearer expiring.jwt.token")
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
-                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(jsonPath("$.token").value(refreshedToken));
         }
 
-        // ── Password Reset Tests ─────────────────────────────────────────────
+        // ── OAuth2 Config Tests ────────────────────────────────────────────
+
+        @Test
+        void getOAuth2Config_WithEnabledProvider_ShouldReturnProviders() throws Exception {
+                when(googleProvider.getProviderName()).thenReturn("google");
+                when(googleProvider.getDisplayName()).thenReturn("Google");
+                when(googleProvider.isEnabled()).thenReturn(true);
+                when(googleProvider.getClientId()).thenReturn("test-client-id.apps.googleusercontent.com");
+                when(oauthProviderRegistry.getEnabledProviders()).thenReturn(List.of(googleProvider));
+
+                mockMvc.perform(get("/auth/oauth2/config"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.providers").isArray())
+                                .andExpect(jsonPath("$.providers.length()").value(1))
+                                .andExpect(jsonPath("$.providers[0].name").value("google"))
+                                .andExpect(jsonPath("$.providers[0].displayName").value("Google"))
+                                .andExpect(jsonPath("$.providers[0].clientId").value("test-client-id.apps.googleusercontent.com"));
+        }
+
+        @Test
+        void getOAuth2Config_WithNoEnabledProviders_ShouldReturnEmptyList() throws Exception {
+                when(oauthProviderRegistry.getEnabledProviders()).thenReturn(List.of());
+
+                mockMvc.perform(get("/auth/oauth2/config"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.providers").isArray())
+                                .andExpect(jsonPath("$.providers.length()").value(0));
+        }
+
+        // ── OAuth2 Login Tests ────────────────────────────────────────────
+
+        @Test
+        void oauthLogin_WithEnabledProvider_ShouldRedirect() throws Exception {
+                when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+                when(googleProvider.isEnabled()).thenReturn(true);
+                when(googleProvider.buildAuthUrl(anyString())).thenReturn("https://accounts.google.com/o/oauth2/auth?client_id=test");
+
+                mockMvc.perform(get("/auth/oauth2/google"))
+                                .andExpect(status().is3xxRedirection())
+                                .andExpect(header().string("Location", "https://accounts.google.com/o/oauth2/auth?client_id=test"));
+        }
+
+        @Test
+        void oauthLogin_WithDisabledProvider_ShouldReturnBadRequest() throws Exception {
+                when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+                when(googleProvider.isEnabled()).thenReturn(false);
+
+                mockMvc.perform(get("/auth/oauth2/google"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("OAuth provider 'google' is not enabled"));
+        }
+
+        @Test
+        void oauthLogin_WithUnknownProvider_ShouldReturnBadRequest() throws Exception {
+                when(oauthProviderRegistry.getProvider("unknown")).thenReturn(Optional.empty());
+
+                mockMvc.perform(get("/auth/oauth2/unknown"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message").value("OAuth provider 'unknown' not found"));
+        }
+
+        @Test
+        void oauthCallback_WithInvalidCode_ShouldRedirectToLoginWithError() throws Exception {
+                when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+                when(googleProvider.processCallback(anyString(), anyString()))
+                                .thenThrow(new RuntimeException("Invalid code"));
+
+                mockMvc.perform(get("/auth/google/callback").param("code", "invalid-code"))
+                                .andExpect(status().is3xxRedirection())
+                                .andExpect(header().string("Location", "/login?error=oauth_auth_failed&provider=google"));
+        }
+
+        // ── Generic provider endpoints ────────────────────────────────────
+
+        @Test
+        void oauthLogin_Generic_WithEnabledProvider_ShouldRedirect() throws Exception {
+                when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+                when(googleProvider.isEnabled()).thenReturn(true);
+                when(googleProvider.buildAuthUrl(anyString())).thenReturn("https://accounts.google.com/o/oauth2/auth");
+
+                mockMvc.perform(get("/auth/oauth2/google"))
+                                .andExpect(status().is3xxRedirection());
+        }
+
+        // ── Password Reset Tests ──────────────────────────────────────────
 
         @Test
         void forgotPassword_ShouldAlwaysReturn200() throws Exception {

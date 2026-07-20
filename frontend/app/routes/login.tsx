@@ -11,8 +11,10 @@ import { ApiError } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGift } from "@fortawesome/free-solid-svg-icons";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { fireRainbow } from "~/utils/confetti";
 import { getSafeReturnTo } from "~/utils/auth";
+import { AuthService } from "~/services/authService";
 
 // Easter egg: gag passwords
 const GAG_PASSWORDS: Record<string, { key: string; rainbow?: boolean }> = {
@@ -106,15 +108,68 @@ export default function Index() {
     const [searchParams] = useSearchParams();
     const { login, isAuthenticated, reload } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [oauthLoading, setOauthLoading] = useState(false);
     const [rainbowMode, setRainbowMode] = useState(false);
+    const [oauthEnabled, setOauthEnabled] = useState(false);
     const inviteToken = searchParams.get("invite");
+    // Handle both new (oauth_token) and old (google_token) params
+    const oauthToken = searchParams.get("oauth_token") || searchParams.get("google_token");
+    const oauthProvider = searchParams.get("oauth_provider") || "google";
+    const errorParam = searchParams.get("error");
     const returnTo = getSafeReturnTo(searchParams.get("returnTo")) ?? "/mi-espacio";
 
     const emailRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
 
+    // Check OAuth config on mount
     useEffect(() => {
-        if (isAuthenticated()) {
+        const authService = new AuthService();
+        authService.getOAuth2Config().then(config => {
+            setOauthEnabled(config.providers.length > 0);
+        }).catch(() => {
+            setOauthEnabled(false);
+        });
+    }, []);
+
+    // Handle OAuth redirect (oauth_token in URL)
+    useEffect(() => {
+        if (oauthToken) {
+            const authService = new AuthService();
+            authService.setToken(oauthToken);
+            // Reload user context
+            reload().then(() => {
+                // Clean URL
+                const params = new URLSearchParams(searchParams);
+                params.delete("oauth_token");
+                params.delete("oauth_provider");
+                params.delete("google_token");
+                const newUrl = params.toString()
+                    ? `${window.location.pathname}?${params}`
+                    : window.location.pathname;
+                window.history.replaceState({}, "", newUrl);
+                navigate(returnTo, { replace: true });
+            }).catch(() => {
+                toast.error(t('login.googleError'));
+            });
+        }
+    }, [oauthToken]);
+
+    // Handle OAuth error
+    useEffect(() => {
+        if (errorParam === "oauth_auth_failed" || errorParam === "google_auth_failed") {
+            toast.error(t('login.googleError'));
+            const params = new URLSearchParams(searchParams);
+            params.delete("error");
+            params.delete("provider");
+            const newUrl = params.toString()
+                ? `${window.location.pathname}?${params}`
+                : window.location.pathname;
+            window.history.replaceState({}, "", newUrl);
+        }
+    }, [errorParam]);
+
+    useEffect(() => {
+        if (isAuthenticated() && !oauthToken) {
             navigate(returnTo, { replace: true });
         }
     }, []);
@@ -140,6 +195,17 @@ export default function Index() {
             handleLoginError(err, t);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleGoogleLogin() {
+        try {
+            setOauthLoading(true);
+            // Redirect to backend Google OAuth endpoint
+            window.location.href = `${window.location.origin}/api/auth/oauth2/google`;
+        } catch (err) {
+            toast.error(t('login.googleError'));
+            setOauthLoading(false);
         }
     }
 
@@ -205,6 +271,35 @@ export default function Index() {
                     {t('login.loginButton')}
                 </ButtonComponent>
             </form>
+
+            {/* Separator */}
+            <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-3 text-gray-400 font-medium">
+                        {t('login.orContinueWith')}
+                    </span>
+                </div>
+            </div>
+
+            {/* Google Login Button — only show if OAuth is enabled */}
+            {oauthEnabled && (
+                <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={oauthLoading}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                    {oauthLoading ? (
+                        <span className="w-5 h-5 border-2 border-gray-300 border-t-yambo-green-600 rounded-full animate-spin" />
+                    ) : (
+                        <FontAwesomeIcon icon={faGoogle} className="w-5 h-5 text-[#4285F4]" />
+                    )}
+                    {t('login.googleLogin')}
+                </button>
+            )}
         </AuthLayout>
         </div>
     );

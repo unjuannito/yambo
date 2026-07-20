@@ -6,6 +6,8 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.service.SettingsService;
+import es.yambo_alco.web.service.oauth.OAuthProvider;
+import es.yambo_alco.web.service.oauth.OAuthProviderRegistry;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -39,6 +42,12 @@ class SettingsControllerTest {
 
     @MockitoBean
     private PermissionCheckService permissionCheckService;
+
+    @MockitoBean
+    private OAuthProviderRegistry oauthProviderRegistry;
+
+    @MockitoBean
+    private OAuthProvider googleProvider;
 
     @BeforeEach
     void setUp() {
@@ -733,5 +742,163 @@ class SettingsControllerTest {
                 .andExpect(status().isOk());
 
         verify(settingsService, never()).setUploadMaxFileSizeMb(anyInt());
+    }
+
+    // ── OAuth Settings Tests ──
+
+    @Test
+    @WithMockUser
+    void getOAuthConfig_ShouldReturnAllProviders() throws Exception {
+        // Given
+        when(googleProvider.getProviderName()).thenReturn("google");
+        when(googleProvider.getDisplayName()).thenReturn("Google");
+        when(googleProvider.isEnabled()).thenReturn(true);
+        when(googleProvider.getClientId()).thenReturn("test-client-id.apps.googleusercontent.com");
+        when(oauthProviderRegistry.getAllProviders()).thenReturn(List.of(googleProvider));
+
+        // When & Then
+        mockMvc.perform(get("/admin/settings/oauth"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("google"))
+                .andExpect(jsonPath("$[0].displayName").value("Google"))
+                .andExpect(jsonPath("$[0].enabled").value(true))
+                .andExpect(jsonPath("$[0].clientId").value("test-client-id.apps.googleusercontent.com"))
+                .andExpect(jsonPath("$[0].clientSecret").value(""));
+
+        verify(oauthProviderRegistry).getAllProviders();
+    }
+
+    @Test
+    @WithMockUser
+    void getOAuthConfig_WhenDisabled_ShouldShowDisabled() throws Exception {
+        // Given
+        when(googleProvider.getProviderName()).thenReturn("google");
+        when(googleProvider.getDisplayName()).thenReturn("Google");
+        when(googleProvider.isEnabled()).thenReturn(false);
+        when(googleProvider.getClientId()).thenReturn("");
+        when(oauthProviderRegistry.getAllProviders()).thenReturn(List.of(googleProvider));
+
+        // When & Then
+        mockMvc.perform(get("/admin/settings/oauth"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].enabled").value(false))
+                .andExpect(jsonPath("$[0].clientId").value(""));
+    }
+
+    @Test
+    @WithMockUser
+    void updateOAuthConfig_WithAllFields_ShouldUpdateAll() throws Exception {
+        // Given
+        when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+
+        String requestBody = """
+                {
+                    "enabled": true,
+                    "clientId": "new-client-id.apps.googleusercontent.com",
+                    "clientSecret": "GOCSPX-new-secret"
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/oauth/google")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(content().string("OAuth configuration updated successfully"));
+
+        verify(settingsService).setOAuthProviderEnabled("google", true);
+        verify(settingsService).setOAuthProviderClientId("google", "new-client-id.apps.googleusercontent.com");
+        verify(settingsService).setOAuthProviderClientSecret("google", "GOCSPX-new-secret");
+    }
+
+    @Test
+    @WithMockUser
+    void updateOAuthConfig_WithOnlyEnabled_ShouldOnlyUpdateEnabled() throws Exception {
+        // Given
+        when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+
+        String requestBody = """
+                {
+                    "enabled": false
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/oauth/google")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk());
+
+        verify(settingsService).setOAuthProviderEnabled("google", false);
+        verify(settingsService, never()).setOAuthProviderClientId(anyString(), anyString());
+        verify(settingsService, never()).setOAuthProviderClientSecret(anyString(), anyString());
+    }
+
+    @Test
+    @WithMockUser
+    void updateOAuthConfig_WithUnknownProvider_ShouldReturnBadRequest() throws Exception {
+        // Given
+        when(oauthProviderRegistry.getProvider("unknown")).thenReturn(Optional.empty());
+
+        String requestBody = """
+                {
+                    "enabled": true
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/oauth/unknown")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("OAuth provider 'unknown' not found"));
+
+        verify(settingsService, never()).setOAuthProviderEnabled(anyString(), anyBoolean());
+    }
+
+    @Test
+    @WithMockUser
+    void updateOAuthConfig_WithEmptyBody_ShouldNotUpdateAnything() throws Exception {
+        // Given
+        when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+
+        String requestBody = "{}";
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/oauth/google")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk());
+
+        verify(settingsService, never()).setOAuthProviderEnabled(anyString(), anyBoolean());
+        verify(settingsService, never()).setOAuthProviderClientId(anyString(), anyString());
+        verify(settingsService, never()).setOAuthProviderClientSecret(anyString(), anyString());
+    }
+
+    @Test
+    @WithMockUser
+    void updateOAuthConfig_WithBlankClientId_ShouldNotUpdateClientId() throws Exception {
+        // Given
+        when(oauthProviderRegistry.getProvider("google")).thenReturn(Optional.of(googleProvider));
+
+        String requestBody = """
+                {
+                    "enabled": true,
+                    "clientId": "",
+                    "clientSecret": ""
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/admin/settings/oauth/google")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk());
+
+        verify(settingsService).setOAuthProviderEnabled("google", true);
+        verify(settingsService, never()).setOAuthProviderClientId(anyString(), anyString());
+        verify(settingsService, never()).setOAuthProviderClientSecret(anyString(), anyString());
     }
 }

@@ -92,5 +92,6 @@
     <include file="db/changelog/changes/82-activity-price.xml"/>
     <include file="db/changelog/changes/83-legal-pages.xml"/>
     <include file="db/changelog/changes/84-product-short-description.xml"/>
+    <include file="db/changelog/changes/85-google-oauth-settings.xml"/>
 
 </databaseChangeLog>

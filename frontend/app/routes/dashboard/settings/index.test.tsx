@@ -20,6 +20,8 @@ const { serviceMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
         updateSmtpAdvancedConfig: vi.fn(),
         updateUploadConfig: vi.fn(),
         updateOllamaConfig: vi.fn(),
+        getOAuthProviders: vi.fn().mockResolvedValue([]),
+        updateOAuthProvider: vi.fn(),
     },
     toastSuccessMock: vi.fn(),
     toastErrorMock: vi.fn(),

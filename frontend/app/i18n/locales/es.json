@@ -91,7 +91,10 @@
     "errorInvalidCredentials": "¡Nope! Usuario o contraseña incorrectos. ¿Lo intentamos otra vez?",
     "errorNetwork": "Parece que internet se fue de vacaciones. ¡Revisa tu conexión!",
     "errorServer": "Nuestro servidor necesita un respiro. Vuelve en un ratito",
-    "errorGeneric": "¡Ups! No pudimos iniciar sesión. Revisa tus credenciales"
+    "errorGeneric": "¡Ups! No pudimos iniciar sesión. Revisa tus credenciales",
+    "googleLogin": "Iniciar sesión con Google",
+    "orContinueWith": "O continúa con",
+    "googleError": "Error al iniciar sesión con Google"
   },
   "auth": {
     "login": "Iniciar sesión",

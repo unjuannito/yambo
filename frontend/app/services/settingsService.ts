@@ -48,6 +48,14 @@ export interface OllamaConfig {
     model: string;
 }
 
+export interface OAuthProviderConfig {
+    name: string;
+    displayName: string;
+    enabled: boolean;
+    clientId: string;
+    clientSecret: string;
+}
+
 export class SettingsService extends ApiService {
     public async getAllSettings(): Promise<Setting[]> {
         return await this.get<Setting[]>("/admin/settings");
@@ -138,6 +146,16 @@ export class SettingsService extends ApiService {
 
     public async updateOllamaConfig(config: Partial<OllamaConfig>): Promise<string> {
         return await this.put<string, Partial<OllamaConfig>>("/admin/settings/ai/ollama", config);
+    }
+
+    // OAuth settings
+
+    public async getOAuthProviders(): Promise<OAuthProviderConfig[]> {
+        return await this.get<OAuthProviderConfig[]>("/admin/settings/oauth");
+    }
+
+    public async updateOAuthProvider(provider: string, config: Partial<OAuthProviderConfig>): Promise<string> {
+        return await this.put<string, Partial<OAuthProviderConfig>>(`/admin/settings/oauth/${provider}`, config);
     }
 }
 
