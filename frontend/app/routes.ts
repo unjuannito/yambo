@@ -80,6 +80,7 @@ export default [
     route("/design-system", "routes/design-system.tsx"),
     route("/login", "routes/login.tsx"),
     route("/register", "routes/register.tsx"),
+    route("/parent-invitation/:token", "routes/parent-invitation.tsx"),
     route("/forgot-password", "routes/forgot-password.tsx"),
     route("/reset-password", "routes/reset-password.tsx"),
 

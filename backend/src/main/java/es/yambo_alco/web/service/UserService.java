@@ -122,9 +122,12 @@ public class UserService {
 		ProjectGroup group = projectGroupRepository.findById(groupId)
 				.orElseThrow(() -> new ResourceNotFoundException("Group not found"));
 
-		// Coordinators must be assigned to project-level groups (name=null)
-		if (role == UserProjectGroupRole.COORDINATOR && group.getName() != null) {
-			throw new BadRequestException("Coordinators must be assigned to the project-level group");
+		// Coordinators and Parents must be assigned to project-level groups (name=null)
+		if ((role == UserProjectGroupRole.COORDINATOR || role == UserProjectGroupRole.PARENT)
+				&& group.getName() != null) {
+			throw new BadRequestException(
+					role == UserProjectGroupRole.COORDINATOR ? "Coordinators" : "Parents"
+							+ " must be assigned to the project-level group");
 		}
 
 		boolean alreadyExists = user.getGroupRoles().stream()
@@ -172,6 +175,10 @@ public class UserService {
 	}
 
 	private void syncRoleProfile(User user, UserProjectGroupRole role, boolean shouldHave) {
+		// Parents don't have a synced profile
+		if (role == UserProjectGroupRole.PARENT) {
+			return;
+		}
 		String profileId = role == UserProjectGroupRole.MONITOR ? MONITOR_PROFILE_ID : COORDINATOR_PROFILE_ID;
 		boolean hasProfile = user.getProfiles().stream()
 				.anyMatch(p -> p.getId().equals(profileId));
