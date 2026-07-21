@@ -9,7 +9,7 @@
 //   README.md docs/** *.md   → skip everything
 //
 // On PRs: deploy preview only if code or infra changed (no-op otherwise).
-// On develop: deploy production if code or infra changed (or FORCE_PROD_DEPLOY).
+// On main: deploy production if code or infra changed (or FORCE_PROD_DEPLOY).
 // ============================================================================
 
 pipeline {
@@ -19,7 +19,7 @@ pipeline {
         booleanParam(
             name: 'FORCE_PREVIEW_DEPLOY',
             defaultValue: false,
-            description: 'Deploy this branch as a preview environment (skips the develop-only production deploy guard).'
+            description: 'Deploy this branch as a preview environment (skips the main-only production deploy guard).'
         )
         string(
             name: 'DEPLOY_ID',
@@ -34,7 +34,7 @@ pipeline {
         booleanParam(
             name: 'FORCE_PROD_DEPLOY',
             defaultValue: false,
-            description: 'Redeploy existing registry images to production without rebuilding (develop branch only).'
+            description: 'Redeploy existing registry images to production without rebuilding (main branch only).'
         )
         booleanParam(
             name: 'FORCE_REBUILD',
@@ -109,11 +109,11 @@ pipeline {
                         env.FRONTEND_TAG  = "branch-${slug}"
                         env.BACKEND_TAG   = "branch-${slug}"
                         echo "Custom preview — slug: ${slug}"
-                    } else if (env.BRANCH_NAME == 'develop') {
-                        // Develop branch — use version-numbered tags
+                    } else if (env.BRANCH_NAME == 'main') {
+                        // main branch — use version-numbered tags
                         env.FRONTEND_TAG = env.FRONTEND_VER
                         env.BACKEND_TAG  = env.BACKEND_VER
-                        echo "Develop build — tags: ${env.FRONTEND_VER} / ${env.BACKEND_VER}"
+                        echo "Main build — tags: ${env.FRONTEND_VER} / ${env.BACKEND_VER}"
                     } else {
                         // Any other branch — use branch-name-based tags, not version numbers
                         def slug = env.BRANCH_NAME
@@ -130,15 +130,15 @@ pipeline {
                     // ── 4. Git diff — what changed? ──────────────────────────
                     def baseRef
                     def fetchRef
-                    if (env.BRANCH_NAME == 'develop' && env.IS_PR == 'false' && env.IS_CUSTOM == 'false') {
-                        baseRef = 'HEAD~1'                     // previous commit on develop
+                    if (env.BRANCH_NAME == 'main' && env.IS_PR == 'false' && env.IS_CUSTOM == 'false') {
+                        baseRef = 'HEAD~1'                     // previous commit on main
                         fetchRef = null
                     } else if (env.IS_PR == 'true') {
                         baseRef = 'FETCH_HEAD'                 // PR diffs against target branch — use FETCH_HEAD
                         fetchRef = env.CHANGE_TARGET
                     } else if (env.IS_CUSTOM == 'true') {
                         baseRef = 'FETCH_HEAD'               // custom previews — use FETCH_HEAD after fetch
-                        fetchRef = 'develop'
+                        fetchRef = 'main'
                     } else {
                         baseRef = 'HEAD~1'                     // regular branch push — only this commit
                         fetchRef = null
@@ -366,7 +366,7 @@ pipeline {
                                 script {
                                     def branchArgs = env.IS_PR == 'true'
                                         ? "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
-                                        : (env.BRANCH_NAME == 'develop' ? '' : "-Dsonar.branch.name=${env.BRANCH_NAME}")
+                                        : (env.BRANCH_NAME == 'main' ? '' : "-Dsonar.branch.name=${env.BRANCH_NAME}")
                                     sh "./mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${env.SONAR_HOST_URL} -Dsonar.token=${env.SONAR_AUTH_TOKEN} ${branchArgs}"
                                 }
                             }
@@ -386,7 +386,7 @@ pipeline {
                                 script {
                                     def branchArgs = env.IS_PR == 'true'
                                         ? "--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}"
-                                        : (env.BRANCH_NAME == 'develop' ? '' : "--define sonar.branch.name=${env.BRANCH_NAME}")
+                                        : (env.BRANCH_NAME == 'main' ? '' : "--define sonar.branch.name=${env.BRANCH_NAME}")
                                     sh "npx sonar-scanner --define sonar.host.url=${env.SONAR_HOST_URL} --define sonar.token=${env.SONAR_AUTH_TOKEN} --define sonar.externalIssuesReportPaths=../api-check/api-mapping-issues.json ${branchArgs}"
                                 }
                             }
@@ -434,7 +434,7 @@ pipeline {
         stage('Deploy Preview') {
             when {
                 allOf {
-                    expression { env.IS_PR == 'true' || env.IS_CUSTOM == 'true' || (env.IS_PR == 'false' && env.IS_CUSTOM == 'false' && env.BRANCH_NAME != 'develop') }
+                    expression { env.IS_PR == 'true' || env.IS_CUSTOM == 'true' || (env.IS_PR == 'false' && env.IS_CUSTOM == 'false' && env.BRANCH_NAME != 'main') }
                     expression { env.DEPLOYABLE_CHANGED == 'true' }
                 }
             }
@@ -614,12 +614,12 @@ pipeline {
             }
         }
 
-        // ── Production Deployment (develop branch only) ─────────────────
+        // ── Production Deployment (main branch only) ─────────────────
 
         stage('Deploy Production') {
             when {
                 allOf {
-                    branch 'develop'
+                    branch 'main'
                     expression { env.IS_PR == 'false' && env.IS_CUSTOM == 'false' }
                     expression { env.DEPLOYABLE_CHANGED == 'true' }
                 }
@@ -719,7 +719,7 @@ pipeline {
                 // Build a context description for the notification
                 def context = env.IS_PR == 'true'
                     ? "PR #${env.CHANGE_ID} (${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET})"
-                    : (env.IS_CUSTOM == 'true' ? "Preview ${env.EFFECTIVE_ID}" : "develop")
+                    : (env.IS_CUSTOM == 'true' ? "Preview ${env.EFFECTIVE_ID}" : "main")
 
                 // Nothing was built or deployed — send a brief summary only
                 if (env.SKIP_ALL == 'true') {
@@ -780,15 +780,15 @@ pipeline {
                     } catch (e) { echo "Email notification failed: ${e.message}" }
 
                 } else {
-                    // develop → production deploy
+                    // main → production deploy
                     try {
                         emailext(
                             to: env.NOTIFICATION_EMAIL,
                             mimeType: 'text/html',
-                            subject: "[yambo] develop deployed — v${env.FRONTEND_TAG}",
+                            subject: "[yambo] main deployed — v${env.FRONTEND_TAG}",
                             body: """<div style='font-family:Arial,sans-serif;max-width:600px'>
   <div style='background:#0366d6;color:#fff;padding:16px 20px;border-radius:6px 6px 0 0'>
-    <h2 style='margin:0'>develop deployed to production</h2>
+    <h2 style='margin:0'>main deployed to production</h2>
   </div>
   <div style='border:1px solid #e1e4e8;border-top:none;padding:20px;border-radius:0 0 6px 6px'>
     <p><a href='https://${APP_DOMAIN}' style='display:inline-block;background:#0366d6;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-weight:bold'>Open app →</a></p>
