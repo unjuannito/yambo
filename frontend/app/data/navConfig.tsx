@@ -30,7 +30,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Proyectos",
-        items: ["crew", "projects", "activities"]
+        items: ["projects", "activities"]
     },
     {
         title: "Artículos",

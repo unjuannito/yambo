@@ -42,7 +42,14 @@ export default [
 
         // Proyectos
         route("mi-espacio/admin/equipo", "routes/dashboard/crew/index.tsx"),
-        route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
+        layout("mi-espacio/proyectos", [
+            route("", "routes/dashboard/projects/index.tsx"),
+            route(":projectId", "routes/dashboard/projects/$projectId/_layout.tsx", [
+                route("equipos", "routes/dashboard/projects/$projectId/equipos.tsx"),
+                route("personal", "routes/dashboard/projects/$projectId/personal.tsx"),
+                route("padres", "routes/dashboard/projects/$projectId/padres.tsx"),
+            ]),
+        ]),
 
         // Actividades
         route("mi-espacio/actividades", "routes/dashboard/activities/index.tsx"),
