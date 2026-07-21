@@ -4,8 +4,11 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
@@ -707,5 +710,96 @@ public class UserServiceTest {
         // Then
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getId()).isEqualTo("U0000002");
+    }
+
+    // ── assignGroupRole with PARENT ──────────────────────────────────
+
+    @Test
+    void assignGroupRole_WithParentRole_OnProjectLevelGroup_ShouldSucceed() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).hasSize(1);
+        UserProjectGroup upg = result.getGroupRoles().iterator().next();
+        assertThat(upg.getRole()).isEqualTo(UserProjectGroupRole.PARENT);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_OnNamedGroup_ShouldThrow() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Subgroup").build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Parents must be assigned to the project-level group");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_AlreadyExists_ShouldReturnEarly() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+        UserProjectGroup existing = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.PARENT)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(existing))).profiles(new HashSet<>()).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).hasSize(1);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void removeGroupRole_WithParentRole_ShouldRemoveIt() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+        UserProjectGroup upg = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.PARENT)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>()).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).isEmpty();
+        verify(userRepository).save(user);
     }
 }
