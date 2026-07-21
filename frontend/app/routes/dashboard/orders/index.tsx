@@ -30,7 +30,7 @@ import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
 import { useAuth } from "~/hooks/useAuth";
 import { useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faXmark, faFileArrowDown, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faXmark, faFileArrowDown, faUpload, faUser } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import type { FileRecord } from "~/types/fileType";
@@ -655,6 +655,32 @@ export default function Orders() {
                         >
                             Cancelar
                         </ButtonComponent>
+                    </div>
+                )}
+
+                {/* URL filter indicators */}
+                {searchParams.get("customerId") && (
+                    <div className="flex items-center gap-2 mb-4 px-1">
+                        <span className="text-xs text-gray-400 font-medium">Filtros activos:</span>
+                        <span className="inline-flex items-center gap-1.5 bg-yambo-green-50 text-yambo-green-700 rounded-full px-3 py-1 text-xs font-medium">
+                            <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
+                            {(() => {
+                                const customerId = searchParams.get("customerId")!;
+                                const matchedOrder = allOrdersOnPage.find(o => o.user?.id === customerId);
+                                return matchedOrder?.user?.name || customerId;
+                            })()}
+                            <button
+                                onClick={() => {
+                                    const next = new URLSearchParams(searchParams);
+                                    next.delete("customerId");
+                                    setSearchParams(next, { replace: true });
+                                }}
+                                className="ml-0.5 text-yambo-green-500 hover:text-yambo-green-800 transition-colors"
+                                title="Quitar filtro"
+                            >
+                                <FontAwesomeIcon icon={faXmark} className="w-3 h-3" />
+                            </button>
+                        </span>
                     </div>
                 )}
 

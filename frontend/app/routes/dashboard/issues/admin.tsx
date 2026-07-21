@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faXmark } from "@fortawesome/free-solid-svg-icons";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import { RequirePermission } from "~/components/common/RequirePermission";
@@ -36,7 +38,7 @@ function AdminIssuesContent() {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { activeTab, setActiveTab } = useViewTab("actual");
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [refreshKey, setRefreshKey] = useState(0);
     const [stats, setStats] = useState({
         total: 0,
@@ -207,6 +209,27 @@ function AdminIssuesContent() {
             }}
             serverSide={{ fetchData: fetchIssuesData }}
         >
+            {/* URL filter indicators */}
+            {searchParams.get("userId") && (
+                <div className="flex items-center gap-2 mb-4 px-1">
+                    <span className="text-xs text-gray-400 font-medium">Filtros activos:</span>
+                    <span className="inline-flex items-center gap-1.5 bg-yambo-green-50 text-yambo-green-700 rounded-full px-3 py-1 text-xs font-medium">
+                        <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
+                        Usuario: {searchParams.get("userId")}
+                        <button
+                            onClick={() => {
+                                const next = new URLSearchParams(searchParams);
+                                next.delete("userId");
+                                setSearchParams(next, { replace: true });
+                            }}
+                            className="ml-0.5 text-yambo-green-500 hover:text-yambo-green-800 transition-colors"
+                            title="Quitar filtro"
+                        >
+                            <FontAwesomeIcon icon={faXmark} className="w-3 h-3" />
+                        </button>
+                    </span>
+                </div>
+            )}
             <StatusWorkflow
                 title={t('issues.workflowTitle')}
                 config={ISSUE_STATUS_CONFIG}
