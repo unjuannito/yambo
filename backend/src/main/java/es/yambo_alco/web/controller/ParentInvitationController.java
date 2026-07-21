@@ -97,6 +97,13 @@ public class ParentInvitationController {
         return ResponseEntity.ok("Parent invitation deleted successfully");
     }
 
+    @DeleteMapping("/by-product/{familyProductId}/roles")
+    @PreAuthorize("@permissionCheck.hasPermission('invitation', 'delete')")
+    public ResponseEntity<String> revokeAllParentRoles(@PathVariable String familyProductId) {
+        int count = parentInvitationService.revokeAllParentRoles(familyProductId);
+        return ResponseEntity.ok("Revoked " + count + " parent role(s) successfully");
+    }
+
     private ParentInvitationResponse buildResponse(ParentInvitation inv, String invitationLink) {
         return new ParentInvitationResponse(
                 inv.getId(),

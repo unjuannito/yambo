@@ -7,6 +7,7 @@ import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ParentInvitationRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class ParentInvitationService {
     private final ParentInvitationRepository parentInvitationRepository;
     private final FamilyProductRepository familyProductRepository;
     private final ProjectGroupRepository projectGroupRepository;
+    private final UserProjectGroupRepository userProjectGroupRepository;
     private final UserService userService;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -126,5 +128,35 @@ public class ParentInvitationService {
         return familyProductRepository.findById(familyProductId)
                 .map(FamilyProduct::getName)
                 .orElse("Unknown");
+    }
+
+    @Transactional
+    public int revokeAllParentRoles(String familyProductId) {
+        FamilyProduct product = familyProductRepository.findById(familyProductId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family product not found"));
+
+        if (product.getRoleAccess() == null || product.getRoleAccess().isEmpty()) {
+            return 0;
+        }
+
+        int total = 0;
+        for (FamilyProductRoleAccess ra : product.getRoleAccess()) {
+            if (ra.getRole() == UserProjectGroupRole.PARENT) {
+                ProjectGroup projectGroup = projectGroupRepository
+                        .findByProjectIdAndNameIsNull(ra.getProjectId())
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Project-level group not found for project: " + ra.getProjectId()));
+
+                List<es.yambo_alco.web.model.UserProjectGroup> parents =
+                        userProjectGroupRepository.findByProjectGroupIdAndRole(
+                                projectGroup.getId(), UserProjectGroupRole.PARENT);
+
+                if (!parents.isEmpty()) {
+                    userProjectGroupRepository.deleteAll(parents);
+                    total += parents.size();
+                }
+            }
+        }
+        return total;
     }
 }
