@@ -44,7 +44,7 @@ export default function UserHistorial() {
                 </div>
                 <div className="divide-y divide-gray-50">
                     <NavLink
-                        to="/mi-espacio/mis-pedidos"
+                        to={`/mi-espacio/admin/pedidos?customerId=${user.id}`}
                         className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
                     >
                         <div className="flex items-center gap-3">
@@ -59,7 +59,7 @@ export default function UserHistorial() {
                         <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 text-gray-400" />
                     </NavLink>
                     <NavLink
-                        to="/mi-espacio/incidencias"
+                        to={`/mi-espacio/admin/incidencias?userId=${user.id}`}
                         className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors"
                     >
                         <div className="flex items-center gap-3">

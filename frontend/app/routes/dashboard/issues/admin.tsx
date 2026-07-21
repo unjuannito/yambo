@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
@@ -36,6 +36,7 @@ function AdminIssuesContent() {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { activeTab, setActiveTab } = useViewTab("actual");
+    const [searchParams] = useSearchParams();
     const [refreshKey, setRefreshKey] = useState(0);
     const [stats, setStats] = useState({
         total: 0,
@@ -66,6 +67,7 @@ function AdminIssuesContent() {
             const effectiveEndDate = dateRange?.endDate
                 ? new Date(dateRange.endDate + "T23:59:59").toISOString()
                 : undefined;
+            const userId = searchParams.get("userId") || undefined;
             const result = await issueService.getAllIssues(
                 page,
                 size,
@@ -73,7 +75,7 @@ function AdminIssuesContent() {
                 effectiveEndDate,
                 statusFilter,
                 filters.q,
-                undefined,
+                userId,
                 undefined,
                 undefined,
             );

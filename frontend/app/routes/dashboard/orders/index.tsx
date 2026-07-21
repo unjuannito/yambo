@@ -209,13 +209,14 @@ export default function Orders() {
             const effectiveEndDate = dateRange?.endDate
                 ? new Date(dateRange.endDate + "T23:59:59").toISOString()
                 : undefined;
+            const customerId = searchParams.get("customerId") || undefined;
             const result = await orderService.getAllOrders(
                 page,
                 size,
                 filters.q,  // query
                 undefined,  // orderId
                 undefined,  // customerName
-                undefined,  // customerId
+                customerId,
                 statusFilter,
                 effectiveStartDate,
                 effectiveEndDate,

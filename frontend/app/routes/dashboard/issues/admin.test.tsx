@@ -71,10 +71,12 @@ vi.mock("react-i18next", () => ({
 }));
 
 const useNavigateMock = vi.fn();
+const useSearchParamsMock = vi.fn(() => [new URLSearchParams(), vi.fn()]);
 const getAllIssuesMock = vi.fn();
 
 vi.mock("react-router", () => ({
     useNavigate: () => useNavigateMock,
+    useSearchParams: () => useSearchParamsMock(),
 }));
 
 vi.mock("~/components/common/RequirePermission", () => ({
