@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { IssueWatcher, DropWatcher } from "~/types/issueType";
@@ -166,7 +167,18 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                                 </span>
                                 <div className="min-w-0">
                                     {w.userName && (
-                                        <p className="text-sm font-semibold text-yambo-black truncate">{w.userName}</p>
+                                        <p className="text-sm font-semibold truncate">
+                                            {w.userId ? (
+                                                <Link
+                                                    to={`/mi-espacio/admin/usuarios/${w.userId}/perfil`}
+                                                    className="text-yambo-black hover:text-yambo-green-600 transition-colors"
+                                                >
+                                                    {w.userName}
+                                                </Link>
+                                            ) : (
+                                                <span className="text-yambo-black">{w.userName}</span>
+                                            )}
+                                        </p>
                                     )}
                                     <p className="text-xs text-gray-400 truncate">{w.email}</p>
                                 </div>
@@ -244,7 +256,13 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
                                         <span className="h-6 w-6 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
                                             {user.name.charAt(0).toUpperCase()}
                                         </span>
-                                        <span className="font-medium truncate">{user.name}</span>
+                                        <Link
+                                            to={`/mi-espacio/admin/usuarios/${user.id}/perfil`}
+                                            className="font-medium truncate hover:text-yambo-green-600 transition-colors"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {user.name}
+                                        </Link>
                                         <span className="text-gray-400 truncate text-xs">{user.email}</span>
                                     </button>
                                 ))

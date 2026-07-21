@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ISSUE_STATUS_CONFIG } from "~/types/issueType";
@@ -38,7 +39,18 @@ export const IssueChatMessage: React.FC<IssueChatMessageProps> = ({
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-extrabold text-yambo-black/70">{message.userName}</span>
+                            <span className="text-[11px] font-extrabold text-yambo-black/70">
+                                {message.userId ? (
+                                    <Link
+                                        to={`/mi-espacio/admin/usuarios/${message.userId}/perfil`}
+                                        className="hover:text-yambo-green-600 transition-colors"
+                                    >
+                                        {message.userName}
+                                    </Link>
+                                ) : (
+                                    message.userName
+                                )}
+                            </span>
                             {message.status && !hideRepeatedStatus && (
                                 <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ring-1 ring-inset ${ISSUE_STATUS_CONFIG[message.status as keyof typeof ISSUE_STATUS_CONFIG].className}`}>
                                     {ISSUE_STATUS_CONFIG[message.status as keyof typeof ISSUE_STATUS_CONFIG].label}

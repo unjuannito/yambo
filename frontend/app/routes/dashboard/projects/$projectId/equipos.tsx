@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { projectService, type ProjectGroup } from "~/services/projectService";
@@ -209,7 +209,12 @@ export default function ProjectEquipos() {
                                             {monitor.photo && (
                                                 <img src={monitor.photo} alt={monitor.name} className="w-5 h-5 rounded-full object-cover" />
                                             )}
-                                            <span className="text-yambo-green-700 font-medium">{monitor.name}</span>
+                                            <Link
+                                            to={`/mi-espacio/admin/usuarios/${monitor.id}/perfil`}
+                                            className="text-yambo-green-700 font-medium hover:text-yambo-green-800 hover:underline"
+                                        >
+                                            {monitor.name}
+                                        </Link>
                                             <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                                                 <button
                                                     onClick={() => handleRemoveMonitor(monitor.id, group.id, monitor.name)}
@@ -245,7 +250,12 @@ export default function ProjectEquipos() {
                                         {monitor.photo && (
                                             <img src={monitor.photo} alt={monitor.name} className="w-5 h-5 rounded-full object-cover" />
                                         )}
-                                        <span className="text-gray-600 font-medium">{monitor.name}</span>
+                                        <Link
+                                            to={`/mi-espacio/admin/usuarios/${monitor.id}/perfil`}
+                                            className="text-gray-600 font-medium hover:text-yambo-green-600 hover:underline"
+                                        >
+                                            {monitor.name}
+                                        </Link>
                                         <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                                             <button
                                                 onClick={() => handleRemoveMonitor(monitor.id, defaultGroup.group.id, monitor.name)}

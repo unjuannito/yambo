@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { parentInvitationService } from "~/services/parentInvitationService";
@@ -132,7 +132,12 @@ export default function ProjectPadres() {
                                         {parent.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-sm font-medium text-yambo-black truncate">{parent.name}</p>
+                                        <Link
+                                            to={`/mi-espacio/admin/usuarios/${parent.userId}/perfil`}
+                                            className="text-sm font-medium text-yambo-black truncate hover:text-yambo-green-600 transition-colors"
+                                        >
+                                            {parent.name}
+                                        </Link>
                                         <p className="text-xs text-gray-400 truncate">{parent.email}</p>
                                     </div>
                                 </div>

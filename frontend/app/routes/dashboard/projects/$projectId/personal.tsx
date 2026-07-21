@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { projectService } from "~/services/projectService";
@@ -177,7 +177,12 @@ export default function ProjectPersonal() {
                                         }
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-sm font-medium text-yambo-black truncate">{user.name}</p>
+                                        <Link
+                                            to={`/mi-espacio/admin/usuarios/${user.id}/perfil`}
+                                            className="text-sm font-medium text-yambo-black truncate hover:text-yambo-green-600 transition-colors"
+                                        >
+                                            {user.name}
+                                        </Link>
                                         <p className="text-xs text-gray-400 truncate">{user.email}</p>
                                     </div>
                                 </div>
@@ -218,7 +223,12 @@ export default function ProjectPersonal() {
                                         }
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-sm font-medium text-yambo-black truncate">{user.name}</p>
+                                        <Link
+                                            to={`/mi-espacio/admin/usuarios/${user.id}/perfil`}
+                                            className="text-sm font-medium text-yambo-black truncate hover:text-yambo-green-600 transition-colors"
+                                        >
+                                            {user.name}
+                                        </Link>
                                         <p className="text-xs text-gray-400 truncate">{user.email}</p>
                                     </div>
                                 </div>
