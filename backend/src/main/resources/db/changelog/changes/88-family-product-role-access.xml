@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Issue #90: Unificar permisos por Proyecto + Rol
+
+        Crea la tabla family_product_role_access que reemplaza el
+        modelo anterior (perfil auto-creado por drop + family_product_project)
+        por un modelo basado en proyecto + rol.
+
+        La tabla family_product_role_access almacena qué proyectos y roles
+        pueden acceder a cada drop de Merch, en sustitución de los perfiles
+        auto-creados.
+
+        Se conserva user_profile para perfiles globales y de rol.
+    -->
+
+    <changeSet id="90-01-create-family-product-role-access" author="yambo">
+        <createTable tableName="family_product_role_access">
+            <column name="family_product_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+            tableName="family_product_role_access"
+            columnNames="family_product_id, project_id, role"
+            constraintName="pk_family_product_role_access"/>
+
+        <addForeignKeyConstraint
+            baseTableName="family_product_role_access"
+            baseColumnNames="family_product_id"
+            referencedTableName="family_product"
+            referencedColumnNames="id"
+            constraintName="fk_fpra_family_product"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="family_product_role_access"
+            baseColumnNames="project_id"
+            referencedTableName="project"
+            referencedColumnNames="id"
+            constraintName="fk_fpra_project"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="90-02-migrate-existing-projects-to-role-access" author="yambo">
+        <comment>
+            Migra los datos existentes de family_product_project a
+            family_product_role_access. Por cada proyecto asociado a un drop,
+            se insertan dos registros: uno con rol MONITOR y otro con rol
+            COORDINATOR.
+
+            Esto mantiene la compatibilidad hacia atras: todos los miembros
+            actuales del proyecto (monitores y coordinadores) seguiran viendo
+            los drops que ya tenian asignados.
+        </comment>
+        <sql>
+            INSERT INTO family_product_role_access (family_product_id, project_id, role)
+            SELECT fpp.family_product_id, fpp.project_id, 'MONITOR'
+            FROM family_product_project fpp;
+        </sql>
+        <sql>
+            INSERT INTO family_product_role_access (family_product_id, project_id, role)
+            SELECT fpp.family_product_id, fpp.project_id, 'COORDINATOR'
+            FROM family_product_project fpp;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

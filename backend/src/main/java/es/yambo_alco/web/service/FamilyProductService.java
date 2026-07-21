@@ -3,9 +3,12 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
@@ -21,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +46,8 @@ public class FamilyProductService {
     @Transactional
     public FamilyProduct createFamilyProduct(@NonNull String name, @NonNull LocalDateTime startTms,
             @NonNull LocalDateTime endTms,
-            Set<String> projectIds) {
+            Set<String> projectIds,
+            Set<FamilyProductRoleAccess> roleAccess) {
         if (familyProductRepository.existsByName(name)) {
             throw new BadRequestException("Family product name already exists");
         }
@@ -50,6 +56,7 @@ public class FamilyProductService {
             throw new BadRequestException("Start date must be before end date");
         }
 
+        // TODO: Fase 9 - eliminar creacion de perfil automatico
         Profile profile = createProfileForFamily(name);
         Set<Project> projects = resolveProjects(projectIds);
 
@@ -59,6 +66,7 @@ public class FamilyProductService {
                 .endTms(endTms)
                 .profile(profile)
                 .projects(projects)
+                .roleAccess(roleAccess != null ? roleAccess : new HashSet<>())
                 .build();
 
         return familyProductRepository.save(familyProduct);
@@ -93,9 +101,61 @@ public class FamilyProductService {
         return familyProductRepository.findAll(spec, pageable);
     }
 
+    /**
+     * Lista los drops accesibles para un usuario segun sus proyectos y roles.
+     * Reemplaza el filtro por userProfileIds para usuarios no-admin.
+     */
+    public Page<FamilyProduct> listAccessibleFamilyProducts(String name, Boolean active,
+            User user, @NonNull Pageable pageable) {
+        Specification<FamilyProduct> spec = Specification.where(null);
+
+        if (name != null) {
+            spec = spec.and(FamilyProductSpecifications.nameContains(name));
+        }
+        if (active != null) {
+            if (active) {
+                spec = spec.and(FamilyProductSpecifications.active());
+            } else {
+                spec = spec.and(FamilyProductSpecifications.expired());
+            }
+        }
+
+        // Filtrar por proyectos y roles del usuario
+        Set<String> userProjectIds = user.getGroupRoles().stream()
+                .map(gr -> gr.getProjectGroup().getProject().getId())
+                .collect(Collectors.toSet());
+        Set<UserProjectGroupRole> userRoles = user.getGroupRoles().stream()
+                .map(gr -> gr.getRole())
+                .collect(Collectors.toSet());
+
+        if (!userProjectIds.isEmpty() && !userRoles.isEmpty()) {
+            spec = spec.and(FamilyProductSpecifications.hasRoleAccess(userProjectIds, userRoles));
+        }
+
+        return familyProductRepository.findAll(spec, pageable);
+    }
+
+    /**
+     * Verifica si un usuario puede acceder a un drop especifico.
+     */
+    public boolean canAccess(User user, FamilyProduct familyProduct) {
+        if (familyProduct.getRoleAccess() == null || familyProduct.getRoleAccess().isEmpty()) {
+            // Sin restriccion de roleAccess: aplicar logica anterior (perfiles)
+            return true;
+        }
+        return user.getGroupRoles().stream().anyMatch(gr ->
+            familyProduct.getRoleAccess().contains(
+                FamilyProductRoleAccess.builder()
+                    .projectId(gr.getProjectGroup().getProject().getId())
+                    .role(gr.getRole())
+                    .build()
+            )
+        );
+    }
+
     @Transactional
     public FamilyProduct updateFamilyProduct(@NonNull String id, String name, LocalDateTime startTms,
-            LocalDateTime endTms, Set<String> projectIds) {
+            LocalDateTime endTms, Set<String> projectIds, Set<FamilyProductRoleAccess> roleAccess) {
         FamilyProduct familyProduct = getFamilyProductById(id);
 
         if (name != null && !name.trim().isEmpty()) {
@@ -125,6 +185,10 @@ public class FamilyProductService {
             familyProduct.setProjects(resolveProjects(projectIds));
         }
 
+        if (roleAccess != null) {
+            familyProduct.setRoleAccess(roleAccess);
+        }
+
         return familyProductRepository.save(familyProduct);
     }
 
@@ -148,6 +212,13 @@ public class FamilyProductService {
     public FamilyProduct assignProjectsToFamily(@NonNull String familyId, @NonNull Set<String> projectIds) {
         FamilyProduct familyProduct = getFamilyProductById(familyId);
         familyProduct.setProjects(resolveProjects(projectIds));
+        return familyProductRepository.save(familyProduct);
+    }
+
+    @Transactional
+    public FamilyProduct assignRoleAccess(@NonNull String familyId, @NonNull Set<FamilyProductRoleAccess> roleAccess) {
+        FamilyProduct familyProduct = getFamilyProductById(familyId);
+        familyProduct.setRoleAccess(roleAccess);
         return familyProductRepository.save(familyProduct);
     }
 

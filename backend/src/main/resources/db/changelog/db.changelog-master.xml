@@ -95,5 +95,6 @@
     <include file="db/changelog/changes/85-google-oauth-settings.xml"/>
     <include file="db/changelog/changes/86-normalize-email-case.xml"/>
     <include file="db/changelog/changes/87-activity-waitlist.xml"/>
+    <include file="db/changelog/changes/88-family-product-role-access.xml"/>
 
 </databaseChangeLog>

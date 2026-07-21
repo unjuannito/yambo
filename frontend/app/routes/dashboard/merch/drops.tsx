@@ -35,6 +35,7 @@ type DropForm = {
     startTms: string;
     endTms: string;
     projectIds: string[];
+    roleAccess: { projectId: string; role: string }[];
 };
 
 const EMPTY_FORM: DropForm = {
@@ -42,6 +43,7 @@ const EMPTY_FORM: DropForm = {
     startTms: "",
     endTms: "",
     projectIds: [],
+    roleAccess: [],
 };
 
 export default function MerchFamilies() {
@@ -138,6 +140,7 @@ export default function MerchFamilies() {
                     startTms: form.startTms,
                     endTms: form.endTms,
                     projectIds: form.projectIds,
+                    roleAccess: form.roleAccess,
                 });
                 toast.success(t("merch.collectionUpdated"));
             } else {
@@ -146,6 +149,7 @@ export default function MerchFamilies() {
                     startTms: form.startTms,
                     endTms: form.endTms,
                     projectIds: form.projectIds,
+                    roleAccess: form.roleAccess,
                 });
                 toast.success(t("merch.collectionCreated"));
             }
@@ -165,6 +169,7 @@ export default function MerchFamilies() {
             startTms: drop.startTms?.slice(0, 16) || "",
             endTms: drop.endTms?.slice(0, 16) || "",
             projectIds: drop.projectIds ?? [],
+            roleAccess: drop.roleAccess ?? [],
         });
         setIsModalOpen(true);
     };
@@ -418,6 +423,64 @@ export default function MerchFamilies() {
                                 }}
                             />
                         </div>
+                        {/* Role access configuration */}
+                        {form.projectIds.length > 0 && (
+                            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <label className="block text-sm font-medium text-gray-600 mb-3">
+                                    {t("merch.roleAccessLabel")}
+                                </label>
+                                <div className="space-y-3">
+                                    {form.projectIds.map((pid) => {
+                                        const project = projects.find((p) => p.id === pid);
+                                        const projectName = project?.name || pid;
+                                        const roles = ["MONITOR", "COORDINATOR", "PARENT"] as const;
+                                        const roleLabels: Record<string, string> = {
+                                            MONITOR: t("merch.roleMonitor"),
+                                            COORDINATOR: t("merch.roleCoordinator"),
+                                            PARENT: t("merch.roleParent"),
+                                        };
+                                        return (
+                                            <div key={pid} className="bg-white border border-gray-200 rounded p-3">
+                                                <div className="font-medium text-sm text-gray-700 mb-2">
+                                                    {projectName}
+                                                </div>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {roles.map((role) => {
+                                                        const isChecked = form.roleAccess.some(
+                                                            (ra) => ra.projectId === pid && ra.role === role
+                                                        );
+                                                        return (
+                                                            <label key={role} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={() => {
+                                                                        setForm((prev) => {
+                                                                            const filtered = prev.roleAccess.filter(
+                                                                                (ra) => !(ra.projectId === pid && ra.role === role)
+                                                                            );
+                                                                            if (!isChecked) {
+                                                                                return {
+                                                                                    ...prev,
+                                                                                    roleAccess: [...filtered, { projectId: pid, role }],
+                                                                                };
+                                                                            }
+                                                                            return { ...prev, roleAccess: filtered };
+                                                                        });
+                                                                    }}
+                                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                                />
+                                                                {roleLabels[role] || role}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Modal>
 

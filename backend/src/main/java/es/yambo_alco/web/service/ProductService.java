@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
@@ -180,16 +181,29 @@ public class ProductService {
 
     private void checkAccess(Product product) {
         User user = authService.getCurrentUser(true);
-        Set<String> userProfileIds = user.getProfiles().stream()
-                .map(p -> p.getId())
-                .collect(Collectors.toSet());
 
         if (product.getFamilyProduct() == null) {
             return;
         }
 
-        boolean hasAccess = product.getFamilyProduct().getProfile() != null
-                && userProfileIds.contains(product.getFamilyProduct().getProfile().getId());
+        FamilyProduct fp = product.getFamilyProduct();
+
+        // Check 1: acceso por perfil (legacy)
+        boolean hasAccess = fp.getProfile() != null
+                && user.getProfiles().stream()
+                    .anyMatch(p -> p.getId().equals(fp.getProfile().getId()));
+
+        // Check 2: acceso por proyecto+rol (nuevo)
+        if (!hasAccess && fp.getRoleAccess() != null && !fp.getRoleAccess().isEmpty()) {
+            hasAccess = user.getGroupRoles().stream().anyMatch(gr ->
+                fp.getRoleAccess().contains(
+                    FamilyProductRoleAccess.builder()
+                        .projectId(gr.getProjectGroup().getProject().getId())
+                        .role(gr.getRole())
+                        .build()
+                )
+            );
+        }
 
         if (!hasAccess) {
             throw new ResourceNotFoundException("Product not found");

@@ -1,8 +1,10 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.FamilyProductWatcher;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.FamilyProductService;
@@ -47,9 +49,10 @@ public class FamilyProductController {
     public ResponseEntity<FamilyProductResponse> createFamilyProduct(@Valid @RequestBody CreateFamilyProductRequest request) {
         FamilyProduct familyProduct = familyProductService.createFamilyProduct(
                 request.getName(),
-            request.getStartTms(),
+                request.getStartTms(),
                 request.getEndTms(),
-                request.getProjectIds()
+                request.getProjectIds(),
+                request.getRoleAccess()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(new FamilyProductResponse(familyProduct));
     }
@@ -62,14 +65,15 @@ public class FamilyProductController {
             @RequestParam(required = false) String profileId,
             Pageable pageable) {
         boolean isFamilyAdmin = permissionCheck.hasPermission(PermissionResource.FAMILY_PRODUCT, PermissionAction.UPDATE);
-        Set<String> userProfileIds = null;
-        if (!isFamilyAdmin) {
-            var user = authService.getCurrentUser(true);
-            userProfileIds = user.getProfiles().stream()
-                    .map(p -> p.getId())
-                    .collect(Collectors.toSet());
+        var user = authService.getCurrentUser(true);
+
+        Page<FamilyProduct> familyProducts;
+        if (isFamilyAdmin) {
+            familyProducts = familyProductService.listFamilyProducts(name, active, profileId, null, pageable);
+        } else {
+            // Usar el nuevo filtro por proyecto+rol
+            familyProducts = familyProductService.listAccessibleFamilyProducts(name, active, user, pageable);
         }
-        Page<FamilyProduct> familyProducts = familyProductService.listFamilyProducts(name, active, profileId, userProfileIds, pageable);
         Page<FamilyProductResponse> response = familyProducts.map(FamilyProductResponse::new);
         return ResponseEntity.ok(response);
     }
@@ -91,7 +95,8 @@ public class FamilyProductController {
                 request.getName(),
                 request.getStartTms(),
                 request.getEndTms(),
-                request.getProjectIds()
+                request.getProjectIds(),
+                request.getRoleAccess()
         );
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
@@ -118,6 +123,15 @@ public class FamilyProductController {
             @PathVariable String id,
             @Valid @RequestBody AssignProjectsRequest request) {
         FamilyProduct familyProduct = familyProductService.assignProjectsToFamily(id, request.getProjectIds());
+        return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
+    }
+
+    @PutMapping("/{id}/role-access")
+    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
+    public ResponseEntity<FamilyProductResponse> assignRoleAccess(
+            @PathVariable String id,
+            @Valid @RequestBody AssignRoleAccessRequest request) {
+        FamilyProduct familyProduct = familyProductService.assignRoleAccess(id, request.getRoleAccess());
         return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
 
@@ -149,6 +163,8 @@ public class FamilyProductController {
         private LocalDateTime endTms;
 
         private Set<String> projectIds;
+
+        private Set<FamilyProductRoleAccess> roleAccess;
     }
 
     @Data
@@ -157,6 +173,7 @@ public class FamilyProductController {
         private LocalDateTime startTms;
         private LocalDateTime endTms;
         private Set<String> projectIds;
+        private Set<FamilyProductRoleAccess> roleAccess;
     }
 
     @Data
@@ -169,6 +186,12 @@ public class FamilyProductController {
     public static class AssignProjectsRequest {
         @NotEmpty(message = "Project IDs cannot be empty")
         private Set<String> projectIds;
+    }
+
+    @Data
+    public static class AssignRoleAccessRequest {
+        @NotEmpty(message = "Role access cannot be empty")
+        private Set<FamilyProductRoleAccess> roleAccess;
     }
 
     @Data
@@ -186,27 +209,40 @@ public class FamilyProductController {
         private FamilyProductStatus status;
         private String profileId;
         private Set<String> projectIds;
+        private Set<RoleAccessResponse> roleAccess;
         private boolean active;
 
         public FamilyProductResponse(FamilyProduct familyProduct) {
             this.id = familyProduct.getId();
             this.name = familyProduct.getName();
-                this.startTms = familyProduct.getStartTms();
+            this.startTms = familyProduct.getStartTms();
             this.endTms = familyProduct.getEndTms();
             this.status = familyProduct.getStatus();
             this.profileId = familyProduct.getProfile() != null
                     ? familyProduct.getProfile().getId()
                     : null;
-                this.projectIds = familyProduct.getProjects() != null
+            this.projectIds = familyProduct.getProjects() != null
                     ? familyProduct.getProjects().stream()
                     .map(p -> p.getId())
                     .collect(Collectors.toSet())
                     : Set.of();
-                LocalDateTime now = LocalDateTime.now();
-                this.active = familyProduct.getStatus() == FamilyProductStatus.OPEN
+            this.roleAccess = familyProduct.getRoleAccess() != null
+                    ? familyProduct.getRoleAccess().stream()
+                    .map(ra -> new RoleAccessResponse(ra.getProjectId(), ra.getRole()))
+                    .collect(Collectors.toSet())
+                    : Set.of();
+            LocalDateTime now = LocalDateTime.now();
+            this.active = familyProduct.getStatus() == FamilyProductStatus.OPEN
                     && (familyProduct.getStartTms() == null || !familyProduct.getStartTms().isAfter(now))
                     && familyProduct.getEndTms().isAfter(now);
         }
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class RoleAccessResponse {
+        private String projectId;
+        private UserProjectGroupRole role;
     }
 
     // ─── Watcher endpoints ────────────────────────────────────────────────────

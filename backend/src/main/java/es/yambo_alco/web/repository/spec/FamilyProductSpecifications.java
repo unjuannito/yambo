@@ -1,7 +1,9 @@
 package es.yambo_alco.web.repository.spec;
 
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
@@ -73,6 +75,26 @@ public final class FamilyProductSpecifications {
             if (profileName == null) return null;
             Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
             return cb.like(cb.lower(profileJoin.get("name")), "%" + profileName.toLowerCase() + "%");
+        };
+    }
+
+    /**
+     * Filtra los drops accesibles segun los proyectos y roles del usuario.
+     * Reemplaza el filtro por perfil auto-creado.
+     */
+    public static Specification<FamilyProduct> hasRoleAccess(Set<String> projectIds, Set<UserProjectGroupRole> roles) {
+        return (root, query, cb) -> {
+            if (projectIds == null || projectIds.isEmpty() || roles == null || roles.isEmpty()) {
+                return null;
+            }
+            // Distinct para evitar duplicados por el join con la coleccion
+            query.distinct(true);
+
+            var roleAccessJoin = root.join("roleAccess", JoinType.INNER);
+            return cb.and(
+                roleAccessJoin.get("projectId").in(projectIds),
+                roleAccessJoin.get("role").in(roles)
+            );
         };
     }
 }

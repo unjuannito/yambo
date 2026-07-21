@@ -1,6 +1,11 @@
 import { ApiService } from './apiService';
 import type { DropWatcher } from '~/types/issueType';
 
+export interface RoleAccess {
+  projectId: string;
+  role: 'MONITOR' | 'COORDINATOR' | 'PARENT';
+}
+
 export interface FamilyProduct {
   id: string;
   name: string;
@@ -10,6 +15,7 @@ export interface FamilyProduct {
   active?: boolean;
   profileId?: string | null;
   projectIds?: string[];
+  roleAccess?: RoleAccess[];
 }
 
 export interface CreateFamilyProductRequest {
@@ -17,6 +23,7 @@ export interface CreateFamilyProductRequest {
   startTms: string;
   endTms: string;
   projectIds?: string[];
+  roleAccess?: RoleAccess[];
 }
 
 export interface UpdateFamilyProductRequest {
@@ -24,6 +31,7 @@ export interface UpdateFamilyProductRequest {
   startTms?: string;
   endTms?: string;
   projectIds?: string[];
+  roleAccess?: RoleAccess[];
 }
 
 export class FamilyProductService extends ApiService {
@@ -59,6 +67,10 @@ export class FamilyProductService extends ApiService {
 
   public async assignProjects(id: string, projectIds: string[]): Promise<FamilyProduct> {
     return await this.put(`/family-products/${id}/projects`, { projectIds });
+  }
+
+  public async assignRoleAccess(id: string, roleAccess: RoleAccess[]): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}/role-access`, { roleAccess });
   }
 
   public async deleteFamilyProduct(id: string): Promise<void> {

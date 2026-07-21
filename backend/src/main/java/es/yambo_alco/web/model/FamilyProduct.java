@@ -51,4 +51,11 @@ public class FamilyProduct {
         inverseJoinColumns = @JoinColumn(name = "project_id")
     )
     private Set<Project> projects;
+
+    @ElementCollection
+    @CollectionTable(
+        name = "family_product_role_access",
+        joinColumns = @JoinColumn(name = "family_product_id")
+    )
+    private Set<FamilyProductRoleAccess> roleAccess;
 }
