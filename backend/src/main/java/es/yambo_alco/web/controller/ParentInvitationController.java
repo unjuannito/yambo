@@ -104,6 +104,13 @@ public class ParentInvitationController {
         return ResponseEntity.ok("Revoked " + count + " parent role(s) successfully");
     }
 
+    @DeleteMapping("/by-project/{projectId}/roles")
+    @PreAuthorize("@permissionCheck.hasPermission('invitation', 'delete')")
+    public ResponseEntity<String> revokeAllParentRolesByProject(@PathVariable String projectId) {
+        int count = parentInvitationService.revokeAllParentRolesByProject(projectId);
+        return ResponseEntity.ok("Revoked " + count + " parent role(s) from project successfully");
+    }
+
     private ParentInvitationResponse buildResponse(ParentInvitation inv, String invitationLink) {
         return new ParentInvitationResponse(
                 inv.getId(),

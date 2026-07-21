@@ -68,6 +68,12 @@ export class ParentInvitationService extends ApiService {
             `/parent-invitations/by-product/${familyProductId}/roles`,
         );
     }
+
+    public async revokeAllParentRolesByProject(projectId: string): Promise<string> {
+        return await this.delete<string>(
+            `/parent-invitations/by-project/${projectId}/roles`,
+        );
+    }
 }
 
 export const parentInvitationService = new ParentInvitationService();

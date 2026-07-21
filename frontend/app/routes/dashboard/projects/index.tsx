@@ -10,6 +10,7 @@ import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { Modal } from "~/components/common/Modal";
 import { projectService, type Project, type ProjectGroup } from "~/services/projectService";
+import { parentInvitationService } from "~/services/parentInvitationService";
 import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
@@ -19,6 +20,7 @@ import {
     faCalendarDays,
     faPenToSquare,
     faTrashCan,
+    faUserSlash,
 } from "@fortawesome/free-solid-svg-icons";
 
 export function meta() {
@@ -563,6 +565,31 @@ export default function Projects() {
                                         </ButtonComponent>
                                     </div>
                                 )}
+                            </div>
+                        )}
+                        {editing && canUpdate && (
+                            <div className="border-t border-gray-100 pt-4 mt-2">
+                                <h3 className="text-sm font-semibold text-yambo-black mb-3">Acceso de padres</h3>
+                                <p className="text-xs text-gray-400 mb-3">
+                                    Elimina todos los accesos de padres/madres de este proyecto (ej: al cambiar de temporada).
+                                </p>
+                                <ButtonComponent
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={async () => {
+                                        if (!editing) return;
+                                        if (!confirm("¿Eliminar todos los accesos de padres de este proyecto? Los padres perderán el acceso y tendrán que usar un nuevo enlace de invitación.")) return;
+                                        try {
+                                            const result = await parentInvitationService.revokeAllParentRolesByProject(editing);
+                                            toast.success(result);
+                                        } catch (err) {
+                                            toast.error(getErrorMessage(err, "Error al eliminar accesos de padres"));
+                                        }
+                                    }}
+                                >
+                                    <FontAwesomeIcon icon={faUserSlash} className="mr-2" />
+                                    Eliminar todos los padres
+                                </ButtonComponent>
                             </div>
                         )}
                     </div>

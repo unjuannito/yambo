@@ -159,4 +159,21 @@ public class ParentInvitationService {
         }
         return total;
     }
+
+    @Transactional
+    public int revokeAllParentRolesByProject(String projectId) {
+        ProjectGroup projectGroup = projectGroupRepository
+                .findByProjectIdAndNameIsNull(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Project-level group not found for project: " + projectId));
+
+        List<es.yambo_alco.web.model.UserProjectGroup> parents =
+                userProjectGroupRepository.findByProjectGroupIdAndRole(
+                        projectGroup.getId(), UserProjectGroupRole.PARENT);
+
+        if (!parents.isEmpty()) {
+            userProjectGroupRepository.deleteAll(parents);
+        }
+        return parents.size();
+    }
 }
