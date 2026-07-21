@@ -75,7 +75,7 @@ class FamilyProductControllerTest {
                 .projects(Set.of(Project.builder().id("PRJ001").build()))
                 .build();
 
-        when(familyProductService.createFamilyProduct(anyString(), any(LocalDateTime.class), any(LocalDateTime.class), any()))
+        when(familyProductService.createFamilyProduct(anyString(), any(LocalDateTime.class), any(LocalDateTime.class), any(), any()))
                 .thenReturn(familyProduct);
 
         String payload = """
@@ -111,7 +111,7 @@ class FamilyProductControllerTest {
                 .endTms(end)
                 .build();
 
-        when(familyProductService.updateFamilyProduct(anyString(), any(), any(), any(), any()))
+        when(familyProductService.updateFamilyProduct(anyString(), any(), any(), any(), any(), any()))
                 .thenReturn(familyProduct);
 
         String payload = """

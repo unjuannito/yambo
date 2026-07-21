@@ -55,7 +55,7 @@ class FamilyProductServiceTest {
         LocalDateTime end = LocalDateTime.now().plusDays(1);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                                () -> familyProductService.createFamilyProduct("Drop", start, end, null));
+                                () -> familyProductService.createFamilyProduct("Drop", start, end, null, null));
 
         assertEquals("Start date must be before end date", exception.getMessage());
         verify(familyProductRepository, never()).save(any());
@@ -80,7 +80,8 @@ class FamilyProductServiceTest {
                 "Drop",
                 start,
                 end,
-                Set.of("PRJ001")
+                Set.of("PRJ001"),
+                Set.of()
         );
 
         assertEquals("Drop", result.getName());
@@ -109,6 +110,7 @@ class FamilyProductServiceTest {
                         null,
                         LocalDateTime.now().plusDays(3),
                         LocalDateTime.now().plusDays(2),
+                        null,
                         null
                 ));
 

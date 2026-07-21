@@ -35,7 +35,7 @@ type DropForm = {
     startTms: string;
     endTms: string;
     projectIds: string[];
-    roleAccess: { projectId: string; role: string }[];
+    roleAccess: { projectId: string; role: 'MONITOR' | 'COORDINATOR' | 'PARENT' }[];
 };
 
 const EMPTY_FORM: DropForm = {
