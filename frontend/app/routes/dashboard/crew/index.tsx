@@ -37,7 +37,6 @@ interface ProjectCrewGroup {
     projectId: string;
     projectName: string;
     coordinators: User[];
-    parents: User[];
     monitors: { groupId: string; groupName: string | null; members: User[] }[];
 }
 
@@ -113,7 +112,6 @@ export default function Crew() {
                         projectId: gr.projectId,
                         projectName: gr.projectName,
                         coordinators: [],
-                        parents: [],
                         monitors: [],
                     });
                 }
@@ -122,10 +120,6 @@ export default function Crew() {
                 if (gr.role === "COORDINATOR") {
                     if (!pg.coordinators.some(u => u.id === user.id)) {
                         pg.coordinators.push(user);
-                    }
-                } else if (gr.role === "PARENT") {
-                    if (!pg.parents.some(u => u.id === user.id)) {
-                        pg.parents.push(user);
                     }
                 } else {
                     let monitorGroup = pg.monitors.find(mg => mg.groupId === gr.groupId);
@@ -244,7 +238,7 @@ export default function Crew() {
         try {
             setSaving(true);
             await adminUserService.assignGroupRole(selectedUser.id, addGroupId, addRole);
-            const roleLabel = addRole === 'COORDINATOR' ? 'Coordinador' : addRole === 'PARENT' ? 'Padre/Madre' : 'Monitor';
+            const roleLabel = addRole === 'COORDINATOR' ? 'Coordinador' : 'Monitor';
             toast.success(`${selectedUser.name} añadido al equipo como ${roleLabel}`);
             resetAdd();
             setRefreshKey(prev => prev + 1);
@@ -291,13 +285,11 @@ export default function Crew() {
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     gr.role === 'COORDINATOR'
                                         ? 'bg-yambo-purple-100 text-yambo-purple-800'
-                                        : gr.role === 'PARENT'
-                                        ? 'bg-amber-100 text-amber-800'
                                         : 'bg-yambo-green-50 text-yambo-green-700'
                                 }`}
-                                title={`${gr.role === 'COORDINATOR' ? 'Coordinador' : gr.role === 'PARENT' ? 'Padre/Madre' : 'Monitor'} - ${gr.projectName}${gr.groupName ? ` / ${gr.groupName}` : ''}`}
+                                title={`${gr.role === 'COORDINATOR' ? 'Coordinador' : 'Monitor'} - ${gr.projectName}${gr.groupName ? ` / ${gr.groupName}` : ''}`}
                             >
-                                {gr.role === 'COORDINATOR' ? 'C' : gr.role === 'PARENT' ? 'P' : 'M'}: {gr.groupName || gr.projectName}
+                                {gr.role === 'COORDINATOR' ? 'C' : 'M'}: {gr.groupName || gr.projectName}
                             </span>
                         ))
                     ) : (
@@ -398,26 +390,6 @@ export default function Crew() {
                                                 </div>
                                             </div>
                                         )}
-                                        {pg.parents.length > 0 && (
-                                            <div>
-                                                <h3 className="text-sm font-medium text-amber-600 mb-2">Padres/Madres</h3>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {pg.parents.map(user => (
-                                                        <button
-                                                            key={user.id}
-                                                            onClick={() => startEdit(user)}
-                                                            className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors text-left"
-                                                        >
-                                                            {user.photo && (
-                                                                <img src={user.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
-                                                            )}
-                                                            <span className="text-sm font-medium text-amber-700">{user.name}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
                                         {pg.monitors.length > 0 && (
                                             <div>
                                                 <h3 className="text-sm font-medium text-yambo-green-600 mb-2">Monitores</h3>
@@ -500,7 +472,6 @@ export default function Crew() {
                                     >
                                         <option value="MONITOR">Monitor</option>
                                         <option value="COORDINATOR">Coordinador</option>
-                                        <option value="PARENT">Padre/Madre</option>
                                     </select>
                                     <button
                                         type="button"

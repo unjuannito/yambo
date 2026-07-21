@@ -655,9 +655,7 @@ function ParentsView() {
         }
     }, []);
 
-    useEffect(() => {
-        void loadParents();
-    }, [loadParents]);
+    useEffect(() => { void loadParents(); }, [loadParents]);
 
     const handleRemove = async (projectId: string, userId: string, name: string) => {
         if (!confirm(`¿Eliminar a ${name} como padre de este proyecto?`)) return;
@@ -682,8 +680,7 @@ function ParentsView() {
     const handleRemoveAll = async (projectId: string, projectName: string) => {
         if (!confirm(`¿Eliminar TODOS los padres de "${projectName}"?`)) return;
         try {
-            const result = await parentInvitationService.revokeAllParentRolesByProject(projectId);
-            toast.success(result);
+            toast.success(await parentInvitationService.revokeAllParentRolesByProject(projectId));
             setProjectParents(prev => prev.filter(pp => pp.projectId !== projectId));
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar padres"));
@@ -691,69 +688,72 @@ function ParentsView() {
     };
 
     if (loading) {
-        return <div className="flex justify-center py-12"><LoadingSpinner size="md" message="Cargando padres..." /></div>;
+        return <div className="flex justify-center py-16"><LoadingSpinner size="md" message="Cargando padres..." /></div>;
     }
 
     if (error) {
-        return <ErrorMessage message={error} onRetry={loadParents} />;
+        return <div className="py-8"><ErrorMessage message={error} onRetry={loadParents} /></div>;
     }
 
     if (projectParents.length === 0) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                <FontAwesomeIcon icon={faUserGroup} className="text-gray-300 text-4xl mb-4" />
-                <h2 className="text-lg font-bold text-yambo-black mb-2">No hay padres asignados</h2>
-                <p className="text-gray-400">Aún no hay padres con acceso a ningún proyecto.</p>
+            <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-yambo-green-50 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faUserGroup} className="text-2xl text-yambo-green-400" />
+                </div>
+                <h2 className="text-lg font-bold text-yambo-black mb-1">No hay padres asignados</h2>
+                <p className="text-sm text-gray-400">Los padres aceptan invitaciones desde el enlace que se genera en cada familia.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {projectParents.map(pp => (
                 <section key={pp.projectId} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                    <div className="flex items-center justify-between px-5 py-3 bg-yambo-green-50/30 border-b border-gray-100">
-                        <h2 className="text-lg font-bold font-display text-yambo-black">{pp.projectName}</h2>
-                        <span className="text-sm text-gray-400">{pp.parents.length} padre{pp.parents.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="p-5">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left text-gray-400 text-xs uppercase tracking-wider">
-                                    <th className="pb-3 pr-4">Nombre</th>
-                                    <th className="pb-3 pr-4 hidden sm:table-cell">Email</th>
-                                    <th className="pb-3 text-right">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {pp.parents.map(parent => (
-                                    <tr key={parent.userId} className="hover:bg-gray-50/50">
-                                        <td className="py-3 pr-4 font-medium text-yambo-black">{parent.name}</td>
-                                        <td className="py-3 pr-4 text-gray-400 hidden sm:table-cell">{parent.email}</td>
-                                        <td className="py-3 text-right">
-                                            <ButtonComponent
-                                                variant="destructive-text"
-                                                size="sm"
-                                                onClick={() => handleRemove(pp.projectId, parent.userId, parent.name)}
-                                                isLoading={removing === `${pp.projectId}:${parent.userId}`}
-                                            >
-                                                Eliminar
-                                            </ButtonComponent>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
-                            <ButtonComponent
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleRemoveAll(pp.projectId, pp.projectName)}
-                            >
-                                <FontAwesomeIcon icon={faUserSlash} className="mr-1.5" />
-                                Eliminar todos
-                            </ButtonComponent>
+                    <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-yambo-green-500/10 flex items-center justify-center">
+                                <FontAwesomeIcon icon={faUserGroup} className="text-sm text-yambo-green-600" />
+                            </div>
+                            <h3 className="font-bold text-yambo-black">{pp.projectName}</h3>
                         </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-400 font-medium bg-gray-50 px-2.5 py-1 rounded-full">
+                                {pp.parents.length} padre{pp.parents.length !== 1 ? "s" : ""}
+                            </span>
+                            {pp.parents.length > 1 && (
+                                <button
+                                    onClick={() => handleRemoveAll(pp.projectId, pp.projectName)}
+                                    className="text-xs text-red-400 hover:text-red-600 transition-colors"
+                                >
+                                    <FontAwesomeIcon icon={faUserSlash} className="mr-1" />
+                                    Quitar todos
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                        {pp.parents.map(parent => (
+                            <div key={parent.userId} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-700 shrink-0">
+                                        {parent.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-yambo-black truncate">{parent.name}</p>
+                                        <p className="text-xs text-gray-400 truncate">{parent.email}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleRemove(pp.projectId, parent.userId, parent.name)}
+                                    disabled={removing === `${pp.projectId}:${parent.userId}`}
+                                    className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0 ml-4 disabled:opacity-50"
+                                >
+                                    {removing === `${pp.projectId}:${parent.userId}` ? "Eliminando..." : "Eliminar"}
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </section>
             ))}
