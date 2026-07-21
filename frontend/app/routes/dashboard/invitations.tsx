@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "~/i18n/config";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
+import SelectComponent from "~/components/common/forms/SelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -11,6 +12,7 @@ import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import { profileService } from "~/services/profileService";
+import { projectService, type Project } from "~/services/projectService";
 import {
     invitationService,
     type Invitation,
@@ -20,6 +22,7 @@ import { getErrorMessage } from "~/types/error";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
+import type { GroupRole } from "~/types/role";
 
 export function meta() {
     return [
@@ -34,10 +37,14 @@ export function meta() {
 export default function Invitations() {
     const { t } = useTranslation();
     const [profiles, setProfiles] = useState<Profile[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [invitations, setInvitations] = useState<Invitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
+    const [selectedRole, setSelectedRole] = useState<GroupRole>("MONITOR");
+    const [invitationType, setInvitationType] = useState<"profile" | "role">("profile");
     const [startTms, setStartTms] = useState("");
     const [endTms, setEndTms] = useState("");
     const [creating, setCreating] = useState(false);
@@ -51,12 +58,14 @@ export default function Invitations() {
             setLoading(true);
             setError(null);
             const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-            const [profilesResponse, invitationsResponse] = await Promise.all([
+            const [profilesResponse, invitationsResponse, projectsData] = await Promise.all([
                 profileService.getAllProfiles(),
                 invitationService.listInvitations(startDate),
+                projectService.listProjects(0, 200),
             ]);
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
+            setProjects(projectsData.content || []);
         } catch (err) {
             setError(getErrorMessage(err, t("invitations.profilesLoadingError")));
         } finally {
@@ -86,34 +95,55 @@ export default function Invitations() {
         [profiles],
     );
 
+    const projectOptions = useMemo(
+        () => projects.map((p) => ({ value: p.id, label: p.name })),
+        [projects],
+    );
+
+    const roleOptions = [
+        { value: "MONITOR", label: t("invitations.roleMonitor") },
+        { value: "COORDINATOR", label: t("invitations.roleCoordinator") },
+        { value: "PARENT", label: t("invitations.roleParent") },
+    ];
+
     const invitationLink = useMemo(() => {
         if (!lastInvitation) return "";
         return `${baseUrl}/register?invite=${lastInvitation.token}`;
     }, [baseUrl, lastInvitation]);
 
     const handleCreate = async () => {
-        if (selectedProfiles.length === 0) {
+        if (invitationType === "profile" && selectedProfiles.length === 0) {
             toast.error(t("invitations.selectProfileFirst"));
+            return;
+        }
+        if (invitationType === "role" && !selectedProjectId) {
+            toast.error(t("invitations.selectProjectFirst"));
             return;
         }
 
         try {
             setCreating(true);
-            const invitation =
-                await invitationService.createInvitation({
-                    profileIds: selectedProfiles,
-                    startTms: startTms || undefined,
-                    endTms: endTms || undefined,
-                });
+            const payload: any = {};
+            if (invitationType === "profile") {
+                payload.profileIds = selectedProfiles;
+            } else {
+                payload.projectId = selectedProjectId;
+                payload.role = selectedRole;
+            }
+            payload.startTms = startTms || undefined;
+            payload.endTms = endTms || undefined;
+
+            const invitation = await invitationService.createInvitation(payload);
             setLastInvitation(invitation);
             setSelectedProfiles([]);
+            setSelectedProjectId("");
+            setSelectedRole("MONITOR");
             setStartTms("");
             setEndTms("");
             setIsModalOpen(false);
             toast.success(t("invitations.createdSuccess"));
             const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-            const updated =
-                await invitationService.listInvitations(startDate);
+            const updated = await invitationService.listInvitations(startDate);
             setInvitations(updated);
         } catch (err) {
             toast.error(getErrorMessage(err, t("invitations.createError")));
@@ -246,8 +276,7 @@ export default function Invitations() {
                                 invitation.id,
                             );
                             const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-                            const updated =
-                                await invitationService.listInvitations(startDate);
+                            const updated = await invitationService.listInvitations(startDate);
                             setInvitations(updated);
                             toast.success(t("invitations.disabledSuccess"));
                         } catch (err) {
@@ -400,6 +429,9 @@ export default function Invitations() {
                     onClose={() => {
                         setIsModalOpen(false);
                         setSelectedProfiles([]);
+                        setSelectedProjectId("");
+                        setSelectedRole("MONITOR");
+                        setInvitationType("profile");
                         setStartTms("");
                         setEndTms("");
                     }}
@@ -411,6 +443,9 @@ export default function Invitations() {
                                 onClick={() => {
                                     setIsModalOpen(false);
                                     setSelectedProfiles([]);
+                                    setSelectedProjectId("");
+                                    setSelectedRole("MONITOR");
+                                    setInvitationType("profile");
                                     setStartTms("");
                                     setEndTms("");
                                 }}
@@ -428,18 +463,66 @@ export default function Invitations() {
                     }
                 >
                     <div className="grid gap-4">
-                        <MultiSelectComponent
-                            label={t("invitations.profiles")}
-                            options={profileOptions}
-                            value={selectedProfiles}
-                            placeholder={t("invitations.selectProfiles")}
-                            onChange={(e) => {
-                                const selected = Array.from(
-                                    e.target.selectedOptions,
-                                ).map((opt) => opt.value);
-                                setSelectedProfiles(selected);
-                            }}
-                        />
+                        {/* Invitation type tabs */}
+                        <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1">
+                            <button
+                                type="button"
+                                onClick={() => setInvitationType("profile")}
+                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                    invitationType === "profile"
+                                        ? "bg-white text-yambo-green-700 shadow-sm"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                {t("invitations.byProfile")}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setInvitationType("role")}
+                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                    invitationType === "role"
+                                        ? "bg-white text-yambo-green-700 shadow-sm"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                {t("invitations.byProjectRole")}
+                            </button>
+                        </div>
+
+                        {invitationType === "profile" ? (
+                            <MultiSelectComponent
+                                label={t("invitations.profiles")}
+                                options={profileOptions}
+                                value={selectedProfiles}
+                                placeholder={t("invitations.selectProfiles")}
+                                onChange={(e) => {
+                                    const selected = Array.from(
+                                        e.target.selectedOptions,
+                                    ).map((opt) => opt.value);
+                                    setSelectedProfiles(selected);
+                                }}
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                <SelectComponent
+                                    label={t("invitations.project")}
+                                    value={selectedProjectId}
+                                    options={projectOptions}
+                                    onChange={(e) =>
+                                        setSelectedProjectId(e.target.value)
+                                    }
+                                />
+                                <SelectComponent
+                                    label={t("invitations.role")}
+                                    value={selectedRole}
+                                    options={roleOptions}
+                                    onChange={(e) =>
+                                        setSelectedRole(e.target.value as GroupRole)
+                                    }
+                                />
+                            </div>
+                        )}
+
                         <InputComponent
                             label={t("invitations.startOptional")}
                             type="datetime-local"
