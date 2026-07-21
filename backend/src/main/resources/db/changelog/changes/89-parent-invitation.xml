@@ -25,7 +25,7 @@
             <column name="used_by_user_id" type="varchar(8)">
                 <constraints
                     foreignKeyName="fk_parent_invitation_used_by"
-                    referencedTableName="users"
+                    referencedTableName="user"
                     referencedColumnNames="id"/>
             </column>
             <column name="used_at" type="timestamp"/>
