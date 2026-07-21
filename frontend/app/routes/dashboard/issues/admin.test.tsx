@@ -152,4 +152,31 @@ describe("Admin Issues Route", () => {
             expect(getAllIssuesMock).toHaveBeenCalled();
         });
     });
+
+    it("passes userId to getAllIssues when present in searchParams", async () => {
+        useSearchParamsMock.mockReturnValueOnce([new URLSearchParams("userId=USR001"), vi.fn()]);
+
+        render(<AdminIssuesPage />);
+
+        await waitFor(() => {
+            expect(getAllIssuesMock).toHaveBeenCalled();
+        });
+
+        // getAllIssues signature: (page, size, startDate, endDate, status, query, userId, issueId, title)
+        const callArgs = getAllIssuesMock.mock.calls[0];
+        expect(callArgs[6]).toBe("USR001"); // 7th param = userId
+    });
+
+    it("does not pass userId when searchParams has none", async () => {
+        useSearchParamsMock.mockReturnValueOnce([new URLSearchParams(""), vi.fn()]);
+
+        render(<AdminIssuesPage />);
+
+        await waitFor(() => {
+            expect(getAllIssuesMock).toHaveBeenCalled();
+        });
+
+        const callArgs = getAllIssuesMock.mock.calls[0];
+        expect(callArgs[6]).toBeUndefined();
+    });
 });
