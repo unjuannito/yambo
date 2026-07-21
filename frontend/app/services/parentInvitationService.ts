@@ -68,6 +68,20 @@ export class ParentInvitationService extends ApiService {
             `/parent-invitations/by-project/${projectId}/roles`,
         );
     }
+
+    public async listParents(): Promise<{
+        projectId: string;
+        projectName: string;
+        parents: { userId: string; name: string; email: string }[];
+    }[]> {
+        return await this.get(`/parent-invitations/parents`);
+    }
+
+    public async removeParentRole(projectId: string, userId: string): Promise<string> {
+        return await this.delete<string>(
+            `/parent-invitations/parents/${projectId}/${userId}`,
+        );
+    }
 }
 
 export const parentInvitationService = new ParentInvitationService();

@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.ParentInvitation;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.ParentInvitationService;
 import es.yambo_alco.web.service.SettingsService;
@@ -104,6 +105,41 @@ public class ParentInvitationController {
         return ResponseEntity.ok("Revoked " + count + " parent role(s) from project successfully");
     }
 
+    @GetMapping("/parents")
+    public ResponseEntity<List<ProjectParentsResponse>> listParents() {
+        User currentUser = authService.getCurrentUser(true);
+        var projectParents = parentInvitationService.listParentsByAccessibleProjects(currentUser);
+        List<ProjectParentsResponse> response = projectParents.stream()
+                .map(pp -> new ProjectParentsResponse(
+                        pp.getProjectId(),
+                        pp.getProjectName(),
+                        pp.getParents().stream()
+                                .map(p -> new ParentInfoResponse(p.getUserId(), p.getName(), p.getEmail()))
+                                .collect(Collectors.toList())))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/parents/{projectId}/{userId}")
+    public ResponseEntity<String> removeParentRole(@PathVariable String projectId,
+                                                     @PathVariable String userId) {
+        User currentUser = authService.getCurrentUser(true);
+        boolean canManage = currentUser.getProfiles().stream()
+                .flatMap(p -> p.getPermissions().stream())
+                .anyMatch(perm -> "family_product".equals(perm.getResource().getValue())
+                        && "update".equals(perm.getAction().getValue()));
+        boolean isCoordinator = currentUser.getGroupRoles().stream()
+                .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR
+                        && gr.getProjectGroup().getProject().getId().equals(projectId));
+
+        if (!canManage && !isCoordinator) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Not authorized");
+        }
+
+        parentInvitationService.removeParentRole(projectId, userId);
+        return ResponseEntity.ok("Parent role removed successfully");
+    }
+
     private ParentInvitationResponse buildResponse(ParentInvitation inv, String invitationLink) {
         return new ParentInvitationResponse(
                 inv.getId(),
@@ -153,5 +189,21 @@ public class ParentInvitationController {
         private boolean used;
         private boolean expired;
         private String email;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class ParentInfoResponse {
+        private String userId;
+        private String name;
+        private String email;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class ProjectParentsResponse {
+        private String projectId;
+        private String projectName;
+        private List<ParentInfoResponse> parents;
     }
 }

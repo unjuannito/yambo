@@ -4,18 +4,15 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
-import es.yambo_alco.web.repository.FamilyProductRepository;
-import es.yambo_alco.web.repository.ParentInvitationRepository;
-import es.yambo_alco.web.repository.ProjectGroupRepository;
-import es.yambo_alco.web.repository.UserProjectGroupRepository;
+import es.yambo_alco.web.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Base64;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +22,8 @@ public class ParentInvitationService {
     private final FamilyProductRepository familyProductRepository;
     private final ProjectGroupRepository projectGroupRepository;
     private final UserProjectGroupRepository userProjectGroupRepository;
+    private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
     private final UserService userService;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -145,5 +144,85 @@ public class ParentInvitationService {
             userProjectGroupRepository.deleteAll(parents);
         }
         return parents.size();
+    }
+
+    // ── DTO classes for parent management ────────────────────────────
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class ParentInfo {
+        private String userId;
+        private String name;
+        private String email;
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class ProjectParents {
+        private String projectId;
+        private String projectName;
+        private List<ParentInfo> parents;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectParents> listParentsByAccessibleProjects(User currentUser) {
+        boolean hasGlobalAccess = currentUser.getProfiles().stream()
+                .flatMap(p -> p.getPermissions().stream())
+                .anyMatch(perm -> "family_product".equals(perm.getResource().getValue())
+                        && "read".equals(perm.getAction().getValue()));
+
+        Set<String> accessibleProjectIds;
+        if (hasGlobalAccess) {
+            // Admin/Merch: all active projects
+            accessibleProjectIds = projectRepository.findAll().stream()
+                    .map(Project::getId)
+                    .collect(Collectors.toSet());
+        } else {
+            // Monitor/Coordinator: only their projects
+            accessibleProjectIds = currentUser.getGroupRoles().stream()
+                    .filter(gr -> gr.getRole() == UserProjectGroupRole.MONITOR
+                            || gr.getRole() == UserProjectGroupRole.COORDINATOR)
+                    .map(gr -> gr.getProjectGroup().getProject().getId())
+                    .collect(Collectors.toSet());
+        }
+
+        List<ProjectParents> result = new ArrayList<>();
+        for (String projectId : accessibleProjectIds) {
+            Optional<ProjectGroup> projectGroupOpt = projectGroupRepository
+                    .findByProjectIdAndNameIsNull(projectId);
+            if (projectGroupOpt.isEmpty()) continue;
+
+            ProjectGroup projectGroup = projectGroupOpt.get();
+            List<UserProjectGroup> parentRoles = userProjectGroupRepository
+                    .findByProjectGroupIdAndRole(projectGroup.getId(), UserProjectGroupRole.PARENT);
+
+            if (parentRoles.isEmpty()) continue;
+
+            Project project = projectRepository.findById(projectId).orElse(null);
+            String projectName = project != null ? project.getName() : projectId;
+
+            List<ParentInfo> parents = parentRoles.stream()
+                    .map(upg -> {
+                        String name = upg.getUser().getName();
+                        String email = upg.getUser().getEmail();
+                        return new ParentInfo(upg.getUser().getId(), name, email);
+                    })
+                    .collect(Collectors.toList());
+
+            result.add(new ProjectParents(projectId, projectName, parents));
+        }
+
+        return result;
+    }
+
+    @Transactional
+    public void removeParentRole(String projectId, String userId) {
+        ProjectGroup projectGroup = projectGroupRepository
+                .findByProjectIdAndNameIsNull(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Project-level group not found for project: " + projectId));
+
+        userProjectGroupRepository.deleteByUserIdAndProjectGroupIdAndRole(
+                userId, projectGroup.getId(), UserProjectGroupRole.PARENT);
     }
 }

@@ -21,6 +21,8 @@ import {
     faPenToSquare,
     faTrashCan,
     faUserSlash,
+    faUserGroup,
+    faArrowLeft,
 } from "@fortawesome/free-solid-svg-icons";
 
 export function meta() {
@@ -60,6 +62,7 @@ export default function Projects() {
     const [editingGroupName, setEditingGroupName] = useState("");
     const [savingGroup, setSavingGroup] = useState(false);
 
+    const [view, setView] = useState<"projects" | "parents">("projects");
     const canCreate = hasPermission({ obj: "project", action: "create" });
     const canUpdate = hasPermission({ obj: "project", action: "update" });
     const canDelete = hasPermission({ obj: "project", action: "delete" });
@@ -305,15 +308,40 @@ export default function Projects() {
     return (
         <RequirePermission permission={{ obj: "project", action: "read" }} redirectTo="/mi-espacio">
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">{t("projects.title")}</h1>
-                    {canCreate && (
+                {/* View tabs */}
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex rounded-full border border-gray-200 overflow-hidden">
+                        <button
+                            onClick={() => setView("projects")}
+                            className={`px-4 py-1.5 text-sm font-medium transition-all ${
+                                view === "projects"
+                                    ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white"
+                                    : "bg-white text-gray-600 hover:bg-yambo-green-50/30"
+                            }`}
+                        >
+                            Proyectos
+                        </button>
+                        <button
+                            onClick={() => setView("parents")}
+                            className={`px-4 py-1.5 text-sm font-medium transition-all ${
+                                view === "parents"
+                                    ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white"
+                                    : "bg-white text-gray-600 hover:bg-yambo-green-50/30"
+                            }`}
+                        >
+                            <FontAwesomeIcon icon={faUserGroup} className="mr-1.5" />
+                            Padres
+                        </button>
+                    </div>
+                    {view === "projects" && canCreate && (
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
                             + {t("projects.createNew")}
                         </ButtonComponent>
                     )}
                 </div>
 
+                {view === "projects" && (
+                <>
                 <section className="bg-white rounded-2xl border border-gray-100 p-6">
                     {loading ? (
                         <div className="flex justify-center py-8">
@@ -594,7 +622,141 @@ export default function Projects() {
                         )}
                     </div>
                 </Modal>
+                </>
+                )}
+
+                {view === "parents" && <ParentsView />}
             </main>
         </RequirePermission>
+    );
+}
+
+function ParentsView() {
+    const { t } = useTranslation();
+    const [projectParents, setProjectParents] = useState<{
+        projectId: string;
+        projectName: string;
+        parents: { userId: string; name: string; email: string }[];
+    }[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [removing, setRemoving] = useState<string | null>(null);
+
+    const loadParents = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const data = await parentInvitationService.listParents();
+            setProjectParents(data);
+        } catch (err) {
+            setError(getErrorMessage(err, "Error al cargar padres"));
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadParents();
+    }, [loadParents]);
+
+    const handleRemove = async (projectId: string, userId: string, name: string) => {
+        if (!confirm(`¿Eliminar a ${name} como padre de este proyecto?`)) return;
+        const key = `${projectId}:${userId}`;
+        try {
+            setRemoving(key);
+            await parentInvitationService.removeParentRole(projectId, userId);
+            toast.success(`${name} ya no tiene acceso como padre`);
+            setProjectParents(prev =>
+                prev.map(pp => pp.projectId === projectId
+                    ? { ...pp, parents: pp.parents.filter(p => p.userId !== userId) }
+                    : pp
+                ).filter(pp => pp.parents.length > 0)
+            );
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al eliminar padre"));
+        } finally {
+            setRemoving(null);
+        }
+    };
+
+    const handleRemoveAll = async (projectId: string, projectName: string) => {
+        if (!confirm(`¿Eliminar TODOS los padres de "${projectName}"?`)) return;
+        try {
+            const result = await parentInvitationService.revokeAllParentRolesByProject(projectId);
+            toast.success(result);
+            setProjectParents(prev => prev.filter(pp => pp.projectId !== projectId));
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al eliminar padres"));
+        }
+    };
+
+    if (loading) {
+        return <div className="flex justify-center py-12"><LoadingSpinner size="md" message="Cargando padres..." /></div>;
+    }
+
+    if (error) {
+        return <ErrorMessage message={error} onRetry={loadParents} />;
+    }
+
+    if (projectParents.length === 0) {
+        return (
+            <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                <FontAwesomeIcon icon={faUserGroup} className="text-gray-300 text-4xl mb-4" />
+                <h2 className="text-lg font-bold text-yambo-black mb-2">No hay padres asignados</h2>
+                <p className="text-gray-400">Aún no hay padres con acceso a ningún proyecto.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {projectParents.map(pp => (
+                <section key={pp.projectId} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-3 bg-yambo-green-50/30 border-b border-gray-100">
+                        <h2 className="text-lg font-bold font-display text-yambo-black">{pp.projectName}</h2>
+                        <span className="text-sm text-gray-400">{pp.parents.length} padre{pp.parents.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="p-5">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-gray-400 text-xs uppercase tracking-wider">
+                                    <th className="pb-3 pr-4">Nombre</th>
+                                    <th className="pb-3 pr-4 hidden sm:table-cell">Email</th>
+                                    <th className="pb-3 text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {pp.parents.map(parent => (
+                                    <tr key={parent.userId} className="hover:bg-gray-50/50">
+                                        <td className="py-3 pr-4 font-medium text-yambo-black">{parent.name}</td>
+                                        <td className="py-3 pr-4 text-gray-400 hidden sm:table-cell">{parent.email}</td>
+                                        <td className="py-3 text-right">
+                                            <ButtonComponent
+                                                variant="destructive-text"
+                                                size="sm"
+                                                onClick={() => handleRemove(pp.projectId, parent.userId, parent.name)}
+                                                isLoading={removing === `${pp.projectId}:${parent.userId}`}
+                                            >
+                                                Eliminar
+                                            </ButtonComponent>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+                            <ButtonComponent
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleRemoveAll(pp.projectId, pp.projectName)}
+                            >
+                                <FontAwesomeIcon icon={faUserSlash} className="mr-1.5" />
+                                Eliminar todos
+                            </ButtonComponent>
+                        </div>
+                    </div>
+                </section>
+            ))}
+        </div>
     );
 }

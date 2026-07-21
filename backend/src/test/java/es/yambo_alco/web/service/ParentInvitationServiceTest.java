@@ -7,7 +7,9 @@ import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ParentInvitationRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
+import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,12 @@ class ParentInvitationServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private ProjectRepository projectRepository;
+
     private ParentInvitationService parentInvitationService;
 
     private static final String PROJECT_ID = "P0000001";
@@ -51,7 +59,8 @@ class ParentInvitationServiceTest {
     void setUp() {
         parentInvitationService = new ParentInvitationService(
                 parentInvitationRepository, familyProductRepository,
-                projectGroupRepository, userProjectGroupRepository, userService);
+                projectGroupRepository, userProjectGroupRepository,
+                userRepository, projectRepository, userService);
     }
 
     // ── createInvitation ──────────────────────────────────────────────
