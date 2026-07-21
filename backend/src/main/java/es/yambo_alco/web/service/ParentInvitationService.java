@@ -131,36 +131,6 @@ public class ParentInvitationService {
     }
 
     @Transactional
-    public int revokeAllParentRoles(String familyProductId) {
-        FamilyProduct product = familyProductRepository.findById(familyProductId)
-                .orElseThrow(() -> new ResourceNotFoundException("Family product not found"));
-
-        if (product.getRoleAccess() == null || product.getRoleAccess().isEmpty()) {
-            return 0;
-        }
-
-        int total = 0;
-        for (FamilyProductRoleAccess ra : product.getRoleAccess()) {
-            if (ra.getRole() == UserProjectGroupRole.PARENT) {
-                ProjectGroup projectGroup = projectGroupRepository
-                        .findByProjectIdAndNameIsNull(ra.getProjectId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Project-level group not found for project: " + ra.getProjectId()));
-
-                List<es.yambo_alco.web.model.UserProjectGroup> parents =
-                        userProjectGroupRepository.findByProjectGroupIdAndRole(
-                                projectGroup.getId(), UserProjectGroupRole.PARENT);
-
-                if (!parents.isEmpty()) {
-                    userProjectGroupRepository.deleteAll(parents);
-                    total += parents.size();
-                }
-            }
-        }
-        return total;
-    }
-
-    @Transactional
     public int revokeAllParentRolesByProject(String projectId) {
         ProjectGroup projectGroup = projectGroupRepository
                 .findByProjectIdAndNameIsNull(projectId)

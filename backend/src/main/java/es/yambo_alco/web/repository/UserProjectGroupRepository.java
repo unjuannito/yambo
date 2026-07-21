@@ -19,7 +19,5 @@ public interface UserProjectGroupRepository
 
     boolean existsByUserIdAndRole(String userId, UserProjectGroupRole role);
 
-    List<UserProjectGroup> findByRole(UserProjectGroupRole role);
-
     void deleteByUserIdAndProjectGroupIdAndRole(String userId, String projectGroupId, UserProjectGroupRole role);
 }

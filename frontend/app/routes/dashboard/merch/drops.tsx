@@ -18,7 +18,7 @@ import { projectService, type Project } from "~/services/projectService";
 import { parentInvitationService } from "~/services/parentInvitationService";
 import { getErrorMessage } from "~/types/error";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faUserPlus, faLink, faCopy, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faUserPlus, faLink, faCopy } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
@@ -129,20 +129,6 @@ export default function MerchFamilies() {
         setParentInviteDrop(null);
         setParentInviteUrl("");
         setParentInviteCopied(false);
-    };
-
-    const revokeAllParentRoles = async () => {
-        if (!parentInviteDrop) return;
-        if (!confirm(`¿Eliminar todos los accesos de padres para "${parentInviteDrop.name}"? Los padres actuales perderán el acceso a este drop y tendrán que usar un nuevo enlace.`)) {
-            return;
-        }
-        try {
-            await parentInvitationService.revokeAllParentRoles(parentInviteDrop.id);
-            toast.success("Todos los accesos de padres han sido eliminados");
-            closeParentInvite();
-        } catch (err) {
-            toast.error(getErrorMessage(err, "Error al eliminar los accesos de padres"));
-        }
     };
 
     const loadData = useCallback(async () => {
@@ -624,18 +610,7 @@ export default function MerchFamilies() {
                                     </p>
                                 </div>
                             )}
-                            <hr className="border-gray-100" />
-                            <ButtonComponent
-                                variant="destructive"
-                                onClick={revokeAllParentRoles}
-                                className="w-full"
-                            >
-                                <FontAwesomeIcon icon={faTrash} className="mr-2" />
-                                Eliminar todos los accesos de padres
-                            </ButtonComponent>
-                            <p className="text-xs text-gray-400 text-center">
-                                Los padres perderán el acceso y tendrán que usar un nuevo enlace.
-                            </p>
+
                         </div>
                     )}
                 </Modal>
