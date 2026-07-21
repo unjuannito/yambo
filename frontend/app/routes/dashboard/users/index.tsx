@@ -16,7 +16,8 @@ import ListPageShell from "~/components/common/ListPageShell";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowRight, faPenToSquare, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -53,6 +54,7 @@ const EMPTY_FORM: UserForm = {
 };
 
 export default function Users() {
+    const navigate = useNavigate();
     const [profileOptions, setProfileOptions] = useState<{ value: string; label: string }[]>([]);
     const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -204,15 +206,17 @@ export default function Users() {
             },
             render: (user: User) => (
                 <div>
-                    <span className="font-medium text-yambo-black">
+                    <button
+                        onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
+                        className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors text-left"
+                    >
                         {user.name}
-                        {user.system && (
-                            <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
-                                Sistema
-                            </span>
-                        )}
-                    </span>
-                    <p className="text-xs text-gray-400 sm:hidden truncate max-w-[180px]">{user.email}</p>
+                    </button>
+                    {user.system && (
+                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
+                            Sistema
+                        </span>
+                    )}
                 </div>
             ),
         },
@@ -325,13 +329,21 @@ export default function Users() {
             requiredPerms: [{ obj: "user", action: "update" }],
             render: (user: User) => (
                 <div className="flex gap-2">
+                    <ButtonComponent
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
+                    >
+                        <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 mr-1" />
+                        Gestionar
+                    </ButtonComponent>
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                         <ButtonComponent
                             onClick={() => startEdit(user)}
-                            variant="primary"
+                            variant="neutral"
                             size="sm"
                         >
-                            Editar
+                            <FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" />
                         </ButtonComponent>
                     </RequirePermission>
                     {!user.system && (
@@ -341,7 +353,7 @@ export default function Users() {
                                 variant="destructive"
                                 size="sm"
                             >
-                                Eliminar
+                                <FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" />
                             </ButtonComponent>
                         </RequirePermission>
                     )}

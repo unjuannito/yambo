@@ -23,6 +23,13 @@ export default [
 
         // Administración
         route("mi-espacio/admin/usuarios", "routes/dashboard/users/index.tsx"),
+        route("mi-espacio/admin/usuarios/:userId", "routes/dashboard/users/$userId/_layout.tsx", [
+            index("routes/dashboard/users/$userId/index.tsx"),
+            route("perfil", "routes/dashboard/users/$userId/perfil.tsx"),
+            route("permisos", "routes/dashboard/users/$userId/permisos.tsx"),
+            route("proyectos", "routes/dashboard/users/$userId/proyectos.tsx"),
+            route("historial", "routes/dashboard/users/$userId/historial.tsx"),
+        ]),
         route("mi-espacio/admin/perfiles", "routes/dashboard/profiles/index.tsx"),
         route(
             "mi-espacio/admin/invitaciones-nominativas",
