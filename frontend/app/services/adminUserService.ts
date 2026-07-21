@@ -1,4 +1,5 @@
 import type { User } from "~/types/userType";
+import type { GroupRole } from "~/types/role";
 import { ApiService, type PagedParams } from "./apiService";
 import type { PagedInfo } from "~/types/apiType";
 
@@ -33,7 +34,7 @@ export interface UpdateUserGroupsRequest {
 
 export interface AssignGroupRoleRequest {
     groupId: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 export interface GroupRoleResponse {
@@ -41,7 +42,7 @@ export interface GroupRoleResponse {
     groupName: string | null;
     projectId: string;
     projectName: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 export class AdminUserService extends ApiService {
@@ -87,7 +88,7 @@ export class AdminUserService extends ApiService {
     public async assignGroupRole(
         userId: string,
         groupId: string,
-        role: 'MONITOR' | 'COORDINATOR'
+        role: GroupRole
     ): Promise<User> {
         return await this.post<User, AssignGroupRoleRequest>(
             `/admin/users/${userId}/group-roles`,
@@ -98,7 +99,7 @@ export class AdminUserService extends ApiService {
     public async removeGroupRole(
         userId: string,
         groupId: string,
-        role: 'MONITOR' | 'COORDINATOR'
+        role: GroupRole
     ): Promise<User> {
         return await this.delete<User>(
             `/admin/users/${userId}/group-roles/${groupId}/${role}`

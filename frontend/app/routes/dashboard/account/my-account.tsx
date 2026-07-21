@@ -300,8 +300,9 @@ export default function MyAccount() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Roles en Grupos</label>
                 <p className="text-sm text-gray-600">
                   {user.groupRoles.map(gr => {
-                    const label = gr.groupName ? `${gr.groupName} (${gr.projectName})` : gr.projectName;
-                    return `${gr.role === 'COORDINATOR' ? 'Coordinador' : 'Monitor'} - ${label}`;
+                  const label = gr.groupName ? `${gr.groupName} (${gr.projectName})` : gr.projectName;
+                  const roleLabel = gr.role === 'COORDINATOR' ? 'Coordinador' : gr.role === 'PARENT' ? 'Padre/Madre' : 'Monitor';
+                  return `${roleLabel} - ${label}`;
                   }).join(", ")}
                 </p>
               </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Route } from "./+types/index";
 import type { User } from "~/types/userType";
+import type { GroupRole } from "~/types/role";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
@@ -26,7 +27,7 @@ export function meta({}: Route.MetaArgs) {
 
 interface GroupRoleEntry {
     groupId: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 interface UserForm {
@@ -144,7 +145,7 @@ export default function Users() {
                 // Remove roles no longer desired
                 for (const cr of currentRoles) {
                     if (!desiredSet.has(currentKey(cr))) {
-                        await adminUserService.removeGroupRole(editing, cr.groupId, cr.role);
+                        await adminUserService.removeGroupRole(editing, cr.groupId, cr.role as GroupRole);
                     }
                 }
                 // Add new roles
@@ -273,11 +274,13 @@ export default function Users() {
                                 className={`px-2 py-1 rounded-full text-xs ${
                                     gr.role === 'COORDINATOR'
                                         ? 'bg-yambo-purple-100 text-yambo-purple-800'
+                                        : gr.role === 'PARENT'
+                                        ? 'bg-amber-100 text-amber-800'
                                         : 'bg-yambo-green-50 text-yambo-green-700'
                                 }`}
                                 title={`${gr.role} - ${gr.projectName}`}
                             >
-                                {gr.role === 'COORDINATOR' ? 'C' : 'M'}: {gr.groupName || gr.projectName}
+                                {gr.role === 'COORDINATOR' ? 'C' : gr.role === 'PARENT' ? 'P' : 'M'}: {gr.groupName || gr.projectName}
                             </span>
                         ))
                     ) : (
@@ -451,13 +454,14 @@ export default function Users() {
                                         value={gr.role}
                                         onChange={(e) => {
                                             const updated = [...form.groupRoles];
-                                            updated[idx] = { ...updated[idx], role: e.target.value as 'MONITOR' | 'COORDINATOR' };
+                                            updated[idx] = { ...updated[idx], role: e.target.value as GroupRole };
                                             setForm({ ...form, groupRoles: updated });
                                         }}
                                         className="w-36 border border-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
                                         <option value="MONITOR">Monitor</option>
                                         <option value="COORDINATOR">Coordinador</option>
+                                        <option value="PARENT">Padre/Madre</option>
                                     </select>
                                     <button
                                         type="button"

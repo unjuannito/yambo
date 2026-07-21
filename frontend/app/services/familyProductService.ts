@@ -1,9 +1,10 @@
 import { ApiService } from './apiService';
+import type { GroupRole } from '~/types/role';
 import type { DropWatcher } from '~/types/issueType';
 
 export interface RoleAccess {
   projectId: string;
-  role: 'MONITOR' | 'COORDINATOR' | 'PARENT';
+  role: GroupRole;
 }
 
 export interface FamilyProduct {
