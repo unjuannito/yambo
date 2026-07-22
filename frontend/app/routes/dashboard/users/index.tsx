@@ -9,6 +9,7 @@ import { adminUserService } from "~/services/adminUserService";
 import { profileService } from "~/services/profileService";
 import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -62,6 +63,7 @@ export default function Users() {
     const [form, setForm] = useState<UserForm>({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => {
         const fetchProfiles = async () => {
@@ -168,17 +170,20 @@ export default function Users() {
         }
     };
 
-    const handleDelete = async (userId: string, userName: string) => {
-        if (!confirm(`¿Estás seguro de que deseas eliminar al usuario "${userName}"?`)) {
-            return;
-        }
+    const handleDelete = (userId: string, userName: string) => {
+        setConfirmDelete({ id: userId, name: userName });
+    };
 
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
         try {
-            await adminUserService.deleteUser(userId);
+            await adminUserService.deleteUser(confirmDelete.id);
             toast.success("Usuario eliminado correctamente");
             setRefreshKey(prev => prev + 1);
         } catch (err) {
             toast.error(getErrorMessage(err, "¡El usuario se resiste a irse!"));
+        } finally {
+            setConfirmDelete(null);
         }
     };
 
@@ -536,6 +541,15 @@ export default function Users() {
                         )}
                     </div>
                 </Modal>
+            <ConfirmDialog
+                isOpen={confirmDelete !== null}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={executeDelete}
+                title="Eliminar usuario"
+                message={confirmDelete ? `¿Estás seguro de que deseas eliminar al usuario "${confirmDelete.name}"?` : ""}
+                confirmLabel="Eliminar"
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

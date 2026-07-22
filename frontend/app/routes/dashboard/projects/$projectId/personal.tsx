@@ -14,6 +14,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faMagnifyingGlass, faCrown, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 
 export default function ProjectPersonal() {
     const { t } = useTranslation();
@@ -30,6 +31,8 @@ export default function ProjectPersonal() {
     const [searching, setSearching] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [addRole, setAddRole] = useState<GroupRole>("MONITOR");
+    const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string; role: GroupRole } | null>(null);
+    const [removing, setRemoving] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!projectId) return;
@@ -87,10 +90,17 @@ export default function ProjectPersonal() {
         return created.id;
     }, [projectId]);
 
-    const handleRemove = async (userId: string, name: string, role: GroupRole) => {
+    const handleRemove = (userId: string, name: string, role: GroupRole) => {
         if (!projectId) return;
+        setRemoveTarget({ userId, name, role });
+    };
+
+    const handleRemoveConfirm = async () => {
+        if (!projectId || !removeTarget) return;
+        const { userId, name, role } = removeTarget;
         const roleLabel = role === "COORDINATOR" ? "coordinador" : "monitor";
-        if (!confirm(`¿Quitar a ${name} como ${roleLabel}?`)) return;
+        setRemoving(true);
+        setRemoveTarget(null);
         try {
             // Find the group ID for this role
             const groups = await projectService.listGroups(projectId);
@@ -119,6 +129,8 @@ export default function ProjectPersonal() {
             toast.success(`${name} ya no es ${roleLabel}`);
         } catch (err) {
             toast.error(getErrorMessage(err, `Error al quitar ${roleLabel}`));
+        } finally {
+            setRemoving(false);
         }
     };
 
@@ -349,6 +361,17 @@ export default function ProjectPersonal() {
                     </div>
                 </Modal>
             </div>
+
+            <ConfirmDialog
+                isOpen={removeTarget !== null}
+                onClose={() => setRemoveTarget(null)}
+                onConfirm={handleRemoveConfirm}
+                title="Quitar personal"
+                message={`¿Quitar a ${removeTarget?.name} como ${removeTarget?.role === "COORDINATOR" ? "coordinador" : "monitor"}?`}
+                confirmLabel="Quitar"
+                variant="danger"
+                isLoading={removing}
+            />
         </RequirePermission>
     );
 }

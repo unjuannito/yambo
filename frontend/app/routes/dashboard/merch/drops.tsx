@@ -7,6 +7,7 @@ import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import { WatcherManager } from "~/components/common/WatcherManager";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -72,6 +73,7 @@ export default function MerchFamilies() {
     const [parentInviteUrl, setParentInviteUrl] = useState<string>("");
     const [parentInviteSaving, setParentInviteSaving] = useState(false);
     const [parentInviteCopied, setParentInviteCopied] = useState(false);
+    const [dropToDelete, setDropToDelete] = useState<FamilyProduct | null>(null);
 
     const openWatchers = async (drop: FamilyProduct) => {
         setWatchersDrop(drop);
@@ -222,13 +224,19 @@ export default function MerchFamilies() {
     };
 
     const handleDelete = async (drop: FamilyProduct) => {
-        if (!confirm(`${t("common.delete")} "${drop.name}"?`)) return;
+        setDropToDelete(drop);
+    };
+
+    const confirmDelete = async () => {
+        if (!dropToDelete) return;
         try {
-            await familyProductService.deleteFamilyProduct(drop.id);
+            await familyProductService.deleteFamilyProduct(dropToDelete.id);
             toast.success(t("merch.collectionDeleted"));
             await loadData();
         } catch (err) {
             toast.error(getErrorMessage(err, t("merch.collectionDeleteError")));
+        } finally {
+            setDropToDelete(null);
         }
     };
 
@@ -614,6 +622,18 @@ export default function MerchFamilies() {
                         </div>
                     )}
                 </Modal>
+
+                {/* Delete Drop Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={!!dropToDelete}
+                    onClose={() => setDropToDelete(null)}
+                    onConfirm={confirmDelete}
+                    title={t("common.delete")}
+                    message={dropToDelete ? `${t("common.delete")} "${dropToDelete.name}"?` : ""}
+                    confirmLabel={t("common.delete")}
+                    cancelLabel={t("common.cancel")}
+                    variant="danger"
+                />
         </RequirePermission>
     );
 }

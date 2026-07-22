@@ -5,6 +5,7 @@ import { RequirePermission } from "~/components/common/RequirePermission";
 import { parentInvitationService } from "~/services/parentInvitationService";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -24,6 +25,7 @@ export default function ProjectPadres() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [removing, setRemoving] = useState<string | null>(null);
+    const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null);
 
     const loadParents = useCallback(async () => {
         if (!projectId) return;
@@ -48,14 +50,14 @@ export default function ProjectPadres() {
 
     useEffect(() => { void loadParents(); }, [loadParents]);
 
-    const handleRemove = async (userId: string, name: string) => {
-        if (!projectId) return;
-        if (!confirm(`¿Eliminar a ${name} como padre de este proyecto?`)) return;
+    const handleRemoveConfirm = async () => {
+        if (!projectId || !removeTarget) return;
         try {
-            setRemoving(userId);
-            await parentInvitationService.removeParentRole(projectId, userId);
-            toast.success(`${name} ya no tiene acceso como padre`);
-            setParents(prev => prev.filter(p => p.userId !== userId));
+            setRemoving(removeTarget.userId);
+            setRemoveTarget(null);
+            await parentInvitationService.removeParentRole(projectId, removeTarget.userId);
+            toast.success(`${removeTarget.name} ya no tiene acceso como padre`);
+            setParents(prev => prev.filter(p => p.userId !== removeTarget.userId));
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar padre"));
         } finally {
@@ -63,10 +65,12 @@ export default function ProjectPadres() {
         }
     };
 
-    const handleRemoveAll = async () => {
+    const [showRemoveAll, setShowRemoveAll] = useState(false);
+
+    const handleRemoveAllConfirm = async () => {
         if (!projectId) return;
-        if (!confirm(`¿Eliminar TODOS los padres de "${projectName}"?`)) return;
         try {
+            setShowRemoveAll(false);
             toast.success(await parentInvitationService.revokeAllParentRolesByProject(projectId));
             setParents([]);
         } catch (err) {
@@ -114,7 +118,7 @@ export default function ProjectPadres() {
                             {parents.length > 1 && (
                                 <RequirePermission permission={{ obj: "invitation", action: "delete" }} redirect={false}>
                                     <button
-                                        onClick={handleRemoveAll}
+                                        onClick={() => setShowRemoveAll(true)}
                                         className="text-xs text-red-400 hover:text-red-600 transition-colors"
                                     >
                                         <FontAwesomeIcon icon={faTrashCan} className="mr-1" />
@@ -142,7 +146,7 @@ export default function ProjectPadres() {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => handleRemove(parent.userId, parent.name)}
+                                    onClick={() => setRemoveTarget({ userId: parent.userId, name: parent.name })}
                                     disabled={removing === parent.userId}
                                     className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0 ml-4 disabled:opacity-50"
                                 >
@@ -153,6 +157,27 @@ export default function ProjectPadres() {
                     </div>
                 </section>
             </div>
+
+            <ConfirmDialog
+                isOpen={removeTarget !== null}
+                onClose={() => setRemoveTarget(null)}
+                onConfirm={handleRemoveConfirm}
+                title="Eliminar padre"
+                message={`¿Eliminar a ${removeTarget?.name} como padre de este proyecto?`}
+                confirmLabel="Eliminar"
+                variant="danger"
+                isLoading={removing !== null}
+            />
+
+            <ConfirmDialog
+                isOpen={showRemoveAll}
+                onClose={() => setShowRemoveAll(false)}
+                onConfirm={handleRemoveAllConfirm}
+                title="Eliminar todos los padres"
+                message={`¿Eliminar TODOS los padres de "${projectName}"?`}
+                confirmLabel="Eliminar todos"
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

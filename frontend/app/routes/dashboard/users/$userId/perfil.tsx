@@ -3,6 +3,7 @@ import { useParams, useOutletContext } from "react-router";
 import { adminUserService } from "~/services/adminUserService";
 import type { User } from "~/types/userType";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import FileUploader from "~/components/common/FileUploader";
@@ -39,6 +40,7 @@ export default function UserPerfil() {
         funFact: user.funFact || "",
     });
     const [dirty, setDirty] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const canHaveExtra = canHaveExtraProfileData(user);
 
     const handleChange = (field: string, value: string) => {
@@ -71,15 +73,21 @@ export default function UserPerfil() {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (!userId) return;
-        if (!confirm(`¿Eliminar permanentemente a "${user.name}"? Esta acción no se puede deshacer.`)) return;
+        setConfirmDelete(true);
+    };
+
+    const executeDelete = async () => {
+        if (!userId) return;
         try {
             await adminUserService.deleteUser(userId);
             toast.success("Usuario eliminado");
             window.history.back();
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar"));
+        } finally {
+            setConfirmDelete(false);
         }
     };
 
@@ -243,7 +251,16 @@ export default function UserPerfil() {
                         </div>
                     </section>
                 )}
-            </RequirePermission>
+            <ConfirmDialog
+                isOpen={confirmDelete}
+                onClose={() => setConfirmDelete(false)}
+                onConfirm={executeDelete}
+                title="Eliminar usuario"
+                message={`¿Eliminar permanentemente a "${user.name}"? Esta acción no se puede deshacer.`}
+                confirmLabel="Eliminar"
+                variant="danger"
+            />
+        </RequirePermission>
         </div>
     );
 }

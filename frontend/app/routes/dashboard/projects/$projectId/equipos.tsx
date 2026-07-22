@@ -14,6 +14,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare, faTrashCan, faPlus, faSave, faXmark, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 
 interface GroupWithMonitors {
     group: ProjectGroup;
@@ -35,6 +36,14 @@ export default function ProjectEquipos() {
     // Edit group
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [editingGroupName, setEditingGroupName] = useState("");
+
+    type ConfirmAction =
+        | { type: "deleteGroup"; groupId: string; groupName: string | null }
+        | { type: "removeMonitor"; userId: string; groupId: string; name: string }
+        | null;
+
+    const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!projectId) return;
@@ -99,21 +108,36 @@ export default function ProjectEquipos() {
         }
     };
 
-    const handleDeleteGroup = async (groupId: string, groupName: string | null) => {
+    const handleDeleteGroup = (groupId: string, groupName: string | null) => {
         if (!projectId) return;
-        const label = groupName || "sin nombre";
-        if (!confirm(`¿Eliminar el equipo "${label}"?`)) return;
+        setConfirmAction({ type: "deleteGroup", groupId, groupName });
+    };
+
+    const handleDeleteGroupConfirm = async () => {
+        if (!projectId || !confirmAction || confirmAction.type !== "deleteGroup") return;
+        const { groupId, groupName } = confirmAction;
+        setConfirmLoading(true);
+        setConfirmAction(null);
         try {
             await projectService.deleteGroup(projectId, groupId);
             setGroups(prev => prev.filter(g => g.id !== groupId));
             toast.success("Equipo eliminado");
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar equipo"));
+        } finally {
+            setConfirmLoading(false);
         }
     };
 
-    const handleRemoveMonitor = async (userId: string, groupId: string, name: string) => {
-        if (!confirm(`¿Quitar a ${name} de este equipo?`)) return;
+    const handleRemoveMonitor = (userId: string, groupId: string, name: string) => {
+        setConfirmAction({ type: "removeMonitor", userId, groupId, name });
+    };
+
+    const handleRemoveMonitorConfirm = async () => {
+        if (!projectId || !confirmAction || confirmAction.type !== "removeMonitor") return;
+        const { userId, groupId, name } = confirmAction;
+        setConfirmLoading(true);
+        setConfirmAction(null);
         try {
             await adminUserService.removeGroupRole(userId, groupId, "MONITOR");
             setAllUsers(prev =>
@@ -125,6 +149,8 @@ export default function ProjectEquipos() {
             toast.success(`${name} ya no es monitor de este equipo`);
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al quitar monitor"));
+        } finally {
+            setConfirmLoading(false);
         }
     };
 
@@ -301,6 +327,28 @@ export default function ProjectEquipos() {
                     </div>
                 </RequirePermission>
             </div>
+
+            <ConfirmDialog
+                isOpen={confirmAction?.type === "deleteGroup"}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={handleDeleteGroupConfirm}
+                title="Eliminar equipo"
+                message={`¿Eliminar el equipo "${confirmAction?.type === "deleteGroup" ? (confirmAction.groupName || "sin nombre") : ""}"?`}
+                confirmLabel="Eliminar"
+                variant="danger"
+                isLoading={confirmLoading}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmAction?.type === "removeMonitor"}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={handleRemoveMonitorConfirm}
+                title="Quitar monitor"
+                message={`¿Quitar a ${confirmAction?.type === "removeMonitor" ? confirmAction.name : ""} de este equipo?`}
+                confirmLabel="Quitar"
+                variant="danger"
+                isLoading={confirmLoading}
+            />
         </RequirePermission>
     );
 }

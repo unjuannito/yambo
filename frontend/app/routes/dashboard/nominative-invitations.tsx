@@ -9,6 +9,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -42,6 +43,7 @@ export default function NominativeInvitations() {
     const [saving, setSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
     const [batchEmails, setBatchEmails] = useState("");
     const [batchProfileIds, setBatchProfileIds] = useState<string[]>([]);
     const [batchProjectId, setBatchProjectId] = useState("");
@@ -103,15 +105,20 @@ export default function NominativeInvitations() {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm(t("invitations.deleteConfirm"))) {
-            try {
-                await nominativeInvitationService.deleteInvitation(id);
-                setInvitations((prev) => prev.filter((inv) => inv.id !== id));
-                toast.success(t("invitations.deleteSuccess"));
-            } catch (err) {
-                toast.error(getErrorMessage(err, t("invitations.deleteError")));
-            }
+    const handleDelete = (id: string) => {
+        setConfirmDelete(id);
+    };
+
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
+        try {
+            await nominativeInvitationService.deleteInvitation(confirmDelete);
+            setInvitations((prev) => prev.filter((inv) => inv.id !== confirmDelete));
+            toast.success(t("invitations.deleteSuccess"));
+        } catch (err) {
+            toast.error(getErrorMessage(err, t("invitations.deleteError")));
+        } finally {
+            setConfirmDelete(null);
         }
     };
 
@@ -587,6 +594,15 @@ export default function NominativeInvitations() {
                         )}
                     </div>
                 </Modal>
+            <ConfirmDialog
+                isOpen={confirmDelete !== null}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={executeDelete}
+                title={t("invitations.deleteConfirmTitle")}
+                message={t("invitations.deleteConfirm")}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

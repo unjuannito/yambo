@@ -8,6 +8,7 @@ import type { GroupRole } from "~/types/role";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { getErrorMessage } from "~/types/error";
 import { loadAssignableGroupOptions } from "~/utils/groupOptions";
@@ -36,6 +37,7 @@ export default function UserProyectos() {
 
     // Refresh key for roles
     const [roles, setRoles] = useState<GroupRoleResponse[]>([]);
+    const [confirmRemove, setConfirmRemove] = useState<{ groupId: string; role: GroupRole; projectName: string; groupName: string | null } | null>(null);
 
     useEffect(() => {
         const fetch = async () => {
@@ -56,17 +58,22 @@ export default function UserProyectos() {
         fetch();
     }, [userId]);
 
-    const handleRemove = async (groupId: string, role: GroupRole, projectName: string, groupName: string | null) => {
+    const handleRemove = (groupId: string, role: GroupRole, projectName: string, groupName: string | null) => {
         if (!userId) return;
-        const roleLabel = role === "COORDINATOR" ? "coordinador" : "monitor";
-        const location = groupName ? `${projectName} / ${groupName}` : projectName;
-        if (!confirm(`¿Quitar a ${user.name} como ${roleLabel} de "${location}"?`)) return;
+        setConfirmRemove({ groupId, role, projectName, groupName });
+    };
+
+    const executeRemove = async () => {
+        if (!userId || !confirmRemove) return;
+        const roleLabel = confirmRemove.role === "COORDINATOR" ? "coordinador" : confirmRemove.role === "PARENT" ? "padre/madre" : "monitor";
         try {
-            await adminUserService.removeGroupRole(userId, groupId, role);
-            setRoles(prev => prev.filter(r => !(r.groupId === groupId && r.role === role)));
+            await adminUserService.removeGroupRole(userId, confirmRemove.groupId, confirmRemove.role);
+            setRoles(prev => prev.filter(r => !(r.groupId === confirmRemove.groupId && r.role === confirmRemove.role)));
             toast.success(`Rol de ${roleLabel} eliminado`);
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al quitar rol"));
+        } finally {
+            setConfirmRemove(null);
         }
     };
 
@@ -262,6 +269,15 @@ export default function UserProyectos() {
                     </div>
                 </div>
             </Modal>
+            <ConfirmDialog
+                isOpen={confirmRemove !== null}
+                onClose={() => setConfirmRemove(null)}
+                onConfirm={executeRemove}
+                title="Quitar rol"
+                message={confirmRemove ? `¿Quitar a ${user.name} como ${confirmRemove.role === "COORDINATOR" ? "coordinador" : confirmRemove.role === "PARENT" ? "padre/madre" : "monitor"} de "${confirmRemove.groupName ? `${confirmRemove.projectName} / ${confirmRemove.groupName}` : confirmRemove.projectName}"?` : ""}
+                confirmLabel="Quitar rol"
+                variant="danger"
+            />
         </div>
     );
 }

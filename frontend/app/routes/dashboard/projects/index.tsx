@@ -10,6 +10,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { projectService, type Project, type ProjectGroup } from "~/services/projectService";
 import { parentInvitationService } from "~/services/parentInvitationService";
 import { useAuth } from "~/hooks/useAuth";
@@ -62,6 +63,9 @@ export default function Projects() {
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [editingGroupName, setEditingGroupName] = useState("");
     const [savingGroup, setSavingGroup] = useState(false);
+    const [confirmDeleteProject, setConfirmDeleteProject] = useState<Project | null>(null);
+    const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<{ groupId: string; groupName: string } | null>(null);
+    const [confirmRevokeParents, setConfirmRevokeParents] = useState(false);
 
     const canCreate = hasPermission({ obj: "project", action: "create" });
     const canUpdate = hasPermission({ obj: "project", action: "update" });
@@ -195,26 +199,55 @@ export default function Projects() {
         }
     };
 
-    const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    const handleDeleteGroup = (groupId: string, groupName: string) => {
         if (!editing) return;
-        if (!confirm(t("projects.confirmDeleteGroup", { name: groupName }))) return;
+        setConfirmDeleteGroup({ groupId, groupName });
+    };
+
+    const executeDeleteGroup = async () => {
+        if (!editing || !confirmDeleteGroup) return;
         try {
-            await projectService.deleteGroup(editing, groupId);
-            setGroups((prev) => prev.filter((g) => g.id !== groupId));
+            await projectService.deleteGroup(editing, confirmDeleteGroup.groupId);
+            setGroups((prev) => prev.filter((g) => g.id !== confirmDeleteGroup.groupId));
             toast.success(t("projects.groupDeleted"));
         } catch (err) {
             toast.error(getErrorMessage(err, t("projects.groupDeleteError")));
+        } finally {
+            setConfirmDeleteGroup(null);
         }
     };
 
-    const handleDelete = async (project: Project) => {
-        if (!confirm(t("projects.confirmDelete", { name: project.name }))) return;
+    const handleRevokeParents = () => {
+        if (!editing) return;
+        setConfirmRevokeParents(true);
+    };
+
+    const executeRevokeParents = async () => {
+        if (!editing) return;
         try {
-            await projectService.deleteProject(project.id);
+            const result = await parentInvitationService.revokeAllParentRolesByProject(editing);
+            toast.success(result);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al eliminar accesos de padres"));
+        } finally {
+            setConfirmRevokeParents(false);
+        }
+    };
+
+    const handleDelete = (project: Project) => {
+        setConfirmDeleteProject(project);
+    };
+
+    const executeDelete = async () => {
+        if (!confirmDeleteProject) return;
+        try {
+            await projectService.deleteProject(confirmDeleteProject.id);
             toast.success(t("projects.deleted"));
             await loadProjects();
         } catch (err) {
             toast.error(getErrorMessage(err, t("projects.deleteError")));
+        } finally {
+            setConfirmDeleteProject(null);
         }
     };
 
@@ -598,16 +631,7 @@ export default function Projects() {
                                 <ButtonComponent
                                     variant="destructive"
                                     size="sm"
-                                    onClick={async () => {
-                                        if (!editing) return;
-                                        if (!confirm("¿Eliminar todos los accesos de padres de este proyecto? Los padres perderán el acceso y tendrán que usar un nuevo enlace de invitación.")) return;
-                                        try {
-                                            const result = await parentInvitationService.revokeAllParentRolesByProject(editing);
-                                            toast.success(result);
-                                        } catch (err) {
-                                            toast.error(getErrorMessage(err, "Error al eliminar accesos de padres"));
-                                        }
-                                    }}
+                                    onClick={() => handleRevokeParents()}
                                 >
                                     <FontAwesomeIcon icon={faUserSlash} className="mr-2" />
                                     Eliminar todos los padres
@@ -617,6 +641,33 @@ export default function Projects() {
                     </div>
                 </Modal>
             </main>
+            <ConfirmDialog
+                isOpen={confirmDeleteProject !== null}
+                onClose={() => setConfirmDeleteProject(null)}
+                onConfirm={executeDelete}
+                title={t("projects.confirmDeleteTitle")}
+                message={confirmDeleteProject ? t("projects.confirmDelete", { name: confirmDeleteProject.name }) : ""}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
+            <ConfirmDialog
+                isOpen={confirmDeleteGroup !== null}
+                onClose={() => setConfirmDeleteGroup(null)}
+                onConfirm={executeDeleteGroup}
+                title={t("projects.confirmDeleteGroupTitle")}
+                message={confirmDeleteGroup ? t("projects.confirmDeleteGroup", { name: confirmDeleteGroup.groupName }) : ""}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
+            <ConfirmDialog
+                isOpen={confirmRevokeParents}
+                onClose={() => setConfirmRevokeParents(false)}
+                onConfirm={executeRevokeParents}
+                title="Eliminar accesos de padres"
+                message="¿Eliminar todos los accesos de padres de este proyecto? Los padres perderán el acceso y tendrán que usar un nuevo enlace de invitación."
+                confirmLabel="Eliminar todos"
+                variant="danger"
+            />
         </RequirePermission>
     );
 }
