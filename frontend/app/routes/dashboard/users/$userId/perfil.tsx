@@ -42,7 +42,7 @@ export default function UserPerfil() {
     const canHaveExtra = canHaveExtraProfileData(user);
 
     const handleChange = (field: string, value: string) => {
-        if (!canHaveExtra && (field === "bio" || field === "funFact")) return;
+        if (!canHaveExtra && (field === "photo" || field === "bio" || field === "funFact")) return;
         setForm(prev => ({ ...prev, [field]: value }));
         setDirty(true);
     };
@@ -55,8 +55,8 @@ export default function UserPerfil() {
                 id: userId,
                 name: form.name,
                 email: form.email,
-                photo: form.photo || undefined,
                 ...(canHaveExtra ? {
+                    photo: form.photo || undefined,
                     bio: form.bio || undefined,
                     funFact: form.funFact || undefined,
                 } : {}),
@@ -96,8 +96,11 @@ export default function UserPerfil() {
                 <div className="p-5 sm:p-6">
                     <div className="grid gap-5">
                         {/* Photo */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Foto</label>
+                        <div className={!canHaveExtra ? "opacity-50" : ""}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Foto
+                                {!canHaveExtra && <ExtraProfileNotice />}
+                            </label>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                                 <div className="w-16 h-16 rounded-full bg-yambo-green-100 flex items-center justify-center text-2xl font-bold text-yambo-green-700 shrink-0 overflow-hidden">
                                     {form.photo

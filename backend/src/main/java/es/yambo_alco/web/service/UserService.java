@@ -103,13 +103,13 @@ public class UserService {
 			user.setEmail(normalizedEmail);
 		}
 
-		if (photo != null) {
-			user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
-		}
-		if (bio != null || funFact != null) {
+		if (photo != null || bio != null || funFact != null) {
 			if (!user.canHaveExtraProfileData()) {
 				throw new BadRequestException(
-						"Only users with MONITOR or COORDINATOR role can have extended profile data (bio, fun fact)");
+						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact)");
+			}
+			if (photo != null) {
+				user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
 			}
 			if (bio != null) {
 				user.setBio(bio.trim().isEmpty() ? null : bio.trim());
