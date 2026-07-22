@@ -10,5 +10,6 @@ public record UserFilter(
     Boolean enabled,
     List<String> permissions,
     List<String> profiles,
-    String role
+    String role,
+    Boolean canHaveExtraProfileData
 ) {}

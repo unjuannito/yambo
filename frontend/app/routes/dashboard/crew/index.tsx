@@ -10,6 +10,7 @@ import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
+import { canHaveExtraProfileData } from "~/utils/roleHelpers";
 import toast from "react-hot-toast";
 
 interface GroupRoleEntry {
@@ -496,28 +497,32 @@ export default function Crew() {
                                 + Añadir rol en grupo
                             </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
-                            <textarea
-                                value={editForm.bio}
-                                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                                placeholder="Biografía del miembro..."
-                                rows={3}
-                                maxLength={500}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
-                            <input
-                                type="text"
-                                value={editForm.funFact}
-                                onChange={(e) => setEditForm({ ...editForm, funFact: e.target.value })}
-                                placeholder="Un dato curioso..."
-                                maxLength={100}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                            />
-                        </div>
+                        {canHaveExtraProfileData({ groupRoles: editForm.groupRoles }) && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                                <textarea
+                                    value={editForm.bio}
+                                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                                    placeholder="Biografía del miembro..."
+                                    rows={3}
+                                    maxLength={500}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none"
+                                />
+                            </div>
+                        )}
+                        {canHaveExtraProfileData({ groupRoles: editForm.groupRoles }) && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                                <input
+                                    type="text"
+                                    value={editForm.funFact}
+                                    onChange={(e) => setEditForm({ ...editForm, funFact: e.target.value })}
+                                    placeholder="Un dato curioso..."
+                                    maxLength={100}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
+                                />
+                            </div>
+                        )}
                     </div>
                 </Modal>
 

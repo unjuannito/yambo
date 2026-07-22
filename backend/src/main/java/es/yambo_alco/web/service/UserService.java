@@ -75,6 +75,8 @@ public class UserService {
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 		if (filter.role() != null && !filter.role().isBlank())
 			spec = spec.and(UserSpecifications.hasGroupRole(filter.role()));
+		if (filter.canHaveExtraProfileData() != null && filter.canHaveExtraProfileData())
+			spec = spec.and(UserSpecifications.hasMonitorOrCoordinatorRole());
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -104,11 +106,17 @@ public class UserService {
 		if (photo != null) {
 			user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
 		}
-		if (bio != null) {
-			user.setBio(bio.trim().isEmpty() ? null : bio.trim());
-		}
-		if (funFact != null) {
-			user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+		if (bio != null || funFact != null) {
+			if (!user.canHaveExtraProfileData()) {
+				throw new BadRequestException(
+						"Only users with MONITOR or COORDINATOR role can have extended profile data (bio, fun fact)");
+			}
+			if (bio != null) {
+				user.setBio(bio.trim().isEmpty() ? null : bio.trim());
+			}
+			if (funFact != null) {
+				user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+			}
 		}
 
 		return userRepository.save(user);

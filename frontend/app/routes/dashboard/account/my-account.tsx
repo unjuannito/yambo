@@ -13,6 +13,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { canHaveExtraProfileData } from "~/utils/roleHelpers";
 import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
@@ -307,7 +308,7 @@ export default function MyAccount() {
                 </p>
               </div>
             )}
-            {user?.groupRoles?.some(r => r.role === "MONITOR" || r.role === "COORDINATOR") && (
+            {canHaveExtraProfileData(user) && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
