@@ -307,7 +307,7 @@ export default function MyAccount() {
                 </p>
               </div>
             )}
-            {user?.groupRoles && user.groupRoles.length > 0 && (
+            {user?.groupRoles?.some(r => r.role === "MONITOR" || r.role === "COORDINATOR") && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
