@@ -634,6 +634,49 @@ public class UserServiceTest {
     }
 
     @Test
+    void updateProfile_WithExtraDataForNonMonitorUser_ShouldThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .groupRoles(Set.of())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then — photo
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        "new-photo.jpg", null, null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        // When & Then — bio
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        null, "New bio", null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        // When & Then — funFact
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        null, null, "New fun fact"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        // When & Then — all three
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        "new-photo.jpg", "New bio", "New fun fact"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void updateProfile_WithEmptyPhotoBioFunFact_ShouldSetNull() {
         // Given
         UserProjectGroup monitorRole = UserProjectGroup.builder()
