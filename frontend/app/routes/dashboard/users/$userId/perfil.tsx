@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router";
-import { useTranslation } from "react-i18next";
-import { useOutletContext } from "react-router";
+import { useParams, useOutletContext } from "react-router";
 import { adminUserService } from "~/services/adminUserService";
 import type { User } from "~/types/userType";
 import { RequirePermission } from "~/components/common/RequirePermission";
@@ -12,6 +10,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFloppyDisk, faTrashCan, faCircleUser, faCircleCheck, faCircleXmark } from "@fortawesome/free-solid-svg-icons";
+import { canHaveExtraProfileData } from "~/utils/roleHelpers";
 
 type OutletContext = {
     user: User;
@@ -20,7 +19,6 @@ type OutletContext = {
 };
 
 export default function UserPerfil() {
-    const { t } = useTranslation();
     const { userId } = useParams();
     const { user, refreshUser } = useOutletContext<OutletContext>();
     const [saving, setSaving] = useState(false);
@@ -42,13 +40,16 @@ export default function UserPerfil() {
         if (!userId) return;
         try {
             setSaving(true);
+            const canHaveExtra = canHaveExtraProfileData(user);
             await adminUserService.updateUserDetails({
                 id: userId,
                 name: form.name,
                 email: form.email,
                 photo: form.photo || undefined,
-                bio: form.bio || undefined,
-                funFact: form.funFact || undefined,
+                ...(canHaveExtra ? {
+                    bio: form.bio || undefined,
+                    funFact: form.funFact || undefined,
+                } : {}),
             });
             toast.success("Perfil actualizado");
             setDirty(false);
@@ -66,7 +67,6 @@ export default function UserPerfil() {
         try {
             await adminUserService.deleteUser(userId);
             toast.success("Usuario eliminado");
-            // Navigate back to user list
             window.history.back();
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar"));
@@ -130,28 +130,30 @@ export default function UserPerfil() {
                             />
                         </div>
 
-                        {/* Bio */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Biografía</label>
-                            <textarea
-                                value={form.bio}
-                                onChange={(e) => handleChange("bio", e.target.value)}
-                                placeholder="Breve biografía..."
-                                rows={3}
-                                maxLength={500}
-                                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-shadow"
-                            />
-                            <p className="text-xs text-gray-400 mt-1 text-right">{form.bio.length}/500</p>
-                        </div>
-
-                        {/* Fun fact */}
-                        <InputComponent
-                            label="Dato curioso"
-                            value={form.funFact}
-                            onChange={(e) => handleChange("funFact", e.target.value)}
-                            placeholder="Un dato curioso..."
-                            maxLength={100}
-                        />
+                        {/* Bio + FunFact — solo para monitores y coordinadores */}
+                        {canHaveExtraProfileData(user) && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Biografía</label>
+                                    <textarea
+                                        value={form.bio}
+                                        onChange={(e) => handleChange("bio", e.target.value)}
+                                        placeholder="Breve biografía..."
+                                        rows={3}
+                                        maxLength={500}
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-shadow"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1 text-right">{form.bio.length}/500</p>
+                                </div>
+                                <InputComponent
+                                    label="Dato curioso"
+                                    value={form.funFact}
+                                    onChange={(e) => handleChange("funFact", e.target.value)}
+                                    placeholder="Un dato curioso..."
+                                    maxLength={100}
+                                />
+                            </>
+                        )}
                     </div>
 
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
