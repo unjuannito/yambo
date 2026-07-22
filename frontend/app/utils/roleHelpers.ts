@@ -6,7 +6,8 @@
  */
 export function canHaveExtraProfileData(user: {
     groupRoles?: Array<{ role: string }>;
-}): boolean {
+} | null | undefined): boolean {
+    if (!user) return false;
     return user.groupRoles?.some(
         (r) => r.role === "MONITOR" || r.role === "COORDINATOR"
     ) ?? false;
