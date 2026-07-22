@@ -64,7 +64,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("a@b.com");
@@ -77,7 +77,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, "John", null, null, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, "John", null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getName()).isEqualTo("John");
@@ -90,7 +90,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter("test@", null, null, null, null, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter("test@", null, null, null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("test@example.com");
@@ -103,7 +103,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, true, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, true, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).isEnabled()).isTrue();
@@ -116,7 +116,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, "MONITOR"),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, "MONITOR", null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("monitor@example.com");
@@ -600,10 +600,14 @@ public class UserServiceTest {
     @Test
     void updateProfile_WithPhotoBioFunFact_ShouldUpdateFields() {
         // Given
+        UserProjectGroup monitorRole = UserProjectGroup.builder()
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Old Name")
+                .groupRoles(Set.of(monitorRole))
                 .build();
 
         User updatedUser = User.builder()
@@ -632,10 +636,17 @@ public class UserServiceTest {
     @Test
     void updateProfile_WithEmptyPhotoBioFunFact_ShouldSetNull() {
         // Given
+        UserProjectGroup monitorRole = UserProjectGroup.builder()
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Old Name")
+                .photo("old-photo.jpg")
+                .bio("Old bio")
+                .funFact("Old fun fact")
+                .groupRoles(Set.of(monitorRole))
                 .build();
 
         User updatedUser = User.builder()
@@ -689,7 +700,7 @@ public class UserServiceTest {
 
         // When
         PageRequest pageable = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("invalidField"));
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null), pageable);
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null, null), pageable);
 
         // Then
         assertThat(res.getTotalElements()).isEqualTo(1);
@@ -704,7 +715,7 @@ public class UserServiceTest {
                 .thenReturn(page);
 
         // When
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, List.of("PERM001"), null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, List.of("PERM001"), null, null),
                 PageRequest.of(0, 10));
 
         // Then
