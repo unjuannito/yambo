@@ -1,12 +1,9 @@
 package es.yambo_alco.web.repository.spec;
 
 import es.yambo_alco.web.model.FamilyProduct;
-import es.yambo_alco.web.model.FamilyProductRoleAccess;
-import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -51,30 +48,6 @@ public final class FamilyProductSpecifications {
             if (startDate == null) return cb.lessThanOrEqualTo(root.get("endTms"), endDate);
             if (endDate == null) return cb.greaterThanOrEqualTo(root.get("endTms"), startDate);
             return cb.between(root.get("endTms"), startDate, endDate);
-        };
-    }
-
-    public static Specification<FamilyProduct> hasProfileId(String profileId) {
-        return (root, query, cb) -> {
-            if (profileId == null) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-            return cb.equal(profileJoin.get("id"), profileId);
-        };
-    }
-
-    public static Specification<FamilyProduct> hasAnyProfile(Set<String> profileIds) {
-        return (root, query, cb) -> {
-            if (profileIds == null || profileIds.isEmpty()) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-            return profileJoin.get("id").in(profileIds);
-        };
-    }
-
-    public static Specification<FamilyProduct> hasProfileName(String profileName) {
-        return (root, query, cb) -> {
-            if (profileName == null) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-            return cb.like(cb.lower(profileJoin.get("name")), "%" + profileName.toLowerCase() + "%");
         };
     }
 

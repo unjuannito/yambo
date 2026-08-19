@@ -4,13 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.util.PermissionCheckService;
@@ -94,11 +99,10 @@ class ProductServiceTest {
     void getProductById_WhenProductExistsAndUserIsAdmin_ShouldReturnProductWithoutAccessCheck() {
         // Given
         String productId = "P001";
-        Profile adminProfile = Profile.builder().id("ADMIN").build();
-        Profile userProfile = Profile.builder().id("USER").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profile(adminProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -106,11 +110,6 @@ class ProductServiceTest {
                 .name("Test Product")
                 .active(true)
                 .familyProduct(familyProduct)
-                .build();
-
-        User user = User.builder()
-                .id("U001")
-                .profiles(Set.of(userProfile)) // User doesn't have access to family
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -145,10 +144,10 @@ class ProductServiceTest {
     void getProductById_WhenProductHasFamilyAndUserHasAccess_ShouldReturnProduct() {
         // Given
         String productId = "P001";
-        Profile adminProfile = Profile.builder().id("ADMIN").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profile(adminProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -158,9 +157,15 @@ class ProductServiceTest {
                 .familyProduct(familyProduct)
                 .build();
 
+        Project project = Project.builder().id("PRJ001").build();
+        ProjectGroup projectGroup = ProjectGroup.builder().id("PG001").project(project).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(projectGroup)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User user = User.builder()
                 .id("U001")
-                .profiles(Set.of(adminProfile))
+                .groupRoles(Set.of(groupRole))
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -181,11 +186,10 @@ class ProductServiceTest {
     void getProductById_WhenProductHasFamilyAndUserDoesNotHaveAccess_ShouldThrowException() {
         // Given
         String productId = "P001";
-        Profile adminProfile = Profile.builder().id("ADMIN").build();
-        Profile userProfile = Profile.builder().id("USER").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profile(adminProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -195,9 +199,15 @@ class ProductServiceTest {
                 .familyProduct(familyProduct)
                 .build();
 
+        Project otherProject = Project.builder().id("PRJ002").build();
+        ProjectGroup otherProjectGroup = ProjectGroup.builder().id("PG002").project(otherProject).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(otherProjectGroup)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User user = User.builder()
                 .id("U001")
-                .profiles(Set.of(userProfile))
+                .groupRoles(Set.of(groupRole))
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));

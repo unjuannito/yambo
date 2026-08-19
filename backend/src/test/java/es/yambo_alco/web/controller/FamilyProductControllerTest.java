@@ -2,7 +2,6 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.FamilyProduct;
-import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.BatchEmailService;
@@ -71,7 +70,6 @@ class FamilyProductControllerTest {
                 .name("Drop")
                 .startTms(start)
                 .endTms(end)
-                .profile(Profile.builder().id("BASIC").build())
                 .projects(Set.of(Project.builder().id("PRJ001").build()))
                 .build();
 
@@ -94,7 +92,6 @@ class FamilyProductControllerTest {
                 .andExpect(jsonPath("$.id").value("FAM001"))
                 .andExpect(jsonPath("$.startTms").exists())
                 .andExpect(jsonPath("$.endTms").exists())
-                .andExpect(jsonPath("$.profileId").value("BASIC"))
                 .andExpect(jsonPath("$.projectIds[0]").value("PRJ001"));
     }
 

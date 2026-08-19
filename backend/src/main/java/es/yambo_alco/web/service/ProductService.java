@@ -11,6 +11,7 @@ import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
@@ -74,11 +75,14 @@ public class ProductService {
         if (isProductAdmin) {
             spec = spec.and(ProductSpecifications.activeEquals(active));
         } else {
-            Set<String> profileIds = user.getProfiles().stream()
-                    .map(p -> p.getId())
+            Set<String> projectIds = user.getGroupRoles().stream()
+                    .map(gr -> gr.getProjectGroup().getProject().getId())
+                    .collect(Collectors.toSet());
+            Set<UserProjectGroupRole> roles = user.getGroupRoles().stream()
+                    .map(gr -> gr.getRole())
                     .collect(Collectors.toSet());
             spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
-            spec = spec.and(ProductSpecifications.userHasAccess(profileIds));
+            spec = spec.and(ProductSpecifications.userHasAccess(projectIds, roles));
             spec = spec.and(ProductSpecifications.familyProductActive());
         }
 
@@ -188,22 +192,19 @@ public class ProductService {
 
         FamilyProduct fp = product.getFamilyProduct();
 
-        // Check 1: acceso por perfil (legacy)
-        boolean hasAccess = fp.getProfile() != null
-                && user.getProfiles().stream()
-                    .anyMatch(p -> p.getId().equals(fp.getProfile().getId()));
-
-        // Check 2: acceso por proyecto+rol (nuevo)
-        if (!hasAccess && fp.getRoleAccess() != null && !fp.getRoleAccess().isEmpty()) {
-            hasAccess = user.getGroupRoles().stream().anyMatch(gr ->
-                fp.getRoleAccess().contains(
-                    FamilyProductRoleAccess.builder()
-                        .projectId(gr.getProjectGroup().getProject().getId())
-                        .role(gr.getRole())
-                        .build()
-                )
-            );
+        // Sin roleAccess configurado: sin restriccion
+        if (fp.getRoleAccess() == null || fp.getRoleAccess().isEmpty()) {
+            return;
         }
+
+        boolean hasAccess = user.getGroupRoles().stream().anyMatch(gr ->
+            fp.getRoleAccess().contains(
+                FamilyProductRoleAccess.builder()
+                    .projectId(gr.getProjectGroup().getProject().getId())
+                    .role(gr.getRole())
+                    .build()
+            )
+        );
 
         if (!hasAccess) {
             throw new ResourceNotFoundException("Product not found");

@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -150,15 +151,9 @@ class OrderServiceTest {
 
     @Test
     void createOrder_WhenProductExpired_ShouldThrowException() {
-        Profile profile = Profile.builder()
-                .id("PROFILE001")
-                .name("Premium")
-                .build();
-
         User user = User.builder()
                 .id("USER001")
                 .email("test@test.com")
-                .profiles(Set.of(profile))
                 .build();
 
         FamilyProduct family = FamilyProduct.builder()
@@ -166,7 +161,6 @@ class OrderServiceTest {
                 .name("Test Family")
                 .startTms(LocalDateTime.now().minusDays(10))
                 .endTms(LocalDateTime.now().minusDays(1)) // Expired
-                .profile(profile)
                 .build();
 
         Product product = Product.builder()
@@ -193,15 +187,9 @@ class OrderServiceTest {
 
     @Test
     void createOrder_WhenProductNotYetAvailable_ShouldThrowException() {
-        Profile profile = Profile.builder()
-                .id("PROFILE001")
-                .name("Premium")
-                .build();
-
         User user = User.builder()
                 .id("USER001")
                 .email("test@test.com")
-                .profiles(Set.of(profile))
                 .build();
 
         FamilyProduct family = FamilyProduct.builder()
@@ -209,7 +197,6 @@ class OrderServiceTest {
                 .name("Test Family")
                 .startTms(LocalDateTime.now().plusDays(1)) // Not yet available
                 .endTms(LocalDateTime.now().plusDays(10))
-                .profile(profile)
                 .build();
 
         Product product = Product.builder()
@@ -236,20 +223,17 @@ class OrderServiceTest {
 
     @Test
     void createOrder_WhenUserLacksRequiredProfile_ShouldThrowException() {
-        Profile requiredProfile = Profile.builder()
-                .id("PROFILE001")
-                .name("Premium")
-                .build();
-
-        Profile userProfile = Profile.builder()
-                .id("PROFILE002")
-                .name("Basic")
+        Project otherProject = Project.builder().id("PRJ002").build();
+        ProjectGroup otherProjectGroup = ProjectGroup.builder().id("PG002").project(otherProject).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(otherProjectGroup)
+                .role(UserProjectGroupRole.MONITOR)
                 .build();
 
         User user = User.builder()
                 .id("USER001")
                 .email("test@test.com")
-                .profiles(Set.of(userProfile))
+                .groupRoles(Set.of(groupRole))
                 .build();
 
         FamilyProduct family = FamilyProduct.builder()
@@ -257,7 +241,8 @@ class OrderServiceTest {
                 .name("Test Family")
                 .startTms(LocalDateTime.now().minusDays(1))
                 .endTms(LocalDateTime.now().plusDays(10))
-                .profile(requiredProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -280,20 +265,21 @@ class OrderServiceTest {
         BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> orderService.createOrder("USER001", List.of(orderProduct)));
         assertTrue(exception.getMessage().contains("don't have access"));
-        assertTrue(exception.getMessage().contains("Required profile: Premium"));
     }
 
     @Test
     void createOrder_WhenUserHasRequiredProfileAndTimeValid_ShouldCreateOrder() {
-        Profile profile = Profile.builder()
-                .id("PROFILE001")
-                .name("Premium")
+        Project project = Project.builder().id("PRJ001").build();
+        ProjectGroup projectGroup = ProjectGroup.builder().id("PG001").project(project).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(projectGroup)
+                .role(UserProjectGroupRole.MONITOR)
                 .build();
 
         User user = User.builder()
                 .id("USER001")
                 .email("test@test.com")
-                .profiles(Set.of(profile))
+                .groupRoles(Set.of(groupRole))
                 .build();
 
         FamilyProduct family = FamilyProduct.builder()
@@ -301,7 +287,8 @@ class OrderServiceTest {
                 .name("Test Family")
                 .startTms(LocalDateTime.now().minusDays(1))
                 .endTms(LocalDateTime.now().plusDays(10))
-                .profile(profile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()

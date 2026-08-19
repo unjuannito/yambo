@@ -40,10 +40,6 @@ public class FamilyProduct {
     @Enumerated(EnumType.ORDINAL)
     private FamilyProductStatus status = FamilyProductStatus.OPEN;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id", nullable = false, unique = true)
-    private Profile profile;
-
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "family_product_project",

@@ -14,7 +14,6 @@ export interface FamilyProduct {
   endTms: string;
   status?: string;
   active?: boolean;
-  profileId?: string | null;
   projectIds?: string[];
   roleAccess?: RoleAccess[];
 }
@@ -40,8 +39,7 @@ export class FamilyProductService extends ApiService {
     page = 0,
     size = 50,
     name?: string,
-    active?: boolean,
-    profileId?: string
+    active?: boolean
   ): Promise<{ content: FamilyProduct[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -49,7 +47,6 @@ export class FamilyProductService extends ApiService {
     });
     if (name) params.append('name', name);
     if (active !== undefined) params.append('active', active.toString());
-    if (profileId) params.append('profileId', profileId);
 
     return await this.get(`/family-products?${params.toString()}`);
   }

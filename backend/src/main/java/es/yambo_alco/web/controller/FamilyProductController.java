@@ -63,14 +63,13 @@ public class FamilyProductController {
     public ResponseEntity<Page<FamilyProductResponse>> listFamilyProducts(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Boolean active,
-            @RequestParam(required = false) String profileId,
             Pageable pageable) {
         boolean isFamilyAdmin = permissionCheck.hasPermission(PermissionResource.FAMILY_PRODUCT, PermissionAction.UPDATE);
         var user = authService.getCurrentUser(true);
 
         Page<FamilyProduct> familyProducts;
         if (isFamilyAdmin) {
-            familyProducts = familyProductService.listFamilyProducts(name, active, profileId, null, pageable);
+            familyProducts = familyProductService.listFamilyProducts(name, active, pageable);
         } else {
             // Usar el nuevo filtro por proyecto+rol
             familyProducts = familyProductService.listAccessibleFamilyProducts(name, active, user, pageable);
@@ -107,15 +106,6 @@ public class FamilyProductController {
     public ResponseEntity<Void> deleteFamilyProduct(@PathVariable String id) {
         familyProductService.deleteFamilyProduct(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/profile")
-    @PreAuthorize("@permissionCheck.hasPermission('family_product', 'update')")
-    public ResponseEntity<FamilyProductResponse> assignProfile(
-            @PathVariable String id,
-            @Valid @RequestBody AssignProfileRequest request) {
-        FamilyProduct familyProduct = familyProductService.assignProfileToFamily(id, request.getProfileId());
-        return ResponseEntity.ok(new FamilyProductResponse(familyProduct));
     }
 
     @PutMapping("/{id}/projects")
@@ -178,12 +168,6 @@ public class FamilyProductController {
     }
 
     @Data
-    public static class AssignProfileRequest {
-        @NotBlank(message = "Profile ID cannot be empty")
-        private String profileId;
-    }
-
-    @Data
     public static class AssignProjectsRequest {
         @NotEmpty(message = "Project IDs cannot be empty")
         private Set<String> projectIds;
@@ -208,7 +192,6 @@ public class FamilyProductController {
         private LocalDateTime startTms;
         private LocalDateTime endTms;
         private FamilyProductStatus status;
-        private String profileId;
         private Set<String> projectIds;
         private Set<RoleAccessResponse> roleAccess;
         private boolean active;
@@ -219,9 +202,6 @@ public class FamilyProductController {
             this.startTms = familyProduct.getStartTms();
             this.endTms = familyProduct.getEndTms();
             this.status = familyProduct.getStatus();
-            this.profileId = familyProduct.getProfile() != null
-                    ? familyProduct.getProfile().getId()
-                    : null;
             this.projectIds = familyProduct.getProjects() != null
                     ? familyProduct.getProjects().stream()
                     .map(p -> p.getId())

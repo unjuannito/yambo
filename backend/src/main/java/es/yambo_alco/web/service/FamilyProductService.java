@@ -4,14 +4,12 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.FamilyProductRoleAccess;
-import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
-import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.spec.FamilyProductSpecifications;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +33,6 @@ import java.util.stream.Collectors;
 public class FamilyProductService {
 
     private final FamilyProductRepository familyProductRepository;
-    private final ProfileRepository profileRepository;
     private final ProjectRepository projectRepository;
     private final OrderService orderService;
     private final BatchEmailService batchEmailService;
@@ -56,15 +52,12 @@ public class FamilyProductService {
             throw new BadRequestException("Start date must be before end date");
         }
 
-        // TODO: Fase 9 - eliminar creacion de perfil automatico
-        Profile profile = createProfileForFamily(name);
         Set<Project> projects = resolveProjects(projectIds);
 
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .name(name)
                 .startTms(startTms)
                 .endTms(endTms)
-                .profile(profile)
                 .projects(projects)
                 .roleAccess(roleAccess != null ? roleAccess : new HashSet<>())
                 .build();
@@ -77,8 +70,7 @@ public class FamilyProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Family product not found"));
     }
 
-    public Page<FamilyProduct> listFamilyProducts(String name, Boolean active, String profileId,
-            Set<String> userProfileIds, @NonNull Pageable pageable) {
+    public Page<FamilyProduct> listFamilyProducts(String name, Boolean active, @NonNull Pageable pageable) {
         Specification<FamilyProduct> spec = Specification.where(null);
 
         if (name != null) {
@@ -90,12 +82,6 @@ public class FamilyProductService {
             } else {
                 spec = spec.and(FamilyProductSpecifications.expired());
             }
-        }
-        if (profileId != null) {
-            spec = spec.and(FamilyProductSpecifications.hasProfileId(profileId));
-        }
-        if (userProfileIds != null) {
-            spec = spec.and(FamilyProductSpecifications.hasAnyProfile(userProfileIds));
         }
 
         return familyProductRepository.findAll(spec, pageable);
@@ -163,9 +149,6 @@ public class FamilyProductService {
                 throw new BadRequestException("Family product name already exists");
             }
             familyProduct.setName(name.trim());
-            if (familyProduct.getProfile() != null) {
-                familyProduct.getProfile().setName(name.trim());
-            }
         }
 
         if (startTms != null) {
@@ -200,15 +183,6 @@ public class FamilyProductService {
     }
 
     @Transactional
-    public FamilyProduct assignProfileToFamily(@NonNull String familyId, @NonNull String profileId) {
-        FamilyProduct familyProduct = getFamilyProductById(familyId);
-        Profile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile not found: " + profileId));
-        familyProduct.setProfile(profile);
-        return familyProductRepository.save(familyProduct);
-    }
-
-    @Transactional
     public FamilyProduct assignProjectsToFamily(@NonNull String familyId, @NonNull Set<String> projectIds) {
         FamilyProduct familyProduct = getFamilyProductById(familyId);
         familyProduct.setProjects(resolveProjects(projectIds));
@@ -220,14 +194,6 @@ public class FamilyProductService {
         FamilyProduct familyProduct = getFamilyProductById(familyId);
         familyProduct.setRoleAccess(roleAccess);
         return familyProductRepository.save(familyProduct);
-    }
-
-    private Profile createProfileForFamily(String familyName) {
-        Profile profile = Profile.builder()
-                .name(familyName)
-                .permissions(Set.of())
-                .build();
-        return profileRepository.save(profile);
     }
 
     private Set<Project> resolveProjects(Set<String> projectIds) {
@@ -249,11 +215,6 @@ public class FamilyProductService {
 
     public List<FamilyProduct> getExpiredFamilyProducts() {
         Specification<FamilyProduct> spec = FamilyProductSpecifications.expired();
-        return familyProductRepository.findAll(spec);
-    }
-
-    public List<FamilyProduct> getFamilyProductsByProfile(@NonNull String profileId) {
-        Specification<FamilyProduct> spec = FamilyProductSpecifications.hasProfileId(profileId);
         return familyProductRepository.findAll(spec);
     }
 

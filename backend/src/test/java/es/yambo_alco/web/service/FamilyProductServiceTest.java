@@ -3,14 +3,12 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
-import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
 
 import es.yambo_alco.web.service.FamilyProductService.FamilyProductUpdateResult;
 import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
-import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,9 +31,6 @@ class FamilyProductServiceTest {
 
     @Mock
     private FamilyProductRepository familyProductRepository;
-
-    @Mock
-    private ProfileRepository profileRepository;
 
     @Mock
     private ProjectRepository projectRepository;
@@ -68,11 +63,6 @@ class FamilyProductServiceTest {
         Project project = Project.builder().id("PRJ001").build();
 
         when(familyProductRepository.existsByName("Drop")).thenReturn(false);
-                when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> {
-                        Profile p = invocation.getArgument(0);
-                        p.setId("BASIC");
-                        return p;
-                });
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(familyProductRepository.save(any(FamilyProduct.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -87,8 +77,6 @@ class FamilyProductServiceTest {
         assertEquals("Drop", result.getName());
         assertEquals(start, result.getStartTms());
         assertEquals(end, result.getEndTms());
-                assertNotNull(result.getProfile());
-                assertEquals("BASIC", result.getProfile().getId());
         assertEquals(1, result.getProjects().size());
         verify(familyProductRepository).save(any(FamilyProduct.class));
     }
