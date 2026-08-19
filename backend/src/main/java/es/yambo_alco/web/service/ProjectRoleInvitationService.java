@@ -16,10 +16,9 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ParentInvitationService {
+public class ProjectRoleInvitationService {
 
-    private final ParentInvitationRepository parentInvitationRepository;
-    private final FamilyProductRepository familyProductRepository;
+    private final ProjectRoleInvitationRepository projectRoleInvitationRepository;
     private final ProjectGroupRepository projectGroupRepository;
     private final UserProjectGroupRepository userProjectGroupRepository;
     private final UserRepository userRepository;
@@ -28,30 +27,31 @@ public class ParentInvitationService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
-    public ParentInvitation createInvitation(String familyProductId, String createdBy,
-                                              String email, LocalDateTime expiresAt) {
-        FamilyProduct product = familyProductRepository.findById(familyProductId)
-                .orElseThrow(() -> new ResourceNotFoundException("Family product not found"));
+    public ProjectRoleInvitation createInvitation(String projectId, UserProjectGroupRole role,
+                                                   String createdBy, String email, LocalDateTime expiresAt) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         String token = generateToken();
         LocalDateTime now = LocalDateTime.now();
 
-        ParentInvitation inv = ParentInvitation.builder()
+        ProjectRoleInvitation inv = ProjectRoleInvitation.builder()
                 .token(token)
-                .familyProductId(familyProductId)
+                .projectId(project.getId())
+                .role(role)
                 .email(email != null ? email.toLowerCase().trim() : null)
                 .createdBy(createdBy)
                 .createdAt(now)
                 .expiresAt(expiresAt)
                 .build();
 
-        return parentInvitationRepository.save(inv);
+        return projectRoleInvitationRepository.save(inv);
     }
 
     @Transactional
     public void acceptInvitation(String token, User currentUser) {
-        ParentInvitation invitation = parentInvitationRepository.findByToken(token)
-                .orElseThrow(() -> new ResourceNotFoundException("Parent invitation not found"));
+        ProjectRoleInvitation invitation = projectRoleInvitationRepository.findByToken(token)
+                .orElseThrow(() -> new ResourceNotFoundException("Project role invitation not found"));
 
         if (invitation.isUsed()) {
             throw new BadRequestException("This invitation has already been used");
@@ -61,71 +61,59 @@ public class ParentInvitationService {
             throw new BadRequestException("This invitation has expired");
         }
 
-        // Get the family product's roleAccess to find which projects need PARENT
-        FamilyProduct product = familyProductRepository.findById(invitation.getFamilyProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Family product not found"));
+        ProjectGroup projectGroup = getOrCreateProjectLevelGroup(invitation.getProjectId());
 
-        if (product.getRoleAccess() == null || product.getRoleAccess().isEmpty()) {
-            throw new BadRequestException("This family product has no role access configured");
-        }
+        userService.assignGroupRole(currentUser.getId(), projectGroup.getId(), invitation.getRole());
 
-        // Assign PARENT role for each project that has PARENT in its roleAccess
-        boolean assigned = false;
-        for (FamilyProductRoleAccess ra : product.getRoleAccess()) {
-            if (ra.getRole() == UserProjectGroupRole.PARENT) {
-                ProjectGroup projectGroup = projectGroupRepository
-                        .findByProjectIdAndNameIsNull(ra.getProjectId())
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Project-level group not found for project: " + ra.getProjectId()));
-
-                userService.assignGroupRole(currentUser.getId(), projectGroup.getId(),
-                        UserProjectGroupRole.PARENT);
-                assigned = true;
-            }
-        }
-
-        if (!assigned) {
-            throw new BadRequestException("This family product does not allow parent access");
-        }
-
-        // Mark invitation as used
         invitation.setUsedByUserId(currentUser.getId());
         invitation.setUsedAt(LocalDateTime.now());
-        parentInvitationRepository.save(invitation);
+        projectRoleInvitationRepository.save(invitation);
     }
 
-    public List<ParentInvitation> getInvitations(String familyProductId) {
-        if (familyProductId != null && !familyProductId.isBlank()) {
-            return parentInvitationRepository.findByFamilyProductId(familyProductId);
+    private ProjectGroup getOrCreateProjectLevelGroup(String projectId) {
+        return projectGroupRepository.findByProjectIdAndNameIsNull(projectId)
+                .orElseGet(() -> {
+                    Project project = projectRepository.findById(projectId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                    ProjectGroup group = new ProjectGroup();
+                    group.setName(null);
+                    group.setProject(project);
+                    return projectGroupRepository.save(group);
+                });
+    }
+
+    public List<ProjectRoleInvitation> getInvitations(String projectId) {
+        if (projectId != null && !projectId.isBlank()) {
+            return projectRoleInvitationRepository.findByProjectId(projectId);
         }
-        return parentInvitationRepository.findAll();
+        return projectRoleInvitationRepository.findAll();
     }
 
     @Transactional
     public void deleteInvitation(Long id) {
-        ParentInvitation invitation = parentInvitationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Parent invitation not found"));
+        ProjectRoleInvitation invitation = projectRoleInvitationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project role invitation not found"));
 
         if (invitation.isUsed()) {
             throw new BadRequestException("Cannot delete a used invitation");
         }
 
-        parentInvitationRepository.delete(invitation);
+        projectRoleInvitationRepository.delete(invitation);
     }
 
     private String generateToken() {
         byte[] bytes = new byte[32];
         secureRandom.nextBytes(bytes);
-        return "parent_" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return "prj_role_" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     public String buildInvitationLink(String token, String domain) {
-        return domain + "/parent-invitation/" + token;
+        return domain + "/project-role-invitation/" + token;
     }
 
-    public String getFamilyProductName(String familyProductId) {
-        return familyProductRepository.findById(familyProductId)
-                .map(FamilyProduct::getName)
+    public String getProjectName(String projectId) {
+        return projectRepository.findById(projectId)
+                .map(Project::getName)
                 .orElse("Unknown");
     }
 

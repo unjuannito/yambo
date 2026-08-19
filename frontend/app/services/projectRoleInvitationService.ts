@@ -1,9 +1,11 @@
 import { ApiService } from "./apiService";
+import type { GroupRole } from "~/types/role";
 
-export interface ParentInvitation {
+export interface ProjectRoleInvitation {
     id: string;
     token: string;
-    familyProductId: string;
+    projectId: string;
+    role: GroupRole;
     email: string | null;
     createdBy: string;
     createdAt: string;
@@ -15,57 +17,59 @@ export interface ParentInvitation {
     invitationLink: string;
 }
 
-export interface CreateParentInvitationRequest {
-    familyProductId: string;
+export interface CreateProjectRoleInvitationRequest {
+    projectId: string;
+    role: GroupRole;
     email?: string;
     expiresAt?: string;
 }
 
-export class ParentInvitationService extends ApiService {
+export class ProjectRoleInvitationService extends ApiService {
     public async createInvitation(
-        data: CreateParentInvitationRequest,
-    ): Promise<ParentInvitation> {
-        return await this.post<ParentInvitation, CreateParentInvitationRequest>(
-            "/parent-invitations",
+        data: CreateProjectRoleInvitationRequest,
+    ): Promise<ProjectRoleInvitation> {
+        return await this.post<ProjectRoleInvitation, CreateProjectRoleInvitationRequest>(
+            "/project-role-invitations",
             data,
         );
     }
 
     public async getInvitations(
-        familyProductId?: string,
-    ): Promise<ParentInvitation[]> {
+        projectId?: string,
+    ): Promise<ProjectRoleInvitation[]> {
         const params = new URLSearchParams();
-        if (familyProductId) params.append("familyProductId", familyProductId);
+        if (projectId) params.append("projectId", projectId);
         const query = params.toString();
-        return await this.get<ParentInvitation[]>(
-            `/parent-invitations${query ? `?${query}` : ""}`,
+        return await this.get<ProjectRoleInvitation[]>(
+            `/project-role-invitations${query ? `?${query}` : ""}`,
         );
     }
 
     public async acceptInvitation(token: string): Promise<string> {
         return await this.post<string, Record<string, never>>(
-            `/parent-invitations/${token}/accept`,
+            `/project-role-invitations/${token}/accept`,
             {},
         );
     }
 
     public async getInvitationInfo(token: string): Promise<{
-        familyProductId: string;
-        familyProductName: string;
+        projectId: string;
+        projectName: string;
+        role: GroupRole;
         used: boolean;
         expired: boolean;
         email: string | null;
     }> {
-        return await this.get(`/parent-invitations/${token}`);
+        return await this.get(`/project-role-invitations/${token}`);
     }
 
     public async deleteInvitation(id: string): Promise<string> {
-        return await this.delete<string>(`/parent-invitations/${id}`);
+        return await this.delete<string>(`/project-role-invitations/${id}`);
     }
 
     public async revokeAllParentRolesByProject(projectId: string): Promise<string> {
         return await this.delete<string>(
-            `/parent-invitations/by-project/${projectId}/roles`,
+            `/project-role-invitations/by-project/${projectId}/roles`,
         );
     }
 
@@ -74,14 +78,14 @@ export class ParentInvitationService extends ApiService {
         projectName: string;
         parents: { userId: string; name: string; email: string }[];
     }[]> {
-        return await this.get(`/parent-invitations/parents`);
+        return await this.get(`/project-role-invitations/parents`);
     }
 
     public async removeParentRole(projectId: string, userId: string): Promise<string> {
         return await this.delete<string>(
-            `/parent-invitations/parents/${projectId}/${userId}`,
+            `/project-role-invitations/parents/${projectId}/${userId}`,
         );
     }
 }
 
-export const parentInvitationService = new ParentInvitationService();
+export const projectRoleInvitationService = new ProjectRoleInvitationService();

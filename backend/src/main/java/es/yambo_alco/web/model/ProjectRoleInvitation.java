@@ -1,5 +1,6 @@
 package es.yambo_alco.web.model;
 
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,8 +14,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "parent_invitation")
-public class ParentInvitation {
+@Table(name = "project_role_invitation")
+public class ProjectRoleInvitation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,8 +24,12 @@ public class ParentInvitation {
     @Column(nullable = false, unique = true, length = 64)
     private String token;
 
-    @Column(name = "family_product_id", nullable = false, length = 8)
-    private String familyProductId;
+    @Column(name = "project_id", nullable = false, length = 8)
+    private String projectId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserProjectGroupRole role;
 
     @Column(length = 320)
     private String email;

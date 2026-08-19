@@ -97,5 +97,6 @@
     <include file="db/changelog/changes/87-activity-waitlist.xml"/>
     <include file="db/changelog/changes/88-family-product-role-access.xml"/>
     <include file="db/changelog/changes/89-parent-invitation.xml"/>
+    <include file="db/changelog/changes/90-project-role-invitation.xml"/>
 
 </databaseChangeLog>

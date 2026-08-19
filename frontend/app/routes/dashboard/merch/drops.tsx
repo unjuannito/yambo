@@ -16,10 +16,9 @@ import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { projectService, type Project } from "~/services/projectService";
-import { parentInvitationService } from "~/services/parentInvitationService";
 import { getErrorMessage } from "~/types/error";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faUserPlus, faLink, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faBell } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
@@ -68,11 +67,6 @@ export default function MerchFamilies() {
     const [watchers, setWatchers] = useState<DropWatcher[]>([]);
     const [watchersLoading, setWatchersLoading] = useState(false);
 
-    // Parent invitation modal state
-    const [parentInviteDrop, setParentInviteDrop] = useState<FamilyProduct | null>(null);
-    const [parentInviteUrl, setParentInviteUrl] = useState<string>("");
-    const [parentInviteSaving, setParentInviteSaving] = useState(false);
-    const [parentInviteCopied, setParentInviteCopied] = useState(false);
     const [dropToDelete, setDropToDelete] = useState<FamilyProduct | null>(null);
 
     const openWatchers = async (drop: FamilyProduct) => {
@@ -91,46 +85,6 @@ export default function MerchFamilies() {
     const closeWatchers = () => {
         setWatchersDrop(null);
         setWatchers([]);
-    };
-
-    const openParentInvite = async (drop: FamilyProduct) => {
-        setParentInviteDrop(drop);
-        setParentInviteUrl("");
-        setParentInviteCopied(false);
-        setParentInviteSaving(false);
-    };
-
-    const generateParentInvite = async () => {
-        if (!parentInviteDrop) return;
-        try {
-            setParentInviteSaving(true);
-            const result = await parentInvitationService.createInvitation({
-                familyProductId: parentInviteDrop.id,
-            });
-            setParentInviteUrl(result.invitationLink);
-        } catch (err) {
-            toast.error(getErrorMessage(err, "Error al generar el enlace"));
-        } finally {
-            setParentInviteSaving(false);
-        }
-    };
-
-    const copyParentInvite = async () => {
-        if (!parentInviteUrl) return;
-        try {
-            await navigator.clipboard.writeText(parentInviteUrl);
-            setParentInviteCopied(true);
-            toast.success("Enlace copiado al portapapeles");
-            setTimeout(() => setParentInviteCopied(false), 3000);
-        } catch {
-            toast.error("No se pudo copiar el enlace");
-        }
-    };
-
-    const closeParentInvite = () => {
-        setParentInviteDrop(null);
-        setParentInviteUrl("");
-        setParentInviteCopied(false);
     };
 
     const loadData = useCallback(async () => {
@@ -353,17 +307,6 @@ export default function MerchFamilies() {
                     )}
                     {canUpdate && (
                         <ButtonComponent
-                            variant="neutral"
-                            size="sm"
-                            onClick={() => openParentInvite(drop)}
-                            title="Generar enlace para padres"
-                            aria-label="Generar enlace para padres"
-                        >
-                            <FontAwesomeIcon icon={faUserPlus} className="w-4 h-4" />
-                        </ButtonComponent>
-                    )}
-                    {canUpdate && (
-                        <ButtonComponent
                             variant="primary"
                             size="sm"
                             onClick={() => startEdit(drop)}
@@ -570,56 +513,6 @@ export default function MerchFamilies() {
                                 setWatchers((prev) => prev.filter((w) => w.email !== email));
                             }}
                         />
-                    )}
-                </Modal>
-
-                {/* Parent invitation modal */}
-                <Modal
-                    isOpen={!!parentInviteDrop}
-                    onClose={closeParentInvite}
-                    title={parentInviteDrop ? `Invitación para padres - ${parentInviteDrop.name}` : "Invitación para padres"}
-                    size="sm"
-                >
-                    {parentInviteDrop && (
-                        <div className="flex flex-col gap-4">
-                            <p className="text-sm text-gray-600">
-                                Genera un enlace para que padres/madres puedan acceder a este drop y hacer pedidos para sus hijos.
-                            </p>
-
-                            {!parentInviteUrl ? (
-                                <ButtonComponent
-                                    variant="primary"
-                                    onClick={generateParentInvite}
-                                    isLoading={parentInviteSaving}
-                                    disabled={parentInviteSaving}
-                                    className="w-full"
-                                >
-                                    <FontAwesomeIcon icon={faLink} className="mr-2" />
-                                    Generar enlace de invitación
-                                </ButtonComponent>
-                            ) : (
-                                <div className="space-y-3">
-                                    <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-3">
-                                        <p className="text-xs text-yambo-green-600 font-medium mb-1">Enlace de invitación</p>
-                                        <p className="text-sm text-yambo-green-800 break-all font-mono">
-                                            {parentInviteUrl}
-                                        </p>
-                                    </div>
-                                    <ButtonComponent
-                                        variant="primary"
-                                        onClick={copyParentInvite}
-                                        className="w-full"
-                                    >
-                                        <FontAwesomeIcon icon={faCopy} className="mr-2" />
-                                        {parentInviteCopied ? "¡Copiado!" : "Copiar enlace"}
-                                    </ButtonComponent>
-                                    <p className="text-xs text-gray-400 text-center">
-                                        Comparte este enlace con los padres para que puedan acceder al drop.
-                                    </p>
-                                </div>
-                            )}
-
-                        </div>
                     )}
                 </Modal>
 

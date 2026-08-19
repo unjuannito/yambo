@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "~/hooks/useAuth";
-import { parentInvitationService } from "~/services/parentInvitationService";
+import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
+import type { GroupRole } from "~/types/role";
 import { getErrorMessage } from "~/types/error";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -10,14 +11,21 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserCheck, faUserPlus, faLinkSlash, faCheck, faRightToBracket } from "@fortawesome/free-solid-svg-icons";
 
 interface InvitationInfo {
-    familyProductId: string;
-    familyProductName: string;
+    projectId: string;
+    projectName: string;
+    role: GroupRole;
     used: boolean;
     expired: boolean;
     email: string | null;
 }
 
-export default function ParentInvitationAccept() {
+const ROLE_LABELS: Record<GroupRole, string> = {
+    PARENT: "padre/madre",
+    COORDINATOR: "coordinador/a",
+    MONITOR: "monitor/a",
+};
+
+export default function ProjectRoleInvitationAccept() {
     const { token } = useParams();
     const { t } = useTranslation();
     const { user } = useAuth();
@@ -35,7 +43,7 @@ export default function ParentInvitationAccept() {
         try {
             setLoading(true);
             setError(null);
-            const data = await parentInvitationService.getInvitationInfo(token);
+            const data = await projectRoleInvitationService.getInvitationInfo(token);
             setInfo(data);
         } catch (err) {
             setError(getErrorMessage(err, "No se pudo cargar la invitación"));
@@ -53,7 +61,7 @@ export default function ParentInvitationAccept() {
         try {
             setAccepting(true);
             setAcceptError(null);
-            await parentInvitationService.acceptInvitation(token);
+            await projectRoleInvitationService.acceptInvitation(token);
             setAccepted(true);
         } catch (err) {
             setAcceptError(getErrorMessage(err, "No se pudo aceptar la invitación"));
@@ -89,6 +97,8 @@ export default function ParentInvitationAccept() {
         );
     }
 
+    const roleLabel = ROLE_LABELS[info.role] ?? info.role;
+
     if (info.used || info.expired) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white">
@@ -123,10 +133,10 @@ export default function ParentInvitationAccept() {
                         ¡Invitación aceptada!
                     </h1>
                     <p className="text-gray-500 mb-2">
-                        Ya tienes acceso como padre/madre a <strong>{info.familyProductName}</strong>.
+                        Ya tienes acceso como {roleLabel} en <strong>{info.projectName}</strong>.
                     </p>
                     <p className="text-gray-400 text-sm mb-6">
-                        Ya puedes pedir merchandising para tus hijos.
+                        Ya puedes acceder a los contenidos disponibles para este proyecto.
                     </p>
                     <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio")}>
                         Ir a mi espacio
@@ -144,16 +154,16 @@ export default function ParentInvitationAccept() {
                         <FontAwesomeIcon icon={faUserPlus} className="text-yambo-green-600 text-2xl" />
                     </div>
                     <h1 className="text-2xl font-bold font-display text-yambo-black mb-2">
-                        Invitación para padres
+                        Invitación de proyecto
                     </h1>
                     <p className="text-gray-500">
-                        Has sido invitado como padre/madre para acceder a:
+                        Has sido invitado como {roleLabel} para el proyecto:
                     </p>
                 </div>
 
                 <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 mb-6">
                     <p className="text-lg font-bold text-yambo-green-800 text-center">
-                        {info.familyProductName}
+                        {info.projectName}
                     </p>
                     {info.email && (
                         <p className="text-sm text-yambo-green-600 text-center mt-1">
@@ -167,13 +177,13 @@ export default function ParentInvitationAccept() {
                         <p className="text-sm text-gray-500 text-center mb-4">
                             Inicia sesión o regístrate para aceptar la invitación.
                         </p>
-                        <Link to={`/login?redirect=/parent-invitation/${token}`}>
+                        <Link to={`/login?redirect=/project-role-invitation/${token}`}>
                             <ButtonComponent variant="primary" className="w-full">
                                 <FontAwesomeIcon icon={faRightToBracket} className="mr-2" />
                                 Iniciar sesión
                             </ButtonComponent>
                         </Link>
-                        <Link to={`/register?redirect=/parent-invitation/${token}`}>
+                        <Link to={`/register?redirect=/project-role-invitation/${token}`}>
                             <ButtonComponent variant="neutral" className="w-full">
                                 <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
                                 Registrarse

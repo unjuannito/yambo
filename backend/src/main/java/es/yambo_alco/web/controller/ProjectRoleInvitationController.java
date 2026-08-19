@@ -1,13 +1,14 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.ParentInvitation;
+import es.yambo_alco.web.model.ProjectRoleInvitation;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
-import es.yambo_alco.web.service.ParentInvitationService;
+import es.yambo_alco.web.service.ProjectRoleInvitationService;
 import es.yambo_alco.web.service.SettingsService;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -22,29 +23,30 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/parent-invitations")
+@RequestMapping("/project-role-invitations")
 @RequiredArgsConstructor
-public class ParentInvitationController {
+public class ProjectRoleInvitationController {
 
-    private final ParentInvitationService parentInvitationService;
+    private final ProjectRoleInvitationService projectRoleInvitationService;
     private final AuthService authService;
     private final SettingsService settingsService;
 
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('invitation', 'create')")
-    public ResponseEntity<ParentInvitationResponse> createInvitation(
-            @RequestBody CreateParentInvitationRequest req,
+    public ResponseEntity<ProjectRoleInvitationResponse> createInvitation(
+            @RequestBody CreateProjectRoleInvitationRequest req,
             Authentication authentication) {
         User user = authService.getCurrentUser(true);
 
-        ParentInvitation inv = parentInvitationService.createInvitation(
-                req.getFamilyProductId(),
+        ProjectRoleInvitation inv = projectRoleInvitationService.createInvitation(
+                req.getProjectId(),
+                req.getRole(),
                 user.getId(),
                 req.getEmail(),
                 req.getExpiresAt());
 
         String domain = settingsService.getDomain();
-        String link = parentInvitationService.buildInvitationLink(inv.getToken(), domain);
+        String link = projectRoleInvitationService.buildInvitationLink(inv.getToken(), domain);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(buildResponse(inv, link));
@@ -53,24 +55,25 @@ public class ParentInvitationController {
     @PostMapping("/{token}/accept")
     public ResponseEntity<String> acceptInvitation(@PathVariable String token) {
         User currentUser = authService.getCurrentUser(true);
-        parentInvitationService.acceptInvitation(token, currentUser);
-        return ResponseEntity.ok("Parent invitation accepted successfully");
+        projectRoleInvitationService.acceptInvitation(token, currentUser);
+        return ResponseEntity.ok("Project role invitation accepted successfully");
     }
 
     @GetMapping("/{token}")
-    public ResponseEntity<ParentInvitationInfo> getInvitationInfo(@PathVariable String token) {
+    public ResponseEntity<ProjectRoleInvitationInfo> getInvitationInfo(@PathVariable String token) {
         // Public endpoint to get basic info about an invitation (for the acceptance page)
-        var invitations = parentInvitationService.getInvitations(null);
-        ParentInvitation inv = invitations.stream()
+        var invitations = projectRoleInvitationService.getInvitations(null);
+        ProjectRoleInvitation inv = invitations.stream()
                 .filter(i -> i.getToken().equals(token))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Parent invitation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project role invitation not found"));
 
-        String familyProductName = parentInvitationService.getFamilyProductName(inv.getFamilyProductId());
+        String projectName = projectRoleInvitationService.getProjectName(inv.getProjectId());
 
-        return ResponseEntity.ok(new ParentInvitationInfo(
-                inv.getFamilyProductId(),
-                familyProductName,
+        return ResponseEntity.ok(new ProjectRoleInvitationInfo(
+                inv.getProjectId(),
+                projectName,
+                inv.getRole(),
                 inv.isUsed(),
                 inv.isExpired(),
                 inv.getEmail()));
@@ -78,13 +81,13 @@ public class ParentInvitationController {
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('invitation', 'read')")
-    public ResponseEntity<List<ParentInvitationResponse>> getInvitations(
-            @RequestParam(required = false) String familyProductId) {
-        List<ParentInvitation> invitations = parentInvitationService.getInvitations(familyProductId);
+    public ResponseEntity<List<ProjectRoleInvitationResponse>> getInvitations(
+            @RequestParam(required = false) String projectId) {
+        List<ProjectRoleInvitation> invitations = projectRoleInvitationService.getInvitations(projectId);
         String domain = settingsService.getDomain();
-        List<ParentInvitationResponse> response = invitations.stream()
+        List<ProjectRoleInvitationResponse> response = invitations.stream()
                 .map(inv -> {
-                    String link = parentInvitationService.buildInvitationLink(inv.getToken(), domain);
+                    String link = projectRoleInvitationService.buildInvitationLink(inv.getToken(), domain);
                     return buildResponse(inv, link);
                 })
                 .collect(Collectors.toList());
@@ -94,21 +97,21 @@ public class ParentInvitationController {
     @DeleteMapping("/{id}")
     @PreAuthorize("@permissionCheck.hasPermission('invitation', 'delete')")
     public ResponseEntity<String> deleteInvitation(@PathVariable Long id) {
-        parentInvitationService.deleteInvitation(id);
-        return ResponseEntity.ok("Parent invitation deleted successfully");
+        projectRoleInvitationService.deleteInvitation(id);
+        return ResponseEntity.ok("Project role invitation deleted successfully");
     }
 
     @DeleteMapping("/by-project/{projectId}/roles")
     @PreAuthorize("@permissionCheck.hasPermission('invitation', 'delete')")
     public ResponseEntity<String> revokeAllParentRolesByProject(@PathVariable String projectId) {
-        int count = parentInvitationService.revokeAllParentRolesByProject(projectId);
+        int count = projectRoleInvitationService.revokeAllParentRolesByProject(projectId);
         return ResponseEntity.ok("Revoked " + count + " parent role(s) from project successfully");
     }
 
     @GetMapping("/parents")
     public ResponseEntity<List<ProjectParentsResponse>> listParents() {
         User currentUser = authService.getCurrentUser(true);
-        var projectParents = parentInvitationService.listParentsByAccessibleProjects(currentUser);
+        var projectParents = projectRoleInvitationService.listParentsByAccessibleProjects(currentUser);
         List<ProjectParentsResponse> response = projectParents.stream()
                 .map(pp -> new ProjectParentsResponse(
                         pp.getProjectId(),
@@ -136,15 +139,16 @@ public class ParentInvitationController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Not authorized");
         }
 
-        parentInvitationService.removeParentRole(projectId, userId);
+        projectRoleInvitationService.removeParentRole(projectId, userId);
         return ResponseEntity.ok("Parent role removed successfully");
     }
 
-    private ParentInvitationResponse buildResponse(ParentInvitation inv, String invitationLink) {
-        return new ParentInvitationResponse(
+    private ProjectRoleInvitationResponse buildResponse(ProjectRoleInvitation inv, String invitationLink) {
+        return new ProjectRoleInvitationResponse(
                 inv.getId(),
                 inv.getToken(),
-                inv.getFamilyProductId(),
+                inv.getProjectId(),
+                inv.getRole(),
                 inv.getEmail(),
                 inv.getCreatedBy(),
                 inv.getCreatedAt(),
@@ -157,8 +161,11 @@ public class ParentInvitationController {
     }
 
     @Data
-    public static class CreateParentInvitationRequest {
-        private String familyProductId;
+    public static class CreateProjectRoleInvitationRequest {
+        @NotNull
+        private String projectId;
+        @NotNull
+        private UserProjectGroupRole role;
         @Email
         private String email;
         private LocalDateTime expiresAt;
@@ -166,10 +173,11 @@ public class ParentInvitationController {
 
     @Data
     @AllArgsConstructor
-    public static class ParentInvitationResponse {
+    public static class ProjectRoleInvitationResponse {
         private Long id;
         private String token;
-        private String familyProductId;
+        private String projectId;
+        private UserProjectGroupRole role;
         private String email;
         private String createdBy;
         private LocalDateTime createdAt;
@@ -183,9 +191,10 @@ public class ParentInvitationController {
 
     @Data
     @AllArgsConstructor
-    public static class ParentInvitationInfo {
-        private String familyProductId;
-        private String familyProductName;
+    public static class ProjectRoleInvitationInfo {
+        private String projectId;
+        private String projectName;
+        private UserProjectGroupRole role;
         private boolean used;
         private boolean expired;
         private String email;

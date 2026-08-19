@@ -10,10 +10,11 @@ import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { Modal } from "~/components/common/Modal";
+import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faMagnifyingGlass, faCrown, faUserTie } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faMagnifyingGlass, faCrown, faUserTie, faLink, faCopy } from "@fortawesome/free-solid-svg-icons";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 
 export default function ProjectPersonal() {
@@ -33,6 +34,12 @@ export default function ProjectPersonal() {
     const [addRole, setAddRole] = useState<GroupRole>("MONITOR");
     const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string; role: GroupRole } | null>(null);
     const [removing, setRemoving] = useState(false);
+
+    // Invite link mode
+    const [addMode, setAddMode] = useState<"existing" | "invite">("existing");
+    const [inviteUrl, setInviteUrl] = useState<string>("");
+    const [inviteSaving, setInviteSaving] = useState(false);
+    const [inviteCopied, setInviteCopied] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!projectId) return;
@@ -154,6 +161,37 @@ export default function ProjectPersonal() {
         setSearchResults([]);
         setSelectedUser(null);
         setAddRole("MONITOR");
+        setAddMode("existing");
+        setInviteUrl("");
+        setInviteCopied(false);
+    };
+
+    const generateInvite = async () => {
+        if (!projectId) return;
+        try {
+            setInviteSaving(true);
+            const result = await projectRoleInvitationService.createInvitation({
+                projectId,
+                role: addRole,
+            });
+            setInviteUrl(result.invitationLink);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al generar el enlace"));
+        } finally {
+            setInviteSaving(false);
+        }
+    };
+
+    const copyInvite = async () => {
+        if (!inviteUrl) return;
+        try {
+            await navigator.clipboard.writeText(inviteUrl);
+            setInviteCopied(true);
+            toast.success("Enlace copiado al portapapeles");
+            setTimeout(() => setInviteCopied(false), 3000);
+        } catch {
+            toast.error("No se pudo copiar el enlace");
+        }
     };
 
     if (loading) {
@@ -287,17 +325,41 @@ export default function ProjectPersonal() {
                     title="Añadir Personal"
                     size="md"
                     footer={
-                        <>
+                        addMode === "existing" ? (
+                            <>
+                                <ButtonComponent onClick={resetAdd} variant="neutral">
+                                    Cancelar
+                                </ButtonComponent>
+                                <ButtonComponent onClick={handleAdd} variant="primary" disabled={!selectedUser}>
+                                    Añadir
+                                </ButtonComponent>
+                            </>
+                        ) : (
                             <ButtonComponent onClick={resetAdd} variant="neutral">
-                                Cancelar
+                                Cerrar
                             </ButtonComponent>
-                            <ButtonComponent onClick={handleAdd} variant="primary" disabled={!selectedUser}>
-                                Añadir
-                            </ButtonComponent>
-                        </>
+                        )
                     }
                 >
                     <div className="flex flex-col gap-4">
+                        {/* Mode toggle */}
+                        <div className="flex gap-2 border-b border-gray-100 pb-3">
+                            <button
+                                onClick={() => setAddMode("existing")}
+                                className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${addMode === "existing" ? "bg-yambo-green-50 text-yambo-green-700" : "text-gray-400 hover:text-gray-600"}`}
+                            >
+                                Añadir existente
+                            </button>
+                            <button
+                                onClick={() => setAddMode("invite")}
+                                className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${addMode === "invite" ? "bg-yambo-green-50 text-yambo-green-700" : "text-gray-400 hover:text-gray-600"}`}
+                            >
+                                Generar enlace de invitación
+                            </button>
+                        </div>
+
+                        {addMode === "existing" ? (
+                        <>
                         {/* Search */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar usuario</label>
@@ -357,6 +419,47 @@ export default function ProjectPersonal() {
                                     <option value="COORDINATOR">Coordinador</option>
                                 </select>
                             </div>
+                        )}
+                        </>
+                        ) : (
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
+                                <select
+                                    value={addRole}
+                                    onChange={e => setAddRole(e.target.value as GroupRole)}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
+                                >
+                                    <option value="MONITOR">Monitor</option>
+                                    <option value="COORDINATOR">Coordinador</option>
+                                </select>
+                            </div>
+                            {!inviteUrl ? (
+                                <ButtonComponent
+                                    variant="primary"
+                                    onClick={generateInvite}
+                                    isLoading={inviteSaving}
+                                    disabled={inviteSaving}
+                                    className="w-full"
+                                >
+                                    <FontAwesomeIcon icon={faLink} className="mr-2" />
+                                    Generar enlace de invitación
+                                </ButtonComponent>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-3">
+                                        <p className="text-xs text-yambo-green-600 font-medium mb-1">Enlace de invitación</p>
+                                        <p className="text-sm text-yambo-green-800 break-all font-mono">
+                                            {inviteUrl}
+                                        </p>
+                                    </div>
+                                    <ButtonComponent variant="primary" onClick={copyInvite} className="w-full">
+                                        <FontAwesomeIcon icon={faCopy} className="mr-2" />
+                                        {inviteCopied ? "¡Copiado!" : "Copiar enlace"}
+                                    </ButtonComponent>
+                                </div>
+                            )}
+                        </div>
                         )}
                     </div>
                 </Modal>

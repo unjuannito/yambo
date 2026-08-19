@@ -12,7 +12,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { projectService, type Project, type ProjectGroup } from "~/services/projectService";
-import { parentInvitationService } from "~/services/parentInvitationService";
+import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
 import { useAuth } from "~/hooks/useAuth";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
@@ -225,7 +225,7 @@ export default function Projects() {
     const executeRevokeParents = async () => {
         if (!editing) return;
         try {
-            const result = await parentInvitationService.revokeAllParentRolesByProject(editing);
+            const result = await projectRoleInvitationService.revokeAllParentRolesByProject(editing);
             toast.success(result);
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar accesos de padres"));

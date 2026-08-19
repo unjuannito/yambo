@@ -2,14 +2,16 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
-import { parentInvitationService } from "~/services/parentInvitationService";
+import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
+import { Modal } from "~/components/common/Modal";
+import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserGroup, faUserSlash, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { faUserGroup, faUserSlash, faTrashCan, faLink, faCopy } from "@fortawesome/free-solid-svg-icons";
 
 interface ParentInfo {
     userId: string;
@@ -27,12 +29,18 @@ export default function ProjectPadres() {
     const [removing, setRemoving] = useState<string | null>(null);
     const [removeTarget, setRemoveTarget] = useState<{ userId: string; name: string } | null>(null);
 
+    // Invite link modal state
+    const [isInviteOpen, setIsInviteOpen] = useState(false);
+    const [inviteUrl, setInviteUrl] = useState<string>("");
+    const [inviteSaving, setInviteSaving] = useState(false);
+    const [inviteCopied, setInviteCopied] = useState(false);
+
     const loadParents = useCallback(async () => {
         if (!projectId) return;
         try {
             setLoading(true);
             setError(null);
-            const data = await parentInvitationService.listParents();
+            const data = await projectRoleInvitationService.listParents();
             const thisProject = data.find(p => p.projectId === projectId);
             if (thisProject) {
                 setProjectName(thisProject.projectName);
@@ -55,7 +63,7 @@ export default function ProjectPadres() {
         try {
             setRemoving(removeTarget.userId);
             setRemoveTarget(null);
-            await parentInvitationService.removeParentRole(projectId, removeTarget.userId);
+            await projectRoleInvitationService.removeParentRole(projectId, removeTarget.userId);
             toast.success(`${removeTarget.name} ya no tiene acceso como padre`);
             setParents(prev => prev.filter(p => p.userId !== removeTarget.userId));
         } catch (err) {
@@ -67,11 +75,51 @@ export default function ProjectPadres() {
 
     const [showRemoveAll, setShowRemoveAll] = useState(false);
 
+    const openInvite = () => {
+        setInviteUrl("");
+        setInviteCopied(false);
+        setIsInviteOpen(true);
+    };
+
+    const closeInvite = () => {
+        setIsInviteOpen(false);
+        setInviteUrl("");
+        setInviteCopied(false);
+    };
+
+    const generateInvite = async () => {
+        if (!projectId) return;
+        try {
+            setInviteSaving(true);
+            const result = await projectRoleInvitationService.createInvitation({
+                projectId,
+                role: "PARENT",
+            });
+            setInviteUrl(result.invitationLink);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al generar el enlace"));
+        } finally {
+            setInviteSaving(false);
+        }
+    };
+
+    const copyInvite = async () => {
+        if (!inviteUrl) return;
+        try {
+            await navigator.clipboard.writeText(inviteUrl);
+            setInviteCopied(true);
+            toast.success("Enlace copiado al portapapeles");
+            setTimeout(() => setInviteCopied(false), 3000);
+        } catch {
+            toast.error("No se pudo copiar el enlace");
+        }
+    };
+
     const handleRemoveAllConfirm = async () => {
         if (!projectId) return;
         try {
             setShowRemoveAll(false);
-            toast.success(await parentInvitationService.revokeAllParentRolesByProject(projectId));
+            toast.success(await projectRoleInvitationService.revokeAllParentRolesByProject(projectId));
             setParents([]);
         } catch (err) {
             toast.error(getErrorMessage(err, "Error al eliminar padres"));
@@ -94,8 +142,15 @@ export default function ProjectPadres() {
                         <FontAwesomeIcon icon={faUserGroup} className="text-2xl text-yambo-green-400" />
                     </div>
                     <h2 className="text-lg font-bold text-yambo-black mb-1">No hay padres asignados</h2>
-                    <p className="text-sm text-gray-400">Los padres aceptan invitaciones desde el enlace que se genera en cada familia.</p>
+                    <p className="text-sm text-gray-400 mb-4">Los padres aceptan acceso a través de un enlace de invitación.</p>
+                    <RequirePermission permission={{ obj: "invitation", action: "create" }} redirect={false}>
+                        <ButtonComponent variant="primary" onClick={openInvite}>
+                            <FontAwesomeIcon icon={faLink} className="mr-2" />
+                            Generar enlace de invitación
+                        </ButtonComponent>
+                    </RequirePermission>
                 </div>
+                {renderInviteModal()}
             </RequirePermission>
         );
     }
@@ -115,6 +170,15 @@ export default function ProjectPadres() {
                             <span className="text-xs text-gray-400 font-medium bg-gray-50 px-2.5 py-1 rounded-full">
                                 {parents.length} padre{parents.length !== 1 ? "s" : ""}
                             </span>
+                            <RequirePermission permission={{ obj: "invitation", action: "create" }} redirect={false}>
+                                <button
+                                    onClick={openInvite}
+                                    className="text-xs text-yambo-green-600 hover:text-yambo-green-700 transition-colors"
+                                >
+                                    <FontAwesomeIcon icon={faLink} className="mr-1" />
+                                    Generar enlace
+                                </button>
+                            </RequirePermission>
                             {parents.length > 1 && (
                                 <RequirePermission permission={{ obj: "invitation", action: "delete" }} redirect={false}>
                                     <button
@@ -178,6 +242,53 @@ export default function ProjectPadres() {
                 confirmLabel="Eliminar todos"
                 variant="danger"
             />
+
+            {renderInviteModal()}
         </RequirePermission>
     );
+
+    function renderInviteModal() {
+        return (
+            <Modal
+                isOpen={isInviteOpen}
+                onClose={closeInvite}
+                title="Invitación para padres"
+                size="sm"
+            >
+                <div className="flex flex-col gap-4">
+                    <p className="text-sm text-gray-600">
+                        Genera un enlace para que padres/madres del proyecto {projectName || ""} puedan registrarse y acceder a los drops disponibles para este proyecto.
+                    </p>
+                    {!inviteUrl ? (
+                        <ButtonComponent
+                            variant="primary"
+                            onClick={generateInvite}
+                            isLoading={inviteSaving}
+                            disabled={inviteSaving}
+                            className="w-full"
+                        >
+                            <FontAwesomeIcon icon={faLink} className="mr-2" />
+                            Generar enlace de invitación
+                        </ButtonComponent>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-3">
+                                <p className="text-xs text-yambo-green-600 font-medium mb-1">Enlace de invitación</p>
+                                <p className="text-sm text-yambo-green-800 break-all font-mono">
+                                    {inviteUrl}
+                                </p>
+                            </div>
+                            <ButtonComponent variant="primary" onClick={copyInvite} className="w-full">
+                                <FontAwesomeIcon icon={faCopy} className="mr-2" />
+                                {inviteCopied ? "¡Copiado!" : "Copiar enlace"}
+                            </ButtonComponent>
+                            <p className="text-xs text-gray-400 text-center">
+                                Comparte este enlace con los padres para que puedan registrarse.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </Modal>
+        );
+    }
 }
