@@ -18,7 +18,7 @@ import { familyProductService, type FamilyProduct } from "~/services/familyProdu
 import { projectService, type Project } from "~/services/projectService";
 import { getErrorMessage } from "~/types/error";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faPenToSquare, faTrashCan, faCalendarDays, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { StatusWorkflow } from "~/components/common/StatusWorkflow";
@@ -209,6 +209,16 @@ export default function MerchFamilies() {
         label: project.name,
     })), [projects]);
 
+    const renderStatusBadge = useCallback((drop: FamilyProduct) => {
+        const statusKey = drop.status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG;
+        const statusConfig = statusKey ? FAMILY_PRODUCT_STATUS_CONFIG[statusKey] : null;
+        return statusConfig ? (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${statusConfig.className}`}>
+                {statusConfig.label}
+            </span>
+        ) : <span className="text-sm text-gray-400">{drop.status || "-"}</span>;
+    }, []);
+
     const columns: FilterableColumn<FamilyProduct>[] = useMemo(() => [
         {
             key: "name",
@@ -328,6 +338,74 @@ export default function MerchFamilies() {
         },
     ], [projects, canUpdate, canDelete, t]);
 
+    const renderMobileCard = useCallback((drop: FamilyProduct) => {
+        const projectNames = (drop.projectIds ?? [])
+            .map((id) => projects.find((p) => p.id === id)?.name || id)
+            .join(", ");
+        const transitions = FAMILY_PRODUCT_WORKFLOW_TRANSITIONS[(drop.status || "OPEN") as FamilyProductStatus] || [];
+        const statusKey = drop.status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG;
+        const statusConfig = statusKey ? FAMILY_PRODUCT_STATUS_CONFIG[statusKey] : null;
+
+        return (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-yambo-black text-sm leading-tight line-clamp-2 flex-1">{drop.name}</span>
+                    {canUpdate && transitions.length > 0 ? (
+                        <select
+                            value={drop.status || "OPEN"}
+                            onChange={(e) => handleStatusChange(drop, e.target.value)}
+                            className={`text-[10px] font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer shrink-0 ${statusConfig?.className || "bg-gray-100 text-gray-800"}`}
+                        >
+                            <option value={drop.status || "OPEN"}>{statusConfig?.label || drop.status}</option>
+                            {transitions.map((status) => {
+                                const cfg = FAMILY_PRODUCT_STATUS_CONFIG[status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG];
+                                return <option key={status} value={status}>{cfg?.label || status}</option>;
+                            })}
+                        </select>
+                    ) : renderStatusBadge(drop)}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                    {drop.startTms && drop.endTms && (
+                        <span className="flex items-center gap-1">
+                            <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3 text-gray-400" />
+                            {new Date(drop.startTms).toLocaleDateString()} — {new Date(drop.endTms).toLocaleDateString()}
+                        </span>
+                    )}
+                    {projectNames && (
+                        <span className="flex items-center gap-1">
+                            <FontAwesomeIcon icon={faFolderOpen} className="w-3 h-3 text-gray-400" />
+                            {projectNames}
+                        </span>
+                    )}
+                </div>
+                <div className="flex gap-1.5 pt-1">
+                    {canUpdate && (
+                        <button
+                            onClick={() => openWatchers(drop)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                            title={t("merch.manageWatchers")}
+                            aria-label={t("merch.manageWatchers")}
+                        ><FontAwesomeIcon icon={faBell} className="w-3.5 h-3.5" /></button>
+                    )}
+                    {canUpdate && (
+                        <button
+                            onClick={() => startEdit(drop)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                            title={t("common.edit")}
+                        ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
+                    )}
+                    {canDelete && (
+                        <button
+                            onClick={() => handleDelete(drop)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors ml-auto"
+                            title={t("common.delete")}
+                        ><FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" /></button>
+                    )}
+                </div>
+            </div>
+        );
+    }, [projects, canUpdate, canDelete, t, renderStatusBadge]);
+
     return (
         <RequirePermission permission={{ obj: "family_product", action: "read" }} redirectTo="/mi-espacio/articulos">
             <ListPageShell<FamilyProduct>
@@ -345,6 +423,7 @@ export default function MerchFamilies() {
                 display={{
                     emptyMessage: t("merch.noCollections"),
                     loadingMessage: t("merch.loadingCollections"),
+                    renderMobileCard,
                 }}
                 features={{
                     enablePagination: false,
