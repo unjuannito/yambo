@@ -75,12 +75,8 @@ public class ProductService {
         if (isProductAdmin) {
             spec = spec.and(ProductSpecifications.activeEquals(active));
         } else {
-            Set<String> projectIds = user.getGroupRoles().stream()
-                    .map(gr -> gr.getProjectGroup().getProject().getId())
-                    .collect(Collectors.toSet());
-            Set<UserProjectGroupRole> roles = user.getGroupRoles().stream()
-                    .map(gr -> gr.getRole())
-                    .collect(Collectors.toSet());
+            Set<String> projectIds = FamilyProductRoleAccess.projectIds(user);
+            Set<UserProjectGroupRole> roles = FamilyProductRoleAccess.roles(user);
             spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
             spec = spec.and(ProductSpecifications.userHasAccess(projectIds, roles));
             spec = spec.and(ProductSpecifications.familyProductActive());
@@ -192,21 +188,7 @@ public class ProductService {
 
         FamilyProduct fp = product.getFamilyProduct();
 
-        // Sin roleAccess configurado: sin restriccion
-        if (fp.getRoleAccess() == null || fp.getRoleAccess().isEmpty()) {
-            return;
-        }
-
-        boolean hasAccess = user.getGroupRoles().stream().anyMatch(gr ->
-            fp.getRoleAccess().contains(
-                FamilyProductRoleAccess.builder()
-                    .projectId(gr.getProjectGroup().getProject().getId())
-                    .role(gr.getRole())
-                    .build()
-            )
-        );
-
-        if (!hasAccess) {
+        if (!FamilyProductRoleAccess.userHasAccess(user, fp.getRoleAccess())) {
             throw new ResourceNotFoundException("Product not found");
         }
     }

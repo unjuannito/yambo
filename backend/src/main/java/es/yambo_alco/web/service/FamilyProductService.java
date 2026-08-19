@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -107,12 +106,8 @@ public class FamilyProductService {
         }
 
         // Filtrar por proyectos y roles del usuario
-        Set<String> userProjectIds = user.getGroupRoles().stream()
-                .map(gr -> gr.getProjectGroup().getProject().getId())
-                .collect(Collectors.toSet());
-        Set<UserProjectGroupRole> userRoles = user.getGroupRoles().stream()
-                .map(gr -> gr.getRole())
-                .collect(Collectors.toSet());
+        Set<String> userProjectIds = FamilyProductRoleAccess.projectIds(user);
+        Set<UserProjectGroupRole> userRoles = FamilyProductRoleAccess.roles(user);
 
         if (!userProjectIds.isEmpty() && !userRoles.isEmpty()) {
             spec = spec.and(FamilyProductSpecifications.hasRoleAccess(userProjectIds, userRoles));
@@ -125,18 +120,7 @@ public class FamilyProductService {
      * Verifica si un usuario puede acceder a un drop especifico.
      */
     public boolean canAccess(User user, FamilyProduct familyProduct) {
-        if (familyProduct.getRoleAccess() == null || familyProduct.getRoleAccess().isEmpty()) {
-            // Sin restriccion de roleAccess: aplicar logica anterior (perfiles)
-            return true;
-        }
-        return user.getGroupRoles().stream().anyMatch(gr ->
-            familyProduct.getRoleAccess().contains(
-                FamilyProductRoleAccess.builder()
-                    .projectId(gr.getProjectGroup().getProject().getId())
-                    .role(gr.getRole())
-                    .build()
-            )
-        );
+        return FamilyProductRoleAccess.userHasAccess(user, familyProduct.getRoleAccess());
     }
 
     @Transactional

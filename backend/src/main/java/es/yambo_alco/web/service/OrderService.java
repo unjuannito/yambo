@@ -128,20 +128,9 @@ public class OrderService {
                             product.getName(), family.getEndTms()));
         }
 
-        if (family.getRoleAccess() != null && !family.getRoleAccess().isEmpty()) {
-            boolean hasAccess = user.getGroupRoles().stream().anyMatch(gr ->
-                family.getRoleAccess().contains(
-                    FamilyProductRoleAccess.builder()
-                        .projectId(gr.getProjectGroup().getProject().getId())
-                        .role(gr.getRole())
-                        .build()
-                )
-            );
-
-            if (!hasAccess) {
-                throw new BadRequestException(
-                        String.format("You don't have access to product '%s'", product.getName()));
-            }
+        if (!FamilyProductRoleAccess.userHasAccess(user, family.getRoleAccess())) {
+            throw new BadRequestException(
+                    String.format("You don't have access to product '%s'", product.getName()));
         }
     }
 
