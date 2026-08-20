@@ -31,7 +31,8 @@ pipeline {
         REGISTRY_URL     = credentials('yambo-registry')
         REGISTRY_USER    = credentials('yambo-registry-user')
         REGISTRY_PASS    = credentials('yambo-registry-pass')
-        BUILD_HOST_IP    = credentials('yambo-build-host')
+        // yambo-build-host incluye el usuario: "root@192.168.1.21"
+        BUILD_HOST       = credentials('yambo-build-host')
         SONAR_URL        = credentials('yambo-sonar-url')
         SONAR_TOKEN      = credentials('yambo-sonar-token')
         NOTIFICATION_EMAIL = credentials('notification-email')
@@ -136,7 +137,7 @@ pipeline {
                     // Enviar el repo (sin node_modules/.git) al build host
                     sh """
                         tar czf - --exclude=.git --exclude=node_modules --exclude=target --exclude=dist . | \
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@${BUILD_HOST_IP} \
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${BUILD_HOST} \
                           'rm -rf /srv/ci/yambo && mkdir -p /srv/ci/yambo && tar xzf - -C /srv/ci/yambo'
                     """
                 }
@@ -159,7 +160,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@${BUILD_HOST_IP} \
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${BUILD_HOST} \
                           'cd /srv/ci/yambo && \
                            REGISTRY_URL="${REGISTRY_URL}" REGISTRY_USER="${REGISTRY_USER}" REGISTRY_PASS="${REGISTRY_PASS}" \
                            SONAR_URL="${SONAR_URL}" SONAR_TOKEN="${SONAR_TOKEN}" \
@@ -212,7 +213,7 @@ pipeline {
                     echo "Deploy target: ${env.DEPLOY_TARGET} → ns ${env.NAMESPACE} (${env.APP_DOMAIN}) registry=${env.REGISTRY_HOST}"
 
                     sh """
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no root@${BUILD_HOST_IP} \
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${BUILD_HOST} \
                           'cd /srv/ci/yambo && \
                            REGISTRY_URL="${REGISTRY_URL}" REGISTRY_HOST="${REGISTRY_HOST}" \
                            FRONTEND_TAG="${FRONTEND_TAG}" BACKEND_TAG="${BACKEND_TAG}" \
