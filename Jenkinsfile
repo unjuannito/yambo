@@ -103,13 +103,14 @@ pipeline {
                     ).trim()
 
                     // Tags de imagen
+                    def shortSha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     if (env.IS_MAIN == 'true') {
                         env.FRONTEND_TAG = env.FRONTEND_VER
                         env.BACKEND_TAG  = env.BACKEND_VER
                     } else {
                         def slug = env.BRANCH_NAME.toLowerCase().replaceAll('[^a-z0-9]+', '-').replaceAll('^-+|-+$', '')
-                        env.FRONTEND_TAG = "branch-${slug}"
-                        env.BACKEND_TAG  = "branch-${slug}"
+                        env.FRONTEND_TAG = "branch-${slug}-${shortSha}"
+                        env.BACKEND_TAG  = "branch-${slug}-${shortSha}"
                     }
 
                     // Cambios (solo main/develop hacen deploy)
