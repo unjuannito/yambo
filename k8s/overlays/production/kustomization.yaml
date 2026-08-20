@@ -8,12 +8,12 @@ resources:
 
 # Image tags are set by the CI pipeline:
 #   kustomize edit set image \
-#     192.168.1.11:5000/yambo-web-frontend=192.168.1.11:5000/yambo-web-frontend:1.2.3 \
-#     192.168.1.11:5000/yambo-web-backend=192.168.1.11:5000/yambo-web-backend:1.2.3
+#     192.168.1.21:5000/yambo-web-frontend=192.168.1.21:5000/yambo-web-frontend:1.2.3 \
+#     192.168.1.21:5000/yambo-web-backend=192.168.1.21:5000/yambo-web-backend:1.2.3
 images:
-  - name: 192.168.1.11:5000/yambo-web-frontend
+  - name: 192.168.1.21:5000/yambo-web-frontend
     newTag: latest
-  - name: 192.168.1.11:5000/yambo-web-backend
+  - name: 192.168.1.21:5000/yambo-web-backend
     newTag: latest
 
 patches:
