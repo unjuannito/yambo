@@ -17,12 +17,18 @@ import {
     invitationService,
     type Invitation,
 } from "~/services/invitationService";
+import {
+    projectRoleInvitationService,
+    type ProjectRoleInvitation,
+} from "~/services/projectRoleInvitationService";
 import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCopy, faLinkSlash, faCheck, faUsers } from "@fortawesome/free-solid-svg-icons";
 
 export function meta() {
     return [
@@ -50,6 +56,9 @@ export default function Invitations() {
     const [creating, setCreating] = useState(false);
     const [lastInvitation, setLastInvitation] =
         useState<Invitation | null>(null);
+    const [roleInvitations, setRoleInvitations] = useState<ProjectRoleInvitation[]>([]);
+    const [roleMaxUses, setRoleMaxUses] = useState("");
+    const [lastRoleInvitation, setLastRoleInvitation] = useState<ProjectRoleInvitation | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { activeTab, setActiveTab } = useViewTab("actual");
 
@@ -58,14 +67,16 @@ export default function Invitations() {
             setLoading(true);
             setError(null);
             const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-            const [profilesResponse, invitationsResponse, projectsData] = await Promise.all([
+            const [profilesResponse, invitationsResponse, projectsData, roleLinks] = await Promise.all([
                 profileService.getAllProfiles(),
                 invitationService.listInvitations(startDate),
                 projectService.listProjects(0, 200),
+                projectRoleInvitationService.getInvitations(),
             ]);
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
             setProjects(projectsData.content || []);
+            setRoleInvitations(roleLinks);
         } catch (err) {
             setError(getErrorMessage(err, t("invitations.profilesLoadingError")));
         } finally {
@@ -111,6 +122,47 @@ export default function Invitations() {
         return `${baseUrl}/register?invite=${lastInvitation.token}`;
     }, [baseUrl, lastInvitation]);
 
+    // Estado de un link de rol: activo / agotado / expirado / deshabilitado
+    const roleLinkStatus = (inv: ProjectRoleInvitation): {
+        label: string;
+        tone: "green" | "amber" | "gray" | "red";
+    } => {
+        if (inv.disabled) return { label: "Deshabilitado", tone: "red" };
+        if (inv.expired) return { label: "Expirado", tone: "gray" };
+        if (inv.used) return { label: "Agotado", tone: "amber" };
+        return { label: "Activo", tone: "green" };
+    };
+
+    const roleStatusClass = (tone: string) => {
+        switch (tone) {
+            case "green": return "bg-yambo-green-50 text-yambo-green-700";
+            case "amber": return "bg-amber-50 text-amber-700";
+            case "red": return "bg-red-50 text-red-700";
+            default: return "bg-gray-100 text-gray-500";
+        }
+    };
+
+    const toggleRoleLink = async (inv: ProjectRoleInvitation) => {
+        try {
+            await projectRoleInvitationService.updateInvitation(inv.id, {
+                enabled: inv.disabled,
+            });
+            toast.success(inv.disabled ? "Enlace habilitado" : "Enlace deshabilitado");
+            setRoleInvitations(await projectRoleInvitationService.getInvitations());
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al actualizar el enlace"));
+        }
+    };
+
+    const copyRoleLink = async (inv: ProjectRoleInvitation) => {
+        try {
+            await navigator.clipboard.writeText(inv.invitationLink);
+            toast.success(t("invitations.linkCopied"));
+        } catch {
+            toast.error(t("invitations.linkCopyError"));
+        }
+    };
+
     const handleCreate = async () => {
         if (invitationType === "profile" && selectedProfiles.length === 0) {
             toast.error(t("invitations.selectProfileFirst"));
@@ -123,21 +175,39 @@ export default function Invitations() {
 
         try {
             setCreating(true);
-            const payload: any = {};
-            if (invitationType === "profile") {
-                payload.profileIds = selectedProfiles;
-            } else {
-                payload.projectId = selectedProjectId;
-                payload.role = selectedRole;
+            if (invitationType === "role") {
+                const payload: {
+                    projectId: string;
+                    role: GroupRole;
+                    expiresAt?: string;
+                    maxUses?: number;
+                } = {
+                    projectId: selectedProjectId,
+                    role: selectedRole,
+                };
+                if (endTms) payload.expiresAt = new Date(endTms).toISOString();
+                if (roleMaxUses) payload.maxUses = Number(roleMaxUses);
+                const invitation = await projectRoleInvitationService.createInvitation(payload);
+                setLastRoleInvitation(invitation);
+                setLastInvitation(null);
+                setSelectedProjectId("");
+                setSelectedRole("MONITOR");
+                setRoleMaxUses("");
+                setIsModalOpen(false);
+                toast.success(t("invitations.createdSuccess"));
+                const roleLinks = await projectRoleInvitationService.getInvitations();
+                setRoleInvitations(roleLinks);
+                return;
             }
+
+            const payload: any = {};
+            payload.profileIds = selectedProfiles;
             payload.startTms = startTms || undefined;
             payload.endTms = endTms || undefined;
 
             const invitation = await invitationService.createInvitation(payload);
             setLastInvitation(invitation);
             setSelectedProfiles([]);
-            setSelectedProjectId("");
-            setSelectedRole("MONITOR");
             setStartTms("");
             setEndTms("");
             setIsModalOpen(false);
@@ -374,6 +444,140 @@ export default function Invitations() {
                     </section>
                 )}
 
+                {!loading && !error && (
+                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 mt-6">
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-1">
+                            Links de invitación por rol
+                        </h2>
+                        <p className="text-sm text-gray-400 mb-4">
+                            Enlaces que asignan un rol (coordinador, monitor o padre) en un proyecto. Puedes limitar los usos, la fecha de expiración y deshabilitarlos.
+                        </p>
+                        {roleInvitations.length === 0 ? (
+                            <p className="text-sm text-gray-400 py-4 text-center">
+                                No hay links de rol creados todavía. Créalos con el botón «Nueva invitación» seleccionando «Por proyecto y rol».
+                            </p>
+                        ) : (
+                            <div className="overflow-x-auto -mx-4 md:mx-0">
+                                <table className="w-full text-sm min-w-[640px]">
+                                    <thead>
+                                        <tr className="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                                            <th className="px-4 py-2">Proyecto</th>
+                                            <th className="px-4 py-2">Rol</th>
+                                            <th className="px-4 py-2">Usos</th>
+                                            <th className="px-4 py-2 hidden sm:table-cell">Expira</th>
+                                            <th className="px-4 py-2">Estado</th>
+                                            <th className="px-4 py-2 text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {roleInvitations.map((inv) => {
+                                            const status = roleLinkStatus(inv);
+                                            const project = projects.find(p => p.id === inv.projectId);
+                                            return (
+                                                <tr key={inv.id} className="border-b border-gray-50 hover:bg-gray-50/60">
+                                                    <td className="px-4 py-3 font-medium text-yambo-black">
+                                                        {project?.name || inv.projectId}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="px-2 py-0.5 text-xs rounded-full bg-yambo-green-50 text-yambo-green-700">
+                                                            {inv.role === "COORDINATOR" ? "Coordinador" : inv.role === "MONITOR" ? "Monitor" : "Padre"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-500">
+                                                        {inv.maxUses != null
+                                                            ? `${inv.usageCount} / ${inv.maxUses}`
+                                                            : `${inv.usageCount} usos`}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
+                                                        {inv.expiresAt
+                                                            ? new Date(inv.expiresAt).toLocaleDateString()
+                                                            : "Sin expiración"}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${roleStatusClass(status.tone)}`}>
+                                                            {status.label}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyRoleLink(inv)}
+                                                                title="Copiar enlace"
+                                                                className="p-2 text-gray-400 hover:text-yambo-green-600 rounded-lg hover:bg-yambo-green-50 transition-colors"
+                                                            >
+                                                                <FontAwesomeIcon icon={faCopy} className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleRoleLink(inv)}
+                                                                title={inv.disabled ? "Habilitar enlace" : "Deshabilitar enlace"}
+                                                                className={`p-2 rounded-lg transition-colors ${
+                                                                    inv.disabled
+                                                                        ? "text-yambo-green-600 hover:bg-yambo-green-50"
+                                                                        : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                                }`}
+                                                            >
+                                                                <FontAwesomeIcon icon={inv.disabled ? faCheck : faLinkSlash} className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </section>
+                )}
+
+                {lastRoleInvitation && (
+                    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 mt-6">
+                        <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
+                            Último link creado
+                        </h2>
+                        <div className="grid gap-4">
+                            <InputComponent
+                                label="Token"
+                                value={lastRoleInvitation.token}
+                                readOnly
+                            />
+                            <InputComponent
+                                label="Enlace de invitación"
+                                value={lastRoleInvitation.invitationLink}
+                                readOnly
+                            />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <InputComponent
+                                    label="Máximo de usos"
+                                    value={lastRoleInvitation.maxUses != null ? String(lastRoleInvitation.maxUses) : "Sin límite"}
+                                    readOnly
+                                />
+                                <InputComponent
+                                    label="Expiración"
+                                    value={formatDateTime(lastRoleInvitation.expiresAt)}
+                                    readOnly
+                                />
+                            </div>
+                            <ButtonComponent
+                                variant="neutral"
+                                onClick={async () => {
+                                    if (!lastRoleInvitation.invitationLink) return;
+                                    try {
+                                        await navigator.clipboard.writeText(lastRoleInvitation.invitationLink);
+                                        toast.success(t("invitations.linkCopied"));
+                                    } catch (err) {
+                                        toast.error(t("invitations.linkCopyError"));
+                                    }
+                                }}
+                            >
+                                {t("invitations.copyLink")}
+                            </ButtonComponent>
+                        </div>
+                    </section>
+                )}
+
                 {lastInvitation && (
                     <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 mt-6">
                         <h2 className="text-lg font-bold font-display text-yambo-black mb-4">
@@ -434,6 +638,7 @@ export default function Invitations() {
                         setInvitationType("profile");
                         setStartTms("");
                         setEndTms("");
+                        setRoleMaxUses("");
                     }}
                     title={t("invitations.createLink")}
                     footer={
@@ -448,6 +653,7 @@ export default function Invitations() {
                                     setInvitationType("profile");
                                     setStartTms("");
                                     setEndTms("");
+                                    setRoleMaxUses("");
                                 }}
                             >
                                 {t("common.cancel")}
@@ -520,6 +726,22 @@ export default function Invitations() {
                                         setSelectedRole(e.target.value as GroupRole)
                                     }
                                 />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <InputComponent
+                                        type="number"
+                                        min={1}
+                                        label="Máximo de usos (opcional)"
+                                        value={roleMaxUses}
+                                        onChange={(e) => setRoleMaxUses(e.target.value)}
+                                        placeholder="Sin límite"
+                                    />
+                                    <InputComponent
+                                        type="datetime-local"
+                                        label="Expiración (opcional)"
+                                        value={endTms}
+                                        onChange={(e) => setEndTms(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         )}
 

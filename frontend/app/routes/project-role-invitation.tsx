@@ -6,17 +6,31 @@ import { projectRoleInvitationService } from "~/services/projectRoleInvitationSe
 import type { GroupRole } from "~/types/role";
 import { getErrorMessage } from "~/types/error";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import InputComponent from "~/components/common/forms/InputComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserCheck, faUserPlus, faLinkSlash, faCheck, faRightToBracket } from "@fortawesome/free-solid-svg-icons";
+import {
+    faUserCheck,
+    faUserPlus,
+    faLinkSlash,
+    faCheck,
+    faRightToBracket,
+    faBan,
+    faClock,
+    faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface InvitationInfo {
+    id: string;
     projectId: string;
     projectName: string;
     role: GroupRole;
     used: boolean;
     expired: boolean;
+    disabled: boolean;
     email: string | null;
+    maxUses: number | null;
+    usageCount: number;
 }
 
 const ROLE_LABELS: Record<GroupRole, string> = {
@@ -28,7 +42,7 @@ const ROLE_LABELS: Record<GroupRole, string> = {
 export default function ProjectRoleInvitationAccept() {
     const { token } = useParams();
     const { t } = useTranslation();
-    const { user } = useAuth();
+    const { user, login } = useAuth();
     const navigate = useNavigate();
 
     const [info, setInfo] = useState<InvitationInfo | null>(null);
@@ -36,7 +50,12 @@ export default function ProjectRoleInvitationAccept() {
     const [error, setError] = useState<string | null>(null);
     const [accepting, setAccepting] = useState(false);
     const [accepted, setAccepted] = useState(false);
-    const [acceptError, setAcceptError] = useState<string | null>(null);
+
+    // Registration form (new users arriving via the link)
+    const [registerMode, setRegisterMode] = useState(false);
+    const [regForm, setRegForm] = useState({ name: "", email: "", password: "" });
+    const [regError, setRegError] = useState<string | null>(null);
+    const [registering, setRegistering] = useState(false);
 
     const fetchInfo = useCallback(async () => {
         if (!token) return;
@@ -60,13 +79,42 @@ export default function ProjectRoleInvitationAccept() {
         if (!token) return;
         try {
             setAccepting(true);
-            setAcceptError(null);
+            setRegError(null);
             await projectRoleInvitationService.acceptInvitation(token);
             setAccepted(true);
         } catch (err) {
-            setAcceptError(getErrorMessage(err, "No se pudo aceptar la invitación"));
+            setRegError(getErrorMessage(err, "No se pudo aceptar la invitación"));
         } finally {
             setAccepting(false);
+        }
+    };
+
+    const handleRegisterAndAccept = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!token) return;
+        if (!regForm.name.trim() || !regForm.email.trim() || regForm.password.length < 6) {
+            setRegError("Rellena todos los campos (contraseña mínima 6 caracteres)");
+            return;
+        }
+        try {
+            setRegistering(true);
+            setRegError(null);
+            await projectRoleInvitationService.registerAndAccept(token, {
+                email: regForm.email,
+                password: regForm.password,
+                name: regForm.name,
+            });
+            // Login with the new account so the user lands authenticated
+            try {
+                await login(regForm.email, regForm.password);
+            } catch {
+                // Non-fatal: session will be picked up on next login
+            }
+            setAccepted(true);
+        } catch (err) {
+            setRegError(getErrorMessage(err, "No se pudo completar el registro"));
+        } finally {
+            setRegistering(false);
         }
     };
 
@@ -78,77 +126,126 @@ export default function ProjectRoleInvitationAccept() {
         );
     }
 
-    if (error || !info) {
+    // ── Shared wrapper for status/error screens ──────────────────────
+    const StatusCard = ({ icon, tone, title, children }: {
+        icon: React.ReactNode;
+        tone: "red" | "amber" | "green";
+        title: string;
+        children: React.ReactNode;
+    }) => {
+        const tones = {
+            red: "bg-red-100 text-red-500",
+            amber: "bg-amber-100 text-amber-500",
+            green: "bg-yambo-green-100 text-yambo-green-600",
+        };
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white">
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 max-w-md w-full mx-4 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                        <FontAwesomeIcon icon={faLinkSlash} className="text-red-500 text-2xl" />
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white px-4">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 max-w-md w-full text-center">
+                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${tones[tone]}`}>
+                        {icon}
                     </div>
-                    <h1 className="text-2xl font-bold font-display text-yambo-black mb-2">
-                        Invitación no válida
-                    </h1>
-                    <p className="text-gray-500 mb-6">{error || "Esta invitación no existe o ha expirado."}</p>
-                    <Link to="/login" className="text-yambo-green-600 hover:text-yambo-green-700 font-medium">
-                        Volver al inicio
-                    </Link>
+                    <h1 className="text-2xl font-bold font-display text-yambo-black mb-2">{title}</h1>
+                    {children}
                 </div>
             </div>
+        );
+    };
+
+    if (error || !info) {
+        return (
+            <StatusCard
+                icon={<FontAwesomeIcon icon={faLinkSlash} className="text-2xl" />}
+                tone="red"
+                title="Invitación no válida"
+            >
+                <p className="text-gray-500 mb-6">{error || "Esta invitación no existe o ha expirado."}</p>
+                <Link to="/login" className="text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                    Volver al inicio
+                </Link>
+            </StatusCard>
         );
     }
 
     const roleLabel = ROLE_LABELS[info.role] ?? info.role;
+    const remaining = info.maxUses != null
+        ? Math.max(0, info.maxUses - info.usageCount)
+        : null;
 
-    if (info.used || info.expired) {
+    if (info.disabled) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white">
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 max-w-md w-full mx-4 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center">
-                        <FontAwesomeIcon icon={faLinkSlash} className="text-amber-500 text-2xl" />
-                    </div>
-                    <h1 className="text-2xl font-bold font-display text-yambo-black mb-2">
-                        {info.used ? "Invitación ya utilizada" : "Invitación expirada"}
-                    </h1>
-                    <p className="text-gray-500 mb-6">
-                        {info.used
-                            ? "Esta invitación ya ha sido aceptada. Si crees que es un error, contacta con el administrador."
-                            : "El plazo para aceptar esta invitación ha terminado. Solicita un nuevo enlace."}
-                    </p>
-                    <Link to="/login" className="text-yambo-green-600 hover:text-yambo-green-700 font-medium">
-                        Volver al inicio
-                    </Link>
-                </div>
-            </div>
+            <StatusCard
+                icon={<FontAwesomeIcon icon={faBan} className="text-2xl" />}
+                tone="amber"
+                title="Invitación deshabilitada"
+            >
+                <p className="text-gray-500 mb-6">
+                    Este enlace ha sido deshabilitado por el administrador. Solicita un nuevo enlace.
+                </p>
+                <Link to="/login" className="text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                    Volver al inicio
+                </Link>
+            </StatusCard>
+        );
+    }
+
+    if (info.expired) {
+        return (
+            <StatusCard
+                icon={<FontAwesomeIcon icon={faClock} className="text-2xl" />}
+                tone="amber"
+                title="Invitación expirada"
+            >
+                <p className="text-gray-500 mb-6">
+                    El plazo para aceptar esta invitación ha terminado. Solicita un nuevo enlace.
+                </p>
+                <Link to="/login" className="text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                    Volver al inicio
+                </Link>
+            </StatusCard>
+        );
+    }
+
+    if (info.used) {
+        return (
+            <StatusCard
+                icon={<FontAwesomeIcon icon={faUsers} className="text-2xl" />}
+                tone="amber"
+                title="Invitación agotada"
+            >
+                <p className="text-gray-500 mb-6">
+                    Este enlace ya ha alcanzado su número máximo de usos.
+                    {info.maxUses != null && ` (${info.maxUses} de ${info.maxUses})`}
+                </p>
+                <Link to="/login" className="text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                    Volver al inicio
+                </Link>
+            </StatusCard>
         );
     }
 
     if (accepted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white">
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 max-w-md w-full mx-4 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-yambo-green-100 rounded-full flex items-center justify-center">
-                        <FontAwesomeIcon icon={faCheck} className="text-yambo-green-600 text-2xl" />
-                    </div>
-                    <h1 className="text-2xl font-bold font-display text-yambo-black mb-2">
-                        ¡Invitación aceptada!
-                    </h1>
-                    <p className="text-gray-500 mb-2">
-                        Ya tienes acceso como {roleLabel} en <strong>{info.projectName}</strong>.
-                    </p>
-                    <p className="text-gray-400 text-sm mb-6">
-                        Ya puedes acceder a los contenidos disponibles para este proyecto.
-                    </p>
-                    <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio")}>
-                        Ir a mi espacio
-                    </ButtonComponent>
-                </div>
-            </div>
+            <StatusCard
+                icon={<FontAwesomeIcon icon={faCheck} className="text-2xl" />}
+                tone="green"
+                title="¡Invitación aceptada!"
+            >
+                <p className="text-gray-500 mb-2">
+                    Ya tienes acceso como {roleLabel} en <strong>{info.projectName}</strong>.
+                </p>
+                <p className="text-gray-400 text-sm mb-6">
+                    Ya puedes acceder a los contenidos disponibles para este proyecto.
+                </p>
+                <ButtonComponent variant="primary" onClick={() => navigate("/mi-espacio")}>
+                    Ir a mi espacio
+                </ButtonComponent>
+            </StatusCard>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 max-w-md w-full mx-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yambo-green-50 to-white px-4 py-8">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 max-w-md w-full">
                 <div className="text-center mb-6">
                     <div className="w-16 h-16 mx-auto mb-4 bg-yambo-green-100 rounded-full flex items-center justify-center">
                         <FontAwesomeIcon icon={faUserPlus} className="text-yambo-green-600 text-2xl" />
@@ -161,7 +258,7 @@ export default function ProjectRoleInvitationAccept() {
                     </p>
                 </div>
 
-                <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 mb-6">
+                <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 mb-4">
                     <p className="text-lg font-bold text-yambo-green-800 text-center">
                         {info.projectName}
                     </p>
@@ -170,31 +267,97 @@ export default function ProjectRoleInvitationAccept() {
                             Invitación para: {info.email}
                         </p>
                     )}
+                    {remaining != null && (
+                        <p className="text-xs text-yambo-green-600/80 text-center mt-2">
+                            Usos disponibles: {remaining} de {info.maxUses}
+                        </p>
+                    )}
                 </div>
 
                 {!user ? (
                     <div className="space-y-3">
-                        <p className="text-sm text-gray-500 text-center mb-4">
-                            Inicia sesión o regístrate para aceptar la invitación.
-                        </p>
-                        <Link to={`/login?redirect=/project-role-invitation/${token}`}>
-                            <ButtonComponent variant="primary" className="w-full">
-                                <FontAwesomeIcon icon={faRightToBracket} className="mr-2" />
-                                Iniciar sesión
-                            </ButtonComponent>
-                        </Link>
-                        <Link to={`/register?redirect=/project-role-invitation/${token}`}>
-                            <ButtonComponent variant="neutral" className="w-full">
-                                <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
-                                Registrarse
-                            </ButtonComponent>
-                        </Link>
+                        {!registerMode ? (
+                            <>
+                                <p className="text-sm text-gray-500 text-center mb-4">
+                                    Inicia sesión o regístrate para aceptar la invitación.
+                                </p>
+                                <Link
+                                    to={`/login?returnTo=${encodeURIComponent(`/project-role-invitation/${token}`)}`}
+                                    className="block"
+                                >
+                                    <ButtonComponent variant="primary" className="w-full">
+                                        <FontAwesomeIcon icon={faRightToBracket} className="mr-2" />
+                                        Iniciar sesión
+                                    </ButtonComponent>
+                                </Link>
+                                <ButtonComponent
+                                    variant="neutral"
+                                    className="w-full"
+                                    onClick={() => setRegisterMode(true)}
+                                >
+                                    <FontAwesomeIcon icon={faUserPlus} className="mr-2" />
+                                    Crear cuenta nueva
+                                </ButtonComponent>
+                            </>
+                        ) : (
+                            <form onSubmit={handleRegisterAndAccept} className="space-y-3">
+                                <p className="text-sm text-gray-500 text-center">
+                                    Crea tu cuenta y se te asignará el rol automáticamente.
+                                </p>
+                                {regError && (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
+                                        {regError}
+                                    </div>
+                                )}
+                                <InputComponent
+                                    type="text"
+                                    label="Nombre"
+                                    value={regForm.name}
+                                    onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
+                                    required
+                                    disabled={registering}
+                                />
+                                <InputComponent
+                                    type="email"
+                                    label="Email"
+                                    value={regForm.email}
+                                    onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
+                                    required
+                                    disabled={registering}
+                                />
+                                <InputComponent
+                                    type="password"
+                                    label="Contraseña"
+                                    value={regForm.password}
+                                    onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
+                                    required
+                                    disabled={registering}
+                                />
+                                <ButtonComponent
+                                    type="submit"
+                                    variant="primary"
+                                    className="w-full"
+                                    isLoading={registering}
+                                    disabled={registering}
+                                >
+                                    {registering ? "Creando cuenta..." : "Registrarme y aceptar"}
+                                </ButtonComponent>
+                                <button
+                                    type="button"
+                                    onClick={() => setRegisterMode(false)}
+                                    className="w-full text-sm text-gray-400 hover:text-gray-600"
+                                    disabled={registering}
+                                >
+                                    ← Volver
+                                </button>
+                            </form>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {acceptError && (
+                        {regError && (
                             <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
-                                {acceptError}
+                                {regError}
                             </div>
                         )}
                         <p className="text-sm text-gray-500 text-center mb-2">

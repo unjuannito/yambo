@@ -49,11 +49,29 @@ public class ProjectRoleInvitation {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    /** Máximo de usos permitidos. null = ilimitado. */
+    @Column(name = "max_uses")
+    private Integer maxUses;
+
+    /** Nº de usos realizados (incluye registros nuevos y aceptaciones). */
+    @Builder.Default
+    @Column(name = "usage_count", nullable = false)
+    private Integer usageCount = 0;
+
+    /** Link deshabilitado manualmente (no se puede aceptar). */
+    @Builder.Default
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = true;
+
     public boolean isUsed() {
-        return usedByUserId != null && usedAt != null;
+        return maxUses != null && usageCount != null && usageCount >= maxUses;
     }
 
     public boolean isExpired() {
         return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
+    }
+
+    public boolean isDisabled() {
+        return !enabled;
     }
 }

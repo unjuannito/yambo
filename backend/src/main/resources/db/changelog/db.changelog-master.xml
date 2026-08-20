@@ -99,5 +99,6 @@
     <include file="db/changelog/changes/89-parent-invitation.xml"/>
     <include file="db/changelog/changes/90-project-role-invitation.xml"/>
     <include file="db/changelog/changes/91-remove-family-product-profile.xml"/>
+    <include file="db/changelog/changes/92-project-role-invitation-usage.xml"/>
 
 </databaseChangeLog>

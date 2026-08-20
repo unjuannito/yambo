@@ -9,6 +9,7 @@ import type { GroupRole } from "~/types/role";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import InputComponent from "~/components/common/forms/InputComponent";
 import { Modal } from "~/components/common/Modal";
 import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
 import { getErrorMessage } from "~/types/error";
@@ -40,6 +41,8 @@ export default function ProjectPersonal() {
     const [inviteUrl, setInviteUrl] = useState<string>("");
     const [inviteSaving, setInviteSaving] = useState(false);
     const [inviteCopied, setInviteCopied] = useState(false);
+    const [inviteMaxUses, setInviteMaxUses] = useState<string>("");
+    const [inviteExpiresAt, setInviteExpiresAt] = useState<string>("");
 
     const loadData = useCallback(async () => {
         if (!projectId) return;
@@ -164,6 +167,8 @@ export default function ProjectPersonal() {
         setAddMode("existing");
         setInviteUrl("");
         setInviteCopied(false);
+        setInviteMaxUses("");
+        setInviteExpiresAt("");
     };
 
     const generateInvite = async () => {
@@ -173,6 +178,8 @@ export default function ProjectPersonal() {
             const result = await projectRoleInvitationService.createInvitation({
                 projectId,
                 role: addRole,
+                maxUses: inviteMaxUses ? Number(inviteMaxUses) : undefined,
+                expiresAt: inviteExpiresAt ? new Date(inviteExpiresAt).toISOString() : undefined,
             });
             setInviteUrl(result.invitationLink);
         } catch (err) {
@@ -435,16 +442,34 @@ export default function ProjectPersonal() {
                                 </select>
                             </div>
                             {!inviteUrl ? (
-                                <ButtonComponent
-                                    variant="primary"
-                                    onClick={generateInvite}
-                                    isLoading={inviteSaving}
-                                    disabled={inviteSaving}
-                                    className="w-full"
-                                >
-                                    <FontAwesomeIcon icon={faLink} className="mr-2" />
-                                    Generar enlace de invitación
-                                </ButtonComponent>
+                                <div className="flex flex-col gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <InputComponent
+                                            type="number"
+                                            min={1}
+                                            label="Máximo de usos (opcional)"
+                                            value={inviteMaxUses}
+                                            onChange={(e) => setInviteMaxUses(e.target.value)}
+                                            placeholder="Sin límite"
+                                        />
+                                        <InputComponent
+                                            type="datetime-local"
+                                            label="Fecha de expiración (opcional)"
+                                            value={inviteExpiresAt}
+                                            onChange={(e) => setInviteExpiresAt(e.target.value)}
+                                        />
+                                    </div>
+                                    <ButtonComponent
+                                        variant="primary"
+                                        onClick={generateInvite}
+                                        isLoading={inviteSaving}
+                                        disabled={inviteSaving}
+                                        className="w-full"
+                                    >
+                                        <FontAwesomeIcon icon={faLink} className="mr-2" />
+                                        Generar enlace de invitación
+                                    </ButtonComponent>
+                                </div>
                             ) : (
                                 <div className="space-y-3">
                                     <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-3">

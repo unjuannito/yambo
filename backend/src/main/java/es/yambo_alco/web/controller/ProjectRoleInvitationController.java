@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.ProjectRoleInvitation;
+import es.yambo_alco.web.model.ProjectRoleInvitationUsage;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
@@ -9,6 +10,7 @@ import es.yambo_alco.web.service.ProjectRoleInvitationService;
 import es.yambo_alco.web.service.SettingsService;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +45,8 @@ public class ProjectRoleInvitationController {
                 req.getRole(),
                 user.getId(),
                 req.getEmail(),
-                req.getExpiresAt());
+                req.getExpiresAt(),
+                req.getMaxUses());
 
         String domain = settingsService.getDomain();
         String link = projectRoleInvitationService.buildInvitationLink(inv.getToken(), domain);
@@ -59,24 +62,34 @@ public class ProjectRoleInvitationController {
         return ResponseEntity.ok("Project role invitation accepted successfully");
     }
 
+    /** Registra un usuario nuevo a través del link y le asigna el rol directamente. */
+    @PostMapping("/{token}/register")
+    public ResponseEntity<RegisterResponse> registerAndAccept(
+            @PathVariable String token,
+            @RequestBody RegisterRequest req) {
+        User user = projectRoleInvitationService.registerAndAccept(
+                token, req.getEmail(), req.getPassword(), req.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new RegisterResponse(user.getId(), user.getEmail(), user.getName()));
+    }
+
     @GetMapping("/{token}")
     public ResponseEntity<ProjectRoleInvitationInfo> getInvitationInfo(@PathVariable String token) {
-        // Public endpoint to get basic info about an invitation (for the acceptance page)
-        var invitations = projectRoleInvitationService.getInvitations(null);
-        ProjectRoleInvitation inv = invitations.stream()
-                .filter(i -> i.getToken().equals(token))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Project role invitation not found"));
+        ProjectRoleInvitation inv = projectRoleInvitationService.getInvitationByToken(token);
 
         String projectName = projectRoleInvitationService.getProjectName(inv.getProjectId());
 
         return ResponseEntity.ok(new ProjectRoleInvitationInfo(
+                inv.getId(),
                 inv.getProjectId(),
                 projectName,
                 inv.getRole(),
                 inv.isUsed(),
                 inv.isExpired(),
-                inv.getEmail()));
+                inv.isDisabled(),
+                inv.getEmail(),
+                inv.getMaxUses(),
+                inv.getUsageCount()));
     }
 
     @GetMapping
@@ -92,6 +105,34 @@ public class ProjectRoleInvitationController {
                 })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/usages")
+    @PreAuthorize("@permissionCheck.hasPermission('invitation', 'read')")
+    public ResponseEntity<List<UsageResponse>> getUsages(@PathVariable Long id) {
+        List<ProjectRoleInvitationUsage> usages = projectRoleInvitationService.getUsages(id);
+        List<UsageResponse> response = usages.stream()
+                .map(u -> new UsageResponse(
+                        u.getUserId(),
+                        u.getUserEmail(),
+                        u.getUserName(),
+                        u.isWasNewRegistration(),
+                        u.getUsedAt()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
+    }
+
+    /** Actualiza límites del link: maxUses, expiresAt, enabled. */
+    @PutMapping("/{id}")
+    @PreAuthorize("@permissionCheck.hasPermission('invitation', 'update')")
+    public ResponseEntity<ProjectRoleInvitationResponse> updateInvitation(
+            @PathVariable Long id,
+            @RequestBody UpdateInvitationRequest req) {
+        ProjectRoleInvitation inv = projectRoleInvitationService.updateInvitation(
+                id, req.getMaxUses(), req.getExpiresAt(), req.getEnabled());
+        String domain = settingsService.getDomain();
+        String link = projectRoleInvitationService.buildInvitationLink(inv.getToken(), domain);
+        return ResponseEntity.ok(buildResponse(inv, link));
     }
 
     @DeleteMapping("/{id}")
@@ -157,6 +198,9 @@ public class ProjectRoleInvitationController {
                 inv.getUsedAt(),
                 inv.isUsed(),
                 inv.isExpired(),
+                inv.isDisabled(),
+                inv.getMaxUses(),
+                inv.getUsageCount(),
                 invitationLink);
     }
 
@@ -169,6 +213,32 @@ public class ProjectRoleInvitationController {
         @Email
         private String email;
         private LocalDateTime expiresAt;
+        private Integer maxUses;
+    }
+
+    @Data
+    public static class UpdateInvitationRequest {
+        private Integer maxUses;
+        private LocalDateTime expiresAt;
+        private Boolean enabled;
+    }
+
+    @Data
+    public static class RegisterRequest {
+        @NotNull @Email
+        private String email;
+        @NotNull @Size(min = 6)
+        private String password;
+        @NotNull
+        private String name;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class RegisterResponse {
+        private String userId;
+        private String email;
+        private String name;
     }
 
     @Data
@@ -186,18 +256,35 @@ public class ProjectRoleInvitationController {
         private LocalDateTime usedAt;
         private boolean used;
         private boolean expired;
+        private boolean disabled;
+        private Integer maxUses;
+        private Integer usageCount;
         private String invitationLink;
     }
 
     @Data
     @AllArgsConstructor
     public static class ProjectRoleInvitationInfo {
+        private Long id;
         private String projectId;
         private String projectName;
         private UserProjectGroupRole role;
         private boolean used;
         private boolean expired;
+        private boolean disabled;
         private String email;
+        private Integer maxUses;
+        private Integer usageCount;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class UsageResponse {
+        private String userId;
+        private String userEmail;
+        private String userName;
+        private boolean wasNewRegistration;
+        private LocalDateTime usedAt;
     }
 
     @Data

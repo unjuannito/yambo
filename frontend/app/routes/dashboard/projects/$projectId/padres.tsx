@@ -8,6 +8,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import InputComponent from "~/components/common/forms/InputComponent";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -34,6 +35,8 @@ export default function ProjectPadres() {
     const [inviteUrl, setInviteUrl] = useState<string>("");
     const [inviteSaving, setInviteSaving] = useState(false);
     const [inviteCopied, setInviteCopied] = useState(false);
+    const [inviteMaxUses, setInviteMaxUses] = useState<string>("");
+    const [inviteExpiresAt, setInviteExpiresAt] = useState<string>("");
 
     const loadParents = useCallback(async () => {
         if (!projectId) return;
@@ -78,6 +81,8 @@ export default function ProjectPadres() {
     const openInvite = () => {
         setInviteUrl("");
         setInviteCopied(false);
+        setInviteMaxUses("");
+        setInviteExpiresAt("");
         setIsInviteOpen(true);
     };
 
@@ -85,6 +90,8 @@ export default function ProjectPadres() {
         setIsInviteOpen(false);
         setInviteUrl("");
         setInviteCopied(false);
+        setInviteMaxUses("");
+        setInviteExpiresAt("");
     };
 
     const generateInvite = async () => {
@@ -94,6 +101,8 @@ export default function ProjectPadres() {
             const result = await projectRoleInvitationService.createInvitation({
                 projectId,
                 role: "PARENT",
+                maxUses: inviteMaxUses ? Number(inviteMaxUses) : undefined,
+                expiresAt: inviteExpiresAt ? new Date(inviteExpiresAt).toISOString() : undefined,
             });
             setInviteUrl(result.invitationLink);
         } catch (err) {
@@ -260,16 +269,34 @@ export default function ProjectPadres() {
                         Genera un enlace para que padres/madres del proyecto {projectName || ""} puedan registrarse y acceder a los drops disponibles para este proyecto.
                     </p>
                     {!inviteUrl ? (
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={generateInvite}
-                            isLoading={inviteSaving}
-                            disabled={inviteSaving}
-                            className="w-full"
-                        >
-                            <FontAwesomeIcon icon={faLink} className="mr-2" />
-                            Generar enlace de invitación
-                        </ButtonComponent>
+                        <div className="flex flex-col gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <InputComponent
+                                    type="number"
+                                    min={1}
+                                    label="Máximo de usos (opcional)"
+                                    value={inviteMaxUses}
+                                    onChange={(e) => setInviteMaxUses(e.target.value)}
+                                    placeholder="Sin límite"
+                                />
+                                <InputComponent
+                                    type="datetime-local"
+                                    label="Fecha de expiración (opcional)"
+                                    value={inviteExpiresAt}
+                                    onChange={(e) => setInviteExpiresAt(e.target.value)}
+                                />
+                            </div>
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={generateInvite}
+                                isLoading={inviteSaving}
+                                disabled={inviteSaving}
+                                className="w-full"
+                            >
+                                <FontAwesomeIcon icon={faLink} className="mr-2" />
+                                Generar enlace de invitación
+                            </ButtonComponent>
+                        </div>
                     ) : (
                         <div className="space-y-3">
                             <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-3">

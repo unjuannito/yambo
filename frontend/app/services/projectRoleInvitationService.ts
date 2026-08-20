@@ -14,7 +14,31 @@ export interface ProjectRoleInvitation {
     usedAt: string | null;
     used: boolean;
     expired: boolean;
+    disabled: boolean;
+    maxUses: number | null;
+    usageCount: number;
     invitationLink: string;
+}
+
+export interface ProjectRoleInvitationInfo {
+    id: string;
+    projectId: string;
+    projectName: string;
+    role: GroupRole;
+    used: boolean;
+    expired: boolean;
+    disabled: boolean;
+    email: string | null;
+    maxUses: number | null;
+    usageCount: number;
+}
+
+export interface InvitationUsage {
+    userId: string;
+    userEmail: string | null;
+    userName: string | null;
+    wasNewRegistration: boolean;
+    usedAt: string;
 }
 
 export interface CreateProjectRoleInvitationRequest {
@@ -22,6 +46,19 @@ export interface CreateProjectRoleInvitationRequest {
     role: GroupRole;
     email?: string;
     expiresAt?: string;
+    maxUses?: number;
+}
+
+export interface UpdateProjectRoleInvitationRequest {
+    maxUses?: number;
+    expiresAt?: string;
+    enabled?: boolean;
+}
+
+export interface RegisterWithRoleRequest {
+    email: string;
+    password: string;
+    name: string;
 }
 
 export class ProjectRoleInvitationService extends ApiService {
@@ -52,15 +89,33 @@ export class ProjectRoleInvitationService extends ApiService {
         );
     }
 
-    public async getInvitationInfo(token: string): Promise<{
-        projectId: string;
-        projectName: string;
-        role: GroupRole;
-        used: boolean;
-        expired: boolean;
-        email: string | null;
-    }> {
-        return await this.get(`/project-role-invitations/${token}`);
+    /** Registra un usuario nuevo a través del link y le asigna el rol. */
+    public async registerAndAccept(
+        token: string,
+        data: RegisterWithRoleRequest,
+    ): Promise<{ userId: string; email: string; name: string }> {
+        return await this.post(
+            `/project-role-invitations/${token}/register`,
+            data,
+        );
+    }
+
+    public async getInvitationInfo(token: string): Promise<ProjectRoleInvitationInfo> {
+        return await this.get<ProjectRoleInvitationInfo>(`/project-role-invitations/${token}`);
+    }
+
+    public async getUsages(id: string): Promise<InvitationUsage[]> {
+        return await this.get<InvitationUsage[]>(`/project-role-invitations/${id}/usages`);
+    }
+
+    public async updateInvitation(
+        id: string,
+        data: UpdateProjectRoleInvitationRequest,
+    ): Promise<ProjectRoleInvitation> {
+        return await this.put<ProjectRoleInvitation, UpdateProjectRoleInvitationRequest>(
+            `/project-role-invitations/${id}`,
+            data,
+        );
     }
 
     public async deleteInvitation(id: string): Promise<string> {
