@@ -43,7 +43,6 @@ pipeline {
         //   github               : credencial GitHub existente (jobs brain-web/mantelio)
         SSH_KEY          = credentials('yambo-ssh-key')
         BUILD_HOST       = credentials('yambo-build-host')
-        REGISTRY         = credentials('yambo-registry')
         REGISTRY_USER    = credentials('yambo-registry-user')
         REGISTRY_PASS    = credentials('yambo-registry-pass')
         SONAR_HOST_URL   = credentials('yambo-sonar-url')
@@ -51,10 +50,11 @@ pipeline {
 
         // ── Imágenes ─────────────────────────────────────────────────────────
         // Registry local por LAN (develop → k3s .22)
+        REGISTRY = credentials('yambo-registry-host-dev')
         FRONTEND_IMAGE = "${REGISTRY}/yambo-web-frontend"
         BACKEND_IMAGE  = "${REGISTRY}/yambo-web-backend"
         // Registry vía NetBird para Hetzner (main → producción)
-        REGISTRY_HETZNER = "100.111.131.248:5000"
+        REGISTRY_HETZNER = credentials('yambo-registry-host-prod')
         FRONTEND_IMAGE_HETZNER = "${REGISTRY_HETZNER}/yambo-web-frontend"
         BACKEND_IMAGE_HETZNER  = "${REGISTRY_HETZNER}/yambo-web-backend"
 
