@@ -136,6 +136,25 @@ pipeline {
         }
 
         // ═══════════════════════════════════════════════════════════════════
+        // Phase 2.5 — Prepare Build Host (transferir código a BUILD_HOST .21)
+        // ═══════════════════════════════════════════════════════════════════
+        // Necesario SIEMPRE que haya deploy (aunque solo cambie infra):
+        // los stages Test/Sonar se saltan si no hay cambios FE/BE y el
+        // deploy necesita /tmp/yambo-ci con el código.
+        stage('Prepare Build Host') {
+            when {
+                expression { env.DEPLOYABLE_CHANGED == 'true' && !params.FORCE_PROD_DEPLOY }
+            }
+            steps {
+                sh """
+                    tar czf - --exclude=.git --exclude=node_modules --exclude=frontend/node_modules --exclude=backend/target . | \
+                    ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
+                        'rm -rf /tmp/yambo-ci && mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && ls /tmp/yambo-ci | head -20'
+                """
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // Phase 3 — Test (en BUILD_HOST con contenedores; .21 no tiene mvn/node)
         // ═══════════════════════════════════════════════════════════════════
         stage('Test') {
@@ -222,7 +241,7 @@ pipeline {
             }
             parallel {
                 stage('Frontend Image') {
-                    when { expression { env.FE_CHANGED == 'true' } }
+                    when { expression { env.FE_CHANGED == 'true' || env.INFRA_CHANGED == 'true' } }
                     steps {
                         script {
                             sh """
@@ -236,7 +255,7 @@ pipeline {
                     }
                 }
                 stage('Backend Image') {
-                    when { expression { env.BE_CHANGED == 'true' } }
+                    when { expression { env.BE_CHANGED == 'true' || env.INFRA_CHANGED == 'true' } }
                     steps {
                         script {
                             sh """
