@@ -6,19 +6,21 @@ namespace: yambo
 resources:
   - ../../base
 
+# Image tags are set by the CI pipeline:
+#   kustomize edit set image \
+#     192.168.1.21:5000/yambo-web-frontend=192.168.1.21:5000/yambo-web-frontend:1.2.3 \
+#     192.168.1.21:5000/yambo-web-backend=192.168.1.21:5000/yambo-web-backend:1.2.3
 images:
-  - name: yambo-web-frontend
-    newName: 100.111.131.248:5000/yambo-web-frontend
+  - name: 192.168.1.21:5000/yambo-web-frontend
     newTag: latest
-  - name: yambo-web-backend
-    newName: 100.111.131.248:5000/yambo-web-backend
+  - name: 192.168.1.21:5000/yambo-web-backend
     newTag: latest
 
 patches:
-  # 2 réplicas para HA en producción
+  # Set replicas to 2 for HA
   - path: patches/backend-replicas.yaml
   - path: patches/frontend-replicas.yaml
-  # Dominio real en ingress, CORS y FRONTEND_URL
+  # Patch real domain into ingress, backend CORS, and frontend FRONTEND_URL
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value

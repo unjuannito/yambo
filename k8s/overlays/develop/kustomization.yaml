@@ -1,0 +1,63 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ── Overlay DESARROLLO: k3s local (.22), acceso público vía nginx .21 ────
+# Aplicado por Jenkinsfile (rama develop) con KUBECONFIG local.
+# El Secret placeholder del base se FILTRA en el pipeline; los reales los
+# crea el pipeline con credenciales Jenkins.
+
+namespace: yambo-develop
+
+resources:
+  - ../../base
+
+# Imágenes → registry local por LAN. El pipeline inyecta el tag:
+#   kustomize edit set image yambo-web-frontend=192.168.1.21:5000/yambo-web-frontend:<tag>
+images:
+  - name: yambo-web-frontend
+    newName: 192.168.1.21:5000/yambo-web-frontend
+    newTag: latest
+  - name: yambo-web-backend
+    newName: 192.168.1.21:5000/yambo-web-backend
+    newTag: latest
+
+patches:
+  # Dominio de desarrollo (público vía nginx .21 → k3s .22)
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: dev.yambo.cabrasky.net
+    target:
+      kind: Ingress
+      name: yambo-ingress
+  # CORS backend → dominio dev
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://dev.yambo.cabrasky.net"
+    target:
+      kind: Deployment
+      name: yambo-backend
+  # FRONTEND_URL → dominio dev
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "https://dev.yambo.cabrasky.net"
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  # Replicas mínimas en desarrollo
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: yambo-backend
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: yambo-frontend

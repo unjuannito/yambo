@@ -26,7 +26,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: frontend
-          image: yambo-web-frontend:latest
+          image: 192.168.1.11:5000/yambo-web-frontend:latest
           imagePullPolicy: Always
           env:
             - name: BACKEND_INTERNAL_URL
