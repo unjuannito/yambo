@@ -289,7 +289,7 @@ pipeline {
                                      doc = "---\\n"; is_secret = 0; next
                                  }
                                  { doc = doc \$0 "\\n" }
-                                 /^kind: Secret$/ { is_secret = 1 }
+                                 /^kind: Secret\$/ { is_secret = 1 }
                                  END { if (doc != "" && !is_secret) { printf "%s", doc } }
                               '\'' | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s && \
@@ -322,7 +322,7 @@ pipeline {
                                KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create secret generic yambo-secrets -n ${NS_DEV} \
                                  --from-literal=DB_USER=${REGISTRY_USER} \
                                  --from-literal=DB_PASS=${REGISTRY_PASS} \
-                                 --from-literal=JWT_SECRET=$(openssl rand -hex 32) \
+                                 --from-literal=JWT_SECRET=\$(openssl rand -hex 32) \
                                  --from-literal=MAIL_HOST=smtp.gmail.com \
                                  --from-literal=MAIL_USERNAME=CHANGE_ME \
                                  --from-literal=MAIL_PASSWORD=CHANGE_ME \
@@ -336,7 +336,7 @@ pipeline {
                                      doc = "---\\n"; is_secret = 0; next
                                  }
                                  { doc = doc \$0 "\\n" }
-                                 /^kind: Secret$/ { is_secret = 1 }
+                                 /^kind: Secret\$/ { is_secret = 1 }
                                  END { if (doc != "" && !is_secret) { printf "%s", doc } }
                               '\'' | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s && \
