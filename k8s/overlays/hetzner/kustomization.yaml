@@ -1,0 +1,63 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ── Overlay PRODUCCIÓN: Hetzner CX33 ─────────────────────────────────────
+# Aplicado por Jenkinsfile (rama main/master) con KUBECONFIG hetzner.
+# Imágenes → registry local vía NetBird (100.111.131.248:5000).
+# El Secret se gestiona aparte (no se re-aplica salvo FORCE_PROD_DEPLOY).
+
+namespace: yambo
+
+resources:
+  - ../../base
+
+# Imágenes → registry vía NetBird. El pipeline inyecta el tag:
+#   kustomize edit set image yambo-web-frontend=100.111.131.248:5000/yambo-web-frontend:<tag>
+images:
+  - name: yambo-web-frontend
+    newName: 100.111.131.248:5000/yambo-web-frontend
+    newTag: latest
+  - name: yambo-web-backend
+    newName: 100.111.131.248:5000/yambo-web-backend
+    newTag: latest
+
+patches:
+  # Dominio real de producción
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: yambo.cabrasky.net
+    target:
+      kind: Ingress
+      name: yambo-ingress
+  # CORS backend
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://yambo.cabrasky.net"
+    target:
+      kind: Deployment
+      name: yambo-backend
+  # FRONTEND_URL
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "https://yambo.cabrasky.net"
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  # Replicas para HA
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: yambo-backend
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: yambo-frontend
