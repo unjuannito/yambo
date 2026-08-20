@@ -288,10 +288,10 @@ pipeline {
                                      if (doc != "" && !is_secret) { printf "%s", doc }
                                      doc = "---\\n"; is_secret = 0; next
                                  }
-                                 { doc = doc $0 "\\n" }
+                                 { doc = doc \$0 "\\n" }
                                  /^kind: Secret$/ { is_secret = 1 }
                                  END { if (doc != "" && !is_secret) { printf "%s", doc } }
-                               '\'' | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
+                              '\'' | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s'
                     """
@@ -335,10 +335,10 @@ pipeline {
                                      if (doc != "" && !is_secret) { printf "%s", doc }
                                      doc = "---\\n"; is_secret = 0; next
                                  }
-                                 { doc = doc $0 "\\n" }
+                                 { doc = doc \$0 "\\n" }
                                  /^kind: Secret$/ { is_secret = 1 }
                                  END { if (doc != "" && !is_secret) { printf "%s", doc } }
-                               '\'' | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
+                              '\'' | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s'
                     """
