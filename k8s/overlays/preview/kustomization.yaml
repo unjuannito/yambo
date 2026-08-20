@@ -1,77 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# namespace is set by the CI pipeline before rendering:
-#   kustomize edit set namespace yambo-pr-42
-namespace: yambo-pr-PLACEHOLDER
+namespace: yambo
 
 resources:
   - ../../base
-  - preview-uploads-pvc.yaml
 
-# Image tags are set by the CI pipeline:
-#   kustomize edit set image \
-#     192.168.1.11:5000/yambo-web-frontend=...:pr-42 \
-#     192.168.1.11:5000/yambo-web-backend=...:pr-42
 images:
-  - name: 192.168.1.11:5000/yambo-web-frontend
+  - name: yambo-web-frontend
+    newName: 192.168.1.21:5000/yambo-web-frontend
     newTag: latest
-  - name: 192.168.1.11:5000/yambo-web-backend
+  - name: yambo-web-backend
+    newName: 192.168.1.21:5000/yambo-web-backend
     newTag: latest
-
-patches:
-  # Single replica for lightweight preview environments
-  - path: patches/backend-replicas.yaml
-    target:
-      kind: Deployment
-      name: yambo-backend
-  - path: patches/frontend-replicas.yaml
-    target:
-      kind: Deployment
-      name: yambo-frontend
-  # Replace PVC with emptyDir (uploads are ephemeral in previews)
-  - path: patches/backend-emptydir.yaml
-    target:
-      kind: Deployment
-      name: yambo-backend
-  # Lighter resource limits for previews
-  - path: patches/backend-resource-limits.yaml
-    target:
-      kind: Deployment
-      name: yambo-backend
-  - path: patches/frontend-resource-limits.yaml
-    target:
-      kind: Deployment
-      name: yambo-frontend
-  - path: patches/database-resource-limits.yaml
-    target:
-      kind: Deployment
-      name: postgres
-  # Domain is set by the CI pipeline via patches/domain-*.yaml (generated at build time)
-  - path: patches/domain-backend.yaml
-    target:
-      kind: Deployment
-      name: yambo-backend
-  - path: patches/domain-frontend.yaml
-    target:
-      kind: Deployment
-      name: yambo-frontend
-  - path: patches/domain-ingress.yaml
-    target:
-      kind: Ingress
-      name: yambo-ingress
-  # Longer startup delays — preview DB seeding can be slow
-  - path: patches/startup-delays.yaml
-    target:
-      kind: Deployment
-      name: yambo-backend
-  # Frontend also needs longer startup delays — backend may not be ready yet
-  - path: patches/frontend-startup-delays.yaml
-    target:
-      kind: Deployment
-      name: yambo-frontend
-  # Disable mail in preview environments via secrets patch
-  - path: patches/preview-secrets.yaml
-    target:
-      kind: Secret
-      name: yambo-secrets
