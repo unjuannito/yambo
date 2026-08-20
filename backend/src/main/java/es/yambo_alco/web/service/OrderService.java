@@ -5,6 +5,7 @@ import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Issue;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderFilter;
@@ -127,15 +128,9 @@ public class OrderService {
                             product.getName(), family.getEndTms()));
         }
 
-        if (family.getProfile() != null) {
-            boolean hasProfile = user.getProfiles().stream()
-                    .anyMatch(p -> p.getId().equals(family.getProfile().getId()));
-
-            if (!hasProfile) {
-                throw new BadRequestException(
-                        String.format("You don't have access to product '%s'. Required profile: %s",
-                                product.getName(), family.getProfile().getName()));
-            }
+        if (!FamilyProductRoleAccess.userHasAccess(user, family.getRoleAccess())) {
+            throw new BadRequestException(
+                    String.format("You don't have access to product '%s'", product.getName()));
         }
     }
 

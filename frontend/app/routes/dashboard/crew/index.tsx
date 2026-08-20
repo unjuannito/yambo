@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { User, UserGroupRole } from "~/types/userType";
+import type { GroupRole } from "~/types/role";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
@@ -9,11 +10,12 @@ import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
+import { canHaveExtraProfileData } from "~/utils/roleHelpers";
 import toast from "react-hot-toast";
 
 interface GroupRoleEntry {
     groupId: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 interface EditForm {
@@ -55,7 +57,7 @@ export default function Crew() {
     const [searching, setSearching] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [addGroupId, setAddGroupId] = useState("");
-    const [addRole, setAddRole] = useState<'MONITOR' | 'COORDINATOR'>("MONITOR");
+    const [addRole, setAddRole] = useState<GroupRole>("MONITOR");
 
     const [allCrew, setAllCrew] = useState<User[]>([]);
     const [loadingGrouped, setLoadingGrouped] = useState(false);
@@ -177,7 +179,7 @@ export default function Crew() {
 
             for (const cr of currentRoles) {
                 if (!desiredSet.has(currentKey(cr))) {
-                    await adminUserService.removeGroupRole(userId, cr.groupId, cr.role as 'MONITOR' | 'COORDINATOR');
+                    await adminUserService.removeGroupRole(userId, cr.groupId, cr.role as GroupRole);
                 }
             }
             for (const gr of editForm.groupRoles) {
@@ -237,7 +239,8 @@ export default function Crew() {
         try {
             setSaving(true);
             await adminUserService.assignGroupRole(selectedUser.id, addGroupId, addRole);
-            toast.success(`${selectedUser.name} añadido al equipo como ${addRole === 'COORDINATOR' ? 'Coordinador' : 'Monitor'}`);
+            const roleLabel = addRole === 'COORDINATOR' ? 'Coordinador' : 'Monitor';
+            toast.success(`${selectedUser.name} añadido al equipo como ${roleLabel}`);
             resetAdd();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
@@ -282,7 +285,7 @@ export default function Crew() {
                                 key={`${gr.groupId}:${gr.role}`}
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     gr.role === 'COORDINATOR'
-                                        ? 'bg-yambo-purple-50 text-yambo-purple-700'
+                                        ? 'bg-yambo-purple-100 text-yambo-purple-800'
                                         : 'bg-yambo-green-50 text-yambo-green-700'
                                 }`}
                                 title={`${gr.role === 'COORDINATOR' ? 'Coordinador' : 'Monitor'} - ${gr.projectName}${gr.groupName ? ` / ${gr.groupName}` : ''}`}
@@ -388,7 +391,6 @@ export default function Crew() {
                                                 </div>
                                             </div>
                                         )}
-
                                         {pg.monitors.length > 0 && (
                                             <div>
                                                 <h3 className="text-sm font-medium text-yambo-green-600 mb-2">Monitores</h3>
@@ -464,10 +466,10 @@ export default function Crew() {
                                         value={gr.role}
                                         onChange={(e) => {
                                             const updated = [...editForm.groupRoles];
-                                            updated[idx] = { ...updated[idx], role: e.target.value as 'MONITOR' | 'COORDINATOR' };
+                                            updated[idx] = { ...updated[idx], role: e.target.value as GroupRole };
                                             setEditForm({ ...editForm, groupRoles: updated });
                                         }}
-                                        className="w-36 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
+                                        className="w-36 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
                                         <option value="MONITOR">Monitor</option>
                                         <option value="COORDINATOR">Coordinador</option>
@@ -495,28 +497,32 @@ export default function Crew() {
                                 + Añadir rol en grupo
                             </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
-                            <textarea
-                                value={editForm.bio}
-                                onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                                placeholder="Biografía del miembro..."
-                                rows={3}
-                                maxLength={500}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
-                            <input
-                                type="text"
-                                value={editForm.funFact}
-                                onChange={(e) => setEditForm({ ...editForm, funFact: e.target.value })}
-                                placeholder="Un dato curioso..."
-                                maxLength={100}
-                                className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                            />
-                        </div>
+                        {canHaveExtraProfileData({ groupRoles: editForm.groupRoles }) && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                                <textarea
+                                    value={editForm.bio}
+                                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                                    placeholder="Biografía del miembro..."
+                                    rows={3}
+                                    maxLength={500}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none"
+                                />
+                            </div>
+                        )}
+                        {canHaveExtraProfileData({ groupRoles: editForm.groupRoles }) && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                                <input
+                                    type="text"
+                                    value={editForm.funFact}
+                                    onChange={(e) => setEditForm({ ...editForm, funFact: e.target.value })}
+                                    placeholder="Un dato curioso..."
+                                    maxLength={100}
+                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
+                                />
+                            </div>
+                        )}
                     </div>
                 </Modal>
 
@@ -605,7 +611,7 @@ export default function Crew() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
                                     <select
                                         value={addRole}
-                                        onChange={(e) => setAddRole(e.target.value as 'MONITOR' | 'COORDINATOR')}
+                                        onChange={(e) => setAddRole(e.target.value as GroupRole)}
                                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                     >
                                         <option value="MONITOR">Monitor</option>

@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
@@ -73,11 +75,10 @@ public class ProductService {
         if (isProductAdmin) {
             spec = spec.and(ProductSpecifications.activeEquals(active));
         } else {
-            Set<String> profileIds = user.getProfiles().stream()
-                    .map(p -> p.getId())
-                    .collect(Collectors.toSet());
+            Set<String> projectIds = FamilyProductRoleAccess.projectIds(user);
+            Set<UserProjectGroupRole> roles = FamilyProductRoleAccess.roles(user);
             spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
-            spec = spec.and(ProductSpecifications.userHasAccess(profileIds));
+            spec = spec.and(ProductSpecifications.userHasAccess(projectIds, roles));
             spec = spec.and(ProductSpecifications.familyProductActive());
         }
 
@@ -180,18 +181,14 @@ public class ProductService {
 
     private void checkAccess(Product product) {
         User user = authService.getCurrentUser(true);
-        Set<String> userProfileIds = user.getProfiles().stream()
-                .map(p -> p.getId())
-                .collect(Collectors.toSet());
 
         if (product.getFamilyProduct() == null) {
             return;
         }
 
-        boolean hasAccess = product.getFamilyProduct().getProfile() != null
-                && userProfileIds.contains(product.getFamilyProduct().getProfile().getId());
+        FamilyProduct fp = product.getFamilyProduct();
 
-        if (!hasAccess) {
+        if (!FamilyProductRoleAccess.userHasAccess(user, fp.getRoleAccess())) {
             throw new ResourceNotFoundException("Product not found");
         }
     }

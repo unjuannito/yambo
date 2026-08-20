@@ -8,6 +8,7 @@ import type {
     FetchDataParams,
 } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -46,6 +47,7 @@ export default function Profiles() {
     const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
     const [editing, setEditing] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
     useEffect(() => {
         loadPermissions();
@@ -128,18 +130,21 @@ export default function Profiles() {
         }
     };
 
-    const handleDelete = async (profileId: string) => {
-        if (!confirm(t("profiles.confirmDelete", { id: profileId }))) {
-            return;
-        }
+    const handleDelete = (profileId: string) => {
+        setConfirmDelete(profileId);
+    };
 
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
         try {
-            await profileService.deleteProfile(profileId);
+            await profileService.deleteProfile(confirmDelete);
             toast.success(t("profiles.deleted"));
         } catch (err) {
             toast.error(
                 getErrorMessage(err, t("profiles.deleteError")),
             );
+        } finally {
+            setConfirmDelete(null);
         }
     };
 
@@ -326,6 +331,15 @@ export default function Profiles() {
                         />
                     </div>
                 </Modal>
+            <ConfirmDialog
+                isOpen={confirmDelete !== null}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={executeDelete}
+                title={t("profiles.confirmDeleteTitle")}
+                message={confirmDelete ? t("profiles.confirmDelete", { id: confirmDelete }) : ""}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

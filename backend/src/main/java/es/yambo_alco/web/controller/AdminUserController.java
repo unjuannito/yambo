@@ -56,6 +56,7 @@ public class AdminUserController {
             @RequestParam(required = false) String permissions,
             @RequestParam(required = false) String profiles,
             @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean canHaveExtraProfileData,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size,
             @RequestParam(required = false) String sortBy,
@@ -76,7 +77,7 @@ public class AdminUserController {
                 : PageRequest.of(page, size, dir, sortBy);
 
         UserFilter userFilter = new UserFilter(query, id, name, email, enabled, perms == null ? null : List.copyOf(perms),
-                profilesList, role);
+                profilesList, role, canHaveExtraProfileData);
         Page<User> users = userService.listUsers(userFilter, pr);
         return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }

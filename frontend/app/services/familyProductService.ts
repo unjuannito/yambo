@@ -1,5 +1,11 @@
 import { ApiService } from './apiService';
+import type { GroupRole } from '~/types/role';
 import type { DropWatcher } from '~/types/issueType';
+
+export interface RoleAccess {
+  projectId: string;
+  role: GroupRole;
+}
 
 export interface FamilyProduct {
   id: string;
@@ -8,8 +14,8 @@ export interface FamilyProduct {
   endTms: string;
   status?: string;
   active?: boolean;
-  profileId?: string | null;
   projectIds?: string[];
+  roleAccess?: RoleAccess[];
 }
 
 export interface CreateFamilyProductRequest {
@@ -17,6 +23,7 @@ export interface CreateFamilyProductRequest {
   startTms: string;
   endTms: string;
   projectIds?: string[];
+  roleAccess?: RoleAccess[];
 }
 
 export interface UpdateFamilyProductRequest {
@@ -24,6 +31,7 @@ export interface UpdateFamilyProductRequest {
   startTms?: string;
   endTms?: string;
   projectIds?: string[];
+  roleAccess?: RoleAccess[];
 }
 
 export class FamilyProductService extends ApiService {
@@ -31,8 +39,7 @@ export class FamilyProductService extends ApiService {
     page = 0,
     size = 50,
     name?: string,
-    active?: boolean,
-    profileId?: string
+    active?: boolean
   ): Promise<{ content: FamilyProduct[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -40,7 +47,6 @@ export class FamilyProductService extends ApiService {
     });
     if (name) params.append('name', name);
     if (active !== undefined) params.append('active', active.toString());
-    if (profileId) params.append('profileId', profileId);
 
     return await this.get(`/family-products?${params.toString()}`);
   }
@@ -59,6 +65,10 @@ export class FamilyProductService extends ApiService {
 
   public async assignProjects(id: string, projectIds: string[]): Promise<FamilyProduct> {
     return await this.put(`/family-products/${id}/projects`, { projectIds });
+  }
+
+  public async assignRoleAccess(id: string, roleAccess: RoleAccess[]): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}/role-access`, { roleAccess });
   }
 
   public async deleteFamilyProduct(id: string): Promise<void> {

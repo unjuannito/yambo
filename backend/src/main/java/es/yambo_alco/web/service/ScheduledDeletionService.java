@@ -21,8 +21,8 @@ public class ScheduledDeletionService {
     private final PendingDeletionRepository pendingDeletionRepository;
     private final UserRepository userRepository;
 
-    @Scheduled(cron = "0 0 2 * * ?") 
-    @Transactional
+    // @Scheduled(cron = "0 0 2 * * ?") — disabled: table pending_deletion doesn't exist (dead code)
+    // @Transactional
     public void processPendingDeletions() {
         log.info("Starting scheduled deletion process");
 

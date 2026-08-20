@@ -75,6 +75,8 @@ public class UserService {
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 		if (filter.role() != null && !filter.role().isBlank())
 			spec = spec.and(UserSpecifications.hasGroupRole(filter.role()));
+		if (filter.canHaveExtraProfileData() != null && filter.canHaveExtraProfileData())
+			spec = spec.and(UserSpecifications.hasMonitorOrCoordinatorRole());
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -101,14 +103,20 @@ public class UserService {
 			user.setEmail(normalizedEmail);
 		}
 
-		if (photo != null) {
-			user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
-		}
-		if (bio != null) {
-			user.setBio(bio.trim().isEmpty() ? null : bio.trim());
-		}
-		if (funFact != null) {
-			user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+		if (photo != null || bio != null || funFact != null) {
+			if (!user.canHaveExtraProfileData()) {
+				throw new BadRequestException(
+						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact)");
+			}
+			if (photo != null) {
+				user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
+			}
+			if (bio != null) {
+				user.setBio(bio.trim().isEmpty() ? null : bio.trim());
+			}
+			if (funFact != null) {
+				user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+			}
 		}
 
 		return userRepository.save(user);
@@ -122,9 +130,12 @@ public class UserService {
 		ProjectGroup group = projectGroupRepository.findById(groupId)
 				.orElseThrow(() -> new ResourceNotFoundException("Group not found"));
 
-		// Coordinators must be assigned to project-level groups (name=null)
-		if (role == UserProjectGroupRole.COORDINATOR && group.getName() != null) {
-			throw new BadRequestException("Coordinators must be assigned to the project-level group");
+		// Coordinators and Parents must be assigned to project-level groups (name=null)
+		if ((role == UserProjectGroupRole.COORDINATOR || role == UserProjectGroupRole.PARENT)
+				&& group.getName() != null) {
+			throw new BadRequestException(
+					role == UserProjectGroupRole.COORDINATOR ? "Coordinators" : "Parents"
+							+ " must be assigned to the project-level group");
 		}
 
 		boolean alreadyExists = user.getGroupRoles().stream()
@@ -172,6 +183,10 @@ public class UserService {
 	}
 
 	private void syncRoleProfile(User user, UserProjectGroupRole role, boolean shouldHave) {
+		// Parents don't have a synced profile
+		if (role == UserProjectGroupRole.PARENT) {
+			return;
+		}
 		String profileId = role == UserProjectGroupRole.MONITOR ? MONITOR_PROFILE_ID : COORDINATOR_PROFILE_ID;
 		boolean hasProfile = user.getProfiles().stream()
 				.anyMatch(p -> p.getId().equals(profileId));

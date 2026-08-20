@@ -4,8 +4,11 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
@@ -61,7 +64,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("a@b.com");
@@ -74,7 +77,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, "John", null, null, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, "John", null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getName()).isEqualTo("John");
@@ -87,7 +90,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter("test@", null, null, null, null, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter("test@", null, null, null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("test@example.com");
@@ -100,7 +103,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, true, null, null, null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, true, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).isEnabled()).isTrue();
@@ -113,7 +116,7 @@ public class UserServiceTest {
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, "MONITOR"),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, "MONITOR", null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getEmail()).isEqualTo("monitor@example.com");
@@ -597,10 +600,14 @@ public class UserServiceTest {
     @Test
     void updateProfile_WithPhotoBioFunFact_ShouldUpdateFields() {
         // Given
+        UserProjectGroup monitorRole = UserProjectGroup.builder()
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Old Name")
+                .groupRoles(Set.of(monitorRole))
                 .build();
 
         User updatedUser = User.builder()
@@ -627,12 +634,62 @@ public class UserServiceTest {
     }
 
     @Test
-    void updateProfile_WithEmptyPhotoBioFunFact_ShouldSetNull() {
+    void updateProfile_WithExtraDataForNonMonitorUser_ShouldThrow() {
         // Given
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Old Name")
+                .groupRoles(Set.of())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then — photo
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        "new-photo.jpg", null, null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        // When & Then — bio
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        null, "New bio", null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        // When & Then — funFact
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        null, null, "New fun fact"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        // When & Then — all three
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        "new-photo.jpg", "New bio", "New fun fact"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProfile_WithEmptyPhotoBioFunFact_ShouldSetNull() {
+        // Given
+        UserProjectGroup monitorRole = UserProjectGroup.builder()
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .photo("old-photo.jpg")
+                .bio("Old bio")
+                .funFact("Old fun fact")
+                .groupRoles(Set.of(monitorRole))
                 .build();
 
         User updatedUser = User.builder()
@@ -686,7 +743,7 @@ public class UserServiceTest {
 
         // When
         PageRequest pageable = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("invalidField"));
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null), pageable);
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null, null), pageable);
 
         // Then
         assertThat(res.getTotalElements()).isEqualTo(1);
@@ -701,11 +758,102 @@ public class UserServiceTest {
                 .thenReturn(page);
 
         // When
-        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, List.of("PERM001"), null),
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, List.of("PERM001"), null, null),
                 PageRequest.of(0, 10));
 
         // Then
         assertThat(res.getTotalElements()).isEqualTo(1);
         assertThat(res.getContent().get(0).getId()).isEqualTo("U0000002");
+    }
+
+    // ── assignGroupRole with PARENT ──────────────────────────────────
+
+    @Test
+    void assignGroupRole_WithParentRole_OnProjectLevelGroup_ShouldSucceed() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).hasSize(1);
+        UserProjectGroup upg = result.getGroupRoles().iterator().next();
+        assertThat(upg.getRole()).isEqualTo(UserProjectGroupRole.PARENT);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_OnNamedGroup_ShouldThrow() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Subgroup").build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Parents must be assigned to the project-level group");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_AlreadyExists_ShouldReturnEarly() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+        UserProjectGroup existing = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.PARENT)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(existing))).profiles(new HashSet<>()).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).hasSize(1);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void removeGroupRole_WithParentRole_ShouldRemoveIt() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+        UserProjectGroup upg = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.PARENT)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>()).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).isEmpty();
+        verify(userRepository).save(user);
     }
 }

@@ -1,12 +1,15 @@
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBagShopping, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 export default function CartSidebar() {
   const { t } = useTranslation();
+  const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
   const {
     items,
     removeItem,
@@ -77,11 +80,7 @@ export default function CartSidebar() {
           <h2 className="text-lg font-bold font-display">{t('merch.cartTitle')}</h2>
           {items.length > 0 && (
             <button
-              onClick={() => {
-                if (confirm(t('merch.clearCartConfirm'))) {
-                  clearCart();
-                }
-              }}
+              onClick={() => setShowClearCartConfirm(true)}
               className="text-sm text-gray-500 hover:text-red-500 underline transition-colors"
             >
               {t('dashboard.clearAll')}
@@ -224,6 +223,21 @@ export default function CartSidebar() {
           </div>
         )}
       </aside>
+
+      {/* Clear Cart Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showClearCartConfirm}
+        onClose={() => setShowClearCartConfirm(false)}
+        onConfirm={() => {
+          clearCart();
+          setShowClearCartConfirm(false);
+        }}
+        title={t('merch.clearCart')}
+        message={t('merch.clearCartConfirm')}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        variant="warning"
+      />
     </>
   );
 }

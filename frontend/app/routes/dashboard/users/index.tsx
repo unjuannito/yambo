@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Route } from "./+types/index";
 import type { User } from "~/types/userType";
+import type { GroupRole } from "~/types/role";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
@@ -8,6 +9,7 @@ import { adminUserService } from "~/services/adminUserService";
 import { profileService } from "~/services/profileService";
 import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -15,7 +17,8 @@ import ListPageShell from "~/components/common/ListPageShell";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faArrowRight, faPenToSquare, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -26,7 +29,7 @@ export function meta({}: Route.MetaArgs) {
 
 interface GroupRoleEntry {
     groupId: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 interface UserForm {
@@ -52,6 +55,7 @@ const EMPTY_FORM: UserForm = {
 };
 
 export default function Users() {
+    const navigate = useNavigate();
     const [profileOptions, setProfileOptions] = useState<{ value: string; label: string }[]>([]);
     const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,6 +63,7 @@ export default function Users() {
     const [form, setForm] = useState<UserForm>({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => {
         const fetchProfiles = async () => {
@@ -144,7 +149,7 @@ export default function Users() {
                 // Remove roles no longer desired
                 for (const cr of currentRoles) {
                     if (!desiredSet.has(currentKey(cr))) {
-                        await adminUserService.removeGroupRole(editing, cr.groupId, cr.role);
+                        await adminUserService.removeGroupRole(editing, cr.groupId, cr.role as GroupRole);
                     }
                 }
                 // Add new roles
@@ -165,17 +170,20 @@ export default function Users() {
         }
     };
 
-    const handleDelete = async (userId: string, userName: string) => {
-        if (!confirm(`¿Estás seguro de que deseas eliminar al usuario "${userName}"?`)) {
-            return;
-        }
+    const handleDelete = (userId: string, userName: string) => {
+        setConfirmDelete({ id: userId, name: userName });
+    };
 
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
         try {
-            await adminUserService.deleteUser(userId);
+            await adminUserService.deleteUser(confirmDelete.id);
             toast.success("Usuario eliminado correctamente");
             setRefreshKey(prev => prev + 1);
         } catch (err) {
             toast.error(getErrorMessage(err, "¡El usuario se resiste a irse!"));
+        } finally {
+            setConfirmDelete(null);
         }
     };
 
@@ -203,15 +211,17 @@ export default function Users() {
             },
             render: (user: User) => (
                 <div>
-                    <span className="font-medium text-yambo-black">
+                    <button
+                        onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
+                        className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors text-left"
+                    >
                         {user.name}
-                        {user.system && (
-                            <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
-                                Sistema
-                            </span>
-                        )}
-                    </span>
-                    <p className="text-xs text-gray-400 sm:hidden truncate max-w-[180px]">{user.email}</p>
+                    </button>
+                    {user.system && (
+                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
+                            Sistema
+                        </span>
+                    )}
                 </div>
             ),
         },
@@ -273,11 +283,13 @@ export default function Users() {
                                 className={`px-2 py-1 rounded-full text-xs ${
                                     gr.role === 'COORDINATOR'
                                         ? 'bg-yambo-purple-100 text-yambo-purple-800'
+                                        : gr.role === 'PARENT'
+                                        ? 'bg-amber-100 text-amber-800'
                                         : 'bg-yambo-green-50 text-yambo-green-700'
                                 }`}
                                 title={`${gr.role} - ${gr.projectName}`}
                             >
-                                {gr.role === 'COORDINATOR' ? 'C' : 'M'}: {gr.groupName || gr.projectName}
+                                {gr.role === 'COORDINATOR' ? 'C' : gr.role === 'PARENT' ? 'P' : 'M'}: {gr.groupName || gr.projectName}
                             </span>
                         ))
                     ) : (
@@ -322,13 +334,21 @@ export default function Users() {
             requiredPerms: [{ obj: "user", action: "update" }],
             render: (user: User) => (
                 <div className="flex gap-2">
+                    <ButtonComponent
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
+                    >
+                        <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 mr-1" />
+                        Gestionar
+                    </ButtonComponent>
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                         <ButtonComponent
                             onClick={() => startEdit(user)}
-                            variant="primary"
+                            variant="neutral"
                             size="sm"
                         >
-                            Editar
+                            <FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" />
                         </ButtonComponent>
                     </RequirePermission>
                     {!user.system && (
@@ -338,7 +358,7 @@ export default function Users() {
                                 variant="destructive"
                                 size="sm"
                             >
-                                Eliminar
+                                <FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" />
                             </ButtonComponent>
                         </RequirePermission>
                     )}
@@ -451,13 +471,14 @@ export default function Users() {
                                         value={gr.role}
                                         onChange={(e) => {
                                             const updated = [...form.groupRoles];
-                                            updated[idx] = { ...updated[idx], role: e.target.value as 'MONITOR' | 'COORDINATOR' };
+                                            updated[idx] = { ...updated[idx], role: e.target.value as GroupRole };
                                             setForm({ ...form, groupRoles: updated });
                                         }}
                                         className="w-36 border border-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
                                         <option value="MONITOR">Monitor</option>
                                         <option value="COORDINATOR">Coordinador</option>
+                                        <option value="PARENT">Padre/Madre</option>
                                     </select>
                                     <button
                                         type="button"
@@ -520,6 +541,15 @@ export default function Users() {
                         )}
                     </div>
                 </Modal>
+            <ConfirmDialog
+                isOpen={confirmDelete !== null}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={executeDelete}
+                title="Eliminar usuario"
+                message={confirmDelete ? `¿Estás seguro de que deseas eliminar al usuario "${confirmDelete.name}"?` : ""}
+                confirmLabel="Eliminar"
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

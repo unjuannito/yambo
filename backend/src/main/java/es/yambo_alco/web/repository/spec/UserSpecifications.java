@@ -73,4 +73,14 @@ public final class UserSpecifications {
             return cb.equal(grJoin.get("role"), enumRole);
         };
     }
+
+    public static Specification<User> hasMonitorOrCoordinatorRole() {
+        return (root, query, cb) -> {
+            Join<User, UserProjectGroup> grJoin = root.join("groupRoles", JoinType.INNER);
+            query.distinct(true);
+            Predicate monitor = cb.equal(grJoin.get("role"), UserProjectGroupRole.MONITOR);
+            Predicate coordinator = cb.equal(grJoin.get("role"), UserProjectGroupRole.COORDINATOR);
+            return cb.or(monitor, coordinator);
+        };
+    }
 }
