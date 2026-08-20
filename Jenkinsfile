@@ -137,7 +137,7 @@ pipeline {
                     // Enviar el repo (sin node_modules/.git) al build host
                     sh """
                         tar czf - --exclude=.git --exclude=node_modules --exclude=target --exclude=dist . | \
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${BUILD_HOST} \
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_deploy ${BUILD_HOST} \
                           'rm -rf /srv/ci/yambo && mkdir -p /srv/ci/yambo && tar xzf - -C /srv/ci/yambo'
                     """
                 }
@@ -160,7 +160,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${BUILD_HOST} \
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_deploy ${BUILD_HOST} \
                           'cd /srv/ci/yambo && \
                            REGISTRY_URL="${REGISTRY_URL}" REGISTRY_USER="${REGISTRY_USER}" REGISTRY_PASS="${REGISTRY_PASS}" \
                            SONAR_URL="${SONAR_URL}" SONAR_TOKEN="${SONAR_TOKEN}" \
@@ -213,7 +213,7 @@ pipeline {
                     echo "Deploy target: ${env.DEPLOY_TARGET} → ns ${env.NAMESPACE} (${env.APP_DOMAIN}) registry=${env.REGISTRY_HOST}"
 
                     sh """
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${BUILD_HOST} \
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /var/jenkins_home/.ssh/id_deploy ${BUILD_HOST} \
                           'cd /srv/ci/yambo && \
                            REGISTRY_URL="${REGISTRY_URL}" REGISTRY_HOST="${REGISTRY_HOST}" \
                            FRONTEND_TAG="${FRONTEND_TAG}" BACKEND_TAG="${BACKEND_TAG}" \
