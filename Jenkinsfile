@@ -70,16 +70,16 @@ pipeline {
         stage('Classify & Tag') {
             steps {
                 script {
-                    env.IS_PR     = env.CHANGE_ID ? 'true' : 'false'
+                    env.IS_PR     = env.getProperty('CHANGE_ID') ? 'true' : 'false'
                     env.IS_CUSTOM = params.FORCE_PREVIEW_DEPLOY ? 'true' : 'false'
 
                     env.FRONTEND_VER = sh(script: "grep '\"version\"' frontend/package.json | head -1 | sed 's/.*\"version\": \"\\(.*\\)\".*/\\1/'", returnStdout: true).trim()
                     env.BACKEND_VER  = sh(script: "grep '<version>' backend/pom.xml | head -1 | sed 's/.*<version>\\(.*\\)<\\/version>.*/\\1/'", returnStdout: true).trim()
 
                     if (env.IS_PR == 'true') {
-                        env.FRONTEND_TAG = "pr-${env.CHANGE_ID}"
-                        env.BACKEND_TAG  = "pr-${env.CHANGE_ID}"
-                        env.EFFECTIVE_ID = env.CHANGE_ID
+                        env.FRONTEND_TAG = "pr-${env.getProperty("CHANGE_ID")}"
+                        env.BACKEND_TAG  = "pr-${env.getProperty("CHANGE_ID")}"
+                        env.EFFECTIVE_ID = env.getProperty('CHANGE_ID')
                     } else if (env.IS_CUSTOM == 'true') {
                         def slug = (params.DEPLOY_ID?.trim() ?: env.BRANCH_NAME).toLowerCase().replaceAll('[^a-z0-9]+', '-').replaceAll('^-+|-+$', '').take(30)
                         env.EFFECTIVE_ID  = slug
@@ -98,7 +98,7 @@ pipeline {
                     // Detectar cambios
                     def baseRef = (env.BRANCH_NAME == 'main' && env.IS_PR == 'false' && env.IS_CUSTOM == 'false') ? 'HEAD~1' : 'FETCH_HEAD'
                     if (env.IS_PR == 'true') {
-                        sh "git fetch origin ${env.CHANGE_TARGET}"
+                        sh "git fetch origin ${env.getProperty('CHANGE_TARGET')}"
                     } else if (env.IS_CUSTOM == 'true') {
                         sh "git fetch origin main"
                     }
@@ -168,7 +168,7 @@ pipeline {
                            FRONTEND_TAG="${FRONTEND_TAG}" BACKEND_TAG="${BACKEND_TAG}" \
                            FE_CHANGED="${FE_CHANGED}" BE_CHANGED="${BE_CHANGED}" \
                            BRANCH_NAME="${BRANCH_NAME}" IS_PR="${IS_PR}" \
-                           CHANGE_ID="${CHANGE_ID}" CHANGE_BRANCH="${CHANGE_BRANCH}" CHANGE_TARGET="${CHANGE_TARGET}" \
+                           CHANGE_ID="${env.getProperty('CHANGE_ID') ?: ''}" CHANGE_BRANCH="${env.getProperty('CHANGE_BRANCH') ?: ''}" CHANGE_TARGET="${env.getProperty('CHANGE_TARGET') ?: ''}" \
                            bash scripts/ci-build.sh'
                     """
                 }
@@ -188,8 +188,8 @@ pipeline {
                     // Decidir target por rama
                     if (env.IS_PR == 'true') {
                         env.DEPLOY_TARGET = 'preview'
-                        env.NAMESPACE     = "yambo-pr-${env.CHANGE_ID}"
-                        env.DEPLOY_LABEL  = "pr-${env.CHANGE_ID}"
+                        env.NAMESPACE     = "yambo-pr-${env.getProperty("CHANGE_ID")}"
+                        env.DEPLOY_LABEL  = "pr-${env.getProperty("CHANGE_ID")}"
                         env.KUBECONFIG    = "${KUBECONFIG_LOCAL}"
                         env.APP_DOMAIN    = "${APP_DOMAIN_DEV}"
                         env.REGISTRY_HOST = "${REGISTRY_HOST_DEV}"
