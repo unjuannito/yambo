@@ -304,16 +304,7 @@ pipeline {
                              kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
                              cd /tmp/yambo-ci && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
-                               awk '\''
-                                 BEGIN { doc = ""; is_secret = 0 }
-                                 /^---/ {
-                                     if (doc != "" && !is_secret) { printf "%s", doc }
-                                     doc = "---\\n"; is_secret = 0; next
-                                 }
-                                 { doc = doc \$0 "\\n" }
-                                 /^kind: Secret\$/ { is_secret = 1 }
-                                 END { if (doc != "" && !is_secret) { printf "%s", doc } }
-                              '\'' | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
+                               awk -f k8s/scripts/strip-secrets.awk |
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s'
                     """
@@ -351,16 +342,7 @@ pipeline {
                                  --from-literal=MAIL_FROM=noreply@yambo-alco.es; \
                              fi && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl kustomize ${overlayDir} | \
-                               awk '\''
-                                 BEGIN { doc = ""; is_secret = 0 }
-                                 /^---/ {
-                                     if (doc != "" && !is_secret) { printf "%s", doc }
-                                     doc = "---\\n"; is_secret = 0; next
-                                 }
-                                 { doc = doc \$0 "\\n" }
-                                 /^kind: Secret\$/ { is_secret = 1 }
-                                 END { if (doc != "" && !is_secret) { printf "%s", doc } }
-                              '\'' | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
+                               awk -f k8s/scripts/strip-secrets.awk |
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s'
                     """
