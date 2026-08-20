@@ -643,6 +643,8 @@
     "createdAt": "Creado",
     "expiresAt": "Expira",
     "used": "Usado",
+    "usedBy": "Usado por",
+    "beneficiaries": "Beneficiarios",
     "usedYes": "Sí",
     "usedNo": "No",
     "searchEmail": "Buscar email...",

@@ -111,6 +111,30 @@ export class AdminUserService extends ApiService {
             `/admin/users/${userId}/group-roles`
         );
     }
+
+    public async getUserGrants(userId: string): Promise<AccessGrant[]> {
+        return await this.get<AccessGrant[]>(`/admin/users/${userId}/grants`);
+    }
+}
+
+/** Cómo obtuvo un usuario cada perfil/rol (origen de la concesión). */
+export interface AccessGrant {
+    id: number;
+    userId: string;
+    grantType: 'PROFILE' | 'GROUP_ROLE';
+    profileId: string | null;
+    profileName: string | null;
+    projectGroupId: string | null;
+    groupName: string | null;
+    projectName: string | null;
+    role: 'MONITOR' | 'COORDINATOR' | 'PARENT' | null;
+    source: 'MANUAL' | 'INVITATION';
+    invitationType: 'LINK' | 'NOMINATIVE' | 'PROJECT_ROLE' | null;
+    invitationId: number | null;
+    grantedBy: string | null;
+    grantedByName: string | null;
+    grantedAt: string;
+    revokedAt: string | null;
 }
 
 export const adminUserService = new AdminUserService();

@@ -45,6 +45,7 @@ public class UserServiceTest {
     private ProjectGroupRepository projectGroupRepository;
     private UserProjectGroupRepository userProjectGroupRepository;
     private PendingDeletionService pendingDeletionService;
+    private AccessGrantService accessGrantService;
 
     @BeforeEach
     public void setup() {
@@ -54,7 +55,8 @@ public class UserServiceTest {
         projectGroupRepository = Mockito.mock(ProjectGroupRepository.class);
         userProjectGroupRepository = Mockito.mock(UserProjectGroupRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
-        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService);
+        accessGrantService = Mockito.mock(AccessGrantService.class);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService);
     }
 
     @Test

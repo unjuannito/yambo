@@ -1,5 +1,11 @@
 import { ApiService } from './apiService';
 
+export interface InvitationRegistration {
+  userId: string;
+  name: string | null;
+  registeredAt: string;
+}
+
 export interface Invitation {
   id: number;
   token: string;
@@ -8,6 +14,7 @@ export interface Invitation {
   expiresAt: string | null;
   invitedBy: string | null;
   profileIds: string[];
+  registrations: InvitationRegistration[];
 }
 
 export interface CreateInvitationRequest {

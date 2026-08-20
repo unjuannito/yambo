@@ -47,7 +47,7 @@ public class InvitationController {
                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate) {
         java.util.List<Invitation> invitations = invitationService.getInvitationsSince(startDate);
         java.util.List<InvitationResponse> response = invitations.stream()
-            .map(InvitationResponse::new)
+            .map(inv -> new InvitationResponse(inv, invitationService.getRegistrations(inv.getId())))
             .collect(Collectors.toList());
         return ResponseEntity.ok(response);
         }
@@ -56,7 +56,7 @@ public class InvitationController {
         @PreAuthorize("@permissionCheck.hasPermission('invitation', 'update')")
         public ResponseEntity<InvitationResponse> disableInvitation(@PathVariable Long id) {
             Invitation invitation = invitationService.disableInvitation(id);
-            return ResponseEntity.ok(new InvitationResponse(invitation));
+            return ResponseEntity.ok(new InvitationResponse(invitation, invitationService.getRegistrations(id)));
         }
 
     @PostMapping("/{token}/accept")
@@ -107,8 +107,14 @@ public class InvitationController {
         private LocalDateTime expiresAt;
         private String invitedBy;
         private Set<String> profileIds;
+        private java.util.List<InvitationService.InvitationRegistrationDto> registrations;
 
         public InvitationResponse(Invitation invitation) {
+            this(invitation, java.util.List.of());
+        }
+
+        public InvitationResponse(Invitation invitation,
+                java.util.List<InvitationService.InvitationRegistrationDto> registrations) {
             this.id = invitation.getId();
             this.token = invitation.getToken();
             this.createdAt = invitation.getCreatedAt();
@@ -118,6 +124,7 @@ public class InvitationController {
                 this.profileIds = invitation.getProfiles().stream()
                     .map(profile -> profile.getId())
                     .collect(Collectors.toSet());
+            this.registrations = registrations;
         }
     }
 }

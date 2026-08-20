@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
+import es.yambo_alco.web.model.enums.InvitationType;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ProjectRoleInvitationService {
     private final ProjectRepository projectRepository;
     private final ProfileRepository profileRepository;
     private final UserService userService;
+    private final AccessGrantService accessGrantService;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -79,6 +81,11 @@ public class ProjectRoleInvitationService {
         projectRoleInvitationRepository.save(invitation);
 
         recordUsage(invitation, currentUser, false);
+
+        // Historial: rol de grupo obtenido a través de esta invitación (origen INVITATION/PROJECT_ROLE)
+        accessGrantService.recordInvitationGroupRoleGrant(
+                currentUser.getId(), invitation.getId(), InvitationType.PROJECT_ROLE,
+                projectGroup.getId(), invitation.getRole(), invitation.getCreatedBy());
     }
 
     /**
@@ -118,6 +125,11 @@ public class ProjectRoleInvitationService {
         projectRoleInvitationRepository.save(invitation);
 
         recordUsage(invitation, user, true);
+
+        // Historial: rol de grupo obtenido a través de esta invitación (origen INVITATION/PROJECT_ROLE)
+        accessGrantService.recordInvitationGroupRoleGrant(
+                user.getId(), invitation.getId(), InvitationType.PROJECT_ROLE,
+                projectGroup.getId(), invitation.getRole(), invitation.getCreatedBy());
 
         return user;
     }

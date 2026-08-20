@@ -37,6 +37,14 @@ public class NominativeInvitation {
 
     private String invitedBy;
 
+    /** Usuario que aceptó/usó la invitación (relleno al completar el registro). */
+    @Column(name = "used_by_user_id", length = 8)
+    private String usedByUserId;
+
+    /** Cuándo se usó la invitación. */
+    @Column(name = "used_at")
+    private LocalDateTime usedAt;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "nominative_invitation_profile",

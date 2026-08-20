@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import i18n from "~/i18n/config";
 import { RequirePermission } from "~/components/common/RequirePermission";
@@ -20,6 +21,7 @@ import {
 import {
     projectRoleInvitationService,
     type ProjectRoleInvitation,
+    type InvitationUsage,
 } from "~/services/projectRoleInvitationService";
 import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
@@ -57,6 +59,7 @@ export default function Invitations() {
     const [lastInvitation, setLastInvitation] =
         useState<Invitation | null>(null);
     const [roleInvitations, setRoleInvitations] = useState<ProjectRoleInvitation[]>([]);
+    const [roleUsages, setRoleUsages] = useState<Record<string, InvitationUsage[]>>({});
     const [roleMaxUses, setRoleMaxUses] = useState("");
     const [lastRoleInvitation, setLastRoleInvitation] = useState<ProjectRoleInvitation | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,6 +80,18 @@ export default function Invitations() {
             setInvitations(invitationsResponse);
             setProjects(projectsData.content || []);
             setRoleInvitations(roleLinks);
+            // Cargar beneficiarios de cada link de rol (quién lo usó y cuándo)
+            const usagesMap: Record<string, InvitationUsage[]> = {};
+            await Promise.all(
+                roleLinks.map(async (link) => {
+                    try {
+                        usagesMap[link.id] = await projectRoleInvitationService.getUsages(link.id);
+                    } catch {
+                        usagesMap[link.id] = [];
+                    }
+                }),
+            );
+            setRoleUsages(usagesMap);
         } catch (err) {
             setError(getErrorMessage(err, t("invitations.profilesLoadingError")));
         } finally {
@@ -307,6 +322,32 @@ export default function Invitations() {
                 },
             },
             {
+                key: "beneficiaries",
+                header: t("invitations.beneficiaries"),
+                render: (invitation) => {
+                    const regs = invitation.registrations ?? [];
+                    if (regs.length === 0) return <span className="text-sm text-gray-400">—</span>;
+                    return (
+                        <div className="flex flex-col gap-1">
+                            {regs.map((reg) => (
+                                <div key={reg.userId} className="flex items-center gap-1.5 text-sm">
+                                    <FontAwesomeIcon icon={faUsers} className="w-3 h-3 text-gray-400" />
+                                    <Link
+                                        to={`/mi-espacio/admin/usuarios/${reg.userId}/perfil`}
+                                        className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors"
+                                    >
+                                        {reg.name || reg.userId}
+                                    </Link>
+                                    <span className="text-xs text-gray-400">
+                                        {new Date(reg.registeredAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                },
+            },
+            {
                 key: "computedStatus",
                 header: t("invitations.status"),
                 filter: {
@@ -464,6 +505,7 @@ export default function Invitations() {
                                             <th className="px-4 py-2">Proyecto</th>
                                             <th className="px-4 py-2">Rol</th>
                                             <th className="px-4 py-2">Usos</th>
+                                            <th className="px-4 py-2">Beneficiarios</th>
                                             <th className="px-4 py-2 hidden sm:table-cell">Expira</th>
                                             <th className="px-4 py-2">Estado</th>
                                             <th className="px-4 py-2 text-right">Acciones</th>
@@ -487,6 +529,33 @@ export default function Invitations() {
                                                         {inv.maxUses != null
                                                             ? `${inv.usageCount} / ${inv.maxUses}`
                                                             : `${inv.usageCount} usos`}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {(roleUsages[inv.id] ?? []).length === 0 ? (
+                                                            <span className="text-sm text-gray-400">—</span>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-1">
+                                                                {(roleUsages[inv.id] ?? []).map((usage) => (
+                                                                    <div key={usage.userId + usage.usedAt} className="flex items-center gap-1.5 text-sm">
+                                                                        <FontAwesomeIcon icon={faUsers} className="w-3 h-3 text-gray-400" />
+                                                                        <Link
+                                                                            to={`/mi-espacio/admin/usuarios/${usage.userId}/perfil`}
+                                                                            className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors"
+                                                                        >
+                                                                            {usage.userName || usage.userEmail || usage.userId}
+                                                                        </Link>
+                                                                        <span className="text-xs text-gray-400">
+                                                                            {new Date(usage.usedAt).toLocaleDateString()}
+                                                                        </span>
+                                                                        {usage.wasNewRegistration && (
+                                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yambo-green-50 text-yambo-green-700">
+                                                                                nuevo
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                                                         {inv.expiresAt

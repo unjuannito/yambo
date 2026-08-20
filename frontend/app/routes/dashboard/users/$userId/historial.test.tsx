@@ -9,6 +9,12 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
+vi.mock('~/services/adminUserService', () => ({
+    adminUserService: {
+        getUserGrants: vi.fn().mockResolvedValue([]),
+    },
+}));
+
 vi.mock('react-router', async () => {
     const actual = await vi.importActual<typeof import('react-router')>('react-router');
     return {

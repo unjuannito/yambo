@@ -49,6 +49,14 @@ public class NominativeInvitationController {
                     .orElse(null);
         }
 
+        // Beneficiario: quién usó la invitación (si se ha completado el registro)
+        UserInfo usedByUser = null;
+        if (inv.getUsedByUserId() != null) {
+            usedByUser = userRepository.findById(inv.getUsedByUserId())
+                    .map(u -> new UserInfo(u.getId(), u.getUsername(), u.getName(), u.getEmail()))
+                    .orElse(null);
+        }
+
         return new NominativeInvitationResponse(
                 inv.getId(),
                 inv.getEmail(),
@@ -58,7 +66,9 @@ public class NominativeInvitationController {
                 inv.isUsed(),
                 inv.getInvitedBy(),
                 invitedByUser,
-                inv.getProfiles().stream().map(Profile::getId).collect(Collectors.toSet())
+                inv.getProfiles().stream().map(Profile::getId).collect(Collectors.toSet()),
+                usedByUser,
+                inv.getUsedAt()
         );
     }
 
@@ -132,6 +142,8 @@ public class NominativeInvitationController {
         private String invitedBy;
         private UserInfo invitedByUser;
         private Set<String> profileIds;
+        private UserInfo usedByUser;
+        private LocalDateTime usedAt;
     }
     @Data
     @AllArgsConstructor

@@ -43,6 +43,7 @@ public class UserService {
 	private final ProjectGroupRepository projectGroupRepository;
 	private final UserProjectGroupRepository userProjectGroupRepository;
 	private final PendingDeletionService pendingDeletionService;
+	private final AccessGrantService accessGrantService;
 
 	private static final String MONITOR_PROFILE_ID = "P0000004";
 	private static final String COORDINATOR_PROFILE_ID = "P0000005";
@@ -125,6 +126,13 @@ public class UserService {
 	@Transactional
 	public User assignGroupRole(@NonNull String userId, @NonNull String groupId,
 			@NonNull UserProjectGroupRole role) {
+		// Sin grantedBy: usado por invitaciones (registran su propio grant INVITATION)
+		return assignGroupRole(userId, groupId, role, null);
+	}
+
+	@Transactional
+	public User assignGroupRole(@NonNull String userId, @NonNull String groupId,
+			@NonNull UserProjectGroupRole role, String grantedBy) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 		ProjectGroup group = projectGroupRepository.findById(groupId)
@@ -153,7 +161,14 @@ public class UserService {
 
 		syncRoleProfile(user, role, true);
 
-		return userRepository.save(user);
+		User saved = userRepository.save(user);
+
+		// Origen: asignación manual por una persona (grantedBy != null)
+		if (grantedBy != null) {
+			accessGrantService.recordManualGroupRoleGrant(userId, groupId, role, grantedBy);
+		}
+
+		return saved;
 	}
 
 	@Transactional
@@ -172,7 +187,12 @@ public class UserService {
 			syncRoleProfile(user, role, false);
 		}
 
-		return userRepository.save(user);
+		User saved = userRepository.save(user);
+
+		// Historial: la concesión de este rol de grupo queda revocada
+		accessGrantService.revokeGroupRoleGrants(userId, groupId, role);
+
+		return saved;
 	}
 
 	public List<UserProjectGroup> getUserGroupRoles(@NonNull String userId) {
@@ -213,6 +233,11 @@ public class UserService {
 	}
 
 	public User updateUserProfiles(@NonNull String userId, Set<String> profileIds) {
+		// Sin grantedBy: usado por flujos internos (sin auditoría de quién)
+		return updateUserProfiles(userId, profileIds, null);
+	}
+
+	public User updateUserProfiles(@NonNull String userId, Set<String> profileIds, String grantedBy) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -242,8 +267,29 @@ public class UserService {
 				.filter(p -> ROLE_PROFILE_IDS.contains(p.getId()))
 				.forEach(profilesSet::add);
 
+		// Historial: revocar perfiles quitados (no role-managed)
+		Set<String> before = user.getProfiles().stream()
+				.filter(p -> !ROLE_PROFILE_IDS.contains(p.getId()))
+				.map(Profile::getId)
+				.collect(Collectors.toSet());
+		Set<String> after = filteredProfileIds;
+		for (String removedId : before) {
+			if (!after.contains(removedId)) {
+				accessGrantService.revokeProfileGrants(userId, removedId);
+			}
+		}
+
 		user.setProfiles(profilesSet);
-		return userRepository.save(user);
+		User saved = userRepository.save(user);
+
+		// Historial: registrar perfiles añadidos (origen MANUAL, quién = grantedBy)
+		for (String addedId : after) {
+			if (!before.contains(addedId)) {
+				accessGrantService.recordManualProfileGrant(userId, addedId, grantedBy);
+			}
+		}
+
+		return saved;
 	}
 
 	public User updateUser(@NonNull String userId, @NonNull String name, @NonNull String email,

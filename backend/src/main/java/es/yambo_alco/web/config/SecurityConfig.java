@@ -71,6 +71,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/invitations/*/accept").permitAll()
                     .requestMatchers(HttpMethod.POST, "/project-role-invitations/*/accept").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/project-role-invitations/*/register").permitAll()
                     .requestMatchers(HttpMethod.GET, "/project-role-invitations/*").permitAll()
                     .requestMatchers(HttpMethod.POST, "/products/*/views").permitAll()
                         .requestMatchers("/user/**").authenticated()

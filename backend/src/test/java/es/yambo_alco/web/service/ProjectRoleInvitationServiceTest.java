@@ -51,6 +51,9 @@ class ProjectRoleInvitationServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AccessGrantService accessGrantService;
+
     private ProjectRoleInvitationService projectRoleInvitationService;
 
     private static final String PROJECT_ID = "P0000001";
@@ -62,7 +65,7 @@ class ProjectRoleInvitationServiceTest {
         projectRoleInvitationService = new ProjectRoleInvitationService(
                 projectRoleInvitationRepository, projectRoleInvitationUsageRepository,
                 projectGroupRepository, userProjectGroupRepository, userRepository,
-                projectRepository, profileRepository, userService, passwordEncoder);
+                projectRepository, profileRepository, userService, accessGrantService, passwordEncoder);
     }
 
     // ── createInvitation ──────────────────────────────────────────────

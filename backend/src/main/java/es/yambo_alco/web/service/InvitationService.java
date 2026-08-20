@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Invitation;
 import es.yambo_alco.web.model.InvitationRegistration;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.InvitationType;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.InvitationRegistrationRepository;
 import es.yambo_alco.web.repository.InvitationRepository;
@@ -30,6 +31,7 @@ public class InvitationService {
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AccessGrantService accessGrantService;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -112,6 +114,11 @@ public class InvitationService {
             invitationRegistrationRepository.save(registration);
         }
 
+        // Historial: perfiles obtenidos a través de esta invitación (origen INVITATION/LINK)
+        accessGrantService.recordInvitationProfileGrants(
+                user.getId(), invitation.getId(), InvitationType.LINK,
+                invitationProfiles, invitation.getInvitedBy());
+
         return user;
     }
 
@@ -138,5 +145,28 @@ public class InvitationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
         invitation.setExpiresAt(LocalDateTime.now());
         return invitationRepository.save(invitation);
+    }
+
+    /** Beneficiarios de una invitación LINK: usuarios que se registraron con ella. */
+    public java.util.List<InvitationRegistrationDto> getRegistrations(Long invitationId) {
+        return invitationRegistrationRepository.findByInvitationIdOrderByRegisteredAtDesc(invitationId)
+                .stream()
+                .map(reg -> {
+                    String name = userRepository.findById(reg.getUserId())
+                            .map(User::getName)
+                            .orElse(null);
+                    return new InvitationRegistrationDto(
+                            reg.getUserId(), name, reg.getRegisteredAt());
+                })
+                .toList();
+    }
+
+    /** DTO de beneficiario de invitación (para la tabla de invitaciones). */
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class InvitationRegistrationDto {
+        private String userId;
+        private String name;
+        private java.time.LocalDateTime registeredAt;
     }
 }

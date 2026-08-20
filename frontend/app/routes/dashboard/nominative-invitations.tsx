@@ -305,6 +305,30 @@ export default function NominativeInvitations() {
             ),
         },
         {
+            key: "usedByUser" as any,
+            header: t("invitations.usedBy"),
+            render: (invitation) => {
+                if (!invitation.usedByUser) {
+                    return <span className="text-sm text-gray-400">—</span>;
+                }
+                return (
+                    <div className="flex items-center gap-1.5 text-sm">
+                        <Link
+                            to={`/mi-espacio/admin/usuarios/${invitation.usedByUser.id}/perfil`}
+                            className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors"
+                        >
+                            {invitation.usedByUser.name}
+                        </Link>
+                        {invitation.usedAt && (
+                            <span className="text-xs text-gray-400">
+                                {new Date(invitation.usedAt).toLocaleDateString()}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
+        },
+        {
             key: "id",
             header: t("invitations.actions"),
             requiredPerms: [{ obj: "invitation", action: "update" }],
