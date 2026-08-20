@@ -209,7 +209,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/backend && \
-                                     docker run --rm -v /tmp/yambo-ci/backend:/app -w /app \
+                                     docker run --rm --network=host -v /tmp/yambo-ci/backend:/app -w /app \
                                        maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_AUTH_TOKEN}"'
                             """
                         }
@@ -223,7 +223,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
-                                     docker run --rm -v /tmp/yambo-ci/frontend:/app -w /app \
+                                     docker run --rm --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app'"
                             """
                         }
