@@ -205,12 +205,12 @@ pipeline {
                     when { expression { env.BE_CHANGED == 'true' } }
                     steps {
                         script {
-                            def branchArgs = (env.IS_MAIN == 'true') ? '' : "-Dsonar.branch.name=${env.BRANCH_NAME}"
+                            // Sonar Community no soporta branch analysis: no pasar sonar.branch.name
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/backend && \
                                      docker run --rm -v /tmp/yambo-ci/backend:/app -w /app \
-                                       maven:3.9-eclipse-temurin-21 sh -c "./mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_AUTH_TOKEN} ${branchArgs}"'
+                                       maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_AUTH_TOKEN}"'
                             """
                         }
                     }
@@ -219,12 +219,12 @@ pipeline {
                     when { expression { env.FE_CHANGED == 'true' } }
                     steps {
                         script {
-                            def branchArgs = (env.IS_MAIN == 'true') ? '' : "--define sonar.branch.name=${env.BRANCH_NAME}"
+                            // Imagen oficial con Java + escaner incluidos (node:22-alpine no tiene Java)
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
                                      docker run --rm -v /tmp/yambo-ci/frontend:/app -w /app \
-                                       node:22-alpine sh -c "npm install --no-audit --no-fund && npx sonar-scanner --define sonar.host.url=${SONAR_HOST_URL} --define sonar.token=${SONAR_AUTH_TOKEN} ${branchArgs}"'
+                                       sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app'"
                             """
                         }
                     }
