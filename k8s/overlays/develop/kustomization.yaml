@@ -3,23 +3,22 @@ kind: Kustomization
 
 # ── Overlay DESARROLLO: k3s local (.22), acceso público vía nginx .21 ────
 # Aplicado por Jenkinsfile (rama develop) con KUBECONFIG local.
-# El Secret se ELIMINA del base: el pipeline lo crea con credenciales Jenkins.
-# El Namespace base (yambo) se renombra automáticamente a yambo-develop.
+# El Secret placeholder del base se FILTRA en el pipeline; los reales los
+# crea el pipeline con credenciales Jenkins.
 
 namespace: yambo-develop
 
 resources:
   - ../../base
 
-# El Secret placeholder del base se FILTRA en el pipeline (patrón producción):
-#   kubectl kustomize | awk (excluye kind: Secret) | kubectl apply -f -
-# El pipeline crea yambo-secrets real con credenciales Jenkins.
-
-# Las imágenes se inyectan en CI (kustomize edit set image)
+# Imágenes → registry local por LAN. El pipeline inyecta el tag:
+#   kustomize edit set image yambo-web-frontend=192.168.1.21:5000/yambo-web-frontend:<tag>
 images:
-  - name: 192.168.1.21:5000/yambo-web-frontend
+  - name: yambo-web-frontend
+    newName: 192.168.1.21:5000/yambo-web-frontend
     newTag: latest
-  - name: 192.168.1.21:5000/yambo-web-backend
+  - name: yambo-web-backend
+    newName: 192.168.1.21:5000/yambo-web-backend
     newTag: latest
 
 patches:

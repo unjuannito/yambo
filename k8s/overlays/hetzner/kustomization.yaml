@@ -3,21 +3,22 @@ kind: Kustomization
 
 # ── Overlay PRODUCCIÓN: Hetzner CX33 ─────────────────────────────────────
 # Aplicado por Jenkinsfile (rama main/master) con KUBECONFIG hetzner.
-# Las imágenes se inyectan por el pipeline: kustomize edit set image.
+# Imágenes → registry local vía NetBird (100.111.131.248:5000).
+# El Secret se gestiona aparte (no se re-aplica salvo FORCE_PROD_DEPLOY).
 
 namespace: yambo
 
 resources:
   - ../../base
 
-# Las imágenes se inyectan en CI con:
-#   kustomize edit set image \
-#     <REGISTRY>/yambo-web-frontend=<REGISTRY>/yambo-web-frontend:<tag> \
-#     <REGISTRY>/yambo-web-backend=<REGISTRY>/yambo-web-backend:<tag>
+# Imágenes → registry vía NetBird. El pipeline inyecta el tag:
+#   kustomize edit set image yambo-web-frontend=100.111.131.248:5000/yambo-web-frontend:<tag>
 images:
-  - name: 192.168.1.21:5000/yambo-web-frontend
+  - name: yambo-web-frontend
+    newName: 100.111.131.248:5000/yambo-web-frontend
     newTag: latest
-  - name: 192.168.1.21:5000/yambo-web-backend
+  - name: yambo-web-backend
+    newName: 100.111.131.248:5000/yambo-web-backend
     newTag: latest
 
 patches:

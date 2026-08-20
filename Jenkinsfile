@@ -50,8 +50,13 @@ pipeline {
         SONAR_AUTH_TOKEN = credentials('yambo-sonar-token')
 
         // ── Imágenes ─────────────────────────────────────────────────────────
+        // Registry local por LAN (develop → k3s .22)
         FRONTEND_IMAGE = "${REGISTRY}/yambo-web-frontend"
         BACKEND_IMAGE  = "${REGISTRY}/yambo-web-backend"
+        // Registry vía NetBird para Hetzner (main → producción)
+        REGISTRY_HETZNER = "100.111.131.248:5000"
+        FRONTEND_IMAGE_HETZNER = "${REGISTRY_HETZNER}/yambo-web-frontend"
+        BACKEND_IMAGE_HETZNER  = "${REGISTRY_HETZNER}/yambo-web-backend"
 
         // ── Dominios públicos (DNS gestionado en BIND .21 + Cloudflare) ──────
         PROD_DOMAIN = 'yambo.cabrasky.net'
@@ -262,9 +267,20 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/hetzner"
+                    // Para Hetzner: push de imágenes al registry vía NetBird
+                    // y usar el nombre overlay del registry (100.111.131.248:5000)
                     sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
+                             echo ${REGISTRY_PASS} | docker login ${REGISTRY_HETZNER} -u ${REGISTRY_USER} --password-stdin && \
+                             docker tag ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
+                             docker push ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
+                             docker tag ${BACKEND_IMAGE}:${env.BACKEND_TAG} ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             docker push ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             cd ${overlayDir} && \
+                             kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
+                             kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             cd /tmp/yambo-ci && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
                                awk '\''
                                  BEGIN { doc = ""; is_secret = 0 }
@@ -297,6 +313,10 @@ pipeline {
                     sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
+                             cd ${overlayDir} && \
+                             kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG} && \
+                             kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG} && \
+                             cd /tmp/yambo-ci && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
                              if ! KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
                                KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create secret generic yambo-secrets -n ${NS_DEV} \

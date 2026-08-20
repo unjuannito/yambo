@@ -52,7 +52,7 @@ spec:
               cpu: "50m"
       containers:
         - name: backend
-          image: 192.168.1.11:5000/yambo-web-backend:latest
+          image: yambo-web-backend:latest
           imagePullPolicy: Always
           securityContext:
             allowPrivilegeEscalation: false
