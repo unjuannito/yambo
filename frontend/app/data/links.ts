@@ -54,7 +54,7 @@ const LINKS_MAP: Link[] = [
     },
     {
         name: "nominativeInvitations",
-        href: "/mi-espacio/admin/invitaciones-nominativas",
+        href: "/mi-espacio/admin/invitaciones",
         label: "Invitaciones Nominativas",
         need: { obj: "invitation", action: "read" },
     },

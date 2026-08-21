@@ -26,7 +26,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Administración",
-        items: ["settings", "mainPage", "users", "profiles",  "invitations", "nominativeInvitations", "orders", "adminIssues", "seo", "legal", "reports"]
+        items: ["settings", "mainPage", "users", "profiles", "invitations", "orders", "adminIssues", "seo", "legal", "reports"]
     },
     {
         title: "Proyectos",

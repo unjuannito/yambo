@@ -35,7 +35,7 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-export default function NominativeInvitations() {
+export function NominativeInvitationsView() {
     const { t } = useTranslation();
     const [invitations, setInvitations] = useState<NominativeInvitation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -629,4 +629,10 @@ export default function NominativeInvitations() {
             />
         </RequirePermission>
     );
+}
+
+import { Navigate } from "react-router";
+
+export default function NominativeInvitationsRedirect() {
+    return <Navigate to="/mi-espacio/admin/invitaciones" replace />;
 }

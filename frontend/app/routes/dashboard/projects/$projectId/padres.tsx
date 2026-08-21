@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
-import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
+import { projectRoleInvitationService, type ProjectRoleInvitation } from "~/services/projectRoleInvitationService";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
@@ -12,7 +12,7 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserGroup, faUserSlash, faTrashCan, faLink, faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faUserGroup, faUserSlash, faTrashCan, faLink, faCopy, faClockRotateLeft, faCircleCheck, faCircleXmark, faCircle } from "@fortawesome/free-solid-svg-icons";
 
 interface ParentInfo {
     userId: string;
@@ -37,6 +37,49 @@ export default function ProjectPadres() {
     const [inviteCopied, setInviteCopied] = useState(false);
     const [inviteMaxUses, setInviteMaxUses] = useState<string>("");
     const [inviteExpiresAt, setInviteExpiresAt] = useState<string>("");
+
+    // Previous invite links history
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [history, setHistory] = useState<ProjectRoleInvitation[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState<string | null>(null);
+    const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+
+    const formatDateTime = (value?: string | null) =>
+        value ? new Date(value).toLocaleString() : "Sin expiración";
+
+    const openHistory = async () => {
+        if (!projectId) return;
+        try {
+            setHistoryLoading(true);
+            setHistoryError(null);
+            const data = await projectRoleInvitationService.getInvitations(projectId);
+            setHistory(data);
+            setIsHistoryOpen(true);
+        } catch (err) {
+            setHistoryError(getErrorMessage(err, "Error al cargar los enlaces"));
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    const closeHistory = () => {
+        setIsHistoryOpen(false);
+        setHistory([]);
+        setHistoryError(null);
+        setCopiedLinkId(null);
+    };
+
+    const copyHistoryLink = async (inv: ProjectRoleInvitation) => {
+        try {
+            await navigator.clipboard.writeText(inv.invitationLink);
+            setCopiedLinkId(inv.id);
+            toast.success("Enlace copiado al portapapeles");
+            setTimeout(() => setCopiedLinkId(null), 2000);
+        } catch {
+            toast.error("No se pudo copiar el enlace");
+        }
+    };
 
     const loadParents = useCallback(async () => {
         if (!projectId) return;
@@ -158,8 +201,15 @@ export default function ProjectPadres() {
                             Generar enlace de invitación
                         </ButtonComponent>
                     </RequirePermission>
+                    <RequirePermission permission={{ obj: "invitation", action: "read" }} redirect={false}>
+                        <ButtonComponent variant="neutral" onClick={openHistory}>
+                            <FontAwesomeIcon icon={faClockRotateLeft} className="mr-2" />
+                            Ver enlaces anteriores
+                        </ButtonComponent>
+                    </RequirePermission>
                 </div>
                 {renderInviteModal()}
+                {renderHistoryModal()}
             </RequirePermission>
         );
     }
@@ -186,6 +236,15 @@ export default function ProjectPadres() {
                                 >
                                     <FontAwesomeIcon icon={faLink} className="mr-1" />
                                     Generar enlace
+                                </button>
+                            </RequirePermission>
+                            <RequirePermission permission={{ obj: "invitation", action: "read" }} redirect={false}>
+                                <button
+                                    onClick={openHistory}
+                                    className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                >
+                                    <FontAwesomeIcon icon={faClockRotateLeft} className="mr-1" />
+                                    Enlaces anteriores
                                 </button>
                             </RequirePermission>
                             {parents.length > 1 && (
@@ -253,8 +312,66 @@ export default function ProjectPadres() {
             />
 
             {renderInviteModal()}
+            {renderHistoryModal()}
         </RequirePermission>
     );
+
+    function renderHistoryModal() {
+        return (
+            <Modal
+                isOpen={isHistoryOpen}
+                onClose={closeHistory}
+                title={`Enlaces de invitación anteriores — ${projectName || ""}`}
+                size="lg"
+            >
+                {historyLoading ? (
+                    <LoadingSpinner size="md" message="Cargando enlaces..." />
+                ) : historyError ? (
+                    <ErrorMessage message={historyError} onRetry={openHistory} />
+                ) : history.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic text-center py-8">
+                        No hay enlaces anteriores para este proyecto.
+                    </p>
+                ) : (
+                    <div className="flex flex-col divide-y divide-gray-50 max-h-[60vh] overflow-y-auto">
+                        {history.map(inv => {
+                            const statusIcon = inv.used
+                                ? { icon: faCircleCheck, cls: "text-yambo-green-600", label: "Usado" }
+                                : inv.expired || inv.disabled
+                                    ? { icon: faCircleXmark, cls: "text-red-400", label: inv.expired ? "Expirado" : "Deshabilitado" }
+                                    : { icon: faCircle, cls: "text-blue-400", label: "Activo" };
+                            return (
+                                <div key={inv.id} className="py-3">
+                                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <span className="inline-flex items-center gap-1 font-medium">
+                                                <FontAwesomeIcon icon={statusIcon.icon} className={statusIcon.cls} />
+                                                {statusIcon.label}
+                                            </span>
+                                            <span>· Creado {formatDateTime(inv.createdAt)}</span>
+                                            <span>· Expira {formatDateTime(inv.expiresAt)}</span>
+                                            <span>· Usos: {inv.usageCount}{inv.maxUses ? `/${inv.maxUses}` : ""}</span>
+                                        </div>
+                                        <ButtonComponent
+                                            variant="base"
+                                            onClick={() => copyHistoryLink(inv)}
+                                            className="text-xs shrink-0"
+                                        >
+                                            <FontAwesomeIcon icon={faCopy} className="mr-1" />
+                                            {copiedLinkId === inv.id ? "¡Copiado!" : "Copiar"}
+                                        </ButtonComponent>
+                                    </div>
+                                    <p className="text-xs text-yambo-green-700 break-all font-mono bg-yambo-green-50 border border-yambo-green-100 rounded-lg px-2.5 py-1.5">
+                                        {inv.invitationLink}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </Modal>
+        );
+    }
 
     function renderInviteModal() {
         return (

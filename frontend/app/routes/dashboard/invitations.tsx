@@ -30,7 +30,8 @@ import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy, faLinkSlash, faCheck, faUsers, faShieldHalved, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faLinkSlash, faCheck, faUsers, faShieldHalved, faCalendarDays, faEnvelopesBulk, faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import { NominativeInvitationsView } from "./nominative-invitations";
 
 export function meta() {
     return [
@@ -42,7 +43,7 @@ export function meta() {
     ];
 }
 
-export default function Invitations() {
+function InvitationsGeneral() {
     const { t } = useTranslation();
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -1037,5 +1038,42 @@ export default function Invitations() {
                 </Modal>
             </main>
         </RequirePermission>
+    );
+}
+
+export default function Invitations() {
+    const [section, setSection] = useState<"general" | "nominative">("general");
+    const { t } = useTranslation();
+
+    return (
+        <div className="space-y-4">
+            <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1 w-fit">
+                <button
+                    type="button"
+                    onClick={() => setSection("general")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        section === "general"
+                            ? "bg-white text-yambo-black shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                    <FontAwesomeIcon icon={faEnvelopesBulk} className="w-4 h-4" />
+                    {t("invitations.title")}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setSection("nominative")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        section === "nominative"
+                            ? "bg-white text-yambo-black shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                    <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4" />
+                    {t("invitations.nominativeTitle")}
+                </button>
+            </div>
+            {section === "general" ? <InvitationsGeneral /> : <NominativeInvitationsView />}
+        </div>
     );
 }
