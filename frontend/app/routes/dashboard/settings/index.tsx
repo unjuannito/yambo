@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -300,11 +301,15 @@ export default function Settings() {
     return (
         <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
-                    Configuración General
-                </h1>
-                <p className="text-gray-400 mb-6">{t('settings.manageSettingsHint')}</p>
+                <PageHeader
+                    title={
+                        <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
+                            Configuración General
+                        </span>
+                    }
+                    description={t('settings.manageSettingsHint')}
+                />
 
                 <section className="bg-white rounded-2xl border border-gray-100 p-4 mb-6">
                     <div className="flex flex-wrap gap-2">

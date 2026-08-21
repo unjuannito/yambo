@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { Route } from "./+types/index";
 import type { Order } from "~/services/orderService";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type {
     FilterableColumn,
@@ -578,9 +579,10 @@ export default function Orders() {
             redirectTo="/mi-espacio"
         >
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Pedidos</h1>
-                    <div className="flex items-center gap-4">
+                <PageHeader
+                    title="Pedidos"
+                    description="Gestiona y exporta todos los pedidos de la plataforma."
+                    actions={
                         <ButtonComponent
                             variant="primary"
                             onClick={() => setIsExportModalOpen(true)}
@@ -589,8 +591,8 @@ export default function Orders() {
                             <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
                             Exportar a Excel
                         </ButtonComponent>
-                    </div>
-                </div>
+                    }
+                />
 
                 <StatusWorkflow
                     title="Flujo de estados del pedido"
@@ -690,6 +692,72 @@ export default function Orders() {
                     display={{
                         emptyMessage: "No se encontraron pedidos",
                         loadingMessage: "Cargando pedidos...",
+                        renderMobileCard: (order: Order) => {
+                            const config =
+                                ORDER_STATUS_CONFIG[
+                                    order.status as keyof typeof ORDER_STATUS_CONFIG
+                                ];
+                            const total =
+                                order.products?.reduce(
+                                    (sum, p) => sum + p.price * p.quantity,
+                                    0,
+                                ) || 0;
+                            const productCount =
+                                order.products?.reduce(
+                                    (sum, p) => sum + p.quantity,
+                                    0,
+                                ) || 0;
+                            return (
+                                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-yambo-black truncate">
+                                                {order.user?.name || "N/A"}
+                                            </p>
+                                            <p className="text-xs text-gray-400 truncate">
+                                                {order.user?.email || ""}
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedOrders.includes(order.id)}
+                                            onChange={() => toggleOrderSelection(order.id)}
+                                            className="w-4 h-4 text-yambo-green-600 rounded focus:ring-2 focus:ring-yambo-green-500/50 cursor-pointer shrink-0"
+                                        />
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span
+                                            className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                                                config?.className || "bg-gray-100 text-gray-800"
+                                            }`}
+                                        >
+                                            {config?.shortLabel || order.status}
+                                        </span>
+                                        {order.hasOpenIssues && (
+                                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                                                Inc. Pendientes
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2 text-sm">
+                                        <span className="text-gray-400 text-xs">
+                                            {new Date(order.createdAt).toLocaleDateString()} · {productCount} productos
+                                        </span>
+                                        <span className="font-bold text-yambo-black">
+                                            {total.toFixed(2)} €
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                        <button
+                                            onClick={() => openOrderDetail(order)}
+                                            className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
+                                        >
+                                            Ver
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        },
                     }}
                     features={{ enableLoadMore: true, globalSearch: true }}
                     serverSide={{ fetchData: fetchOrdersData }}

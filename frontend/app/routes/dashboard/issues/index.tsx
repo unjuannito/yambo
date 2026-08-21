@@ -188,6 +188,41 @@ export default function IssuesPage() {
                 enableFilters: true,
                 enablePagination: true,
             }}
+            display={{
+                emptyMessage: t('issues.noIssues'),
+                loadingMessage: t('issues.loading'),
+                renderMobileCard: (row: UserIssueRow) => (
+                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <p className="font-medium text-yambo-black truncate">{row.title}</p>
+                                <p className="text-xs text-gray-400 font-mono">#{row.id}</p>
+                            </div>
+                            <IssueStatusBadge status={row.status} />
+                        </div>
+                        {row.orderId && (
+                            <p className="text-xs text-gray-400">
+                                {t('issues.orderId')} #{row.orderId}
+                            </p>
+                        )}
+                        {row.productName && (
+                            <p className="text-xs text-gray-400">{row.productName}</p>
+                        )}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                            <span className="text-xs text-gray-400">
+                                {new Date(row.updatedAt).toLocaleString("es-ES")}
+                            </span>
+                            <ButtonComponent
+                                onClick={() => navigate(`/mi-espacio/incidencias/${row.id}`)}
+                                size="sm"
+                                variant="neutral"
+                            >
+                                {t('issues.viewShort')}
+                            </ButtonComponent>
+                        </div>
+                    </div>
+                ),
+            }}
         />
     );
 }

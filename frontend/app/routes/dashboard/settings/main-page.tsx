@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -244,11 +245,15 @@ export default function MainPageEditor() {
     return (
         <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faHouse} className="text-yambo-green-500" />
-                    Editor de Página Principal
-                </h1>
-                <p className="text-gray-400 mb-6">Personaliza el contenido visible en la página de inicio.</p>
+                <PageHeader
+                    title={
+                        <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faHouse} className="text-yambo-green-500" />
+                            Editor de Página Principal
+                        </span>
+                    }
+                    description="Personaliza el contenido visible en la página de inicio."
+                />
 
                 {/* Tabs */}
                 <div className="flex border-b border-gray-100 mb-6">

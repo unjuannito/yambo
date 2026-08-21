@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import { adminLegalPageService, type LegalPageAdmin, type LegalPageUpdateRequest } from "~/services/adminLegalPageService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
@@ -79,10 +80,14 @@ export default function LegalAdmin() {
     return (
         <RequirePermission permission={{ obj: "legal_page", action: "read" }} redirectTo="/mi-espacio">
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faGavel} className="text-yambo-green-500" />
-                    {t("legal.pageTitle")}
-                </h1>
+                <PageHeader
+                    title={
+                        <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faGavel} className="text-yambo-green-500" />
+                            {t("legal.pageTitle")}
+                        </span>
+                    }
+                />
 
                 {loading ? (
                     <p className="text-gray-500">{t("legal.loadingText")}</p>

@@ -2,6 +2,7 @@ import type { Route } from "./+types/index";
 import { useReportData } from "~/hooks/useReportData";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
+import { PageHeader } from "~/components/common/PageHeader";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faChartLine,
@@ -95,20 +96,18 @@ export default function ReportsPage() {
 
     return (
         <main className="flex flex-col p-4 md:p-6 w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black flex items-center gap-3">
+            <PageHeader
+                title={
+                    <span className="flex items-center gap-3">
                         <FontAwesomeIcon
                             icon={faChartLine}
                             className="text-yambo-green-500"
                         />
                         Informes
-                    </h1>
-                    <p className="text-gray-400 mt-1">
-                        Analíticas y métricas de la plataforma
-                    </p>
-                </div>
-            </div>
+                    </span>
+                }
+                description="Analíticas y métricas de la plataforma"
+            />
 
             <DateRangePicker
                 startDate={startDate}

@@ -26,6 +26,7 @@ import {
 import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
+import { PageHeader } from "~/components/common/PageHeader";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
@@ -43,7 +44,11 @@ export function meta() {
     ];
 }
 
-function InvitationsGeneral() {
+function InvitationsGeneral({
+    onSwitchToNominative,
+}: {
+    onSwitchToNominative?: () => void;
+}) {
     const { t } = useTranslation();
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -462,23 +467,43 @@ function InvitationsGeneral() {
             redirectTo="/mi-espacio"
         >
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">
-                        {t("invitations.title")}
-                    </h1>
-                    {!loading && !error && (
-                        <RequirePermission
-                            permission={{ obj: "invitation", action: "create" }}
-                            redirect={false}
-                        >
-                            <ButtonComponent
-                                variant="primary"
-                                onClick={() => setIsModalOpen(true)}
+                <PageHeader
+                    title={t("invitations.pageTitle")}
+                    subtitle={t("invitations.title")}
+                    description={t("invitations.pageDescription")}
+                    actions={
+                        !loading && !error ? (
+                            <RequirePermission
+                                permission={{ obj: "invitation", action: "create" }}
+                                redirect={false}
                             >
-                                {t("invitations.newInvitation")}
-                            </ButtonComponent>
-                        </RequirePermission>
-                    )}
+                                <ButtonComponent
+                                    variant="primary"
+                                    onClick={() => setIsModalOpen(true)}
+                                >
+                                    {t("invitations.newInvitation")}
+                                </ButtonComponent>
+                            </RequirePermission>
+                        ) : undefined
+                    }
+                />
+
+                <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1 w-fit -mt-2 mb-4">
+                    <button
+                        type="button"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-yambo-black shadow-sm"
+                    >
+                        <FontAwesomeIcon icon={faEnvelopesBulk} className="w-4 h-4" />
+                        {t("invitations.title")}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onSwitchToNominative}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-500 hover:text-gray-700"
+                    >
+                        <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4" />
+                        {t("invitations.nominativeTitle")}
+                    </button>
                 </div>
 
                 <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -1048,37 +1073,17 @@ function InvitationsGeneral() {
 
 export default function Invitations() {
     const [section, setSection] = useState<"general" | "nominative">("general");
-    const { t } = useTranslation();
 
+    if (section === "nominative") {
+        return (
+            <NominativeInvitationsView
+                onBackToGeneral={() => setSection("general")}
+            />
+        );
+    }
     return (
-        <div className="space-y-4">
-            <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1 w-fit">
-                <button
-                    type="button"
-                    onClick={() => setSection("general")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        section === "general"
-                            ? "bg-white text-yambo-black shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    <FontAwesomeIcon icon={faEnvelopesBulk} className="w-4 h-4" />
-                    {t("invitations.title")}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setSection("nominative")}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        section === "nominative"
-                            ? "bg-white text-yambo-black shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4" />
-                    {t("invitations.nominativeTitle")}
-                </button>
-            </div>
-            {section === "general" ? <InvitationsGeneral /> : <NominativeInvitationsView />}
-        </div>
+        <InvitationsGeneral
+            onSwitchToNominative={() => setSection("nominative")}
+        />
     );
 }

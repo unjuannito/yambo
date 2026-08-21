@@ -273,6 +273,61 @@ export default function Profiles() {
                 display={{
                     emptyMessage: t("profiles.noProfiles"),
                     loadingMessage: t("profiles.loading"),
+                    renderMobileCard: (profile: Profile) => (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <span className="font-medium text-yambo-black">
+                                    {profile.name}
+                                </span>
+                                {profile.system && (
+                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs shrink-0">
+                                        {t("profiles.system")}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {profile.permissions.length > 0 ? (
+                                    <>
+                                        {profile.permissions.slice(0, 4).map((permission) => (
+                                            <span
+                                                key={permission.id}
+                                                className="px-2 py-1 bg-yambo-green-50 text-yambo-green-700 rounded-full text-xs"
+                                            >
+                                                {permission.description}
+                                            </span>
+                                        ))}
+                                        {profile.permissions.length > 4 && (
+                                            <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                                +{profile.permissions.length - 4}
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="text-gray-400 text-xs italic">
+                                        {t("profiles.noPermissions")}
+                                    </span>
+                                )}
+                            </div>
+                            {!profile.system && (
+                                <div className="flex gap-2 pt-1">
+                                    <ButtonComponent
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() => startEdit(profile)}
+                                    >
+                                        {t("common.edit")}
+                                    </ButtonComponent>
+                                    <ButtonComponent
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleDelete(profile.id)}
+                                    >
+                                        {t("common.delete")}
+                                    </ButtonComponent>
+                                </div>
+                            )}
+                        </div>
+                    ),
                 }}
                 features={{ globalSearch: true }}
                 serverSide={{ fetchData: fetchProfilesData }}

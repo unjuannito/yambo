@@ -76,6 +76,8 @@ export interface FilterableTableProps<T> {
   renderAboveContent?: (info: ContentInfo<T>) => React.ReactNode;
   renderEmptyState?: (clearFilters: () => void) => React.ReactNode;
   filterFn?: (item: T, filters: FilterValues) => boolean;
+  /** Right-aligned actions shown next to the filter toggle (e.g. "Exportar"). */
+  toolbarActions?: React.ReactNode;
 }
 
 export type {
@@ -99,6 +101,7 @@ export function FilterableTable<T>({
   renderAboveContent,
   renderEmptyState,
   filterFn,
+  toolbarActions,
 }: FilterableTableProps<T>) {
   const { t } = useTranslation();
   const {
@@ -466,6 +469,8 @@ export function FilterableTable<T>({
               page={displayPageInfo.number}
               totalPages={displayPageInfo.totalPages}
               onPageChange={handlePageChange}
+              totalElements={displayPageInfo.totalElements}
+              pageSize={displayPageInfo.size}
             />
           )}
           {(canLoadMore || isLoadingMore) && (
@@ -519,6 +524,8 @@ export function FilterableTable<T>({
             page={displayPageInfo.number}
             totalPages={displayPageInfo.totalPages}
             onPageChange={handlePageChange}
+            totalElements={displayPageInfo.totalElements}
+            pageSize={displayPageInfo.size}
           />
         )}
         {(canLoadMore || isLoadingMore) && (
@@ -569,6 +576,7 @@ export function FilterableTable<T>({
           ) : (
             /* ── Per-column filters (collapsible) ── */
             <>
+            <div className="flex items-center justify-between gap-2 w-full">
             <button
             type="button"
             onClick={() => setFiltersCollapsed((c) => !c)}
@@ -586,6 +594,10 @@ export function FilterableTable<T>({
               className="w-3 h-3 text-gray-400 ml-0.5"
             />
           </button>
+          {toolbarActions && (
+            <div className="flex items-center gap-2">{toolbarActions}</div>
+          )}
+            </div>
           {/* Collapsible filter panel */}
           {!filtersCollapsed && (
             <FiltersSection

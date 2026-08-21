@@ -27,6 +27,8 @@ import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope, faEnvelopesBulk } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -35,7 +37,11 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-export function NominativeInvitationsView() {
+export function NominativeInvitationsView({
+    onBackToGeneral,
+}: {
+    onBackToGeneral?: () => void;
+}) {
     const { t } = useTranslation();
     const [invitations, setInvitations] = useState<NominativeInvitation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -378,12 +384,79 @@ export function NominativeInvitationsView() {
                 display={{
                     emptyMessage: t("invitations.noInvitations"),
                     loadingMessage: t("invitations.loading"),
+                    renderMobileCard: (invitation) => (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="font-medium text-yambo-black truncate">
+                                        {invitation.email}
+                                    </p>
+                                    <p className="text-xs text-gray-400 font-mono truncate">
+                                        {invitation.id}
+                                    </p>
+                                </div>
+                                <span
+                                    className={`px-2.5 py-1 text-xs font-medium rounded-full shrink-0 ${
+                                        invitation.used
+                                            ? "bg-yambo-green-50 text-yambo-green-700"
+                                            : "bg-coral/10 text-coral"
+                                    }`}
+                                >
+                                    {invitation.used ? t("invitations.usedYes") : t("invitations.usedNo")}
+                                </span>
+                            </div>
+                            {invitation.invitedByUser && (
+                                <p className="text-xs text-gray-500">
+                                    {t("invitations.invitedBy")}: {invitation.invitedByUser.name}
+                                </p>
+                            )}
+                            <p className="text-xs text-gray-400">
+                                {t("invitations.expiresAt")}: {new Date(invitation.expiresAt).toLocaleDateString()}
+                            </p>
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                                {invitation.usedByUser ? (
+                                    <span className="text-xs text-gray-500 truncate">
+                                        {t("invitations.usedBy")}: {invitation.usedByUser.name}
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                )}
+                                <ButtonComponent
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDelete(invitation.id)}
+                                    disabled={invitation.used}
+                                >
+                                    {t("invitations.deleteButton")}
+                                </ButtonComponent>
+                            </div>
+                        </div>
+                    ),
                 }}
                 features={{
                     enableFilters: true,
                     enablePagination: true,
                 }}
             >
+                {onBackToGeneral && (
+                    <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1 w-fit -mt-1 mb-2">
+                        <button
+                            type="button"
+                            onClick={onBackToGeneral}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-500 hover:text-gray-700"
+                        >
+                            <FontAwesomeIcon icon={faEnvelopesBulk} className="w-4 h-4" />
+                            {t("invitations.title")}
+                        </button>
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-yambo-black shadow-sm"
+                        >
+                            <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4" />
+                            {t("invitations.nominativeTitle")}
+                        </button>
+                    </div>
+                )}
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner size="md" message={t("invitations.loading")} />

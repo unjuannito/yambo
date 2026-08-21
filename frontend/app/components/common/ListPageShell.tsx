@@ -11,6 +11,7 @@ import type {
 import type { FeaturesConfig, DisplayConfig } from "./FilterableTable";
 import type { PagedResponse } from "~/types/apiType";
 import { ViewTabs, type ViewTabKey } from "./ViewTabs";
+import { PageHeader } from "./PageHeader";
 import { twMerge } from "tailwind-merge";
 
 export interface CompactStat {
@@ -79,35 +80,23 @@ export default function ListPageShell<T>({
   return (
     <main className="flex flex-col gap-4 p-3 md:p-4 w-full">
       {/* Header row */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl md:text-2xl font-extrabold font-display text-yambo-black">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5">{subtitle}</p>
-          )}
-          {compactStats && compactStats.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              {compactStats.map((stat) => (
-                <span
-                  key={stat.label}
-                  className={twMerge(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border",
-                    STAT_COLORS[stat.color],
-                  )}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  {stat.label}: {stat.value}
-                </span>
-              ))}
-            </div>
-          )}
+      <PageHeader title={title} description={subtitle} actions={actions} />
+      {compactStats && compactStats.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 -mt-3 mb-4">
+          {compactStats.map((stat) => (
+            <span
+              key={stat.label}
+              className={twMerge(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border",
+                STAT_COLORS[stat.color],
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+              {stat.label}: {stat.value}
+            </span>
+          ))}
         </div>
-        {actions && (
-          <div className="flex items-center gap-2 shrink-0">{actions}</div>
-        )}
-      </div>
+      )}
 
       {/* Tabs */}
       {tabs && (

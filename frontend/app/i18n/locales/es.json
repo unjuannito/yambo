@@ -523,6 +523,7 @@
   },
   "seo": {
     "title": "SEO",
+    "description": "Gestiona los metadatos SEO de las páginas de la plataforma.",
     "keywords": "Palabras clave",
     "noMetadata": "No se encontraron metadatos SEO",
     "loading": "Cargando metadatos SEO...",
@@ -659,6 +660,8 @@
     "nominativeNew": "+ Nueva Invitación",
     "nominativeSaving": "Guardando...",
     "nominativeTitle": "Invitaciones nominativas",
+    "pageDescription": "Crea, gestiona y supervisa todas las invitaciones enviadas a nuevos usuarios.",
+    "pageTitle": "Gestión de invitaciones",
     "profiles": "Perfiles",
     "profilesLoadingError": "¡Los perfiles se esconden!",
     "project": "Proyecto",
@@ -824,7 +827,8 @@
   },
   "table": {
     "loadingMessage": "Cargando...",
-    "showing": "Mostrando {{from}} a {{to}} de {{total}} elementos",
+    "showing": "Mostrando {{from}} a {{to}} de {{total}} resultados",
+    "perPage": "por página",
     "globalSearch": "Buscar en toda la tabla..."
   },
   "component": {

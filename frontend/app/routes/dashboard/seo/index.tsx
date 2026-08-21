@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type {
     FilterableColumn,
@@ -362,29 +363,34 @@ export default function SeoAdmin() {
             redirectTo="/mi-espacio"
         >
             <main className="flex flex-col p-4 md:p-6 w-full">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black flex items-center gap-2">
-                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-yambo-green-500" />
-                        {t("seo.title")}
-                    </h1>
-                    <RequirePermission
-                        permission={{ obj: "seo_metadata", action: "create" }}
-                        redirect={false}
-                    >
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={handleBulkGenerate}
-                            isLoading={bulkLoading}
-                            disabled={bulkLoading}
+                <PageHeader
+                    title={
+                        <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-yambo-green-500" />
+                            {t("seo.title")}
+                        </span>
+                    }
+                    description={t("seo.description")}
+                    actions={
+                        <RequirePermission
+                            permission={{ obj: "seo_metadata", action: "create" }}
+                            redirect={false}
                         >
-                            <FontAwesomeIcon
-                                icon={faWandMagicSparkles}
-                                className="mr-2"
-                            />
-                            {t("seo.generateMissing")}
-                        </ButtonComponent>
-                    </RequirePermission>
-                </div>
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={handleBulkGenerate}
+                                isLoading={bulkLoading}
+                                disabled={bulkLoading}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faWandMagicSparkles}
+                                    className="mr-2"
+                                />
+                                {t("seo.generateMissing")}
+                            </ButtonComponent>
+                        </RequirePermission>
+                    }
+                />
 
                 <FilterableTable
                     columns={columns}
@@ -392,6 +398,86 @@ export default function SeoAdmin() {
                     display={{
                         emptyMessage: t("seo.noMetadata"),
                         loadingMessage: t("seo.loading"),
+                        renderMobileCard: (entry: SeoMetadataAdmin) => {
+                            const kws = parseKeywords(entry.keywords);
+                            return (
+                                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-yambo-black truncate">
+                                                {entry.entityName}
+                                            </p>
+                                            <p className="text-xs text-gray-400 font-mono">
+                                                {entry.entityType}
+                                            </p>
+                                        </div>
+                                        <span className="text-xs text-gray-400 shrink-0">
+                                            {formatDate(entry.updatedAt)}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-yambo-green-600 font-mono truncate">
+                                        {truncate(entry.slug, 40)}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                        {truncate(entry.metaDescription, 80)}
+                                    </p>
+                                    {kws.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {kws.slice(0, 3).map((kw, i) => (
+                                                <span
+                                                    key={`kw-${kw}-${i}`}
+                                                    className="px-2 py-0.5 rounded-full text-xs font-medium bg-yambo-green-50 text-yambo-green-700"
+                                                >
+                                                    {kw}
+                                                </span>
+                                            ))}
+                                            {kws.length > 3 && (
+                                                <span className="text-xs text-gray-400">
+                                                    +{kws.length - 3}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 pt-1 flex-wrap">
+                                        <RequirePermission
+                                            permission={{ obj: "seo_metadata", action: "update" }}
+                                            redirect={false}
+                                        >
+                                            <ButtonComponent
+                                                variant="primary"
+                                                size="sm"
+                                                onClick={() => openEdit(entry)}
+                                            >
+                                                {t("common.edit")}
+                                            </ButtonComponent>
+                                            <ButtonComponent
+                                                variant="neutral"
+                                                size="sm"
+                                                onClick={() => openRegenerate(entry)}
+                                            >
+                                                <FontAwesomeIcon
+                                                    icon={faWandMagicSparkles}
+                                                    className="mr-1"
+                                                />
+                                                {t("seo.aiRegenerate")}
+                                            </ButtonComponent>
+                                        </RequirePermission>
+                                        <RequirePermission
+                                            permission={{ obj: "seo_metadata", action: "delete" }}
+                                            redirect={false}
+                                        >
+                                            <ButtonComponent
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => openDelete(entry)}
+                                            >
+                                                {t("common.delete")}
+                                            </ButtonComponent>
+                                        </RequirePermission>
+                                    </div>
+                                </div>
+                            );
+                        },
                     }}
                     serverSide={{ fetchData: fetchSeoData }}
                 />

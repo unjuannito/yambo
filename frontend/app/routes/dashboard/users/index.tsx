@@ -381,6 +381,78 @@ export default function Users() {
                 display={{
                     emptyMessage: "No se encontraron usuarios",
                     loadingMessage: "Cargando usuarios...",
+                    renderMobileCard: (user: User) => (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="font-medium text-yambo-black truncate">
+                                        {user.name}
+                                    </p>
+                                    <p className="text-xs text-gray-400 truncate">
+                                        {user.email}
+                                    </p>
+                                </div>
+                                {user.system && (
+                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs shrink-0">
+                                        Sistema
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {user.profiles.length > 0 ? (
+                                    <>
+                                        {user.profiles.slice(0, 3).map((profile) => (
+                                            <span
+                                                key={profile.id}
+                                                className="px-2 py-1 bg-yambo-green-50 text-yambo-green-700 rounded-full text-xs"
+                                            >
+                                                {profile.name}
+                                            </span>
+                                        ))}
+                                        {user.profiles.length > 3 && (
+                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                                +{user.profiles.length - 3} más
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="text-gray-400 text-xs italic">
+                                        Sin permisos
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <ButtonComponent
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
+                                >
+                                    <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 mr-1" />
+                                    Gestionar
+                                </ButtonComponent>
+                                <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
+                                    <ButtonComponent
+                                        onClick={() => startEdit(user)}
+                                        variant="neutral"
+                                        size="sm"
+                                    >
+                                        <FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" />
+                                    </ButtonComponent>
+                                </RequirePermission>
+                                {!user.system && (
+                                    <RequirePermission permission={{ obj: "user", action: "delete" }} redirect={false}>
+                                        <ButtonComponent
+                                            onClick={() => handleDelete(user.id, user.name)}
+                                            variant="destructive"
+                                            size="sm"
+                                        >
+                                            <FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" />
+                                        </ButtonComponent>
+                                    </RequirePermission>
+                                )}
+                            </div>
+                        </div>
+                    ),
                 }}
                 features={{ globalSearch: true }}
                 serverSide={{ fetchData: fetchUsersData }}
