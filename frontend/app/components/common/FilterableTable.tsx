@@ -491,7 +491,7 @@ export function FilterableTable<T>({
     return (
       <>
         {renderMobileCard && (
-          <div className="block md:hidden space-y-3">
+          <div className="block md:hidden space-y-4">
             {paginatedData.map((item) => (
               <div
                 key={String(item[keyField])}

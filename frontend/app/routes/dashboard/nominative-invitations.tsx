@@ -445,29 +445,34 @@ export function NominativeInvitationsView() {
                         />
 
                         {/* Invitation type tabs */}
-                        <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1">
-                            <button
-                                type="button"
-                                onClick={() => setInvitationType("profile")}
-                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                                    invitationType === "profile"
-                                        ? "bg-white text-yambo-green-700 shadow-sm"
-                                        : "text-gray-500 hover:text-gray-700"
-                                }`}
-                            >
-                                {t("invitations.byProfile")}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setInvitationType("role")}
-                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                                    invitationType === "role"
-                                        ? "bg-white text-yambo-green-700 shadow-sm"
-                                        : "text-gray-500 hover:text-gray-700"
-                                }`}
-                            >
-                                {t("invitations.byProjectRole")}
-                            </button>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                                {t("invitations.invitationType")}
+                            </label>
+                            <div className="flex gap-2 bg-gray-100/80 rounded-lg p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setInvitationType("profile")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        invitationType === "profile"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProfile")}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setInvitationType("role")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        invitationType === "role"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProjectRole")}
+                                </button>
+                            </div>
                         </div>
 
                         {invitationType === "profile" ? (
@@ -556,29 +561,34 @@ export function NominativeInvitationsView() {
                         </div>
 
                         {/* Batch type tabs */}
-                        <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1">
-                            <button
-                                type="button"
-                                onClick={() => setBatchType("profile")}
-                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                                    batchType === "profile"
-                                        ? "bg-white text-yambo-green-700 shadow-sm"
-                                        : "text-gray-500 hover:text-gray-700"
-                                }`}
-                            >
-                                {t("invitations.byProfile")}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setBatchType("role")}
-                                className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                                    batchType === "role"
-                                        ? "bg-white text-yambo-green-700 shadow-sm"
-                                        : "text-gray-500 hover:text-gray-700"
-                                }`}
-                            >
-                                {t("invitations.byProjectRole")}
-                            </button>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                                {t("invitations.invitationType")}
+                            </label>
+                            <div className="flex gap-2 bg-gray-100/80 rounded-lg p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setBatchType("profile")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        batchType === "profile"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProfile")}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBatchType("role")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        batchType === "role"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProjectRole")}
+                                </button>
+                            </div>
                         </div>
 
                         {batchType === "profile" ? (
