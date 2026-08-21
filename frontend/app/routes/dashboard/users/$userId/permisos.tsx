@@ -67,6 +67,13 @@ export default function UserPermisos() {
                     value={selectedIds}
                     options={profiles.map(p => ({ value: p.id, label: p.name }))}
                     placeholder="Buscar perfiles..."
+                    onChange={(e) => {
+                        const selected = Array.from(
+                            (e.target as HTMLSelectElement).selectedOptions,
+                            (option) => option.value,
+                        );
+                        setSelectedIds(selected);
+                    }}
                 />
                 {hasChanged && (
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
