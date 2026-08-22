@@ -146,6 +146,7 @@ export default function UserProyectos() {
                                                         <button type="button"
                                                             onClick={() => handleRemove(r.groupId, "COORDINATOR", projectName, r.groupName)}
                                                             className="text-gray-400 hover:text-red-500 transition-colors"
+                                                            aria-label={`Quitar ${r.groupName || "del grupo"}`}
                                                         >
                                                             <FontAwesomeIcon icon={faUserSlash} className="w-3 h-3" />
                                                         </button>

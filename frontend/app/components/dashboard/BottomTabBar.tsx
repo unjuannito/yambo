@@ -94,6 +94,7 @@ export default function BottomTabBar({ links }: BottomTabBarProps) {
                         <button type="button"
                             onClick={() => setSheetOpen(false)}
                             className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                            aria-label={t('common.close')}
                         >
                             <FontAwesomeIcon
                                 icon={faXmark}

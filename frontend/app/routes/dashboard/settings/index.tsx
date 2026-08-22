@@ -580,6 +580,7 @@ export default function Settings() {
                                                         type="button"
                                                         onClick={() => setShowClientSecret(prev => ({ ...prev, [provider.name]: !prev[provider.name] }))}
                                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                        aria-label={showClientSecret[provider.name] ? "Ocultar Client Secret" : "Mostrar Client Secret"}
                                                     >
                                                         <FontAwesomeIcon icon={showClientSecret[provider.name] ? faEyeSlash : faEye} className="w-4 h-4" />
                                                     </button>

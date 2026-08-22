@@ -146,6 +146,7 @@ export default function CartSidebar() {
                               removeItem(item.product.id, configKey)
                             }
                             className="text-gray-300 hover:text-red-400 flex-shrink-0 transition-colors"
+                            aria-label={`Quitar ${item.product.name}`}
                           >
                             <FontAwesomeIcon
                               icon={faXmark}
