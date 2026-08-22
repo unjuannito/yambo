@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { PageHeader } from "~/components/common/PageHeader";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -309,6 +310,7 @@ export default function Settings() {
                         </span>
                     }
                     description={t('settings.manageSettingsHint')}
+                    actions={<WikiGuideLink slug="configuracion" />}
                 />
 
                 <section className="bg-white rounded-2xl border border-gray-100 p-4 mb-6">

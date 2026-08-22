@@ -37,7 +37,7 @@ vi.mock("react-i18next", () => ({
                 'issues.statOpen': 'Abiertas',
                 'issues.statInProgress': 'En progreso',
                 'issues.statClosed': 'Cerradas',
-                'issues.workflow': 'Flujo de trabajo',
+                'component.statusWorkflow.wikiLink': 'Ver en la wiki',
                 'issues.newIssue': 'Nueva incidencia',
                 'issues.orderPrefix': 'Pedido',
                 'issues.createIssue': 'Nueva incidencia',
@@ -77,6 +77,7 @@ const getAllIssuesMock = vi.fn();
 vi.mock("react-router", () => ({
     useNavigate: () => useNavigateMock,
     useSearchParams: () => useSearchParamsMock(),
+    Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("~/components/common/RequirePermission", () => ({
@@ -97,10 +98,6 @@ vi.mock("~/components/common/StatCard", () => ({
 
 vi.mock("~/components/issues", () => ({
     IssueStatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
-}));
-
-vi.mock("~/components/common/StatusWorkflow", () => ({
-    StatusWorkflow: () => <div>workflow</div>,
 }));
 
 vi.mock("~/components/common/ViewTabs", () => ({
@@ -145,7 +142,7 @@ describe("Admin Issues Route", () => {
         render(<AdminIssuesPage />);
 
         expect(screen.getByText("Administrador de incidencias")).toBeInTheDocument();
-        expect(screen.getByText("workflow")).toBeInTheDocument();
+        expect(screen.getByText("Ver en la wiki")).toBeInTheDocument();
         expect(screen.getByText("admin-issues-table")).toBeInTheDocument();
 
         await waitFor(() => {

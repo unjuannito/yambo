@@ -8,9 +8,9 @@ import ListPageShell from "~/components/common/ListPageShell";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable, type FilterableColumn, type FetchDataParams } from "~/components/common/FilterableTable";
 import { issueService, type IssueListItem } from "~/services/issueService";
-import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG, ISSUE_WORKFLOW_TRANSITIONS } from "~/types/issueType";
+import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
-import { StatusWorkflow } from "~/components/common/StatusWorkflow";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
@@ -256,12 +256,7 @@ function AdminIssuesContent() {
                     </span>
                 </div>
             )}
-            <StatusWorkflow
-                title={t('issues.workflowTitle')}
-                config={ISSUE_STATUS_CONFIG}
-                transitions={ISSUE_WORKFLOW_TRANSITIONS}
-                wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#incidencias"
-            />
+            <WikiGuideLink slug="incidencias" className="mb-4 inline-flex" />
         </ListPageShell>
     );
 }

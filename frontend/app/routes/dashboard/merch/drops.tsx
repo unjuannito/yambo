@@ -21,7 +21,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faPenToSquare, faTrashCan, faCalendarDays, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
-import { StatusWorkflow } from "~/components/common/StatusWorkflow";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import toast from "react-hot-toast";
 
 export function meta() {
@@ -429,12 +429,7 @@ export default function MerchFamilies() {
                     enablePagination: false,
                 }}
             >
-                <StatusWorkflow
-                    title={t("merch.workflowTitle")}
-                    config={FAMILY_PRODUCT_STATUS_CONFIG}
-                    transitions={FAMILY_PRODUCT_WORKFLOW_TRANSITIONS}
-                    wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#colecciones"
-                />
+                <WikiGuideLink slug="colecciones" className="mb-4" />
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner size="md" message={t("merch.loadingCollections")} />

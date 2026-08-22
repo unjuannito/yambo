@@ -27,7 +27,7 @@ import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { PageHeader } from "~/components/common/PageHeader";
-import { StatusWorkflow } from "~/components/common/StatusWorkflow";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
@@ -507,22 +507,7 @@ function InvitationsGeneral({
                     </button>
                 </div>
 
-                <StatusWorkflow
-                    title={t("invitations.workflowTitle")}
-                    config={{
-                        ACTIVE: { label: t("invitations.statusActive"), className: "bg-green-100 text-green-800" },
-                        USED: { label: t("invitations.statusExhausted"), className: "bg-amber-100 text-amber-800" },
-                        EXPIRED: { label: t("invitations.statusExpired"), className: "bg-gray-200 text-gray-700" },
-                        DISABLED: { label: t("invitations.statusDisabled"), className: "bg-red-100 text-red-800" },
-                    }}
-                    transitions={{
-                        ACTIVE: ["USED", "EXPIRED", "DISABLED"],
-                        USED: [],
-                        EXPIRED: [],
-                        DISABLED: [],
-                    }}
-                    wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#invitaciones"
-                />
+                <WikiGuideLink slug="invitaciones" className="mb-4" />
 
                 <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

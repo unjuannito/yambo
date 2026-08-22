@@ -21,7 +21,7 @@ import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { OrderStatus, ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
-import { StatusWorkflow } from "~/components/common/StatusWorkflow";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { exportService, type ExportReportType } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
@@ -596,12 +596,7 @@ export default function Orders() {
                     }
                 />
 
-                <StatusWorkflow
-                    title="Flujo de estados del pedido"
-                    config={ORDER_STATUS_CONFIG}
-                    transitions={ORDER_WORKFLOW_TRANSITIONS}
-                    wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#pedidos"
-                />
+                <WikiGuideLink slug="pedidos" className="mb-4" />
 
                 <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 

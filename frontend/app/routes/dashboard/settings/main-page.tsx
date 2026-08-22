@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { PageHeader } from "~/components/common/PageHeader";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -253,6 +254,7 @@ export default function MainPageEditor() {
                         </span>
                     }
                     description="Personaliza el contenido visible en la página de inicio."
+                    actions={<WikiGuideLink slug="pagina-principal" />}
                 />
 
                 {/* Tabs */}

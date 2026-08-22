@@ -11,6 +11,7 @@ import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import {
@@ -262,11 +263,14 @@ export default function Profiles() {
             <ListPageShell<Profile>
                 title={t("profiles.title")}
                 actions={
-                    <RequirePermission permission={{ obj: "profile", action: "create" }} redirect={false}>
-                        <ButtonComponent variant="primary" onClick={openCreateModal}>
-                            {t("profiles.createNew")}
-                        </ButtonComponent>
-                    </RequirePermission>
+                    <div className="flex items-center gap-3">
+                        <WikiGuideLink slug="perfiles" />
+                        <RequirePermission permission={{ obj: "profile", action: "create" }} redirect={false}>
+                            <ButtonComponent variant="primary" onClick={openCreateModal}>
+                                {t("profiles.createNew")}
+                            </ButtonComponent>
+                        </RequirePermission>
+                    </div>
                 }
                 columns={columns}
                 keyField="id"

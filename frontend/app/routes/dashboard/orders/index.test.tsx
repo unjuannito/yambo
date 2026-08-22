@@ -71,10 +71,6 @@ vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
     ),
 }));
 
-vi.mock('~/components/common/StatusWorkflow', () => ({
-    StatusWorkflow: () => null,
-}));
-
 vi.mock('~/components/common/ViewTabs', () => ({
     ViewTabs: () => null,
     useViewTab: () => ({ activeTab: 'actual', setActiveTab: vi.fn() }),

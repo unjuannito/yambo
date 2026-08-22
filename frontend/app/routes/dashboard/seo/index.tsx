@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { PageHeader } from "~/components/common/PageHeader";
+import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type {
     FilterableColumn,
@@ -372,23 +373,26 @@ export default function SeoAdmin() {
                     }
                     description={t("seo.description")}
                     actions={
-                        <RequirePermission
-                            permission={{ obj: "seo_metadata", action: "create" }}
-                            redirect={false}
-                        >
-                            <ButtonComponent
-                                variant="primary"
-                                onClick={handleBulkGenerate}
-                                isLoading={bulkLoading}
-                                disabled={bulkLoading}
+                        <div className="flex items-center gap-3">
+                            <WikiGuideLink slug="seo" />
+                            <RequirePermission
+                                permission={{ obj: "seo_metadata", action: "create" }}
+                                redirect={false}
                             >
-                                <FontAwesomeIcon
-                                    icon={faWandMagicSparkles}
-                                    className="mr-2"
-                                />
-                                {t("seo.generateMissing")}
-                            </ButtonComponent>
-                        </RequirePermission>
+                                <ButtonComponent
+                                    variant="primary"
+                                    onClick={handleBulkGenerate}
+                                    isLoading={bulkLoading}
+                                    disabled={bulkLoading}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faWandMagicSparkles}
+                                        className="mr-2"
+                                    />
+                                    {t("seo.generateMissing")}
+                                </ButtonComponent>
+                            </RequirePermission>
+                        </div>
                     }
                 />
 

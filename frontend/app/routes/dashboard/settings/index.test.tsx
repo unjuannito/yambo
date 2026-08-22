@@ -31,6 +31,10 @@ vi.mock("~/components/common/RequirePermission", () => ({
     RequirePermission: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock("react-router", () => ({
+    Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+}));
+
 vi.mock("~/components/common/forms/InputComponent", () => ({
     default: ({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (e: any) => void; type?: string }) => (
         <label>
