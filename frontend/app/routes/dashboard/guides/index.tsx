@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/index";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGoogle, faApple, faGithub } from "@fortawesome/free-brands-svg-icons";
-import { faBook, faExternalLinkAlt, faChevronRight, faLightbulb, faTriangleExclamation, faShield } from "@fortawesome/free-solid-svg-icons";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
+import { faBook, faExternalLinkAlt, faChevronRight, faLightbulb, faTriangleExclamation, faShield, faGear, faPenToSquare, faEnvelopesBulk, faShieldHalved, faMagnifyingGlass, faLink, faUserPlus, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -19,6 +19,36 @@ type GuideSection = {
 };
 
 const sections: GuideSection[] = [
+    {
+        id: "configuracion",
+        title: "Configuración",
+        description: "Ajustes generales de la web: nombre, contacto, OAuth e inicio de sesión",
+        icon: faGear,
+    },
+    {
+        id: "pagina-principal",
+        title: "Página Principal",
+        description: "Editar el contenido visible en la portada de la web",
+        icon: faPenToSquare,
+    },
+    {
+        id: "invitaciones",
+        title: "Invitaciones",
+        description: "Cómo invitar a nuevos socios: enlaces, nominativas y por proyecto",
+        icon: faEnvelopesBulk,
+    },
+    {
+        id: "perfiles",
+        title: "Perfiles y permisos",
+        description: "Qué son los perfiles y cómo gestionar los permisos de cada rol",
+        icon: faShieldHalved,
+    },
+    {
+        id: "seo",
+        title: "SEO",
+        description: "Metadatos, descripciones y posicionamiento en buscadores",
+        icon: faMagnifyingGlass,
+    },
     {
         id: "oauth-google",
         title: "Google — Inicio de sesión",
@@ -65,6 +95,248 @@ export default function Guides() {
                     </a>
                 ))}
             </div>
+
+            {/* ─── Guía: Configuración ─── */}
+            <article id="configuracion" className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faGear} className="w-5 h-5 text-yambo-green-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Configuración general</h2>
+                        <p className="text-sm text-gray-400">Ajustes de la web accesibles desde «Configuración» en el menú de administración</p>
+                    </div>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">¿Qué se puede configurar?</h3>
+                        <ul className="mt-1 space-y-1 list-disc pl-5">
+                            <li><strong>OAuth / Inicio de sesión:</strong> activar «Iniciar sesión con Google» y pegar las credenciales. Ver la guía <a href="#oauth-google" className="text-yambo-green-600 hover:underline">Google — Inicio de sesión</a>.</li>
+                            <li><strong>Datos generales:</strong> nombre de la asociación, correo de contacto y otros datos visibles.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">Cómo guardar los cambios</h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>Ve a <strong>Administración → Configuración</strong></li>
+                            <li>Modifica los campos que necesites</li>
+                            <li>Pulsa <strong>«Guardar»</strong></li>
+                            <li>Verifica que el cambio se ve en la web (puede requerir recargar la página)</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
+                        <div className="flex items-start gap-3">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-yellow-800">Credenciales OAuth</p>
+                                <p className="text-yellow-700 mt-1">El Client Secret nunca se muestra en pantalla (aparece oculto). Si necesitas cambiarlo, genera uno nuevo en Google Cloud Console y pégalo aquí.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            {/* ─── Guía: Página Principal ─── */}
+            <article id="pagina-principal" className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faPenToSquare} className="w-5 h-5 text-yambo-green-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Editar la Página Principal</h2>
+                        <p className="text-sm text-gray-400">El contenido que ven los visitantes en la portada de la web</p>
+                    </div>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">Pasos</h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>Ve a <strong>Administración → Página Principal</strong></li>
+                            <li>Edita los textos, imágenes o secciones visibles</li>
+                            <li>Pulsa <strong>«Guardar»</strong></li>
+                            <li>Abre <strong>yambo.cabrasky.net</strong> para comprobar el resultado</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 text-sm">
+                        <div className="flex items-start gap-3">
+                            <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-yambo-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-yambo-green-800">Consejo</p>
+                                <p className="text-yambo-green-700 mt-1">Los cambios en la portada son visibles inmediatamente para todo el mundo (no hace falta esperar). Revisa siempre en móvil y en ordenador.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            {/* ─── Guía: Invitaciones ─── */}
+            <article id="invitaciones" className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faEnvelopesBulk} className="w-5 h-5 text-yambo-green-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Invitaciones: cómo dar de alta a nuevos socios</h2>
+                        <p className="text-sm text-gray-400">Hay tres formas de invitar, según cómo quieras que se registre la persona</p>
+                    </div>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base flex items-center gap-2">
+                            <FontAwesomeIcon icon={faLink} className="w-4 h-4 text-yambo-green-500" />
+                            1. Enlace por perfiles (invitación general)
+                        </h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>Ve a <strong>Administración → Invitaciones</strong> y pulsa <strong>«Nueva Invitación»</strong></li>
+                            <li>Elige <strong>«Por perfil»</strong> y selecciona el/los perfiles que recibirá la persona al registrarse</li>
+                            <li>Opcional: fija una fecha de inicio y fin de validez</li>
+                            <li>Pulsa <strong>«Crear»</strong> y copia el enlace generado</li>
+                            <li>Compártelo con la persona (email, WhatsApp, …)</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base flex items-center gap-2">
+                            <FontAwesomeIcon icon={faUserPlus} className="w-4 h-4 text-yambo-green-500" />
+                            2. Nominativa (para una persona concreta)
+                        </h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>En <strong>Invitaciones</strong>, pulsa <strong>«Nueva Invitación»</strong> y elige <strong>«Nominativa»</strong></li>
+                            <li>Introduce el <strong>email</strong> de la persona</li>
+                            <li>Elige los perfiles y (opcional) la fecha de caducidad</li>
+                            <li>Pulsa <strong>«Crear»</strong> — se enviará/registrará la invitación para ese email</li>
+                        </ol>
+                        <div className="mt-3 p-3 bg-gray-50 rounded-xl text-sm">
+                            <p className="font-medium text-yambo-black">¿Diferencia con el enlace general?</p>
+                            <p className="mt-1">Con el enlace general, cualquiera que tenga el enlace puede registrarse. Con la nominativa, solo la persona con ese email puede usarla.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base flex items-center gap-2">
+                            <FontAwesomeIcon icon={faClipboardCheck} className="w-4 h-4 text-yambo-green-500" />
+                            3. Por proyecto y rol
+                        </h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>En la sección de <strong>Proyectos → Padres</strong> de un proyecto, pulsa <strong>«Enlaces anteriores»</strong> o crea un enlace nuevo de proyecto+rol</li>
+                            <li>Selecciona el <strong>proyecto</strong> y el <strong>rol</strong> (monitor, coordinador, padre…)</li>
+                            <li>La persona se registrará con ese rol asignado directamente</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 text-sm">
+                        <div className="flex items-start gap-3">
+                            <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-yambo-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-yambo-green-800">Seguimiento</p>
+                                <p className="text-yambo-green-700 mt-1">En la lista de invitaciones puedes ver el estado de cada enlace (activo, agotado, caducado) y cuántas veces se ha usado. Pulsa el icono de copiar para reutilizar un enlace activo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            {/* ─── Guía: Perfiles y permisos ─── */}
+            <article id="perfiles" className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faShieldHalved} className="w-5 h-5 text-yambo-green-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">Perfiles y permisos</h2>
+                        <p className="text-sm text-gray-400">Los perfiles agrupan permisos y determinan qué puede hacer cada persona en la web</p>
+                    </div>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">¿Qué es un perfil?</h3>
+                        <p className="mt-1">Un perfil es un conjunto de permisos (ver usuarios, editar productos, gestionar incidencias…). A cada usuario se le asigna uno o varios perfiles.</p>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">Gestionar perfiles</h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>Ve a <strong>Administración → Perfiles</strong></li>
+                            <li>Verás la lista de perfiles existentes y sus permisos</li>
+                            <li>Pulsa <strong>«Nuevo perfil»</strong> para crear uno, o edita uno existente</li>
+                            <li>Marca los <strong>permisos</strong> que quieras que incluya</li>
+                            <li>Pulsa <strong>«Guardar»</strong></li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">Asignar un perfil a un usuario</h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>Ve a <strong>Administración → Usuarios</strong></li>
+                            <li>Abre el usuario que quieras modificar</li>
+                            <li>En la sección de <strong>perfiles</strong>, añade o quita perfiles</li>
+                            <li>Guarda los cambios</li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
+                        <div className="flex items-start gap-3">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-yellow-800">Cuidado con los permisos</p>
+                                <p className="text-yellow-700 mt-1">Un perfil con muchos permisos da acceso a muchas funciones. Revisa siempre qué permisos incluye antes de asignarlo, y no asignes el perfil de administrador a quien no lo necesite.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            {/* ─── Guía: SEO ─── */}
+            <article id="seo" className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 mb-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="w-5 h-5 text-yambo-green-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold font-display text-yambo-black">SEO: posicionamiento en buscadores</h2>
+                        <p className="text-sm text-gray-400">Títulos, descripciones y metadatos de las páginas públicas</p>
+                    </div>
+                </div>
+
+                <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">Qué se puede editar</h3>
+                        <ul className="mt-1 space-y-1 list-disc pl-5">
+                            <li><strong>Título</strong> de la página (lo que aparece en la pestaña del navegador y en Google)</li>
+                            <li><strong>Descripción</strong> (el texto bajo el título en los resultados de búsqueda)</li>
+                            <li><strong>Imagen</strong> de vista previa al compartir el enlace</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-yambo-black text-base">Cómo editarlo</h3>
+                        <ol className="mt-2 space-y-2 list-decimal pl-5">
+                            <li>Ve a <strong>Administración → SEO</strong></li>
+                            <li>Selecciona la página que quieras optimizar</li>
+                            <li>Escribe un <strong>título</strong> descriptivo (40–60 caracteres recomendado)</li>
+                            <li>Escribe una <strong>descripción</strong> clara (120–160 caracteres)</li>
+                            <li>Pulsa <strong>«Guardar»</strong></li>
+                        </ol>
+                    </div>
+
+                    <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 text-sm">
+                        <div className="flex items-start gap-3">
+                            <FontAwesomeIcon icon={faLightbulb} className="w-5 h-5 text-yambo-green-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="font-medium text-yambo-green-800">Consejo</p>
+                                <p className="text-yambo-green-700 mt-1">Escribe títulos que expliquen claramente qué es la página («Actividades de Yambo — Asociación Juvenil»), no genéricos como «Inicio» o «Página 1».</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
 
             {/* ─── Guía: Google OAuth ─── */}
             <article id="oauth-google" className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 mb-8">

@@ -11,6 +11,7 @@ import {
     faChartLine,
     faPeopleGroup,
     faGavel,
+    faBook,
 } from "@fortawesome/free-solid-svg-icons";
 
 export interface NavSection {
@@ -35,6 +36,10 @@ export const NAV_SECTIONS: NavSection[] = [
     {
         title: "Artículos",
         items: ["merch", "merchFamilies", "myOrders", "cart", "issues"]
+    },
+    {
+        title: "Documentación",
+        items: ["guides"]
     }
 ];
 
@@ -61,5 +66,6 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     myOrders: <FontAwesomeIcon icon={faClipboardList} className="w-5 h-5" />,
     issues: <FontAwesomeIcon icon={faComments} className="w-5 h-5" />,
     cart: <FontAwesomeIcon icon={faCartShopping} className="w-5 h-5" />,
+    guides: <FontAwesomeIcon icon={faBook} className="w-5 h-5" />,
     logout: <FontAwesomeIcon icon={faRightFromBracket} className="w-5 h-5" />,
 };

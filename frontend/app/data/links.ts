@@ -94,6 +94,12 @@ const LINKS_MAP: Link[] = [
         label: "Informes",
         need: { obj: "report", action: "read" },
     },
+    {
+        name: "guides",
+        href: "/mi-espacio/admin/guias",
+        label: "Guías y Wiki",
+        need: null,
+    },
 
     // Proyectos
     {
