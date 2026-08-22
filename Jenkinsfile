@@ -221,10 +221,15 @@ pipeline {
                     steps {
                         script {
                             // Imagen oficial con Java + escaner incluidos (node:22-alpine no tiene Java)
+                            // SONAR_SCANNER_OPTS limita el heap del escáner: la VM .21 tiene 6 GB RAM
+                            // (Sonar+ES+Postgres+registry ya consumen ~4 GB). Sin límite, el análisis
+                            // JS/TS usa ~2.2 GB de heap y provoca swap-thrashing → NetBird management
+                            // (vpn.cabrasky.net) pierde sync y "se cae la red" durante el build.
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
                                      docker run --rm --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
+                                       -e SONAR_SCANNER_OPTS=-Xmx1024m \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app'
                             """
                         }

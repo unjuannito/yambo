@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { Route } from "./+types/index";
 import type { Order } from "~/services/orderService";
 import { RequirePermission } from "~/components/common/RequirePermission";
@@ -86,11 +86,13 @@ export default function Orders() {
         });
     };
 
-    const [statusOptions] = useState(
-        Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
-            value: key,
-            label: config.label,
-        })),
+    const statusOptions = useMemo(
+        () =>
+            Object.entries(ORDER_STATUS_CONFIG).map(([key, config]) => ({
+                value: key,
+                label: config.label,
+            })),
+        [],
     );
 
     const closeOrderDetail = useCallback(() => {
