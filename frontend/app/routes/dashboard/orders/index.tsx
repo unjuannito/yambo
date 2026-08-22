@@ -596,7 +596,7 @@ export default function Orders() {
                     }
                 />
 
-                <WikiGuideLink slug="pedidos" className="mb-4" />
+                <WikiGuideLink slug="flujos-de-trabajo" hash="pedidos" className="mb-4" />
 
                 <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 

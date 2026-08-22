@@ -429,7 +429,7 @@ export default function MerchFamilies() {
                     enablePagination: false,
                 }}
             >
-                <WikiGuideLink slug="colecciones" className="mb-4" />
+                <WikiGuideLink slug="flujos-de-trabajo" hash="colecciones" className="mb-4" />
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner size="md" message={t("merch.loadingCollections")} />

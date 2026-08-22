@@ -256,7 +256,7 @@ function AdminIssuesContent() {
                     </span>
                 </div>
             )}
-            <WikiGuideLink slug="incidencias" className="mb-4 inline-flex" />
+            <WikiGuideLink slug="flujos-de-trabajo" hash="incidencias" className="mb-4 inline-flex" />
         </ListPageShell>
     );
 }

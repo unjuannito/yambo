@@ -1,4 +1,5 @@
-import { useParams, Link, useNavigate } from "react-router";
+import { useEffect } from "react";
+import { useParams, Link, useNavigate, useLocation } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faArrowRight, faBook } from "@fortawesome/free-solid-svg-icons";
 import { GUIDES, GUIDE_COMPONENTS } from "./guides-content";
@@ -15,6 +16,30 @@ export function meta({ params }: Route.MetaArgs) {
 export default function GuideDetail() {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Scroll a la sección indicada por #hash (p.ej. /guias/flujos-de-trabajo#pedidos).
+    // El dashboard scrollea en <main> (overflow-y-auto), no en window, así que el
+    // navegador no resuelve el ancla solo: hay que hacer scroll manual al elemento.
+    useEffect(() => {
+        if (!location.hash) return;
+        const id = location.hash.slice(1);
+        // Esperar al render del contenido (el componente de la guía se monta en el
+        // mismo commit, pero el layout del dashboard puede necesitar un frame).
+        const timer = window.setTimeout(() => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const container = document.querySelector("main");
+            if (container) {
+                // header sticky h-16 (4rem) del dashboard
+                const top = el.getBoundingClientRect().top + container.scrollTop - 64;
+                container.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+            } else {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }, 80);
+        return () => window.clearTimeout(timer);
+    }, [location.hash, slug]);
 
     if (!slug || !GUIDE_COMPONENTS[slug]) {
         // Slug desconocido → volver a la primera guía

@@ -424,7 +424,7 @@ export default function ActivitiesAdminPage() {
     return (
         <main className="flex flex-col p-4 md:p-6 w-full">
             <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("activities.panelTitle")}</h1>
-            <WikiGuideLink slug="actividades" className="mb-4" />
+            <WikiGuideLink slug="flujos-de-trabajo" hash="actividades" className="mb-4" />
             <div className="mb-4">
                 <ButtonComponent variant="success" onClick={handleCreateClick}>
                     {t("activities.createNew")}
