@@ -256,7 +256,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci && \
-                                     docker build --memory=1g --memory-swap=1g --cpus=1 -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
+                                     docker build --memory=1g --memory-swap=1g -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}'
                             """
@@ -270,7 +270,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci && \
-                                     docker build --memory=1g --memory-swap=1g --cpus=1 -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
+                                     docker build --memory=1g --memory-swap=1g -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${BACKEND_IMAGE}:${env.BACKEND_TAG}'
                             """
