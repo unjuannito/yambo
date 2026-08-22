@@ -600,6 +600,7 @@ export default function Orders() {
                     title="Flujo de estados del pedido"
                     config={ORDER_STATUS_CONFIG}
                     transitions={ORDER_WORKFLOW_TRANSITIONS}
+                    wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#pedidos"
                 />
 
                 <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />

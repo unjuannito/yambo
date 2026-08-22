@@ -21,6 +21,7 @@ import {
     type FetchDataParams,
     type FilterableColumn,
 } from "~/components/common/FilterableTable";
+import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import { Modal } from "~/components/common/Modal";
 import { projectService } from "~/services/projectService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -423,6 +424,24 @@ export default function ActivitiesAdminPage() {
     return (
         <main className="flex flex-col p-4 md:p-6 w-full">
             <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("activities.panelTitle")}</h1>
+            <StatusWorkflow
+                title={t("activities.workflowTitle")}
+                config={{
+                    PLANNED: { label: t("activities.statusPlanned"), className: "bg-gray-100 text-gray-700" },
+                    OPEN_REGISTRATION: { label: t("activities.statusOpen"), className: "bg-green-100 text-green-800" },
+                    REGISTRATION_CLOSED: { label: t("activities.statusClosedReg"), className: "bg-amber-100 text-amber-800" },
+                    CLOSED: { label: t("activities.statusClosed"), className: "bg-blue-100 text-blue-800" },
+                    CANCELLED: { label: t("activities.statusCancelled"), className: "bg-red-100 text-red-800" },
+                }}
+                transitions={{
+                    PLANNED: ["OPEN_REGISTRATION", "CANCELLED"],
+                    OPEN_REGISTRATION: ["REGISTRATION_CLOSED", "CANCELLED"],
+                    REGISTRATION_CLOSED: ["CLOSED", "CANCELLED"],
+                    CLOSED: [],
+                    CANCELLED: [],
+                }}
+                wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#actividades"
+            />
             <div className="mb-4">
                 <ButtonComponent variant="success" onClick={handleCreateClick}>
                     {t("activities.createNew")}

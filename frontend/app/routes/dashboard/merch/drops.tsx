@@ -433,6 +433,7 @@ export default function MerchFamilies() {
                     title={t("merch.workflowTitle")}
                     config={FAMILY_PRODUCT_STATUS_CONFIG}
                     transitions={FAMILY_PRODUCT_WORKFLOW_TRANSITIONS}
+                    wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#colecciones"
                 />
                 {loading && (
                     <div className="flex justify-center py-8">

@@ -15,7 +15,6 @@ import FileUploader from "~/components/common/FileUploader";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import type { Route } from "./+types/my-orders";
 import { ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
-import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
 import { IssueStatusBadge } from "~/components/issues/IssueStatusBadge";
 import { CreateIssueModal } from "~/components/issues/CreateIssueModal";

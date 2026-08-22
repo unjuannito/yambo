@@ -260,6 +260,7 @@ function AdminIssuesContent() {
                 title={t('issues.workflowTitle')}
                 config={ISSUE_STATUS_CONFIG}
                 transitions={ISSUE_WORKFLOW_TRANSITIONS}
+                wikiHref="/mi-espacio/admin/guias/flujos-de-trabajo#incidencias"
             />
         </ListPageShell>
     );

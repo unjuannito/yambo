@@ -376,6 +376,12 @@
     "title": "Actividades",
     "status": "Estado",
     "panelTitle": "Panel de actividades",
+    "workflowTitle": "Flujo de la actividad",
+    "statusPlanned": "Planificada",
+    "statusOpen": "Abierta para apuntarse",
+    "statusClosedReg": "Inscripciones cerradas",
+    "statusClosed": "Cerrada",
+    "statusCancelled": "Cancelada",
     "createNew": "Crear actividad",
     "editTitle": "Editar actividad",
     "createTitle": "Crear actividad",
@@ -661,6 +667,7 @@
     "nominativeSaving": "Guardando...",
     "nominativeTitle": "Invitaciones nominativas",
     "pageDescription": "Crea, gestiona y supervisa todas las invitaciones enviadas a nuevos usuarios.",
+    "workflowTitle": "Flujo de la invitación",
     "pageTitle": "Gestión de invitaciones",
     "profiles": "Perfiles",
     "profilesLoadingError": "¡Los perfiles se esconden!",
@@ -873,7 +880,8 @@
       "restricted": "¡Zona restringida! No tienes permiso para entrar aquí"
     },
     "statusWorkflow": {
-      "actions": "Acciones:"
+      "actions": "Acciones:",
+      "wikiLink": "Ver en la wiki"
     },
     "viewTabs": {
       "current": "Actual",
