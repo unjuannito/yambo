@@ -171,7 +171,7 @@ pipeline {
                                 tar czf - --exclude=.git --exclude=node_modules backend | \
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && \
-                                     docker run --rm -v /tmp/yambo-ci/backend:/app -w /app \
+                                     docker run --rm --cpus=1 -v /tmp/yambo-ci/backend:/app -w /app \
                                        maven:3.9-eclipse-temurin-21 sh -c "chmod +x mvnw && ./mvnw verify -T 1C -B -q"'
                             """
                         }
@@ -185,7 +185,7 @@ pipeline {
                                 tar czf - --exclude=.git --exclude=node_modules frontend | \
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && \
-                                     docker run --rm -v /tmp/yambo-ci/frontend:/app -w /app \
+                                     docker run --rm --cpus=1 -v /tmp/yambo-ci/frontend:/app -w /app \
                                        node:22-alpine sh -c "npm install --no-audit --no-fund && npm run typecheck && npm run build"'
                             """
                         }
@@ -210,7 +210,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/backend && \
-                                     docker run --rm --network=host -v /tmp/yambo-ci/backend:/app -w /app \
+                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/backend:/app -w /app \
                                        maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN}"'
                             """
                         }
@@ -228,7 +228,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
-                                     docker run --rm --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
+                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
                                        -e SONAR_SCANNER_OPTS=-Xmx1024m \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app'
                             """
@@ -256,7 +256,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci && \
-                                     docker build --memory=1g --memory-swap=1g -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
+                                     docker build --memory=1g --memory-swap=1g --cpus=1 -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}'
                             """
@@ -270,7 +270,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci && \
-                                     docker build --memory=1g --memory-swap=1g -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
+                                     docker build --memory=1g --memory-swap=1g --cpus=1 -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${BACKEND_IMAGE}:${env.BACKEND_TAG}'
                             """
