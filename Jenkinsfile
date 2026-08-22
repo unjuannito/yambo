@@ -290,23 +290,41 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/hetzner"
-                    // Para Hetzner: push de imágenes al registry vía NetBird
-                    // y usar el nombre overlay del registry (100.111.131.248:5000)
+                    // FIX 2026-08-21 (mismo bug que Deploy Develop): solo se
+                    // tag/push la imagen del componente que se construyó en este
+                    // build. Antes el docker tag de ambas fallaba si el push solo
+                    // tocaba un componente (imagen local inexistente). El
+                    // componente no cambiado conserva el tag desplegado.
                     sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
                              echo ${REGISTRY_PASS} | docker login ${REGISTRY_HETZNER} -u ${REGISTRY_USER} --password-stdin && \
-                             docker tag ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
-                             docker push ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
-                             docker tag ${BACKEND_IMAGE}:${env.BACKEND_TAG} ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
-                             docker push ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               docker tag ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
+                               docker push ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG}; \
+                             fi && \
+                             if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               docker tag ${BACKEND_IMAGE}:${env.BACKEND_TAG} ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                               docker push ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG}; \
+                             fi && \
                              cd ${overlayDir} && \
-                             kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
-                             kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG}; \
+                             else \
+                               FE_CUR=$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-frontend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:\${FE_CUR}; \
+                             fi && \
+                             if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG}; \
+                             else \
+                               BE_CUR=$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-backend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:\${BE_CUR}; \
+                             fi && \
                              cd /tmp/yambo-ci && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
                                awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s'
+                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s && \
+                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s'
                     """
                 }
             }
@@ -323,12 +341,30 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/develop"
+                    // FIX 2026-08-21: `kustomize edit set image` se aplica SOLO al
+                    // componente que se construyó en este build (FE/BE/INFRA_CHANGED).
+                    // Antes se seteaban ambos tags SIEMPRE → si el push solo tocaba
+                    // frontend, el backend apuntaba a un tag inexistente en el
+                    // registry → ImagePullBackOff (rollout atascado y build SUCCESS
+                    // engañoso). El componente no cambiado conserva el tag que ya
+                    // tiene desplegado el cluster. Además se espera el rollout del
+                    // backend (antes solo frontend).
                     sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
                              cd ${overlayDir} && \
-                             kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG} && \
-                             kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG} && \
+                             if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG}; \
+                             else \
+                               FE_CUR=$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-frontend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:\${FE_CUR}; \
+                             fi && \
+                             if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG}; \
+                             else \
+                               BE_CUR=$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-backend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:\${BE_CUR}; \
+                             fi && \
                              cd /tmp/yambo-ci && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
                              if ! KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
@@ -343,7 +379,8 @@ pipeline {
                              fi && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl kustomize ${overlayDir} | \
                                awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s'
+                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s && \
+                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s'
                     """
                 }
             }
