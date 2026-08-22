@@ -45,7 +45,10 @@ export default [
         route("mi-espacio/admin/seo", "routes/dashboard/seo/index.tsx"),
         route("mi-espacio/admin/legal", "routes/dashboard/legal/index.tsx"),
         route("mi-espacio/admin/informes", "routes/dashboard/reports/index.tsx"),
-        route("mi-espacio/admin/guias", "routes/dashboard/guides/index.tsx"),
+        route("mi-espacio/admin/guias", "routes/dashboard/guides/_layout.tsx", [
+            index("routes/dashboard/guides/index.tsx"),
+            route(":slug", "routes/dashboard/guides/$slug.tsx"),
+        ]),
 
         // Proyectos
         route("mi-espacio/admin/equipo", "routes/dashboard/crew/index.tsx"),
