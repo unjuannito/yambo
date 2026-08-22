@@ -144,7 +144,7 @@ export default function IssueDetailPage() {
                 <h1 className="text-xl lg:text-2xl font-black text-yambo-black truncate tracking-tight row-span-6">
                     {issue.title}
                 </h1>
-                <button onClick={() => setShowInfo(true)} className="lg:hidden h-9 w-9 rounded-full bg-white flex items-center justify-center text-gray-500 border-2 border-slate-200 active:scale-90 transition-all hover:shadow-sm row-span-12">
+                <button type="button" onClick={() => setShowInfo(true)} className="lg:hidden h-9 w-9 rounded-full bg-white flex items-center justify-center text-gray-500 border-2 border-slate-200 active:scale-90 transition-all hover:shadow-sm row-span-12">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
                 </button>
                 <IssueStatusBadge status={issue.status} className="row-span-12 justify-self-end self-start w-fit" />

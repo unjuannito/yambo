@@ -125,7 +125,7 @@ export default function UserPerfil() {
                                         onUpload={(file) => handleChange("photo", file.url)}
                                     />
                                     {form.photo && (
-                                        <button
+                                        <button type="button"
                                             onClick={() => handleChange("photo", "")}
                                             className="text-xs text-gray-400 hover:text-red-500 transition-colors"
                                         >

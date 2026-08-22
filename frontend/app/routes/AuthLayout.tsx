@@ -25,7 +25,7 @@ export function AuthLayout({ children, title, subtitle, banner, footer }: AuthLa
 
             <div className="bg-white/90 backdrop-blur-sm shadow-xl rounded-3xl px-8 py-10 max-w-md w-full space-y-6 relative z-10 bounce-in">
                 {/* Back button */}
-                <button
+                <button type="button"
                     onClick={() => navigate("/")}
                     className="absolute top-5 left-5 w-9 h-9 rounded-full bg-gray-100 hover:bg-yambo-green-50 text-gray-400 hover:text-yambo-green-600 transition-all flex items-center justify-center"
                     aria-label={t('common.back')}

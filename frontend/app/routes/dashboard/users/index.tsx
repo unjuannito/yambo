@@ -211,7 +211,7 @@ export default function Users() {
             },
             render: (user: User) => (
                 <div>
-                    <button
+                    <button type="button"
                         onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
                         className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors text-left"
                     >

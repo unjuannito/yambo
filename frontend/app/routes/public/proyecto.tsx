@@ -191,7 +191,7 @@ export default function Proyecto() {
 
             {namedGroups.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                <button
+                <button type="button"
                   onClick={() => setSelectedGroupId(null)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                     selectedGroupId === null
@@ -205,7 +205,7 @@ export default function Proyecto() {
                   const colors = projectColor(group.id);
                   const isSelected = selectedGroupId === group.id;
                   return (
-                    <button
+                    <button type="button"
                       key={group.id}
                       onClick={() => setSelectedGroupId(group.id === selectedGroupId ? null : group.id)}
                       className="px-4 py-2 rounded-full text-sm font-semibold transition-all border hover:brightness-90"
@@ -228,7 +228,7 @@ export default function Proyecto() {
               <span>
                 {t('public.projectFilteredResult', { count: filteredMonitors.length })}
               </span>
-              <button
+              <button type="button"
                 onClick={() => { setSelectedGroupId(null); setSearchText(""); }}
                 className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
               >

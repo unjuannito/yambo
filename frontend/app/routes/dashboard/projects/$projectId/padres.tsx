@@ -230,7 +230,7 @@ export default function ProjectPadres() {
                                 {parents.length} padre{parents.length !== 1 ? "s" : ""}
                             </span>
                             <RequirePermission permission={{ obj: "invitation", action: "create" }} redirect={false}>
-                                <button
+                                <button type="button"
                                     onClick={openInvite}
                                     className="text-xs text-yambo-green-600 hover:text-yambo-green-700 transition-colors"
                                 >
@@ -239,7 +239,7 @@ export default function ProjectPadres() {
                                 </button>
                             </RequirePermission>
                             <RequirePermission permission={{ obj: "invitation", action: "read" }} redirect={false}>
-                                <button
+                                <button type="button"
                                     onClick={openHistory}
                                     className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
                                 >
@@ -249,7 +249,7 @@ export default function ProjectPadres() {
                             </RequirePermission>
                             {parents.length > 1 && (
                                 <RequirePermission permission={{ obj: "invitation", action: "delete" }} redirect={false}>
-                                    <button
+                                    <button type="button"
                                         onClick={() => setShowRemoveAll(true)}
                                         className="text-xs text-red-400 hover:text-red-600 transition-colors"
                                     >
@@ -277,7 +277,7 @@ export default function ProjectPadres() {
                                         <p className="text-xs text-gray-400 truncate">{parent.email}</p>
                                     </div>
                                 </div>
-                                <button
+                                <button type="button"
                                     onClick={() => setRemoveTarget({ userId: parent.userId, name: parent.name })}
                                     disabled={removing === parent.userId}
                                     className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0 ml-4 disabled:opacity-50"

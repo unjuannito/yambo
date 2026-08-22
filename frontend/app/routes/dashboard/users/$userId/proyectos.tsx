@@ -120,7 +120,7 @@ export default function UserProyectos() {
                     return (
                         <section key={projectId} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
-                                <button
+                                <button type="button"
                                     onClick={() => navigate(`/mi-espacio/proyectos/${projectId}/personal`)}
                                     className="font-bold text-yambo-black hover:text-yambo-green-600 transition-colors text-left flex items-center gap-2"
                                 >
@@ -143,7 +143,7 @@ export default function UserProyectos() {
                                                 <div key={`${r.groupId}:${r.role}`} className="flex items-center gap-2 px-3 py-1.5 bg-yambo-purple-50 border border-yambo-purple-200 rounded-full text-sm">
                                                     <span className="text-yambo-purple-700">{r.groupName || "(nivel proyecto)"}</span>
                                                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                                        <button
+                                                        <button type="button"
                                                             onClick={() => handleRemove(r.groupId, "COORDINATOR", projectName, r.groupName)}
                                                             className="text-gray-400 hover:text-red-500 transition-colors"
                                                         >
@@ -166,7 +166,7 @@ export default function UserProyectos() {
                                                 <div key={`${r.groupId}:${r.role}`} className="flex items-center gap-2 px-3 py-1.5 bg-yambo-green-50 border border-yambo-green-200 rounded-full text-sm">
                                                     <span className="text-yambo-green-700">{r.groupName || "(nivel proyecto)"}</span>
                                                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                                        <button
+                                                        <button type="button"
                                                             onClick={() => handleRemove(r.groupId, "MONITOR", projectName, r.groupName)}
                                                             className="text-gray-400 hover:text-red-500 transition-colors"
                                                         >
@@ -189,7 +189,7 @@ export default function UserProyectos() {
                                                 <div key={`${r.groupId}:${r.role}`} className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-sm">
                                                     <span className="text-amber-700">{r.groupName || "(nivel proyecto)"}</span>
                                                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                                        <button
+                                                        <button type="button"
                                                             onClick={() => handleRemove(r.groupId, "PARENT", projectName, r.groupName)}
                                                             className="text-gray-400 hover:text-red-500 transition-colors"
                                                         >

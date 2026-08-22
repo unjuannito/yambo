@@ -36,7 +36,7 @@ export default function FloatingCartButton() {
   };
 
   return (
-    <button
+    <button type="button"
       onClick={handleClick}
       className="fixed bottom-20 md:bottom-6 right-6 z-30 bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 hover:from-yambo-green-600 hover:to-yambo-green-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg shadow-yambo-green-500/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-yambo-green-500/40 animate-bounce-gentle"
       aria-label={t('dashboard.openCart')}

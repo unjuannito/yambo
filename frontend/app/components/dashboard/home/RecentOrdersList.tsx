@@ -138,7 +138,7 @@ export default function RecentOrdersList({ orders }: RecentOrdersListProps) {
                     className="w-full pl-8 pr-3 py-2 bg-gray-50 rounded-xl text-xs outline-none focus:ring-1 focus:ring-yambo-green-300 focus:bg-white transition-all placeholder:text-gray-400"
                 />
                 {searchQuery && (
-                    <button
+                    <button type="button"
                         onClick={() => setSearchQuery("")}
                         className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 hover:text-gray-600 font-medium"
                     >

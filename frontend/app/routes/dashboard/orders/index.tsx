@@ -520,7 +520,7 @@ export default function Orders() {
                             </span>
                         );
                     })()}
-                    <button
+                    <button type="button"
                         onClick={() => openOrderDetail(order)}
                         className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
                         title="Ver detalles"
@@ -528,7 +528,7 @@ export default function Orders() {
                         Ver
                     </button>
                     {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
-                        <button
+                        <button type="button"
                             onClick={() => setUploadReceiptOrder(order)}
                             className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
                             title={order.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
@@ -538,7 +538,7 @@ export default function Orders() {
                         </button>
                     )}
                     {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
-                        <button
+                        <button type="button"
                             onClick={() => setOrderToCancel(order)}
                             className="text-coral hover:text-red-700 text-xs font-medium transition-colors"
                             title="Cancelar pedido"
@@ -667,7 +667,7 @@ export default function Orders() {
                                 const matchedOrder = allOrdersOnPage.find(o => o.user?.id === customerId);
                                 return matchedOrder?.user?.name || customerId;
                             })()}
-                            <button
+                            <button type="button"
                                 onClick={() => {
                                     const next = new URLSearchParams(searchParams);
                                     next.delete("customerId");
@@ -744,7 +744,7 @@ export default function Orders() {
                                         </span>
                                     </div>
                                     <div className="flex gap-2 pt-1">
-                                        <button
+                                        <button type="button"
                                             onClick={() => openOrderDetail(order)}
                                             className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
                                         >
@@ -863,7 +863,7 @@ export default function Orders() {
                                     </span>
                                 </p>
                             </div>
-                            <button
+                            <button type="button"
                                 onClick={closeOrderDetail}
                                 className="text-gray-300 hover:text-gray-500 transition-colors"
                             >
@@ -968,7 +968,7 @@ export default function Orders() {
                                                 Ver justificante
                                             </a>
                                         )}
-                                        <button
+                                        <button type="button"
                                             onClick={() => setUploadReceiptOrder(selectedOrder)}
                                             className="inline-flex items-center gap-2 px-3 py-2 bg-yambo-green-50 text-yambo-green-700 rounded-xl hover:bg-yambo-green-100 transition-colors text-sm font-medium"
                                         >
@@ -986,7 +986,7 @@ export default function Orders() {
                                         Productos
                                     </h3>
                                     {isMerchAdmin && (
-                                        <button
+                                        <button type="button"
                                             onClick={() => openIssueWindow(selectedOrder)}
                                             className="text-sm text-orange-600 hover:text-orange-800 font-medium transition-colors"
                                         >
@@ -1053,7 +1053,7 @@ export default function Orders() {
                                                                             <div key={issue.id} className="flex items-center gap-2">
                                                                                 <IssueStatusBadge status={issue.status} />
                                                                                 <span className="text-sm text-gray-700 flex-1 truncate">{issue.title}</span>
-                                                                                <button
+                                                                                <button type="button"
                                                                                     onClick={() => {
                                                                                         closeOrderDetail();
                                                                                         navigate(`/mi-espacio/incidencias/${issue.id}`);

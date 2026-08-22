@@ -565,7 +565,7 @@ export function FilterableTable<T>({
                 className="w-full pl-10 pr-10 py-2.5 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yambo-green-300 focus:bg-white transition-all border border-gray-100 focus:border-yambo-green-400 placeholder:text-gray-400"
               />
               {globalSearchQuery && (
-                <button
+                <button type="button"
                   onClick={() => handleGlobalSearch("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >

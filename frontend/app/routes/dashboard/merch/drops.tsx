@@ -379,7 +379,7 @@ export default function MerchFamilies() {
                 </div>
                 <div className="flex gap-1.5 pt-1">
                     {canUpdate && (
-                        <button
+                        <button type="button"
                             onClick={() => openWatchers(drop)}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                             title={t("merch.manageWatchers")}
@@ -387,14 +387,14 @@ export default function MerchFamilies() {
                         ><FontAwesomeIcon icon={faBell} className="w-3.5 h-3.5" /></button>
                     )}
                     {canUpdate && (
-                        <button
+                        <button type="button"
                             onClick={() => startEdit(drop)}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                             title={t("common.edit")}
                         ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
                     )}
                     {canDelete && (
-                        <button
+                        <button type="button"
                             onClick={() => handleDelete(drop)}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors ml-auto"
                             title={t("common.delete")}

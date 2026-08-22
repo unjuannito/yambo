@@ -154,13 +154,13 @@ function ActivityCalendar({
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:sticky lg:top-24">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                <button onClick={prev} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
+                <button type="button" onClick={prev} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
                     <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4" />
                 </button>
                 <h3 className="text-lg font-bold text-yambo-black font-display">
                     {MONTH_NAMES[month]} {year}
                 </h3>
-                <button onClick={next} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
+                <button type="button" onClick={next} className="p-2 rounded-xl hover:bg-yambo-green-50 transition text-gray-500 hover:text-yambo-green-600">
                     <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4" />
                 </button>
             </div>
@@ -190,7 +190,7 @@ function ActivityCalendar({
                     const isSelected = selectedDate && isSameDay(cellDate, selectedDate);
 
                     return (
-                        <button
+                        <button type="button"
                             key={key}
                             onClick={() => {
                                 if (isToday) {
@@ -244,7 +244,7 @@ function ActivityCalendar({
             </div>
 
             {selectedDate && (
-                <button
+                <button type="button"
                     onClick={() => onSelectDate(null)}
                     className="mt-3 text-xs text-yambo-green-600 hover:underline w-full text-center font-medium"
                 >
@@ -340,7 +340,7 @@ export default function PublicActivities() {
                             className="w-full pl-11 pr-4 py-3 bg-white rounded-2xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 transition-all"
                         />
                         {searchQuery && (
-                            <button
+                            <button type="button"
                                 onClick={() => setSearchQuery("")}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
                             >
@@ -355,7 +355,7 @@ export default function PublicActivities() {
                     <div className="flex flex-wrap items-center gap-2 mb-8 fade-up" style={{ animationDelay: "0.1s" }}>
                         {/* View toggle */}
                         <div className="flex bg-gray-100 rounded-full p-1 shrink-0">
-                            <button
+                            <button type="button"
                                 onClick={() => { setView("list"); setSelectedDate(null); setPage(0); }}
                                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                                     view === "list"
@@ -366,7 +366,7 @@ export default function PublicActivities() {
                                 <FontAwesomeIcon icon={faList} className="w-3.5 h-3.5" />
                                 {t('public.activitiesListView')}
                             </button>
-                            <button
+                            <button type="button"
                                 onClick={() => { setView("calendar"); setPage(0); }}
                                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                                     view === "calendar"
@@ -382,7 +382,7 @@ export default function PublicActivities() {
                         {/* Project filter chips */}
                         {projects.length > 0 && !selectedDate && (
                             <div className="flex flex-wrap items-center gap-1.5">
-                                <button
+                                <button type="button"
                                     onClick={() => { setSelectedProject(null); setPage(0); }}
                                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                                         !selectedProject
@@ -393,7 +393,7 @@ export default function PublicActivities() {
                                     {t('common.all')}
                                 </button>
                                 {projects.map((name) => (
-                                    <button
+                                    <button type="button"
                                         key={name}
                                         onClick={() => { setSelectedProject(selectedProject === name ? null : name); setPage(0); }}
                                         className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${

@@ -315,7 +315,7 @@ export default function Settings() {
                 <section className="bg-white rounded-2xl border border-gray-100 p-4 mb-6">
                     <div className="flex flex-wrap gap-2">
                         {tabItems.map((tab) => (
-                            <button
+                            <button type="button"
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
                                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
@@ -413,7 +413,7 @@ export default function Settings() {
                             <InputComponent label={t('settings.emailFrom')} type="email" value={emailConfig.from} onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })} placeholder={t('settings.emailFromPlaceholder')} required />
                             <InputComponent label={t('settings.emailFromName')} type="text" value={emailConfig.fromName || ""} onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })} placeholder={t('settings.emailFromNamePlaceholder')} />
                         </div>
-                        <button onClick={() => setSmtpAdvancedVisible(!smtpAdvancedVisible)} className="flex items-center gap-2 text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                        <button type="button" onClick={() => setSmtpAdvancedVisible(!smtpAdvancedVisible)} className="flex items-center gap-2 text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium">
                             <FontAwesomeIcon icon={smtpAdvancedVisible ? faChevronUp : faChevronDown} className="w-3 h-3" />
                             {t('settings.smtpAdvanced')}
                         </button>

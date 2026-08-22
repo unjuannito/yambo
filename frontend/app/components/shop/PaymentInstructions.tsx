@@ -87,7 +87,7 @@ export default function PaymentInstructions({
             <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto bounce-in">
                 {/* Header compacto */}
                 <div className="relative bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white p-5 rounded-t-3xl">
-                    <button
+                    <button type="button"
                         onClick={onClose}
                         className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-all"
                         aria-label={t("common.close")}
@@ -165,7 +165,7 @@ export default function PaymentInstructions({
                                     <p className="text-base font-mono font-extrabold text-yambo-black break-all">
                                         {paymentReference}
                                     </p>
-                                    <button
+                                    <button type="button"
                                         onClick={() => copyToClipboard(paymentReference, t('orders.concept') || "Concepto")}
                                         className="px-3 py-1 text-xs bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-full hover:from-amber-500 hover:to-amber-600 transition-all font-semibold shrink-0"
                                     >
@@ -201,7 +201,7 @@ export default function PaymentInstructions({
                                 Dudas:{" "}
                                 {onOpenTicket ? (
                                     <>
-                                        <button
+                                        <button type="button"
                                             onClick={onOpenTicket}
                                             className="text-yambo-green-600 underline font-medium hover:text-yambo-green-700"
                                         >

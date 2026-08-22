@@ -241,7 +241,7 @@ function AdminIssuesContent() {
                     <span className="inline-flex items-center gap-1.5 bg-yambo-green-50 text-yambo-green-700 rounded-full px-3 py-1 text-xs font-medium">
                         <FontAwesomeIcon icon={faUser} className="w-3 h-3" />
                         Usuario: {searchParams.get("userId")}
-                        <button
+                        <button type="button"
                             onClick={() => {
                                 const next = new URLSearchParams(searchParams);
                                 next.delete("userId");

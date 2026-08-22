@@ -473,12 +473,12 @@ export default function ActivitiesAdminPage() {
                                 )}
                             </div>
                             <div className="flex gap-1.5 pt-1">
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); handleCloneClick(a); }}
                                     className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                                     title={t("activities.clone")}
                                 ><FontAwesomeIcon icon={faCopy} className="w-3.5 h-3.5" /></button>
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); handleEditClick(a); }}
                                     className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                                     title={t("common.edit")}

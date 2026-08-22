@@ -261,7 +261,7 @@ export default function Projects() {
                 placeholder: t("projects.searchByName"),
             },
             render: (project) => (
-                <button
+                <button type="button"
                     onClick={() => navigate(`/mi-espacio/proyectos/${project.id}/equipos`)}
                     className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors text-left"
                 >
@@ -399,17 +399,17 @@ export default function Projects() {
                                             </div>
                                         )}
                                         <div className="flex gap-1.5 pt-1">
-                                            <button
+                                            <button type="button"
                                                 onClick={() => navigate(`/mi-espacio/proyectos/${project.id}/equipos`)}
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-yambo-green-500 text-white hover:bg-yambo-green-600 transition-colors"
                                                 title="Gestionar"
                                             ><FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" /></button>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => startEdit(project)}
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                                                 title={t("common.edit")}
                                             ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => handleDelete(project)}
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
                                                 title={t("common.delete")}

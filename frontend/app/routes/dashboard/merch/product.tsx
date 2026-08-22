@@ -287,12 +287,12 @@ export default function ProductPage() {
                                     />
                                     {product.images.length > 1 && (
                                         <>
-                                            <button
+                                            <button type="button"
                                                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
                                                 className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black/60 transition-all text-lg"
                                                 aria-label={t("merch.prevImage")}
                                             >‹</button>
-                                            <button
+                                            <button type="button"
                                                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black/60 transition-all text-lg"
                                                 aria-label={t("merch.nextImage")}
@@ -305,7 +305,7 @@ export default function ProductPage() {
                                 {product.images.length > 1 && (
                                     <div className="flex justify-center gap-2 lg:hidden">
                                         {product.images.map((_, idx) => (
-                                            <button
+                                            <button type="button"
                                                 key={idx}
                                                 onClick={() => setSelectedImageIndex(idx)}
                                                 className={`w-2.5 h-2.5 rounded-full transition-all ${
@@ -322,7 +322,7 @@ export default function ProductPage() {
                                 {product.images.length > 1 && (
                                     <div className="hidden lg:grid lg:grid-cols-4 gap-2">
                                         {product.images.map((image, idx) => (
-                                            <button
+                                            <button type="button"
                                                 key={idx}
                                                 onClick={() => setSelectedImageIndex(idx)}
                                                 className={`relative rounded-lg overflow-hidden border-2 transition-all ${
@@ -386,9 +386,9 @@ export default function ProductPage() {
 
             {/* Image Modal */}
             {selectedImageIndex !== null && product?.images && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-75" onClick={closeImageModal}>
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-75" onClick={closeImageModal} role="presentation">
                     <div className="relative max-w-4xl max-h-full p-4">
-                        <button
+                        <button type="button"
                             onClick={closeImageModal}
                             className="absolute top-6 right-6 z-10 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
                             aria-label={t("merch.closeImage")}
@@ -403,12 +403,12 @@ export default function ProductPage() {
                         />
                         {product.images.length > 1 && (
                             <>
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); prevImage(); }}
                                     className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-all text-xl"
                                     aria-label={t("merch.prevImage")}
                                 >‹</button>
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); nextImage(); }}
                                     className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-all text-xl"
                                     aria-label={t("merch.nextImage")}

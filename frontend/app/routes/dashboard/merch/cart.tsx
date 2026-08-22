@@ -246,14 +246,14 @@ export default function CartPage() {
 
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button
+                        <button type="button"
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity - 1)}
                           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-sm transition-colors"
                         >
                           −
                         </button>
                         <span className="w-8 sm:w-12 text-center font-medium text-sm sm:text-base text-yambo-black">{item.quantity}</span>
-                        <button
+                        <button type="button"
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity + 1)}
                           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-sm transition-colors"
                         >

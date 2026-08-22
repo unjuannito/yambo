@@ -244,7 +244,7 @@ export default function ProjectPersonal() {
                                     </div>
                                 </div>
                                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                    <button
+                                    <button type="button"
                                         onClick={() => handleRemove(user.id, user.name, "COORDINATOR")}
                                         className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0 ml-4"
                                     >
@@ -290,7 +290,7 @@ export default function ProjectPersonal() {
                                     </div>
                                 </div>
                                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                    <button
+                                    <button type="button"
                                         onClick={() => handleRemove(user.id, user.name, "MONITOR")}
                                         className="text-xs text-gray-400 hover:text-red-500 transition-colors shrink-0 ml-4"
                                     >
@@ -351,13 +351,13 @@ export default function ProjectPersonal() {
                     <div className="flex flex-col gap-4">
                         {/* Mode toggle */}
                         <div className="flex gap-2 border-b border-gray-100 pb-3">
-                            <button
+                            <button type="button"
                                 onClick={() => setAddMode("existing")}
                                 className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${addMode === "existing" ? "bg-yambo-green-50 text-yambo-green-700" : "text-gray-400 hover:text-gray-600"}`}
                             >
                                 Añadir existente
                             </button>
-                            <button
+                            <button type="button"
                                 onClick={() => setAddMode("invite")}
                                 className={`text-sm px-3 py-1.5 rounded-lg font-medium transition-colors ${addMode === "invite" ? "bg-yambo-green-50 text-yambo-green-700" : "text-gray-400 hover:text-gray-600"}`}
                             >
@@ -387,7 +387,7 @@ export default function ProjectPersonal() {
                         {searchResults.length > 0 && (
                             <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl divide-y">
                                 {searchResults.map(user => (
-                                    <button
+                                    <button type="button"
                                         key={user.id}
                                         onClick={() => setSelectedUser(user)}
                                         className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-yambo-green-50/30 transition-colors ${selectedUser?.id === user.id ? "bg-yambo-green-50" : ""}`}

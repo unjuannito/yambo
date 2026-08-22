@@ -326,13 +326,13 @@ export default function Crew() {
                     <div className="flex gap-2">
                         {/* View toggle */}
                         <div className="flex rounded-full border border-gray-200 overflow-hidden">
-                            <button
+                            <button type="button"
                                 onClick={() => setView("table")}
                                 className={`px-4 py-1.5 text-sm font-medium transition-all ${view === "table" ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white" : "bg-white text-gray-600 hover:bg-yambo-green-50/30"}`}
                             >
                                 Tabla
                             </button>
-                            <button
+                            <button type="button"
                                 onClick={() => setView("grouped")}
                                 className={`px-4 py-1.5 text-sm font-medium transition-all ${view === "grouped" ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white" : "bg-white text-gray-600 hover:bg-yambo-green-50/30"}`}
                             >
@@ -377,7 +377,7 @@ export default function Crew() {
                                                 <h3 className="text-sm font-medium text-yambo-purple-600 mb-2">Coordinadores</h3>
                                                 <div className="flex flex-wrap gap-2">
                                                     {pg.coordinators.map(user => (
-                                                        <button
+                                                        <button type="button"
                                                             key={user.id}
                                                             onClick={() => startEdit(user)}
                                                             className="flex items-center gap-2 px-3 py-2 bg-yambo-purple-50 border border-yambo-purple-200 rounded-full hover:bg-yambo-purple-100 transition-colors text-left"
@@ -401,7 +401,7 @@ export default function Crew() {
                                                         )}
                                                         <div className="flex flex-wrap gap-2">
                                                             {mg.members.map(user => (
-                                                                <button
+                                                                <button type="button"
                                                                     key={user.id}
                                                                     onClick={() => startEdit(user)}
                                                                     className="flex items-center gap-2 px-3 py-2 bg-yambo-green-50 border border-yambo-green-200 rounded-full hover:bg-yambo-green-100 transition-colors text-left"
@@ -569,7 +569,7 @@ export default function Crew() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar usuario</label>
                                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl divide-y">
                                     {searchResults.map(user => (
-                                        <button
+                                        <button type="button"
                                             key={user.id}
                                             onClick={() => setSelectedUser(user)}
                                             className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-yambo-green-50/30 transition-colors ${

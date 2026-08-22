@@ -289,10 +289,10 @@ export default function ProjectEquipos() {
                                             className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-yambo-green-500"
                                             autoFocus
                                         />
-                                        <button onClick={() => handleUpdateGroup(group.id)} className="text-yambo-green-600 hover:text-yambo-green-700">
+                                        <button type="button" onClick={() => handleUpdateGroup(group.id)} className="text-yambo-green-600 hover:text-yambo-green-700">
                                             <FontAwesomeIcon icon={faSave} className="w-3.5 h-3.5" />
                                         </button>
-                                        <button onClick={() => { setEditingGroupId(null); setEditingGroupName(""); }} className="text-gray-400 hover:text-gray-600">
+                                        <button type="button" onClick={() => { setEditingGroupId(null); setEditingGroupName(""); }} className="text-gray-400 hover:text-gray-600">
                                             <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
@@ -305,7 +305,7 @@ export default function ProjectEquipos() {
                                     {monitors.length} monitor{monitors.length !== 1 ? "es" : ""}
                                 </span>
                                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                    <button
+                                    <button type="button"
                                         onClick={() => openAddMonitor(group.id, group.name)}
                                         className="text-gray-400 hover:text-yambo-green-600 transition-colors"
                                         title="Añadir monitor"
@@ -316,14 +316,14 @@ export default function ProjectEquipos() {
                                 <RequirePermission permission={{ obj: "project", action: "update" }} redirect={false}>
                                     {editingGroupId !== group.id && (
                                         <>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => { setEditingGroupId(group.id); setEditingGroupName(group.name ?? ""); }}
                                                 className="text-gray-400 hover:text-yambo-green-600 transition-colors"
                                                 title="Renombrar"
                                             >
                                                 <FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" />
                                             </button>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => handleDeleteGroup(group.id, group.name)}
                                                 className="text-gray-400 hover:text-red-500 transition-colors"
                                                 title="Eliminar equipo"
@@ -350,14 +350,14 @@ export default function ProjectEquipos() {
                                             {monitor.name}
                                         </Link>
                                             <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                                <button
+                                                <button type="button"
                                                     onClick={() => openMoveMonitor(monitor.id, monitor.name, group.id, group.name)}
                                                     className="text-gray-400 hover:text-yambo-green-600 transition-colors"
                                                     title="Mover a otro equipo"
                                                 >
                                                     <FontAwesomeIcon icon={faArrowRightArrowLeft} className="w-3 h-3" />
                                                 </button>
-                                                <button
+                                                <button type="button"
                                                     onClick={() => handleRemoveMonitor(monitor.id, group.id, monitor.name)}
                                                     className="text-gray-400 hover:text-red-500 transition-colors ml-1"
                                                     title="Quitar monitor"
@@ -385,7 +385,7 @@ export default function ProjectEquipos() {
                                     {defaultGroup.monitors.length} monitor{defaultGroup.monitors.length !== 1 ? "es" : ""}
                                 </span>
                                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                    <button
+                                    <button type="button"
                                         onClick={() => openAddMonitor(defaultGroup.group.id, defaultGroup.group.name)}
                                         className="text-gray-400 hover:text-yambo-green-600 transition-colors"
                                         title="Añadir monitor"
@@ -409,14 +409,14 @@ export default function ProjectEquipos() {
                                             {monitor.name}
                                         </Link>
                                         <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => openMoveMonitor(monitor.id, monitor.name, defaultGroup.group.id, defaultGroup.group.name)}
                                                 className="text-gray-400 hover:text-yambo-green-600 transition-colors"
                                                 title="Mover a otro equipo"
                                             >
                                                 <FontAwesomeIcon icon={faArrowRightArrowLeft} className="w-3 h-3" />
                                             </button>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => handleRemoveMonitor(monitor.id, defaultGroup.group.id, monitor.name)}
                                                 className="text-gray-400 hover:text-red-500 transition-colors ml-1"
                                                 title="Quitar monitor"

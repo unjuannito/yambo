@@ -79,7 +79,7 @@ export default function CartSidebar() {
         <div className="flex items-center justify-between p-5 border-b border-yambo-green-100/50">
           <h2 className="text-lg font-bold font-display">{t('merch.cartTitle')}</h2>
           {items.length > 0 && (
-            <button
+            <button type="button"
               onClick={() => setShowClearCartConfirm(true)}
               className="text-sm text-gray-500 hover:text-red-500 underline transition-colors"
             >
@@ -141,7 +141,7 @@ export default function CartSidebar() {
                               {item.product.name}
                             </a>
                           </h3>
-                          <button
+                          <button type="button"
                             onClick={() =>
                               removeItem(item.product.id, configKey)
                             }
@@ -166,7 +166,7 @@ export default function CartSidebar() {
                           </p>
 
                           <div className="flex items-center gap-1.5">
-                            <button
+                            <button type="button"
                               onClick={() =>
                                 updateQuantity(
                                   item.product.id,
@@ -181,7 +181,7 @@ export default function CartSidebar() {
                             <span className="text-sm font-semibold w-6 text-center">
                               {item.quantity}
                             </span>
-                            <button
+                            <button type="button"
                               onClick={() =>
                                 updateQuantity(
                                   item.product.id,

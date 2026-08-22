@@ -85,13 +85,13 @@ export default function ImageCarousel({
 
       {images.length > 1 && isHovered && showArrowsOnHover && (
         <>
-          <button
+          <button type="button"
             onClick={prevSlide}
             className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/80 backdrop-blur-sm text-gray-700 w-8 h-8 rounded-full hover:bg-white transition-all shadow-md flex items-center justify-center"
           >
             ‹
           </button>
-          <button
+          <button type="button"
             onClick={nextSlide}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/80 backdrop-blur-sm text-gray-700 w-8 h-8 rounded-full hover:bg-white transition-all shadow-md flex items-center justify-center"
           >
@@ -103,7 +103,7 @@ export default function ImageCarousel({
       {images.length > 1 && (
         <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1.5">
           {images.map((_, index) => (
-            <button
+            <button type="button"
               key={`dot-${index}`}
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-all duration-200 ${

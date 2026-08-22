@@ -137,7 +137,7 @@ export default function ActivityDetail() {
                         </svg>
                         {t('public.backToList') || "Todas las actividades"}
                     </a>
-                    <button
+                    <button type="button"
                         onClick={() => {
                             if (navigator.share) {
                                 navigator.share({

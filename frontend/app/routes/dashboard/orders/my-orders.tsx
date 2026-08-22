@@ -365,7 +365,7 @@ export default function MyOrdersPage() {
               {/* Línea 3: Botones de acción compactos */}
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
                 {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); handleShowPaymentInstructions(order); }}
                     className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                   >
@@ -374,14 +374,14 @@ export default function MyOrdersPage() {
                 )}
                 {order.status === "PENDING_PAYMENT" && (
                   <>
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); setUploadReceiptOrder(order); }}
                       className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1"
                     >
                       <FontAwesomeIcon icon={faUpload} className="w-3 h-3" />
                       Justificante
                     </button>
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); setOrderToCancel(order); }}
                       disabled={cancelingOrderId === order.id}
                       className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
@@ -428,7 +428,7 @@ export default function MyOrdersPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <p className="text-sm text-gray-400">Creado el {formatDate(orderDetail.createdAt)}</p>
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                <button
+                <button type="button"
                   onClick={() => openIssueWindow(orderDetail)}
                   disabled={!!issueWindow}
                   className="px-3 py-1 text-sm text-orange-700 bg-orange-100 rounded-full hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 transition-colors"
@@ -508,7 +508,7 @@ export default function MyOrdersPage() {
                               <div key={issue.id} className="flex items-center gap-2">
                                 <IssueStatusBadge status={issue.status} />
                                 <span className="min-w-0 flex-1 truncate text-sm text-gray-700">{issue.title}</span>
-                                <button
+                                <button type="button"
                                   onClick={() => navigate(`/mi-espacio/incidencias/${issue.id}`)}
                                   className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium shrink-0"
                                 >
@@ -518,7 +518,7 @@ export default function MyOrdersPage() {
                             ))}
                           </div>
                         ) : (
-                          <button
+                          <button type="button"
                             onClick={() => openIssueWindow(orderDetail, product.id)}
                             disabled={!!issueWindow}
                             className="mt-3 text-sm text-orange-600 hover:text-orange-800 disabled:text-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-1"
@@ -550,7 +550,7 @@ export default function MyOrdersPage() {
                 >
                   Ver instrucciones de pago
                 </ButtonComponent>
-                <button
+                <button type="button"
                   onClick={() => setUploadReceiptOrder(orderDetail)}
                   className="w-full px-4 py-2 bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors text-sm font-medium flex items-center justify-center gap-2 sm:w-auto"
                 >

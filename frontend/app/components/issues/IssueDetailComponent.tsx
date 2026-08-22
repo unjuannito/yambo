@@ -312,7 +312,7 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                     </Link>
                                 )}
                                 {isAdmin && relatedOrderId && !editingProducts && (
-                                    <button
+                                    <button type="button"
                                         onClick={startEditProducts}
                                         className="inline-flex items-center rounded-full border border-yambo-green-200 bg-yambo-green-50 px-2.5 py-1 text-[11px] font-semibold text-yambo-green-700 hover:bg-yambo-green-100 transition-colors"
                                     >
@@ -361,14 +361,14 @@ export const IssueDetailComponent: React.FC<IssueDetailComponentProps> = ({
                                 </div>
                                 <p className="text-[11px] text-gray-400 mb-3">{editSelectedIds.length} {t('common.selected') || "seleccionados"}</p>
                                 <div className="flex gap-2 justify-end">
-                                    <button
+                                    <button type="button"
                                         onClick={cancelEditProducts}
                                         disabled={savingProducts}
                                         className="px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
                                     >
                                         {t('common.cancel')}
                                     </button>
-                                    <button
+                                    <button type="button"
                                         onClick={saveProductUpdates}
                                         disabled={savingProducts || editSelectedIds.length === 0}
                                         className="px-3 py-1.5 rounded-xl bg-yambo-green-500 text-xs font-semibold text-white hover:bg-yambo-green-600 transition-colors disabled:opacity-50"

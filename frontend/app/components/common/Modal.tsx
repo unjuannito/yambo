@@ -49,7 +49,7 @@ export function Modal({
                 {title && (
                     <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-100 shrink-0">
                         <h2 className="text-xl sm:text-2xl font-bold text-yambo-black pr-3">{title}</h2>
-                        <button
+                        <button type="button"
                             onClick={onClose}
                             className="w-8 h-8 flex shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-yambo-coral hover:text-white text-lg leading-none transition-all duration-200"
                             aria-label={t("common.close")}

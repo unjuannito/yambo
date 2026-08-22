@@ -51,7 +51,7 @@ export default function ProjectLayout() {
         <main className="flex flex-col p-4 md:p-6 w-full">
             {/* Header */}
             <div className="flex items-center gap-3 mb-2">
-                <button
+                <button type="button"
                     onClick={() => navigate("/mi-espacio/proyectos")}
                     className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                 >
