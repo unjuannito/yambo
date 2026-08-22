@@ -311,13 +311,13 @@ pipeline {
                              if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG}; \
                              else \
-                               FE_CUR=$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-frontend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               FE_CUR=\$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-frontend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:\${FE_CUR}; \
                              fi && \
                              if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG}; \
                              else \
-                               BE_CUR=$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-backend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               BE_CUR=\$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-backend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:\${BE_CUR}; \
                              fi && \
                              cd /tmp/yambo-ci && \
@@ -356,13 +356,13 @@ pipeline {
                              if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG}; \
                              else \
-                               FE_CUR=$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-frontend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               FE_CUR=\$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-frontend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:\${FE_CUR}; \
                              fi && \
                              if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG}; \
                              else \
-                               BE_CUR=$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-backend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               BE_CUR=\$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-backend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:\${BE_CUR}; \
                              fi && \
                              cd /tmp/yambo-ci && \
