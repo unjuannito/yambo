@@ -4,6 +4,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { faClipboardCheck, faEnvelopesBulk, faExternalLinkAlt, faGear, faLightbulb, faLink, faMagnifyingGlass, faPenToSquare, faShield, faShieldHalved, faTriangleExclamation, faUserPlus, faCubes, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
 
+// NOTA i18n (excepción documentada, 2026-08-22):
+// El contenido de las guías (párrafos, pasos, instrucciones) está en español
+// hardcoded a propósito. Es CONTENIDO documental, no UI traducible: la wiki
+// solo existe en español y no hay plan de traducirla. La regla "todo texto
+// visible con t()" aplica a la UI de la app, no a esta prosa. No migrar a
+// i18n — añadiría ~170 claves a es.json sin beneficio.
+
 export interface GuideMeta {
     id: string;
     title: string;
