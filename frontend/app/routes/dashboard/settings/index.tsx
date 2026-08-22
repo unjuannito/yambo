@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faGear, faEye, faEyeSlash, faExternalLinkAlt, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useTranslation } from "react-i18next";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -277,9 +278,9 @@ export default function Settings() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <LoadingSpinner message={t('settings.loadingSettings')} size="lg" />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
@@ -287,20 +288,20 @@ export default function Settings() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6 flex items-center gap-2">
                         <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
                         {t('settings.generalSettings')}
                     </h1>
                     <ErrorMessage message={error} onRetry={loadSettings} />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <PageHeader
                     title={
                         <span className="flex items-center gap-2">
@@ -609,7 +610,7 @@ export default function Settings() {
                         </RequirePermission>
                     </section>
                 )}
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

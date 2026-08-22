@@ -21,6 +21,7 @@ import {
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -247,12 +248,12 @@ export default function Profiles() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("profiles.title")}</h1>
                     <div className="flex justify-center py-12">
                         <LoadingSpinner size="lg" message={t("profiles.loading")} />
                     </div>
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }

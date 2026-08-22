@@ -25,6 +25,7 @@ import {
     faUserSlash,
     faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta() {
     return [
@@ -354,7 +355,7 @@ export default function Projects() {
 
     return (
         <RequirePermission permission={{ obj: "project", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black">Proyectos</h1>
                     {canCreate && (
@@ -640,7 +641,7 @@ export default function Projects() {
                         )}
                     </div>
                 </Modal>
-            </main>
+            </PageContainer>
             <ConfirmDialog
                 isOpen={confirmDeleteProject !== null}
                 onClose={() => setConfirmDeleteProject(null)}

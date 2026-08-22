@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash, faHouse } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta() {
     return [
@@ -225,9 +226,9 @@ export default function MainPageEditor() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <LoadingSpinner message="Cargando configuración..." size="lg" />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
@@ -235,16 +236,16 @@ export default function MainPageEditor() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <ErrorMessage message={error} onRetry={loadSettings} />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <PageHeader
                     title={
                         <span className="flex items-center gap-2">
@@ -619,7 +620,7 @@ export default function MainPageEditor() {
                         </div>
                     </section>
                 )}
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

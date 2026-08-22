@@ -8,6 +8,7 @@ import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGavel } from "@fortawesome/free-solid-svg-icons";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export default function LegalAdmin() {
     const { t } = useTranslation();
@@ -79,7 +80,7 @@ export default function LegalAdmin() {
 
     return (
         <RequirePermission permission={{ obj: "legal_page", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <PageHeader
                     title={
                         <span className="flex items-center gap-2">
@@ -195,7 +196,7 @@ export default function LegalAdmin() {
                         })}
                     </div>
                 )}
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

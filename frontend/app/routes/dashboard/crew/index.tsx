@@ -12,6 +12,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
 import { canHaveExtraProfileData } from "~/utils/roleHelpers";
 import toast from "react-hot-toast";
+import { PageContainer } from "~/components/common/PageContainer";
 
 interface GroupRoleEntry {
     groupId: string;
@@ -320,7 +321,7 @@ export default function Crew() {
 
     return (
         <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black">Equipo</h1>
                     <div className="flex gap-2">
@@ -622,7 +623,7 @@ export default function Crew() {
                         )}
                     </div>
                 </Modal>
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

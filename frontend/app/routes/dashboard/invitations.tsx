@@ -33,6 +33,7 @@ import type { GroupRole } from "~/types/role";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faLinkSlash, faCheck, faUsers, faShieldHalved, faCalendarDays, faEnvelopesBulk, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { NominativeInvitationsView } from "./nominative-invitations";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta() {
     return [
@@ -466,7 +467,7 @@ function InvitationsGeneral({
             permission={{ obj: "invitation", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <PageHeader
                     title={t("invitations.pageTitle")}
                     subtitle={t("invitations.title")}
@@ -1067,7 +1068,7 @@ function InvitationsGeneral({
                         />
                     </div>
                 </Modal>
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

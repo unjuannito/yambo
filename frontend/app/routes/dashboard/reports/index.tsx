@@ -29,6 +29,7 @@ import {
     ReportDoughnutChart,
 } from "~/components/reports/ReportCharts";
 import { ORDER_STATUS_CONFIG } from "~/constants/orderStatus";
+import { PageContainer } from "~/components/common/PageContainer";
 
 // Status label/color maps
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -95,7 +96,7 @@ export default function ReportsPage() {
     } = useReportData();
 
     return (
-        <main className="flex flex-col p-4 md:p-6 w-full">
+        <PageContainer>
             <PageHeader
                 title={
                     <span className="flex items-center gap-3">
@@ -766,6 +767,6 @@ export default function ReportsPage() {
                     </section>
                 </div>
             ) : null}
-        </main>
+        </PageContainer>
     );
 }

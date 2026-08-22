@@ -35,6 +35,7 @@ import FileUploader from "~/components/common/FileUploader";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import type { FileRecord } from "~/types/fileType";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -579,7 +580,7 @@ export default function Orders() {
             permission={{ obj: "order", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <PageHeader
                     title="Pedidos"
                     description="Gestiona y exporta todos los pedidos de la plataforma."
@@ -758,7 +759,7 @@ export default function Orders() {
                     features={{ enableLoadMore: true, globalSearch: true }}
                     serverSide={{ fetchData: fetchOrdersData }}
                 />
-            </main>
+            </PageContainer>
 
             <Modal
                 isOpen={isExportModalOpen}

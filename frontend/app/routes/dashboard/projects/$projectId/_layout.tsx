@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { projectService, type Project } from "~/services/projectService";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
+import { PageContainer } from "~/components/common/PageContainer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faLayerGroup, faUserGear, faPeopleGroup } from "@fortawesome/free-solid-svg-icons";
 
@@ -33,22 +34,22 @@ export default function ProjectLayout() {
 
     if (loading) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <LoadingSpinner size="md" message="Cargando proyecto..." />
-            </main>
+            </PageContainer>
         );
     }
 
     if (error || !project) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <ErrorMessage message={error || "Proyecto no encontrado"} onRetry={() => navigate("/mi-espacio/proyectos")} />
-            </main>
+            </PageContainer>
         );
     }
 
     return (
-        <main className="flex flex-col p-4 md:p-6 w-full">
+        <PageContainer>
             {/* Header */}
             <div className="flex items-center gap-3 mb-2">
                 <button type="button"
@@ -86,6 +87,6 @@ export default function ProjectLayout() {
 
             {/* Page content */}
             <Outlet />
-        </main>
+        </PageContainer>
     );
 }

@@ -14,6 +14,7 @@ import type { FilterableColumn, ContentInfo, FilterValues, FilterField } from "~
 import ImageCarousel from "~/components/common/ImageCarousel";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -304,21 +305,21 @@ export default function Merch() {
 
     if (loading) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("merch.articles")}</h1>
                 <div className="flex justify-center py-12">
                     <LoadingSpinner size="lg" message={t("merch.loadingArticles")} />
                 </div>
-            </main>
+            </PageContainer>
         );
     }
 
     if (error) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("merch.articles")}</h1>
                 <ErrorMessage message={error} />
-            </main>
+            </PageContainer>
         );
     }
 

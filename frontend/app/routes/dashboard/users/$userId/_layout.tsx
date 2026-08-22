@@ -11,6 +11,7 @@ import { getErrorMessage } from "~/types/error";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faAddressCard, faShieldHalved, faBriefcase, faClock } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
+import { PageContainer } from "~/components/common/PageContainer";
 
 const TABS = [
     { key: "perfil", label: "Perfil", icon: faAddressCard, href: "perfil" },
@@ -61,23 +62,23 @@ export default function UserLayout() {
 
     if (loading) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <LoadingSpinner size="md" message="Cargando usuario..." />
-            </main>
+            </PageContainer>
         );
     }
 
     if (error || !user) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <ErrorMessage message={error || "Usuario no encontrado"} onRetry={() => navigate("/mi-espacio/admin/usuarios")} />
-            </main>
+            </PageContainer>
         );
     }
 
     return (
         <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-2">
                     <button type="button"
@@ -163,7 +164,7 @@ export default function UserLayout() {
 
                 {/* Pass user + refresh callback to children via Outlet context */}
                 <Outlet context={{ user, refreshUser, userId }} />
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

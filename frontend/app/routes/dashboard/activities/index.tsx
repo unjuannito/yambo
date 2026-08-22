@@ -27,6 +27,7 @@ import { projectService } from "~/services/projectService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "~/types/error";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export default function ActivitiesAdminPage() {
     const { t } = useTranslation();
@@ -422,7 +423,7 @@ export default function ActivitiesAdminPage() {
     };
 
     return (
-        <main className="flex flex-col p-4 md:p-6 w-full">
+        <PageContainer>
             <PageHeader
                 title={t("activities.panelTitle")}
                 wiki={{ slug: "flujos-de-trabajo", hash: "actividades" }}
@@ -511,6 +512,6 @@ export default function ActivitiesAdminPage() {
                     submitLabel={editing ? t("common.save") : t("common.create")}
                 />
             </Modal>
-        </main>
+        </PageContainer>
     );
 }

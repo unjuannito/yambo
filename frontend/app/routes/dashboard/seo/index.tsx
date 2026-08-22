@@ -24,6 +24,7 @@ import {
     faWandMagicSparkles,
     faMagnifyingGlass,
 } from "@fortawesome/free-solid-svg-icons";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta() {
     return [
@@ -362,7 +363,7 @@ export default function SeoAdmin() {
             permission={{ obj: "seo_metadata", action: "read" }}
             redirectTo="/mi-espacio"
         >
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <PageHeader
                     title={
                         <span className="flex items-center gap-2">
@@ -630,7 +631,7 @@ export default function SeoAdmin() {
                     variant="warning"
                     isLoading={actionLoading}
                 />
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }
