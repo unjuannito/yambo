@@ -11,6 +11,8 @@ interface WikiGuideLinkProps {
     className?: string;
 }
 
+export type { WikiGuideLinkProps };
+
 /**
  * Enlace "Ver en la wiki" — se usa en las páginas de administración que
  * tienen una guía asociada en /mi-espacio/admin/guias/<slug>[#hash].

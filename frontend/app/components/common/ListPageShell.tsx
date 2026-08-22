@@ -12,6 +12,7 @@ import type { FeaturesConfig, DisplayConfig } from "./FilterableTable";
 import type { PagedResponse } from "~/types/apiType";
 import { ViewTabs, type ViewTabKey } from "./ViewTabs";
 import { PageHeader } from "./PageHeader";
+import type { WikiGuideLinkProps } from "./WikiGuideLink";
 import { twMerge } from "tailwind-merge";
 
 export interface CompactStat {
@@ -41,6 +42,8 @@ interface ListPageShellProps<T> {
   title: ReactNode;
   subtitle?: string;
   actions?: React.ReactNode;
+  /** Enlace "Ver en la wiki" — se muestra debajo del título/subtítulo. */
+  wiki?: WikiGuideLinkProps;
   compactStats?: CompactStat[];
   tabs?: TabConfig;
   children?: React.ReactNode;
@@ -61,6 +64,7 @@ export default function ListPageShell<T>({
   title,
   subtitle,
   actions,
+  wiki,
   compactStats,
   tabs,
   children,
@@ -80,7 +84,7 @@ export default function ListPageShell<T>({
   return (
     <main className="flex flex-col gap-4 p-3 md:p-4 w-full">
       {/* Header row */}
-      <PageHeader title={title} description={subtitle} actions={actions} />
+      <PageHeader title={title} description={subtitle} actions={actions} wiki={wiki} />
       {compactStats && compactStats.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 -mt-3 mb-4">
           {compactStats.map((stat) => (

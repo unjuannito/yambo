@@ -21,7 +21,7 @@ import {
     type FetchDataParams,
     type FilterableColumn,
 } from "~/components/common/FilterableTable";
-import { WikiGuideLink } from "~/components/common/WikiGuideLink";
+import { PageHeader } from "~/components/common/PageHeader";
 import { Modal } from "~/components/common/Modal";
 import { projectService } from "~/services/projectService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -423,8 +423,10 @@ export default function ActivitiesAdminPage() {
 
     return (
         <main className="flex flex-col p-4 md:p-6 w-full">
-            <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("activities.panelTitle")}</h1>
-            <WikiGuideLink slug="flujos-de-trabajo" hash="actividades" className="mb-4" />
+            <PageHeader
+                title={t("activities.panelTitle")}
+                wiki={{ slug: "flujos-de-trabajo", hash: "actividades" }}
+            />
             <div className="mb-4">
                 <ButtonComponent variant="success" onClick={handleCreateClick}>
                     {t("activities.createNew")}

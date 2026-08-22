@@ -10,7 +10,6 @@ import { FilterableTable, type FilterableColumn, type FetchDataParams } from "~/
 import { issueService, type IssueListItem } from "~/services/issueService";
 import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
-import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
@@ -234,8 +233,8 @@ function AdminIssuesContent() {
                 onTabChange: (tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); },
             }}
             serverSide={{ fetchData: fetchIssuesData }}
+            wiki={{ slug: "flujos-de-trabajo", hash: "incidencias" }}
         >
-            {/* URL filter indicators */}
             {searchParams.get("userId") && (
                 <div className="flex items-center gap-2 mb-4 px-1">
                     <span className="text-xs text-gray-400 font-medium">Filtros activos:</span>
@@ -256,7 +255,6 @@ function AdminIssuesContent() {
                     </span>
                 </div>
             )}
-            <WikiGuideLink slug="flujos-de-trabajo" hash="incidencias" className="mb-4 inline-flex" />
         </ListPageShell>
     );
 }

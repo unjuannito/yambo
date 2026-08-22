@@ -27,7 +27,6 @@ import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { PageHeader } from "~/components/common/PageHeader";
-import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
@@ -472,6 +471,7 @@ function InvitationsGeneral({
                     title={t("invitations.pageTitle")}
                     subtitle={t("invitations.title")}
                     description={t("invitations.pageDescription")}
+                    wiki={{ slug: "invitaciones" }}
                     actions={
                         !loading && !error ? (
                             <RequirePermission
@@ -506,8 +506,6 @@ function InvitationsGeneral({
                         {t("invitations.nominativeTitle")}
                     </button>
                 </div>
-
-                <WikiGuideLink slug="invitaciones" className="mb-4" />
 
                 <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

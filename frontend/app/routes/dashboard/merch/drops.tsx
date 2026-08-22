@@ -21,7 +21,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faPenToSquare, faTrashCan, faCalendarDays, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
-import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import toast from "react-hot-toast";
 
 export function meta() {
@@ -410,6 +409,7 @@ export default function MerchFamilies() {
         <RequirePermission permission={{ obj: "family_product", action: "read" }} redirectTo="/mi-espacio/articulos">
             <ListPageShell<FamilyProduct>
                 title={t("merch.collectionsTitle")}
+                wiki={{ slug: "flujos-de-trabajo", hash: "colecciones" }}
                 actions={
                     <RequirePermission permission={{ obj: "family_product", action: "create" }} redirect={false}>
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
@@ -429,7 +429,6 @@ export default function MerchFamilies() {
                     enablePagination: false,
                 }}
             >
-                <WikiGuideLink slug="flujos-de-trabajo" hash="colecciones" className="mb-4" />
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner size="md" message={t("merch.loadingCollections")} />

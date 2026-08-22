@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { twMerge } from "tailwind-merge";
+import { WikiGuideLink, type WikiGuideLinkProps } from "./WikiGuideLink";
 
 interface PageHeaderProps {
     title: ReactNode;
@@ -9,18 +10,23 @@ interface PageHeaderProps {
     description?: ReactNode;
     /** Right-aligned actions (buttons, etc.). */
     actions?: ReactNode;
+    /** Enlace "Ver en la wiki" mostrado SIEMPRE debajo del título y subtítulo. */
+    wiki?: WikiGuideLinkProps;
     className?: string;
 }
 
 /**
  * Consistent page header used across the admin (mi-espacio) section:
  * subtitle label + title + description on the left, actions on the right.
+ * Si `wiki` está definido, el enlace "Ver en la wiki" aparece debajo del
+ * título y subtítulo, antes de las acciones.
  */
 export function PageHeader({
     title,
     subtitle,
     description,
     actions,
+    wiki,
     className,
 }: PageHeaderProps) {
     return (
@@ -43,6 +49,11 @@ export function PageHeader({
                     <p className="text-sm text-gray-500 mt-1.5 max-w-2xl">
                         {description}
                     </p>
+                )}
+                {wiki && (
+                    <div className="mt-2">
+                        <WikiGuideLink {...wiki} />
+                    </div>
                 )}
             </div>
             {actions && (

@@ -21,7 +21,6 @@ import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { OrderStatus, ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
-import { WikiGuideLink } from "~/components/common/WikiGuideLink";
 import { exportService, type ExportReportType } from "~/services/exportService";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
@@ -584,6 +583,7 @@ export default function Orders() {
                 <PageHeader
                     title="Pedidos"
                     description="Gestiona y exporta todos los pedidos de la plataforma."
+                    wiki={{ slug: "flujos-de-trabajo", hash: "pedidos" }}
                     actions={
                         <ButtonComponent
                             variant="primary"
@@ -595,8 +595,6 @@ export default function Orders() {
                         </ButtonComponent>
                     }
                 />
-
-                <WikiGuideLink slug="flujos-de-trabajo" hash="pedidos" className="mb-4" />
 
                 <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 
