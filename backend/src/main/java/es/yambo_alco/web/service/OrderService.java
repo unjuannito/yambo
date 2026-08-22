@@ -105,6 +105,45 @@ public class OrderService {
         return order;
     }
 
+    /**
+     * Reemplaza los productos de un pedido existente (edición admin).
+     * Solo permitido si el pedido no está en estado final (CLOSED/CANCELED).
+     */
+    @Transactional
+    public Order updateOrderProducts(@NonNull String orderId, @NonNull List<OrderProduct> orderProducts) {
+        if (orderProducts.isEmpty()) {
+            throw new BadRequestException("Order must contain at least one product");
+        }
+
+        Order order = getOrderById(orderId);
+
+        if (order.getStatus() == OrderStatus.CLOSED || order.getStatus() == OrderStatus.CANCELED) {
+            throw new BadRequestException("Cannot edit an order in status " + order.getStatus());
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        User currentUser = authService.getCurrentUser(true);
+
+        for (OrderProduct op : orderProducts) {
+            Product product = productRepository.findById(op.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
+
+            validateProductAccess(currentUser, product, now);
+
+            BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
+            op.setPrice(calculatedPrice);
+        }
+
+        // Reemplazar los items: borrar los actuales y guardar los nuevos
+        orderProductRepository.deleteByOrderId(orderId);
+        for (OrderProduct op : orderProducts) {
+            op.setOrderId(orderId);
+            orderProductRepository.save(op);
+        }
+
+        return order;
+    }
+
     private BigDecimal calculatePrice(Product product, String configurationJson) {
         return productService.calculatePrice(product, configurationJson);
     }

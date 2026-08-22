@@ -277,7 +277,28 @@
     "uploadReceiptReminder": "Recuerda subir tu justificante de pago",
     "uploadReceiptHint": "Una vez realizada la transferencia, sube el justificante de pago desde \"Mis Pedidos\" para que podamos verificar tu pago lo antes posible.",
     "goToMyOrders": "Ir a Mis Pedidos",
-    "orderSuccess": "¡Pedido realizado con éxito!"
+    "orderSuccess": "¡Pedido realizado con éxito!",
+    "editor": {
+      "createTitle": "Nuevo pedido",
+      "editTitle": "Editar pedido",
+      "member": "Socio",
+      "memberPlaceholder": "Busca por nombre o email (mín. 2 letras)...",
+      "memberSelected": "Socio seleccionado",
+      "needMember": "Selecciona un socio para el pedido",
+      "products": "Productos",
+      "selectProduct": "Selecciona un producto...",
+      "quantity": "Cantidad",
+      "removeProduct": "Quitar producto",
+      "addProduct": "Añadir producto",
+      "needProduct": "Añade al menos un producto",
+      "advancedConfig": "Configuración avanzada (opciones del producto)",
+      "advancedHint": "Solo para productos con opciones: JSON con las claves de las opciones (ver pedidos existentes).",
+      "createOrder": "Crear pedido",
+      "saveChanges": "Guardar cambios",
+      "created": "Pedido creado correctamente",
+      "updated": "Pedido actualizado correctamente",
+      "error": "No se pudo guardar el pedido"
+    }
   },
   "issues": {
     "title": "Incidencias",

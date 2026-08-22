@@ -51,7 +51,35 @@ public class OrderController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         User currentUser = authService.getCurrentUser(true);
-        List<OrderProduct> orderProducts = request.getProducts().stream()
+        List<OrderProduct> orderProducts = toOrderProducts(request.getProducts());
+
+        String customerId = currentUser.getId();
+        if (request.getUserId() != null && !request.getUserId().isBlank()) {
+            // Un admin puede crear pedidos en nombre de un socio
+            if (!permissionCheck.hasPermission("order", "create")) {
+                throw new ForbiddenException("You do not have permission to create orders for other users");
+            }
+            customerId = request.getUserId();
+        }
+
+        Order order = orderService.createOrder(customerId, orderProducts);
+        List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("@permissionCheck.hasPermission('order', 'update')")
+    public ResponseEntity<OrderResponse> updateOrder(
+            @PathVariable String id,
+            @Valid @RequestBody CreateOrderRequest request) {
+        Order order = orderService.updateOrderProducts(id, toOrderProducts(request.getProducts()));
+        List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
+    private List<OrderProduct> toOrderProducts(List<OrderProductRequest> requestProducts) {
+        return requestProducts.stream()
                 .map(p -> OrderProduct.builder()
                         .productId(p.getProductId())
                         .quantity(p.getQuantity())
@@ -61,11 +89,6 @@ public class OrderController {
                                 : null)
                         .build())
                 .collect(Collectors.toList());
-
-        Order order = orderService.createOrder(currentUser.getId(), orderProducts);
-        List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
 
     @GetMapping
@@ -204,6 +227,9 @@ public class OrderController {
     public static class CreateOrderRequest {
         @NotEmpty(message = "Order must contain at least one product")
         private List<OrderProductRequest> products;
+
+        /** Opcional: ID del socio para el que se crea el pedido (solo con permiso 'order','create'). */
+        private String userId;
     }
 
     @Data

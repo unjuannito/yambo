@@ -139,6 +139,114 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser
+    void createOrder_WithUserId_AsAdmin_ShouldCreateOrderForMember() throws Exception {
+        User admin = User.builder().id("ADMIN001").build();
+        Order order = Order.builder()
+                .id("ORD002")
+                .customerId("USER999")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        List<OrderProduct> products = List.of(
+                OrderProduct.builder()
+                        .orderId("ORD002")
+                        .productId("PROD001")
+                        .quantity(1)
+                        .price(BigDecimal.TEN)
+                        .build()
+        );
+
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+        when(permissionCheckService.hasPermission("order", "create")).thenReturn(true);
+        User member = User.builder()
+                .id("USER999")
+                .name("Member User")
+                .email("member@example.com")
+                .build();
+        when(userRepository.findById("USER999")).thenReturn(Optional.of(member));
+        when(orderService.createOrder(eq("USER999"), any())).thenReturn(order);
+        when(orderService.getOrderProducts("ORD002")).thenReturn(products);
+
+        String payload = """
+                {
+                    "userId": "USER999",
+                    "products": [
+                        {"productId": "PROD001", "quantity": 1}
+                    ]
+                }
+                """;
+
+        mockMvc.perform(post("/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("ORD002"))
+                .andExpect(jsonPath("$.user.id").value("USER999"));
+    }
+
+    @Test
+    @WithMockUser
+    void createOrder_WithUserId_WithoutPermission_ShouldReturnForbidden() throws Exception {
+        User user = User.builder().id("USER001").build();
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(permissionCheckService.hasPermission("order", "create")).thenReturn(false);
+
+        String payload = """
+                {
+                    "userId": "USER999",
+                    "products": [
+                        {"productId": "PROD001", "quantity": 1}
+                    ]
+                }
+                """;
+
+        mockMvc.perform(post("/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    void updateOrder_WithPermission_ShouldReplaceProducts() throws Exception {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        List<OrderProduct> products = List.of(
+                OrderProduct.builder()
+                        .orderId("ORD001")
+                        .productId("PROD001")
+                        .quantity(5)
+                        .price(BigDecimal.TEN)
+                        .build()
+        );
+
+        when(orderService.updateOrderProducts(eq("ORD001"), any())).thenReturn(order);
+        when(orderService.getOrderProducts("ORD001")).thenReturn(products);
+
+        String payload = """
+                {
+                    "products": [
+                        {"productId": "PROD001", "quantity": 5}
+                    ]
+                }
+                """;
+
+        mockMvc.perform(put("/orders/ORD001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ORD001"))
+                .andExpect(jsonPath("$.products[0].quantity").value(5));
+    }
+
+    @Test
+    @WithMockUser
     void listOrders_WithAuth_ShouldReturnOrders() throws Exception {
         Order order = Order.builder()
                 .id("ORD001")

@@ -23,10 +23,11 @@ import { exportService, type ExportReportType } from "~/services/exportService";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import type { IssueReportWindowModel } from "~/types/issueType";
 import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
+import { OrderEditorModal } from "~/components/orders/OrderEditorModal";
 import { useAuth } from "~/hooks/useAuth";
 import { useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faXmark, faUpload, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faFileExport, faXmark, faUpload, faUser } from "@fortawesome/free-solid-svg-icons";
 import type { FileRecord } from "~/types/fileType";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { PageContainer } from "~/components/common/PageContainer";
@@ -60,6 +61,9 @@ export default function Orders() {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
+    const [editorOrder, setEditorOrder] = useState<Order | null | undefined>(undefined);
+    const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
     const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
     const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
@@ -257,6 +261,28 @@ export default function Orders() {
             setIsCanceling(false);
             setOrderToCancel(null);
         }
+    };
+
+    const handleDeleteOrder = async () => {
+        if (!orderToDelete) return;
+        setIsDeleting(true);
+        try {
+            await orderService.deleteOrder(orderToDelete.id);
+            toast.success(`Pedido #${orderToDelete.id} eliminado`);
+            setRefreshKey((prev) => prev + 1);
+            if (selectedOrder?.id === orderToDelete.id) {
+                closeOrderDetail();
+            }
+        } catch (err) {
+            toast.error(getErrorMessage(err, "No se pudo eliminar el pedido"));
+        } finally {
+            setIsDeleting(false);
+            setOrderToDelete(null);
+        }
+    };
+
+    const openEditor = (order: Order | null) => {
+        setEditorOrder(order);
     };
 
     const handleReceiptUploaded = async (file: FileRecord) => {
@@ -560,14 +586,25 @@ export default function Orders() {
                     description="Gestiona y exporta todos los pedidos de la plataforma."
                     wiki={{ slug: "flujos-de-trabajo", hash: "pedidos" }}
                     actions={
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={() => setIsExportModalOpen(true)}
-                            disabled={isExporting}
-                        >
-                            <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
-                            Exportar a Excel
-                        </ButtonComponent>
+                        <div className="flex items-center gap-3">
+                            {hasPermission({ obj: "order", action: "create" }) && (
+                                <ButtonComponent
+                                    variant="secondary"
+                                    onClick={() => setEditorOrder(null)}
+                                >
+                                    <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                                    Nuevo pedido
+                                </ButtonComponent>
+                            )}
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={() => setIsExportModalOpen(true)}
+                                disabled={isExporting}
+                            >
+                                <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
+                                Exportar a Excel
+                            </ButtonComponent>
+                        </div>
                     }
                 />
 
@@ -721,6 +758,10 @@ export default function Orders() {
                         closeOrderDetail();
                         navigate(`/mi-espacio/incidencias/${issueId}`);
                     }}
+                    canEdit={hasPermission({ obj: "order", action: "update" })}
+                    canDelete={hasPermission({ obj: "order", action: "delete" })}
+                    onEdit={(order) => openEditor(order)}
+                    onDelete={(order) => setOrderToDelete(order)}
                 />
             )}
             {/* Create Issue Modal (Merch Admin) */}
@@ -757,6 +798,27 @@ export default function Orders() {
                 isUploading={isUploadingReceipt}
                 onUploaded={handleReceiptUploaded}
                 onRequestClose={() => setUploadReceiptOrder(null)}
+            />
+
+            {/* Order Editor Modal (crear/editar) */}
+            <OrderEditorModal
+                order={editorOrder !== undefined ? editorOrder : null}
+                isOpen={editorOrder !== undefined}
+                onClose={() => setEditorOrder(undefined)}
+                onSaved={() => setRefreshKey((prev) => prev + 1)}
+            />
+
+            {/* Delete Order Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={!!orderToDelete}
+                onClose={() => setOrderToDelete(null)}
+                onConfirm={handleDeleteOrder}
+                title="¿Eliminar pedido?"
+                message={`¿Estás seguro de que quieres eliminar el pedido #${orderToDelete?.id ?? ""}? Esta acción no se puede deshacer.`}
+                confirmLabel="Sí, eliminar"
+                cancelLabel="Volver"
+                variant="danger"
+                isLoading={isDeleting}
             />
         </RequirePermission>
 

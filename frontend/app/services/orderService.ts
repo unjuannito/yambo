@@ -11,6 +11,8 @@ export interface CreateOrderProduct {
 
 export interface CreateOrderRequest {
     products: CreateOrderProduct[];
+    /** Opcional: ID del socio para el que se crea el pedido (solo con permiso 'order','create'). */
+    userId?: string;
 }
 
 export interface UpdateOrderStatusRequest {
@@ -51,6 +53,10 @@ export class OrderService extends ApiService {
 
     public async createOrder(request: CreateOrderRequest): Promise<OrderResponse> {
         return await this.post<OrderResponse, CreateOrderRequest>('/orders', request);
+    }
+
+    public async updateOrder(id: string, request: CreateOrderRequest): Promise<OrderResponse> {
+        return await this.put<OrderResponse, CreateOrderRequest>(`/orders/${id}`, request);
     }
 
     public async updateOrderStatus(id: string, status: string): Promise<Order> {

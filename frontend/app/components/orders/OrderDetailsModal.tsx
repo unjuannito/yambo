@@ -7,7 +7,7 @@ import { OrderStatus, ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/
 import { IssueStatusBadge } from "~/components/issues/IssueStatusBadge";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faFileArrowDown, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faFileArrowDown, faUpload, faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 interface OrderDetailsModalProps {
     readonly order: Order;
@@ -23,6 +23,10 @@ interface OrderDetailsModalProps {
     readonly onRequestCancel: (order: Order) => void;
     readonly onOpenIssueWindow: (order: Order, preselectedProductId?: string) => void;
     readonly onViewIssue: (issueId: string) => void;
+    readonly canEdit?: boolean;
+    readonly canDelete?: boolean;
+    readonly onEdit?: (order: Order) => void;
+    readonly onDelete?: (order: Order) => void;
 }
 
 export function OrderDetailsModal({
@@ -39,6 +43,10 @@ export function OrderDetailsModal({
     onRequestCancel,
     onOpenIssueWindow,
     onViewIssue,
+    canEdit,
+    canDelete,
+    onEdit,
+    onDelete,
 }: OrderDetailsModalProps) {
     const formatConfiguration = (configStr: string) => {
         try {
@@ -359,7 +367,27 @@ export function OrderDetailsModal({
                             €
                         </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {canEdit && onEdit && order.status !== "CLOSED" && order.status !== "CANCELED" && (
+                            <ButtonComponent
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => onEdit(order)}
+                            >
+                                <FontAwesomeIcon icon={faPencil} className="w-3.5 h-3.5 mr-1.5" />
+                                Editar
+                            </ButtonComponent>
+                        )}
+                        {canDelete && onDelete && order.status !== "CLOSED" && (
+                            <ButtonComponent
+                                variant="danger-text"
+                                size="sm"
+                                onClick={() => onDelete(order)}
+                            >
+                                <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5 mr-1.5" />
+                                Eliminar
+                            </ButtonComponent>
+                        )}
                         {(order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT") && (
                             <ButtonComponent
                                 variant="danger-text"
