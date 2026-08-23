@@ -128,7 +128,7 @@ export function OrderDetailsModal({
                                 {(() => {
                                     const transitions = ORDER_WORKFLOW_TRANSITIONS[order.status as OrderStatus] || [];
                                     const currentConfig = ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG];
-                                    return transitions.length > 0 ? (
+                                    return canEdit && transitions.length > 0 ? (
                                         <select
                                             value={order.status}
                                             onChange={async (e) => {
@@ -198,13 +198,15 @@ export function OrderDetailsModal({
                                         Ver justificante
                                     </a>
                                 )}
-                                <button type="button"
-                                    onClick={() => onUploadReceipt(order)}
-                                    className="inline-flex items-center gap-2 px-3 py-2 bg-yambo-green-50 text-yambo-green-700 rounded-xl hover:bg-yambo-green-100 transition-colors text-sm font-medium"
-                                >
-                                    <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
-                                    {order.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
-                                </button>
+                                {canEdit && (
+                                    <button type="button"
+                                        onClick={() => onUploadReceipt(order)}
+                                        className="inline-flex items-center gap-2 px-3 py-2 bg-yambo-green-50 text-yambo-green-700 rounded-xl hover:bg-yambo-green-100 transition-colors text-sm font-medium"
+                                    >
+                                        <FontAwesomeIcon icon={faUpload} className="w-4 h-4" />
+                                        {order.receiptFileId ? "Reemplazar justificante" : "Subir justificante"}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
