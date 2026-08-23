@@ -67,14 +67,13 @@ public class OrderService {
             throw new BadRequestException("Order must contain at least one product");
         }
 
-        User currentUser = authService.getCurrentUser(true);
         LocalDateTime now = LocalDateTime.now();
 
         for (OrderProduct op : orderProducts) {
             Product product = productRepository.findById(op.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
 
-            validateProductAccess(currentUser, product, now);
+            validateProductAccessForOrder(customerId, product, now);
 
             BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
             op.setPrice(calculatedPrice);
@@ -122,13 +121,12 @@ public class OrderService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        User currentUser = authService.getCurrentUser(true);
 
         for (OrderProduct op : orderProducts) {
             Product product = productRepository.findById(op.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
 
-            validateProductAccess(currentUser, product, now);
+            validateProductAccessForOrder(order.getCustomerId(), product, now);
 
             BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
             op.setPrice(calculatedPrice);
@@ -146,6 +144,14 @@ public class OrderService {
 
     private BigDecimal calculatePrice(Product product, String configurationJson) {
         return productService.calculatePrice(product, configurationJson);
+    }
+
+    private void validateProductAccessForOrder(String customerId, Product product, LocalDateTime now) {
+        // El acceso a un drop se valida contra el SOCIO dueño del pedido,
+        // no contra el admin que lo crea/edita (issue #76).
+        User customer = userRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + customerId));
+        validateProductAccess(customer, product, now);
     }
 
     private void validateProductAccess(User user, Product product, LocalDateTime now) {
@@ -478,6 +484,13 @@ public class OrderService {
 
         if (order.getStatus() == OrderStatus.CLOSED) {
             throw new BadRequestException("Cannot delete closed order");
+        }
+
+        // Un pedido con incidencias vinculadas no se puede borrar físicamente:
+        // issue.ordered_product_id tiene FK a order_product. El admin debe
+        // resolver/eliminar las incidencias primero (o cancelar el pedido).
+        if (!issueRepository.findByOrderId(orderId).isEmpty()) {
+            throw new BadRequestException("Cannot delete order with linked issues");
         }
 
         // Delete order products first (cascade should handle this, but being explicit)

@@ -34,6 +34,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -314,9 +315,10 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser
-    void cancelOrder_WithPermission_ShouldReturnNoContent() throws Exception {
+    void deleteOrder_WithPermission_ShouldReturnNoContent() throws Exception {
         mockMvc.perform(delete("/orders/ORD001"))
                 .andExpect(status().isNoContent());
+        verify(orderService).deleteOrder("ORD001");
     }
 
     @Test

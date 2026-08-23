@@ -153,8 +153,8 @@ public class OrderController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("@permissionCheck.hasPermission('order', 'delete')")
-    public ResponseEntity<Void> cancelOrder(@PathVariable String id) {
-        orderService.cancelOrder(id, true);
+    public ResponseEntity<Void> deleteOrder(@PathVariable String id) {
+        orderService.deleteOrder(id);
         return ResponseEntity.noContent().build();
     }
 

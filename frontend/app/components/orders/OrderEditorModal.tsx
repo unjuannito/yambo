@@ -241,27 +241,20 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
                                     <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
                                 </button>
                             )}
+                            <details className="sm:flex-1">
+                                <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-600 select-none">
+                                    {t("orders.editor.configForProduct")}
+                                </summary>
+                                <textarea
+                                    value={line.configuration ?? ""}
+                                    onChange={(e) => updateLine(line.key, { configuration: e.target.value })}
+                                    rows={2}
+                                    placeholder='{"color": "negro", "talla": "M"}'
+                                    className="mt-1.5 w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-yambo-green-500"
+                                />
+                            </details>
                         </div>
                     ))}
-                </div>
-
-                {/* Configuración (avanzado) */}
-                <div className="mb-5">
-                    <details className="group">
-                        <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none">
-                            {t("orders.editor.advancedConfig")}
-                        </summary>
-                        <p className="text-xs text-gray-400 mt-1 mb-1.5">
-                            {t("orders.editor.advancedHint")}
-                        </p>
-                        <textarea
-                            value={lines[0]?.configuration ?? ""}
-                            onChange={(e) => updateLine(lines[0].key, { configuration: e.target.value })}
-                            rows={3}
-                            placeholder='{"color": "negro", "talla": "M"}'
-                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-yambo-green-500"
-                        />
-                    </details>
                 </div>
 
                 {/* Footer */}

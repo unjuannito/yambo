@@ -81,6 +81,10 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(productService.calculatePrice(any(Product.class), any())).thenReturn(BigDecimal.TEN);
+        // Default: el socio existe y sin groupRoles (acceso a productos sin familia).
+        // Los tests de roleAccess sobreescriben este mock.
+        lenient().when(userRepository.findById(anyString())).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
     }
 
     @Test
@@ -130,7 +134,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -177,7 +180,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -213,7 +215,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -259,7 +260,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
 
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -305,7 +305,7 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -541,11 +541,25 @@ class OrderServiceTest {
     void deleteOrder_WhenValid_ShouldDeleteOrderAndProducts() {
         Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).build();
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
 
         orderService.deleteOrder("ORD001");
 
         verify(orderProductRepository).deleteByOrderId("ORD001");
         verify(orderRepository).delete(order);
+    }
+
+    @Test
+    void deleteOrder_WhenHasLinkedIssues_ShouldThrowException() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        Issue issue = Issue.builder().id("ISS001").build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(issue));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.deleteOrder("ORD001"));
+        assertEquals("Cannot delete order with linked issues", exception.getMessage());
+        verify(orderRepository, never()).delete(any(Order.class));
     }
 
     @Test
@@ -628,7 +642,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -666,7 +679,6 @@ class OrderServiceTest {
                 .configuration("")
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -711,7 +723,6 @@ class OrderServiceTest {
                 .configuration("{\"CustomText\":\"My Name\"}")
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -768,7 +779,6 @@ class OrderServiceTest {
                 .configuration("{\"Size\":\"Large\"}")
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -831,7 +841,6 @@ class OrderServiceTest {
                 .configuration("{\"Color\":\"Blue\",\"CustomName\":\"John\"}")
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -869,7 +878,6 @@ class OrderServiceTest {
                 .configuration("{invalid json")
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -914,7 +922,6 @@ class OrderServiceTest {
                 .configuration("{\"FakeOption\":\"value\",\"RealOption\":\"My Name\"}")
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -1899,7 +1906,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -1945,7 +1951,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);
@@ -1993,7 +1998,6 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
 
-        when(authService.getCurrentUser(true)).thenReturn(user);
         when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order saved = invocation.getArgument(0);

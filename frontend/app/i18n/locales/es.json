@@ -291,13 +291,12 @@
       "removeProduct": "Quitar producto",
       "addProduct": "Añadir producto",
       "needProduct": "Añade al menos un producto",
-      "advancedConfig": "Configuración avanzada (opciones del producto)",
-      "advancedHint": "Solo para productos con opciones: JSON con las claves de las opciones (ver pedidos existentes).",
       "createOrder": "Crear pedido",
       "saveChanges": "Guardar cambios",
       "created": "Pedido creado correctamente",
       "updated": "Pedido actualizado correctamente",
-      "error": "No se pudo guardar el pedido"
+      "error": "No se pudo guardar el pedido",
+      "configForProduct": "Configuración (opciones del producto, JSON)"
     }
   },
   "issues": {
