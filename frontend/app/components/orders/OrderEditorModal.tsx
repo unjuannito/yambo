@@ -43,6 +43,7 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
     const [userQuery, setUserQuery] = useState("");
     const [userResults, setUserResults] = useState<{ id: string; name: string; email: string }[]>([]);
     const [showUserResults, setShowUserResults] = useState(false);
+    const [justification, setJustification] = useState("");
 
     const [drops, setDrops] = useState<FamilyProduct[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
@@ -114,6 +115,11 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
             return;
         }
 
+        if (!justification.trim()) {
+            toast.error(t("orders.editor.needJustification"));
+            return;
+        }
+
         const cleanLines = lines.filter((l) => l.productId);
         if (cleanLines.length === 0) {
             toast.error(t("orders.editor.needProduct"));
@@ -129,10 +135,10 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
         setSaving(true);
         try {
             if (isEdit && order) {
-                await orderService.updateOrder(order.id, { products: orderProducts });
+                await orderService.updateOrder(order.id, { products: orderProducts, justification: justification.trim() });
                 toast.success(t("orders.editor.updated"));
             } else {
-                await orderService.createOrder({ products: orderProducts, userId: userId || undefined });
+                await orderService.createOrder({ products: orderProducts, userId: userId || undefined, justification: justification.trim() });
                 toast.success(t("orders.editor.created"));
             }
             onSaved();
@@ -186,6 +192,23 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
                         )}
                     </div>
                 )}
+
+                {/* Justificación (incidencia o petición) — obligatoria */}
+                <div className="mb-5">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        {t("orders.editor.justification")} <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        value={justification}
+                        onChange={(e) => setJustification(e.target.value)}
+                        rows={3}
+                        placeholder={t("orders.editor.justificationPlaceholder")}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yambo-green-500 transition-all"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                        {t("orders.editor.justificationHint")}
+                    </p>
+                </div>
 
                 {/* Líneas de producto */}
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">

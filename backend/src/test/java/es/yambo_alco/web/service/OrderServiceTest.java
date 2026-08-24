@@ -28,6 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -74,6 +75,9 @@ class OrderServiceTest {
 
     @Mock
     private ProductService productService;
+
+    @Mock
+    private IssueService issueService;
 
     @InjectMocks
     private OrderService orderService;
@@ -327,6 +331,54 @@ class OrderServiceTest {
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
                 () -> orderService.getOrderById("ORD404"));
         assertEquals("Order not found", exception.getMessage());
+    }
+
+    @Test
+    void createOrderWithJustification_WhenJustificationBlank_ShouldThrowException() {
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .build();
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrderWithJustification("USER001", List.of(orderProduct), "   ", "ADMIN001"));
+        assertEquals("Justification is required when creating an order for another user", exception.getMessage());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void createOrderWithJustification_WhenValid_ShouldCreateIssueLinkedToProducts() {
+        User user = User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null)
+                .build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .id(UUID.randomUUID())
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+
+        Order saved = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PENDING_PAYMENT).build();
+        when(orderRepository.save(any(Order.class))).thenReturn(saved);
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(saved));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenReturn(orderProduct);
+        // getOrderProducts() → findAll(Specification) devuelve el producto guardado
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
+
+        Order result = orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
+
+        assertEquals("ORD001", result.getId());
+        // La incidencia de justificación se crea vinculada al order_product
+        verify(issueService).createIssue(List.of(orderProduct.getId()), "Pedido creado por administración",
+                "Pedido por WhatsApp", "ADMIN001", true);
     }
 
     @Test

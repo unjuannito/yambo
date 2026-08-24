@@ -166,8 +166,33 @@ class OrderControllerTest {
                 .email("member@example.com")
                 .build();
         when(userRepository.findById("USER999")).thenReturn(Optional.of(member));
-        when(orderService.createOrder(eq("USER999"), any())).thenReturn(order);
+        when(orderService.createOrderWithJustification(eq("USER999"), any(), eq("Pedido por WhatsApp"), eq("ADMIN001"))).thenReturn(order);
         when(orderService.getOrderProducts("ORD002")).thenReturn(products);
+
+        String payload = """
+                {
+                    "userId": "USER999",
+                    "justification": "Pedido por WhatsApp",
+                    "products": [
+                        {"productId": "PROD001", "quantity": 1}
+                    ]
+                }
+                """;
+
+        mockMvc.perform(post("/orders")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("ORD002"))
+                .andExpect(jsonPath("$.user.id").value("USER999"));
+    }
+
+    @Test
+    @WithMockUser
+    void createOrder_WithUserId_WithoutJustification_ShouldReturnBadRequest() throws Exception {
+        User admin = User.builder().id("ADMIN001").build();
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+        when(permissionCheckService.hasPermission("order", "create")).thenReturn(true);
 
         String payload = """
                 {
@@ -181,9 +206,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value("ORD002"))
-                .andExpect(jsonPath("$.user.id").value("USER999"));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -227,11 +250,14 @@ class OrderControllerTest {
                         .build()
         );
 
-        when(orderService.updateOrderProducts(eq("ORD001"), any())).thenReturn(order);
+        User user = User.builder().id("USER001").build();
+        when(authService.getCurrentUser(true)).thenReturn(user);
+        when(orderService.updateOrderProductsWithJustification(eq("ORD001"), any(), eq("Cambio de talla"), eq("USER001"))).thenReturn(order);
         when(orderService.getOrderProducts("ORD001")).thenReturn(products);
 
         String payload = """
                 {
+                    "justification": "Cambio de talla",
                     "products": [
                         {"productId": "PROD001", "quantity": 5}
                     ]

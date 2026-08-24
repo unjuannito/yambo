@@ -13,6 +13,8 @@ export interface CreateOrderRequest {
     products: CreateOrderProduct[];
     /** Opcional: ID del socio para el que se crea el pedido (solo con permiso 'order','create'). */
     userId?: string;
+    /** Obligatoria al crear/editar en nombre de un socio: justificación (incidencia o petición). */
+    justification?: string;
 }
 
 export interface UpdateOrderStatusRequest {

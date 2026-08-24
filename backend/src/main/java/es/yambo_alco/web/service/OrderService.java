@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.criteria.Subquery;
@@ -60,6 +61,7 @@ public class OrderService {
     private final MailService mailService;
     private final UserService userService;
     private final ProductService productService;
+    private final IssueService issueService;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -105,6 +107,35 @@ public class OrderService {
     }
 
     /**
+     * Crea un pedido en nombre de un socio (admin) con justificación obligatoria.
+     * Tras crear el pedido, crea una incidencia vinculada a sus productos con la
+     * justificación como descripción (trazabilidad: issue #78 / PR #77).
+     */
+    @Transactional
+    public Order createOrderWithJustification(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts,
+            @NonNull String justification, @NonNull String adminUserId) {
+        if (justification == null || justification.isBlank()) {
+            throw new BadRequestException("Justification is required when creating an order for another user");
+        }
+        Order order = createOrder(customerId, orderProducts);
+        createJustificationIssue(order.getId(), justification, adminUserId, "creado");
+        return order;
+    }
+
+    /**
+     * Crea la incidencia de justificación para un pedido gestionado por un admin.
+     * La incidencia se vincula a todos los order_product del pedido.
+     */
+    private void createJustificationIssue(String orderId, String justification, String adminUserId, String action) {
+        List<OrderProduct> orderProducts = getOrderProducts(orderId);
+        List<UUID> orderedProductIds = orderProducts.stream()
+                .map(OrderProduct::getId)
+                .toList();
+        String title = String.format("Pedido %s por administración", action);
+        issueService.createIssue(orderedProductIds, title, justification, adminUserId, true);
+    }
+
+    /**
      * Reemplaza los productos de un pedido existente (edición admin).
      * Solo permitido si el pedido no está en estado final (CLOSED/CANCELED).
      */
@@ -139,6 +170,23 @@ public class OrderService {
             orderProductRepository.save(op);
         }
 
+        return order;
+    }
+
+    /**
+     * Edita un pedido (admin) con justificación obligatoria.
+     * Tras actualizar los productos, crea una incidencia vinculada con la
+     * justificación como descripción (trazabilidad: issue #78 / PR #77).
+     */
+    @Transactional
+    public Order updateOrderProductsWithJustification(@NonNull String orderId,
+            @NonNull List<OrderProduct> orderProducts,
+            @NonNull String justification, @NonNull String adminUserId) {
+        if (justification == null || justification.isBlank()) {
+            throw new BadRequestException("Justification is required when editing an order");
+        }
+        Order order = updateOrderProducts(orderId, orderProducts);
+        createJustificationIssue(orderId, justification, adminUserId, "modificado");
         return order;
     }
 

@@ -569,6 +569,20 @@ export function GuideFlujosDeTrabajo() {
                             <span><strong>Subir justificante:</strong> el socio sube su justificante desde «Mis pedidos»; el administrador también puede subirlo o reemplazarlo desde el detalle del pedido.</span>
                         </li>
                     </ul>
+                    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-sm font-bold text-amber-800 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="w-4 h-4" />
+                            Justificación obligatoria (incidencia o petición)
+                        </p>
+                        <p className="mt-1.5 text-sm text-amber-800">
+                            Al <strong>crear</strong> o <strong>modificar</strong> un pedido de un socio, el campo «Justificación» es <strong>obligatorio</strong>.
+                            Con ese texto se crea automáticamente una <strong>incidencia vinculada al pedido</strong> (en el módulo de Incidencias), de modo que
+                            cada gestión administrativa queda documentada y trazable: quién la hizo, cuándo y por qué.
+                        </p>
+                        <p className="mt-1.5 text-sm text-amber-700">
+                            Ejemplo: «Pedido solicitado por WhatsApp», «Cambio de talla tras error en el pedido original».
+                        </p>
+                    </div>
                     <p className="mt-2 text-sm text-gray-500">
                         Estos botones solo aparecen si tienes permisos de administración sobre pedidos.
                     </p>

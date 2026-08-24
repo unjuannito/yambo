@@ -1,5 +1,6 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderFilter;
@@ -60,6 +61,14 @@ public class OrderController {
                 throw new ForbiddenException("You do not have permission to create orders for other users");
             }
             customerId = request.getUserId();
+            if (request.getJustification() == null || request.getJustification().isBlank()) {
+                throw new BadRequestException("Justification is required when creating an order for another user");
+            }
+            Order order = orderService.createOrderWithJustification(customerId, orderProducts,
+                    request.getJustification(), currentUser.getId());
+            List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
         }
 
         Order order = orderService.createOrder(customerId, orderProducts);
@@ -73,7 +82,12 @@ public class OrderController {
     public ResponseEntity<OrderResponse> updateOrder(
             @PathVariable String id,
             @Valid @RequestBody CreateOrderRequest request) {
-        Order order = orderService.updateOrderProducts(id, toOrderProducts(request.getProducts()));
+        User currentUser = authService.getCurrentUser(true);
+        if (request.getJustification() == null || request.getJustification().isBlank()) {
+            throw new BadRequestException("Justification is required when editing an order");
+        }
+        Order order = orderService.updateOrderProductsWithJustification(id, toOrderProducts(request.getProducts()),
+                request.getJustification(), currentUser.getId());
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
@@ -230,6 +244,13 @@ public class OrderController {
 
         /** Opcional: ID del socio para el que se crea el pedido (solo con permiso 'order','create'). */
         private String userId;
+
+        /**
+         * Obligatorio cuando se crea/modifica un pedido en nombre de un socio (userId presente):
+         * justificación con una incidencia o petición. Con esta justificación se crea una
+         * incidencia vinculada al pedido automáticamente (trazabilidad).
+         */
+        private String justification;
     }
 
     @Data
