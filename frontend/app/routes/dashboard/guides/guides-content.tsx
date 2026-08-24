@@ -2,7 +2,7 @@
 import type { JSX } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
-import { faClipboardCheck, faEnvelopesBulk, faExternalLinkAlt, faGear, faLightbulb, faLink, faMagnifyingGlass, faPenToSquare, faShield, faShieldHalved, faTriangleExclamation, faUserPlus, faCubes, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faClipboardCheck, faEnvelopesBulk, faExternalLinkAlt, faGear, faLightbulb, faLink, faMagnifyingGlass, faPenToSquare, faShield, faShieldHalved, faTriangleExclamation, faUserPlus, faCubes, faCalendarDays } from "@fortawesome/free-solid-svg-icons";
 
 // NOTA i18n (excepción documentada, 2026-08-22):
 // El contenido de las guías (párrafos, pasos, instrucciones) está en español
@@ -546,6 +546,32 @@ export function GuideFlujosDeTrabajo() {
                         <span className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1">Pendiente de Productos -&gt; Cerrado</span>
                     </div>
                     <p className="mt-3 text-sm">«Cancelado» es un estado final al que se puede llegar desde «Pendiente de Pago» o «Confirmando Pago». Una vez cerrado o cancelado, no se puede cambiar.</p>
+
+                    <h4 className="mt-5 font-bold text-yambo-black text-sm">Gestión de pedidos por administradores</h4>
+                    <p className="mt-2 text-sm">
+                        Los administradores (perfil Administrador o Gestor de Merch) pueden crear, modificar y eliminar pedidos de cualquier socio desde la página <strong>Pedidos</strong>:
+                    </p>
+                    <ul className="mt-2 space-y-1.5 text-sm">
+                        <li className="flex items-start gap-2">
+                            <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-yambo-green-500 mt-0.5 shrink-0" />
+                            <span><strong>Crear un pedido:</strong> botón «Nuevo pedido» → busca al socio por nombre o email → añade productos (colección → producto → cantidad) y guarda. El pedido queda «Pendiente de Pago» y el socio recibe el email.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-yambo-green-500 mt-0.5 shrink-0" />
+                            <span><strong>Modificar un pedido:</strong> botón «Editar» en el detalle del pedido → cambia productos, cantidades o configuración. No se puede editar un pedido «Cerrado» o «Cancelado».</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-yambo-green-500 mt-0.5 shrink-0" />
+                            <span><strong>Eliminar un pedido:</strong> botón «Eliminar» en el detalle → borra el pedido definitivamente (pide confirmación). No se puede eliminar un pedido cerrado o con incidencias vinculadas: primero resuélvelas o cancélalo.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-yambo-green-500 mt-0.5 shrink-0" />
+                            <span><strong>Subir justificante:</strong> el socio sube su justificante desde «Mis pedidos»; el administrador también puede subirlo o reemplazarlo desde el detalle del pedido.</span>
+                        </li>
+                    </ul>
+                    <p className="mt-2 text-sm text-gray-500">
+                        Estos botones solo aparecen si tienes permisos de administración sobre pedidos.
+                    </p>
                 </section>
 
                 {/* Colecciones (drops) */}
