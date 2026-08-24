@@ -402,6 +402,80 @@ class OrderServiceTest {
     }
 
     @Test
+    void updateOrderProducts_WhenMatchingLine_ShouldUpdateInPlacePreservingId() {
+        // La línea existente (mismo productId+configuration) debe ACTUALIZARSE conservando
+        // su ID — no borrarse y recrearse — porque issue.ordered_product_id tiene FK
+        // onDelete=CASCADE y borrar los order_product eliminaría las incidencias vinculadas.
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("Test").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID existingId = UUID.randomUUID();
+        OrderProduct existingOp = OrderProduct.builder()
+                .id(existingId)
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(existingOp));
+
+        OrderProduct newOp = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(3)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        orderService.updateOrderProducts("ORD001", List.of(newOp));
+
+        // No se borra NADA (la línea coincide) — se actualiza el existente
+        verify(orderProductRepository, never()).deleteByOrderId(anyString());
+        verify(orderProductRepository, never()).delete(any(OrderProduct.class));
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(existingId, captor.getValue().getId()); // ID conservado
+        assertEquals(3, captor.getValue().getQuantity());    // cantidad actualizada
+    }
+
+    @Test
+    void updateOrderProducts_WhenLineRemoved_ShouldDeleteOnlyThatLine() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD002")).thenReturn(Optional.of(
+                Product.builder().id("PROD002").name("Other").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        OrderProduct removedOp = OrderProduct.builder()
+                .id(UUID.randomUUID())
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(removedOp));
+
+        OrderProduct newOp = OrderProduct.builder()
+                .productId("PROD002")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        orderService.updateOrderProducts("ORD001", List.of(newOp));
+
+        // La línea vieja (PROD001) se borra individualmente; NO se usa deleteByOrderId
+        verify(orderProductRepository, never()).deleteByOrderId(anyString());
+        verify(orderProductRepository).delete(removedOp);
+    }
+
+    @Test
     void cancelOrder_WhenNotPendingPayment_ShouldThrowException() {
         Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).build();
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));

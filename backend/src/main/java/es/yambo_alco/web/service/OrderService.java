@@ -163,14 +163,54 @@ public class OrderService {
             op.setPrice(calculatedPrice);
         }
 
-        // Reemplazar los items: borrar los actuales y guardar los nuevos
-        orderProductRepository.deleteByOrderId(orderId);
-        for (OrderProduct op : orderProducts) {
-            op.setOrderId(orderId);
-            orderProductRepository.save(op);
+        // MERGE preservando IDs de order_product existentes:
+        // issue.ordered_product_id tiene FK onDelete=CASCADE → si borramos los
+        // order_product (deleteByOrderId) las incidencias vinculadas (incluida la
+        // de justificación) se borran en cascada. En su lugar:
+        //  - línea que coincide (productId + configuration) → se actualiza (conserva ID)
+        //  - línea nueva → se crea
+        //  - línea existente que ya no está → se borra (solo esa)
+        List<OrderProduct> existing = getOrderProducts(orderId);
+        List<OrderProduct> toDelete = new ArrayList<>();
+
+        for (OrderProduct existingOp : existing) {
+            boolean stillPresent = orderProducts.stream().anyMatch(newOp ->
+                    newOp.getProductId().equals(existingOp.getProductId())
+                            && java.util.Objects.equals(normalizeConfig(newOp.getConfiguration()),
+                                    normalizeConfig(existingOp.getConfiguration())));
+            if (!stillPresent) {
+                toDelete.add(existingOp);
+            }
+        }
+        for (OrderProduct op : toDelete) {
+            orderProductRepository.delete(op);
+        }
+
+        for (OrderProduct newOp : orderProducts) {
+            OrderProduct matched = existing.stream()
+                    .filter(existingOp -> existingOp.getProductId().equals(newOp.getProductId())
+                            && java.util.Objects.equals(normalizeConfig(newOp.getConfiguration()),
+                                    normalizeConfig(existingOp.getConfiguration())))
+                    .findFirst()
+                    .orElse(null);
+            if (matched != null) {
+                // Actualizar el existente: conserva el ID (y las incidencias vinculadas)
+                matched.setQuantity(newOp.getQuantity());
+                matched.setPrice(newOp.getPrice());
+                matched.setConfiguration(newOp.getConfiguration());
+                orderProductRepository.save(matched);
+            } else {
+                newOp.setOrderId(orderId);
+                orderProductRepository.save(newOp);
+            }
         }
 
         return order;
+    }
+
+    private String normalizeConfig(String configuration) {
+        if (configuration == null) return null;
+        return configuration.isBlank() || "{}".equals(configuration.trim()) ? null : configuration.trim();
     }
 
     /**
