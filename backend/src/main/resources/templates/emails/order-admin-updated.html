@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido gestionado por administración</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header(${headerColor}, ${headerIcon}, ${headerTitle})}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    Un administrador ha <strong th:text="${actionLabel}">modificado</strong> tu pedido.
+                </p>
+
+                <div th:if="${justification != null and !justification.isEmpty()}" style="background-color: #f9f9f9; border-left: 4px solid #8B5CF6; padding: 15px 20px; margin: 20px 0;">
+                    <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 16px;">Motivo</h3>
+                    <p style="margin: 0; color: #555555; font-size: 14px; line-height: 1.6;" th:text="${justification}"></p>
+                </div>
+
+                <div th:if="${issueLink != null and !issueLink.isEmpty()}" style="background-color: #f9f9f9; border-left: 4px solid #8B5CF6; padding: 15px 20px; margin: 20px 0;">
+                    <p style="margin: 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                        Este motivo queda registrado en una incidencia vinculada a tu pedido.
+                        <a th:href="${issueLink}" style="color: #8B5CF6; font-weight: bold; text-decoration: none;">Ver la discusión de la incidencia</a>
+                    </p>
+                </div>
+
+                <th:block th:replace="~{emails/fragments/layout :: orderDetails(${orderId}, ${orderDate}, ${statusLabel}, ${statusColor})}"/>
+
+                <div th:if="${rows != null and !rows.isEmpty()}" style="margin: 20px 0;">
+                    <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Pedido</h3>
+                    <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #34495e;">
+                                <th style="padding: 12px; text-align: left; color: #ffffff; font-size: 14px;">Producto</th>
+                                <th style="padding: 12px; text-align: center; color: #ffffff; font-size: 14px;">Cantidad</th>
+                                <th style="padding: 12px; text-align: left; color: #ffffff; font-size: 14px;">Configuración</th>
+                                <th style="padding: 12px; text-align: right; color: #ffffff; font-size: 14px;">Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${rows}" style="border-bottom: 1px solid #ecf0f1;">
+                                <td style="padding: 12px; color: #555555; font-size: 14px;">
+                                    <span th:style="'color: ' + ${r.color} + '; font-weight: bold; margin-right: 6px;'" th:text="${r.symbol}"></span>
+                                    <span th:text="${r.name}" th:style="${r.type == 'removed' ? 'text-decoration: line-through;' : ''}"></span>
+                                </td>
+                                <td style="padding: 12px; text-align: center; color: #555555; font-size: 14px;" th:text="${r.quantityText}"></td>
+                                <td style="padding: 12px; color: #7f8c8d; font-size: 14px;" th:text="${r.configText}"></td>
+                                <td style="padding: 12px; text-align: right; color: #555555; font-size: 14px;" th:text="${r.priceText}"></td>
+                            </tr>
+                            <tr style="background-color: #ecf0f1; font-weight: bold;">
+                                <td colspan="3" style="padding: 12px; text-align: right; color: #2c3e50; font-size: 16px;">Total:</td>
+                                <td style="padding: 12px; text-align: right; color: #2c3e50; font-size: 16px;">
+                                    <span th:if="${totalChanged}" th:text="${#numbers.formatDecimal(oldTotalPrice, 1, 2)} + ' € → '"></span>
+                                    <span th:text="${#numbers.formatDecimal(totalPrice, 1, 2)} + ' €'"></span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <th:block th:if="${rows == null or rows.isEmpty()}">
+                    <th:block th:replace="~{emails/fragments/layout :: productTable(${products}, ${totalPrice})}"/>
+                </th:block>
+
+                <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                    Si tienes alguna duda sobre este cambio, contacta con nosotros.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${orderUrl}, 'Ver mi pedido', '#8B5CF6')}"/>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

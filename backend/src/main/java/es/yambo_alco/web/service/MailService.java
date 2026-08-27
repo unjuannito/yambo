@@ -38,10 +38,28 @@ public interface MailService {
 
     void sendActivityOpenRegistration(String to, String activityName, String activityUrl);
 
+    /**
+     * Notifica al socio que un administrador ha creado o modificado su pedido.
+     *
+     * @param action "creado" o "modificado"
+     */
+    void sendOrderAdminUpdate(String to, String userName, String orderId, LocalDateTime orderDate,
+            String action, List<OrderProductInfo> products, BigDecimal totalPrice, String justification,
+            String issueId, List<OrderProductRow> rows, BigDecimal oldTotalPrice, OrderStatus currentStatus);
+
     default String generatePaymentReference(LocalDateTime orderDate, String orderId) {
         return "merch " + orderDate.getYear() + " " + orderId;
     }
 
     record OrderProductInfo(String name, Integer quantity, BigDecimal price, String configuration) {
+    }
+
+    /**
+     * Fila del pedido para el correo de administración, con la comparativa
+     * anterior → nueva (cantidad, configuración y precio).
+     * {@code type}: added / removed / modified / unchanged.
+     */
+    record OrderProductRow(String type, String name, String quantityText, String configText,
+            String priceText, String symbol, String color) {
     }
 }

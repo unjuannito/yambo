@@ -118,7 +118,13 @@ public class OrderService {
             throw new BadRequestException("Justification is required when creating an order for another user");
         }
         Order order = createOrder(customerId, orderProducts);
-        createJustificationIssue(order.getId(), justification, adminUserId, "creado");
+        Issue issue = createJustificationIssue(order.getId(), justification, adminUserId, "creado");
+        try {
+            sendOrderAdminUpdateEmail(order, "creado", justification, issue.getId(), List.of(), null);
+        } catch (Exception e) {
+            log.error("Failed to send admin-created email for order: {}. Order created successfully.",
+                    order.getId(), e);
+        }
         return order;
     }
 
@@ -126,13 +132,13 @@ public class OrderService {
      * Crea la incidencia de justificación para un pedido gestionado por un admin.
      * La incidencia se vincula a todos los order_product del pedido.
      */
-    private void createJustificationIssue(String orderId, String justification, String adminUserId, String action) {
+    private Issue createJustificationIssue(String orderId, String justification, String adminUserId, String action) {
         List<OrderProduct> orderProducts = getOrderProducts(orderId);
         List<UUID> orderedProductIds = orderProducts.stream()
                 .map(OrderProduct::getId)
                 .toList();
         String title = String.format("Pedido %s por administración", action);
-        issueService.createIssue(orderedProductIds, title, justification, adminUserId, true);
+        return issueService.createIssue(orderedProductIds, title, justification, adminUserId, true);
     }
 
     /**
@@ -225,9 +231,173 @@ public class OrderService {
         if (justification == null || justification.isBlank()) {
             throw new BadRequestException("Justification is required when editing an order");
         }
+        List<OrderProduct> before = getOrderProducts(orderId);
         Order order = updateOrderProducts(orderId, orderProducts);
-        createJustificationIssue(orderId, justification, adminUserId, "modificado");
+        Issue issue = createJustificationIssue(orderId, justification, adminUserId, "modificado");
+        List<MailService.OrderProductRow> rows = buildOrderRows(before, getOrderProducts(orderId));
+        try {
+            sendOrderAdminUpdateEmail(order, "modificado", justification, issue.getId(), rows,
+                    computeTotalPrice(before));
+        } catch (Exception e) {
+            log.error("Failed to send admin-modified email for order: {}. Order updated successfully.",
+                    orderId, e);
+        }
         return order;
+    }
+
+    /**
+     * Envía un correo al socio informándole de que un administrador ha creado
+     * o modificado su pedido (issue #76). Respeta la preferencia orderStatus.
+     */
+    private void sendOrderAdminUpdateEmail(Order order, String action, String justification, String issueId,
+            List<MailService.OrderProductRow> rows, BigDecimal oldTotalPrice) {
+        Optional<User> recipient = resolveEmailRecipient(order);
+        if (recipient.isEmpty()) {
+            return;
+        }
+        User user = recipient.get();
+
+        NotificationPreferences prefs = userService.getNotificationPreferences(user.getId());
+        if (!prefs.isOrderStatus()) {
+            log.info("Skipping admin update email for order {}: user {} has disabled order status notifications",
+                    order.getId(), user.getId());
+            return;
+        }
+
+        List<OrderProduct> orderProducts = getOrderProducts(order.getId());
+        mailService.sendOrderAdminUpdate(
+                user.getEmail(),
+                user.getName(),
+                order.getId(),
+                order.getCreatedAt(),
+                action,
+                buildProductInfos(orderProducts),
+                computeTotalPrice(orderProducts),
+                justification,
+                issueId,
+                rows,
+                oldTotalPrice,
+                order.getStatus());
+    }
+
+    /**
+     * Construye las filas del pedido para el correo de administración,
+     * comparando el antes y el después (añadidas, eliminadas, modificadas y sin
+     * cambios), con flechas "antes → después" en cantidad, configuración y precio.
+     */
+    private List<MailService.OrderProductRow> buildOrderRows(List<OrderProduct> before,
+            List<OrderProduct> after) {
+        List<MailService.OrderProductRow> rows = new ArrayList<>();
+        List<OrderProduct> remainingBefore = new ArrayList<>(before);
+
+        for (OrderProduct afterOp : after) {
+            OrderProduct beforeOp = findSameLine(remainingBefore, afterOp);
+            boolean configChanged = false;
+            if (beforeOp == null) {
+                beforeOp = findSameProduct(remainingBefore, afterOp.getProductId());
+                configChanged = beforeOp != null;
+            }
+            if (beforeOp == null) {
+                rows.add(buildRow("added", afterOp, null, "+", "#27ae60"));
+                continue;
+            }
+            remainingBefore.remove(beforeOp);
+            boolean quantityChanged = !java.util.Objects.equals(beforeOp.getQuantity(), afterOp.getQuantity());
+            boolean priceChanged = beforeOp.getPrice() != null && afterOp.getPrice() != null
+                    && beforeOp.getPrice().compareTo(afterOp.getPrice()) != 0;
+            if (!quantityChanged && !configChanged && !priceChanged) {
+                rows.add(buildRow("unchanged", afterOp, beforeOp, "", "#555555"));
+            } else {
+                rows.add(buildRow("modified", afterOp, beforeOp, "~", "#f39c12"));
+            }
+        }
+
+        for (OrderProduct beforeOp : remainingBefore) {
+            rows.add(buildRow("removed", null, beforeOp, "−", "#e74c3c"));
+        }
+
+        return rows;
+    }
+
+    private OrderProduct findSameLine(List<OrderProduct> list, OrderProduct target) {
+        return list.stream()
+                .filter(op -> op.getProductId().equals(target.getProductId())
+                        && java.util.Objects.equals(normalizeConfig(op.getConfiguration()),
+                                normalizeConfig(target.getConfiguration())))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private OrderProduct findSameProduct(List<OrderProduct> list, String productId) {
+        return list.stream()
+                .filter(op -> op.getProductId().equals(productId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String productName(OrderProduct op) {
+        Product product = productRepository.findById(op.getProductId()).orElse(null);
+        return product != null ? product.getName() : "Producto";
+    }
+
+    private String configText(OrderProduct op) {
+        Product product = productRepository.findById(op.getProductId()).orElse(null);
+        String config = productService.formatConfiguration(op.getConfiguration(), product);
+        return config == null ? "" : config;
+    }
+
+    private MailService.OrderProductRow buildRow(String type, OrderProduct after, OrderProduct before,
+            String symbol, String color) {
+        OrderProduct base = after != null ? after : before;
+        return new MailService.OrderProductRow(type, productName(base),
+                quantityText(before, after),
+                configChangeText(before, after),
+                priceText(before, after),
+                symbol, color);
+    }
+
+    private String quantityText(OrderProduct before, OrderProduct after) {
+        if (before == null) return String.valueOf(after.getQuantity());
+        if (after == null) return String.valueOf(before.getQuantity());
+        if (java.util.Objects.equals(before.getQuantity(), after.getQuantity())) {
+            return String.valueOf(after.getQuantity());
+        }
+        return before.getQuantity() + " → " + after.getQuantity();
+    }
+
+    private String configChangeText(OrderProduct before, OrderProduct after) {
+        if (before == null && after == null) {
+            return "";
+        }
+        String beforeConfig = before != null ? configText(before) : "";
+        String afterConfig = after != null ? configText(after) : "";
+        if (beforeConfig.equals(afterConfig)) {
+            return afterConfig;
+        }
+        if (before == null) {
+            return afterConfig;
+        }
+        if (after == null) {
+            return beforeConfig;
+        }
+        String left = beforeConfig.isEmpty() ? "(sin opciones)" : beforeConfig;
+        String right = afterConfig.isEmpty() ? "(sin opciones)" : afterConfig;
+        return left + " → " + right;
+    }
+
+    private String priceText(OrderProduct before, OrderProduct after) {
+        if (before == null) return formatPrice(after.getPrice());
+        if (after == null) return formatPrice(before.getPrice());
+        if (before.getPrice() != null && after.getPrice() != null
+                && before.getPrice().compareTo(after.getPrice()) == 0) {
+            return formatPrice(after.getPrice());
+        }
+        return formatPrice(before.getPrice()) + " → " + formatPrice(after.getPrice());
+    }
+
+    private String formatPrice(BigDecimal price) {
+        if (price == null) return "0.00 €";
+        return price.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " €";
     }
 
     private BigDecimal calculatePrice(Product product, String configurationJson) {
