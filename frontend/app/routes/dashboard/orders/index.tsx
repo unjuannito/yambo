@@ -806,6 +806,7 @@ export default function Orders() {
                 isOpen={editorOrder !== undefined}
                 onClose={() => setEditorOrder(undefined)}
                 onSaved={() => setRefreshKey((prev) => prev + 1)}
+                initialUserId={editorOrder === null ? (searchParams.get("customerId") ?? undefined) : undefined}
             />
 
             {/* Delete Order Confirmation Dialog */}

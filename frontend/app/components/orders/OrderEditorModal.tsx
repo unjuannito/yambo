@@ -11,6 +11,7 @@ import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { getErrorMessage } from "~/types/error";
 import type { Order } from "~/types/order";
+import ProductOptionsFields from "~/components/common/forms/ProductOptionsFields";
 
 interface OrderEditorModalProps {
     /** Pedido a editar; null = crear pedido nuevo. */
@@ -18,23 +19,50 @@ interface OrderEditorModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSaved: () => void;
+    /** ID de socio con el que precargar el formulario al crear un pedido. */
+    initialUserId?: string;
 }
 
 interface EditorLine {
     key: string;
     productId: string;
     quantity: number;
-    configuration?: string;
+    configuration?: Record<string, any>;
 }
 
 const EMPTY_LINE: EditorLine = { key: crypto.randomUUID(), productId: "", quantity: 1 };
+
+/** Parsea la configuración JSON de un pedido a objeto (o `undefined` si es inválida/vacía). */
+function parseConfiguration(raw?: string): Record<string, any> | undefined {
+    if (!raw) return undefined;
+    try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return parsed as Record<string, any>;
+        }
+        return undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Serializa la configuración a JSON string, normalizando selects (`{ id, label }` → `id`). */
+function serializeConfiguration(config?: Record<string, any>): string | undefined {
+    if (!config) return undefined;
+    const normalized = Object.entries(config).reduce<Record<string, any>>((acc, [key, value]) => {
+        acc[key] = typeof value === "object" && value !== null && "id" in value ? value.id : value;
+        return acc;
+    }, {});
+    const json = JSON.stringify(normalized);
+    return json && json !== "{}" && json !== "null" ? json : undefined;
+}
 
 /**
  * Modal de crear/editar pedido para administradores (issue #76).
  * - Crear: buscador de socio + línea(s) de producto (drop → producto → configuración → cantidad)
  * - Editar: mismas líneas precargadas desde el pedido (solo estados no finales)
  */
-export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEditorModalProps) {
+export function OrderEditorModal({ order, isOpen, onClose, onSaved, initialUserId }: OrderEditorModalProps) {
     const { t } = useTranslation();
     const isEdit = order !== null;
 
@@ -61,7 +89,7 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
                   key: crypto.randomUUID(),
                   productId: p.productId,
                   quantity: p.quantity,
-                  configuration: p.configuration && p.configuration !== "{}" ? p.configuration : undefined,
+                  configuration: parseConfiguration(p.configuration),
               }))
             : [EMPTY_LINE]);
 
@@ -72,6 +100,24 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
             .then((r) => setProducts(r.content))
             .catch(() => setProducts([]));
     }, [isOpen, order]);
+
+    // ── Precarga del socio al crear un pedido (p. ej. desde ?customerId=…) ──
+    useEffect(() => {
+        if (!isOpen || isEdit || !initialUserId) return;
+        let cancelled = false;
+        adminUserService
+            .listUsers({ id: initialUserId, page: 0, size: 1 })
+            .then((r) => {
+                if (cancelled || r.content.length === 0) return;
+                const u = r.content[0];
+                setUserId(u.id);
+                setUserQuery(`${u.name ?? u.email} (${u.email})`);
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, isEdit, initialUserId]);
 
     // ── Búsqueda de socio (solo crear) ──
     useEffect(() => {
@@ -126,10 +172,23 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
             return;
         }
 
+        // Validación de opciones obligatorias del producto
+        for (const line of cleanLines) {
+            const product = products.find((p) => p.id === line.productId);
+            if (!product) continue;
+            const missingRequired = (product.options ?? []).filter(
+                (option) => option.required && !line.configuration?.[option.name]
+            );
+            if (missingRequired.length > 0) {
+                toast.error(t("merch.missingOptions", { options: missingRequired.map((o) => o.name).join(", ") }));
+                return;
+            }
+        }
+
         const orderProducts: CreateOrderProduct[] = cleanLines.map((l) => ({
             productId: l.productId,
             quantity: Math.max(1, l.quantity || 1),
-            configuration: l.configuration && l.configuration.trim() ? l.configuration.trim() : undefined,
+            configuration: serializeConfiguration(l.configuration),
         }));
 
         setSaving(true);
@@ -152,75 +211,75 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} size="lg" title={isEdit ? t("orders.editor.editTitle") : t("orders.editor.createTitle")}>
-            <div className="p-6">
-                {/* Buscador de socio (solo crear) */}
-                {!isEdit && (
-                    <div className="mb-5">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                            {t("orders.editor.member")}
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                value={userQuery}
-                                onChange={(e) => { setUserQuery(e.target.value); setShowUserResults(true); }}
-                                onFocus={() => setShowUserResults(true)}
-                                onBlur={() => window.setTimeout(() => setShowUserResults(false), 200)}
-                                placeholder={t("orders.editor.memberPlaceholder")}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-yambo-green-500 focus:border-transparent outline-none transition-all"
-                            />
-                            {showUserResults && userResults.length > 0 && (
-                                <div className="absolute z-30 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
-                                    {userResults.map((u) => (
-                                        <button
-                                            type="button"
-                                            key={u.id}
-                                            onClick={() => { setUserId(u.id); setUserQuery(`${u.name} (${u.email})`); setShowUserResults(false); }}
-                                            className="w-full text-left px-3 py-2.5 hover:bg-yambo-green-50 text-sm transition-colors"
-                                        >
-                                            <span className="font-medium text-gray-800">{u.name}</span>
-                                            <span className="text-gray-400 ml-2">{u.email}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        {userId && (
-                            <p className="mt-1 text-xs text-yambo-green-700">
-                                ✓ {t("orders.editor.memberSelected")}
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {/* Justificación (incidencia o petición) — obligatoria */}
+            {/* Buscador de socio (solo crear) */}
+            {!isEdit && (
                 <div className="mb-5">
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        {t("orders.editor.justification")} <span className="text-red-500">*</span>
+                        {t("orders.editor.member")}
                     </label>
-                    <textarea
-                        value={justification}
-                        onChange={(e) => setJustification(e.target.value)}
-                        rows={3}
-                        placeholder={t("orders.editor.justificationPlaceholder")}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yambo-green-500 transition-all"
-                    />
-                    <p className="mt-1 text-xs text-gray-400">
-                        {t("orders.editor.justificationHint")}
-                    </p>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={userQuery}
+                            onChange={(e) => { setUserQuery(e.target.value); setShowUserResults(true); }}
+                            onFocus={() => setShowUserResults(true)}
+                            onBlur={() => window.setTimeout(() => setShowUserResults(false), 200)}
+                            placeholder={t("orders.editor.memberPlaceholder")}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-yambo-green-500 focus:border-transparent outline-none transition-all"
+                        />
+                        {showUserResults && userResults.length > 0 && (
+                            <div className="absolute z-30 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg max-h-56 overflow-y-auto">
+                                {userResults.map((u) => (
+                                    <button
+                                        type="button"
+                                        key={u.id}
+                                        onClick={() => { setUserId(u.id); setUserQuery(`${u.name} (${u.email})`); setShowUserResults(false); }}
+                                        className="w-full text-left px-3 py-2.5 hover:bg-yambo-green-50 text-sm transition-colors"
+                                    >
+                                        <span className="font-medium text-gray-800">{u.name}</span>
+                                        <span className="text-gray-400 ml-2">{u.email}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {userId && (
+                        <p className="mt-1 text-xs text-yambo-green-700">
+                            ✓ {t("orders.editor.memberSelected")}
+                        </p>
+                    )}
                 </div>
+            )}
 
-                {/* Líneas de producto */}
+            {/* Justificación (incidencia o petición) — obligatoria */}
+            <div className="mb-5">
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    {t("orders.editor.products")}
+                    {t("orders.editor.justification")} <span className="text-red-500">*</span>
                 </label>
-                <div className="space-y-3 mb-4">
-                    {lines.map((line, idx) => (
-                        <div key={line.key} className="flex flex-col sm:flex-row gap-2 bg-gray-50 rounded-xl p-3">
+                <textarea
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    rows={3}
+                    placeholder={t("orders.editor.justificationPlaceholder")}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yambo-green-500 transition-all"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                    {t("orders.editor.justificationHint")}
+                </p>
+            </div>
+
+            {/* Líneas de producto */}
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                {t("orders.editor.products")}
+            </label>
+            <div className="space-y-3 mb-4">
+                {lines.map((line, idx) => (
+                    <div key={line.key} className="bg-gray-50 rounded-xl p-3">
+                        <div className="flex flex-wrap items-center gap-2">
                             <select
                                 value={line.productId}
-                                onChange={(e) => updateLine(line.key, { productId: e.target.value })}
-                                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-yambo-green-500"
+                                onChange={(e) => updateLine(line.key, { productId: e.target.value, configuration: {} })}
+                                className="w-full sm:w-auto sm:flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-yambo-green-500"
                             >
                                 <option value="">{t("orders.editor.selectProduct")}</option>
                                 {drops.map((drop) => {
@@ -264,31 +323,35 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved }: OrderEdito
                                     <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
                                 </button>
                             )}
-                            <details className="sm:flex-1">
-                                <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-600 select-none">
-                                    {t("orders.editor.configForProduct")}
-                                </summary>
-                                <textarea
-                                    value={line.configuration ?? ""}
-                                    onChange={(e) => updateLine(line.key, { configuration: e.target.value })}
-                                    rows={2}
-                                    placeholder='{"color": "negro", "talla": "M"}'
-                                    className="mt-1.5 w-full px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-yambo-green-500"
-                                />
-                            </details>
                         </div>
-                    ))}
-                </div>
+                        {(() => {
+                            const selectedProduct = products.find((p) => p.id === line.productId);
+                            return selectedProduct ? (
+                                <div className="mt-3 border-t border-gray-200 pt-3">
+                                    <p className="text-xs font-semibold text-gray-500 mb-2">
+                                        {t("orders.editor.configForProduct")}
+                                    </p>
+                                    <ProductOptionsFields
+                                        product={selectedProduct}
+                                        configuration={line.configuration ?? {}}
+                                        onChange={(config) => updateLine(line.key, { configuration: config })}
+                                        columns={2}
+                                    />
+                                </div>
+                            ) : null;
+                        })()}
+                    </div>
+                ))}
+            </div>
 
-                {/* Footer */}
-                <div className="flex items-center justify-end gap-3">
-                    <ButtonComponent variant="ghost" onClick={onClose}>
-                        {t("common.cancel")}
-                    </ButtonComponent>
-                    <ButtonComponent variant="primary" onClick={handleSubmit} isLoading={saving}>
-                        {isEdit ? t("orders.editor.saveChanges") : t("orders.editor.createOrder")}
-                    </ButtonComponent>
-                </div>
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3">
+                <ButtonComponent variant="ghost" onClick={onClose}>
+                    {t("common.cancel")}
+                </ButtonComponent>
+                <ButtonComponent variant="primary" onClick={handleSubmit} isLoading={saving}>
+                    {isEdit ? t("orders.editor.saveChanges") : t("orders.editor.createOrder")}
+                </ButtonComponent>
             </div>
         </Modal>
     );

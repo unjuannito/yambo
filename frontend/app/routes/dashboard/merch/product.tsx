@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "~/i18n/config";
 import { useParams, useNavigate } from "react-router";
-import { productService, type Product, type ProductOption } from "~/services/productService";
+import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { productViewService } from "~/services/productViewService";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
-import SelectComponent from "~/components/common/forms/SelectComponent";
-import InputComponent from "~/components/common/forms/InputComponent";
-import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
+import ProductOptionsFields from "~/components/common/forms/ProductOptionsFields";
 import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -100,28 +98,6 @@ export default function ProductPage() {
         setTotalPrice(price);
     };
 
-    const handleSelectChange = (optionName: string, value: string) => {
-        const option = product?.options.find(opt => opt.name === optionName);
-        const selectedOption = option?.values?.find(v => v.id === value);
-
-        setConfiguration({
-            ...configuration,
-            [optionName]: selectedOption ? { id: value, label: selectedOption.label } : value
-        });
-    };
-
-    const handleCheckboxChange = (optionName: string, checked: boolean) => {
-        setConfiguration({ ...configuration, [optionName]: checked });
-    };
-
-    const handleTextChange = (optionName: string, value: string) => {
-        const trimmedValue = value.trim();
-        setConfiguration({
-            ...configuration,
-            [optionName]: trimmedValue === "" ? "" : value,
-        });
-    };
-
     const handleAddToCart = () => {
         if (!product) return;
 
@@ -155,57 +131,6 @@ export default function ProductPage() {
     const prevImage = () => {
         if (product?.images && selectedImageIndex !== null) {
             setSelectedImageIndex((selectedImageIndex - 1 + product.images.length) % product.images.length);
-        }
-    };
-
-    const renderOption = (option: ProductOption) => {
-        switch (option.type) {
-            case "select":
-                const selectedValue = configuration[option.name];
-                const selectValue = selectedValue
-                    ? (typeof selectedValue === 'object' ? selectedValue.id : selectedValue)
-                    : "";
-
-                return (
-                    <SelectComponent
-                        label={option.name}
-                        required={option.required}
-                        value={selectValue}
-                        onChange={(e) => handleSelectChange(option.name, e.target.value)}
-                        options={[
-                            { value: "", label: t("merch.selectOption", { name: option.name }) },
-                            ...(option.values?.map((value) => ({
-                                value: value.id,
-                                label: `${value.label}${value.price ? ` (+${value.price}€)` : ""}`
-                            })) || [])
-                        ]}
-                    />
-                );
-
-            case "checkbox":
-                return (
-                    <CheckboxComponent
-                        label={option.name}
-                        checked={configuration[option.name] || false}
-                        onChange={(e) => handleCheckboxChange(option.name, e.target.checked)}
-                        required={option.required}
-                    />
-                );
-
-            case "text_input":
-                return (
-                    <InputComponent
-                        label={`${option.name}${option.price && option.price > 0 ? ` (+${option.price}€)` : ''}`}
-                        type="text"
-                        value={configuration[option.name] || ""}
-                        onChange={(e) => handleTextChange(option.name, e.target.value)}
-                        placeholder={t("merch.textInputPlaceholder", { name: option.name })}
-                        required={option.required}
-                    />
-                );
-
-            default:
-                return null;
         }
     };
 
@@ -354,9 +279,11 @@ export default function ProductPage() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
                         <h2 className="text-lg font-bold font-display text-yambo-black mb-4">{t("merch.productOptions")}</h2>
                         <div className="space-y-4">
-                            {product.options.map((option, index) => (
-                                <div key={`opt-${index}`}>{renderOption(option)}</div>
-                            ))}
+                            <ProductOptionsFields
+                                product={product}
+                                configuration={configuration}
+                                onChange={setConfiguration}
+                            />
                         </div>
 
                         <hr className="my-4 border-gray-100" />
