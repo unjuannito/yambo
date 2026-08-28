@@ -129,10 +129,6 @@ pipeline {
                         env.BE_CHANGED  = 'true'
                         env.INFRA_CHANGED = 'false'
                     } else {
-                        env.FE_CHANGED  = 'true'
-                        env.BE_CHANGED  = 'true'
-                        env.INFRA_CHANGED = 'false'
-                    } else {
                         env.FE_CHANGED  = changedFiles.any { it.startsWith('frontend/') } ? 'true' : 'false'
                         env.BE_CHANGED  = changedFiles.any { it.startsWith('backend/') } ? 'true' : 'false'
                         env.INFRA_CHANGED = changedFiles.any { it.startsWith('k8s/') || it == 'Jenkinsfile' || it.startsWith('scripts/') } ? 'true' : 'false'
