@@ -120,7 +120,15 @@ pipeline {
                         returnStdout: true
                     ).trim().split('\n').findAll { it?.trim() }
 
-                    if (changedFiles.isEmpty() && !params.FORCE_REBUILD) {
+                    if (params.FORCE_REBUILD) {
+                        env.FE_CHANGED  = 'true'
+                        env.BE_CHANGED  = 'true'
+                        env.INFRA_CHANGED = 'true'
+                    } else if (changedFiles.isEmpty()) {
+                        env.FE_CHANGED  = 'true'
+                        env.BE_CHANGED  = 'true'
+                        env.INFRA_CHANGED = 'false'
+                    } else {
                         env.FE_CHANGED  = 'true'
                         env.BE_CHANGED  = 'true'
                         env.INFRA_CHANGED = 'false'
