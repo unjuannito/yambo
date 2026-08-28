@@ -61,9 +61,9 @@ export const IssueChatMessage: React.FC<IssueChatMessageProps> = ({
                     </div>
                 </div>
             )}
-            <div className={`max-w-[85%] lg:max-w-[75%] px-3 py-2.5 rounded-[10px] text-[13px] shadow-sm relative group transition-all hover:shadow-md ${isRight ? "bg-yambo-green-600 text-white border-2 border-yambo-green-700" : "bg-white text-yambo-black border-2 border-slate-100"} ${isRight ? (isGroupedWithPrevious ? "rounded-tr-md" : "rounded-tr-none") : (isGroupedWithPrevious ? "rounded-tl-md" : "rounded-tl-none")} ${isRight ? (isGroupedWithNext ? "rounded-br-md" : "rounded-br-[10px]") : (isGroupedWithNext ? "rounded-bl-md" : "rounded-bl-[22px]")}`}>
+            <div className={`max-w-[85%] lg:max-w-[75%] px-2.5 py-2 rounded-[10px] text-[13px] shadow-sm relative group transition-all hover:shadow-md ${isRight ? "bg-yambo-green-600 text-white border-2 border-yambo-green-700" : "bg-white text-yambo-black border-2 border-slate-100"} ${isRight ? (isGroupedWithPrevious ? "rounded-tr-md" : "rounded-tr-none") : (isGroupedWithPrevious ? "rounded-tl-md" : "rounded-tl-none")} ${isRight ? (isGroupedWithNext ? "rounded-br-md" : "rounded-br-[10px]") : (isGroupedWithNext ? "rounded-bl-md" : "rounded-bl-[22px]")}`}>
                 <ChatContentRenderer text={message.text || ""} isRightSide={isRight} />
-                <p className={`text-[8px] font-bold mt-1 ${isRight ? "text-yambo-green-100/60" : "text-gray-300"} text-right uppercase tracking-tight`}>
+                <p className={`text-[8px] font-bold mt-0.5 ${isRight ? "text-yambo-green-100/60" : "text-gray-300"} text-right uppercase tracking-tight`}>
                     {new Date(message.createdAt).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}
                 </p>
             </div>

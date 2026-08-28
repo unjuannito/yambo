@@ -139,7 +139,7 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
             <div className="bg-slate-50 rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden focus-within:ring-4 focus-within:ring-yambo-green-500/10 focus-within:border-yambo-green-400 transition-all">
                 {pendingImage && <ImagePreview url={pendingImage} onRemove={removePendingImage} />}
 
-                <section className={`p-2 ${loading ? "pointer-events-none opacity-50" : ""}`}>
+                <section className={`p-1.5 ${loading ? "pointer-events-none opacity-50" : ""}`}>
                     <textarea
                         ref={textareaRef}
                         value={text}
@@ -150,13 +150,13 @@ export const IssueCommentForm: React.FC<IssueCommentFormProps> = ({
                         }}
                         maxLength={maxLength}
                         placeholder={t('issues.writeMessage') || "Escribe un mensaje..."}
-                        className="w-full bg-transparent border-none focus:ring-0 text-sm text-yambo-black placeholder-gray-400 resize-none min-h-[40px] max-h-[150px] py-2 px-3 custom-scrollbar focus:outline-none"
+                        className="w-full bg-transparent border-none focus:ring-0 text-sm text-yambo-black placeholder-gray-400 resize-none min-h-[40px] max-h-[150px] py-1.5 px-2.5 custom-scrollbar focus:outline-none"
                         rows={1}
                         aria-label={t('issues.messageContent') || "Contenido del mensaje"}
                     />
                 </section>
 
-                <footer className="flex items-center justify-between gap-3 px-3 py-2 bg-white border-t-2 border-slate-100">
+                <footer className="flex items-center justify-between gap-3 px-2.5 py-1.5 bg-white border-t-2 border-slate-100">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <button
                             type="button"

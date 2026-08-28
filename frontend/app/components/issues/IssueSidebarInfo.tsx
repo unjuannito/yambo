@@ -50,9 +50,9 @@ export const IssueSidebarInfo: React.FC<IssueSidebarInfoProps> = ({
         : getIssueOrderedProductIds(issue).map(id => ({ orderedProductId: id }));
 
     return (
-        <div className="space-y-6 pb-20 lg:pb-0">
-            <div className="bg-white rounded-[24px] shadow-sm border-2 border-slate-200 p-5 transition-shadow hover:shadow-md">
-                <div className="flex items-center justify-between mb-4">
+        <div className="space-y-4 pb-20 lg:pb-0">
+            <div className="bg-white rounded-[24px] shadow-sm border-2 border-slate-200 p-4 transition-shadow hover:shadow-md">
+                <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-extrabold text-yambo-black tracking-tight">{t('orders.product')}</h3>
                     <div className="flex items-center gap-2">
                         {relatedOrderId && (
@@ -135,9 +135,9 @@ export const IssueSidebarInfo: React.FC<IssueSidebarInfoProps> = ({
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {products.map((p: any) => (
-                            <div key={p.orderedProductId} className="rounded-2xl bg-slate-50/50 border-2 border-slate-100 p-3.5 text-[11px] transition-colors hover:bg-slate-50">
+                            <div key={p.orderedProductId} className="rounded-2xl bg-slate-50/50 border-2 border-slate-100 p-3 text-[11px] transition-colors hover:bg-slate-50">
                                 <p className="font-bold text-yambo-black mb-1">{p.productName || p.orderedProductId}</p>
                                 <div className="flex flex-col gap-0.5 text-gray-500">
                                     {p.quantity && <p>{t('orders.quantity')}: <span className="font-medium text-gray-700">{p.quantity}</span></p>}
@@ -150,8 +150,8 @@ export const IssueSidebarInfo: React.FC<IssueSidebarInfoProps> = ({
             </div>
 
             {isAdmin && (
-                <menu className="bg-white rounded-[24px] shadow-sm border-2 border-slate-200 p-5 transition-shadow hover:shadow-md">
-                    <h3 className="text-sm font-extrabold text-yambo-black tracking-tight mb-4">{t('common.followers') || "Seguidores"}</h3>
+                <menu className="bg-white rounded-[24px] shadow-sm border-2 border-slate-200 p-4 transition-shadow hover:shadow-md">
+                    <h3 className="text-sm font-extrabold text-yambo-black tracking-tight mb-3">{t('common.followers') || "Seguidores"}</h3>
                     <WatcherManager watchers={watchers} loading={loadingWatchers} onAdd={onAddWatcher} onRemove={onRemoveWatcher} />
                 </menu>
             )}
