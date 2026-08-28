@@ -15,6 +15,9 @@ public interface IssueRepository extends JpaRepository<Issue, String>, JpaSpecif
     @Query("SELECT i FROM Issue i JOIN i.orderProducts op WHERE op.id = :orderedProductId")
     Optional<Issue> findByOrderedProductId(@Param("orderedProductId") UUID orderedProductId);
 
+    @Query("SELECT DISTINCT i FROM Issue i JOIN i.orderProducts op WHERE op.id = :orderedProductId")
+    List<Issue> findAllByOrderedProductId(@Param("orderedProductId") UUID orderedProductId);
+
     @Query("SELECT DISTINCT i FROM Issue i JOIN i.orderProducts op WHERE op.orderId = :orderId")
     List<Issue> findByOrderId(@Param("orderId") String orderId);
 

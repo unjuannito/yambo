@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
+import es.yambo_alco.web.model.OrderChange;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.OrderProductOperation;
@@ -11,6 +12,7 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.OrderChangeService;
 import es.yambo_alco.web.service.OrderExportService;
 import es.yambo_alco.web.service.export.ExportReportType;
 import es.yambo_alco.web.service.OrderService;
@@ -35,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -48,6 +51,7 @@ public class OrderController {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final PermissionCheckService permissionCheck;
+    private final OrderChangeService orderChangeService;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -101,6 +105,36 @@ public class OrderController {
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
+
+    @GetMapping("/{id}/history")
+    @PreAuthorize("@permissionCheck.hasPermission('order', 'read')")
+    public ResponseEntity<List<OrderChangeResponse>> getOrderHistory(@PathVariable String id) {
+        orderService.getOrderById(id);
+        List<OrderChangeResponse> history = orderChangeService.getOrderHistory(id).stream()
+                .map(change -> new OrderChangeResponse(
+                        change.getId(),
+                        change.getOrderId(),
+                        change.getOrderProductId(),
+                        change.getAction(),
+                        change.getUserId(),
+                        resolveUserName(change.getUserId()),
+                        change.getIssueId(),
+                        change.getChangedAt(),
+                        change.getSummary(),
+                        change.getBeforeJson(),
+                        change.getAfterJson()))
+                .toList();
+        return ResponseEntity.ok(history);
+    }
+
+    private String resolveUserName(String userId) {
+        if (userId == null) return null;
+        return userRepository.findById(userId).map(User::getName).orElse(userId);
+    }
+
+    public record OrderChangeResponse(UUID id, String orderId, UUID orderProductId, String action,
+            String userId, String userName, String issueId, LocalDateTime changedAt,
+            String summary, String beforeJson, String afterJson) {}
 
     private List<OrderProduct> toOrderProducts(List<OrderProductRequest> requestProducts) {
         return requestProducts.stream()

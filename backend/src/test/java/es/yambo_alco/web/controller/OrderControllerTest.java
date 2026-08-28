@@ -10,6 +10,7 @@ import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.OrderChangeService;
 import es.yambo_alco.web.service.OrderExportService;
 import es.yambo_alco.web.service.OrderService;
 import es.yambo_alco.web.service.export.ExportReportType;
@@ -70,6 +71,9 @@ class OrderControllerTest {
 
     @MockitoBean
     private ProductRepository productRepository;
+
+    @MockitoBean
+    private OrderChangeService orderChangeService;
 
     @BeforeEach
     void setUp() {

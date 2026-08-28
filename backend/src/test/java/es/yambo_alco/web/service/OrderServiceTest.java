@@ -80,6 +80,9 @@ class OrderServiceTest {
     @Mock
     private IssueService issueService;
 
+    @Mock
+    private OrderChangeService orderChangeService;
+
     @InjectMocks
     private OrderService orderService;
 
@@ -496,7 +499,7 @@ class OrderServiceTest {
 
         OrderProductOperation op = new OrderProductOperation(existingId, "PROD001", 3, null, "modified");
 
-        orderService.updateOrderProducts("ORD001", List.of(op));
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
 
         // No se borra la línea; se actualiza el existente conservando su ID.
         verify(orderProductRepository, never()).deleteByOrderId(anyString());
@@ -522,14 +525,40 @@ class OrderServiceTest {
                 .configuration(null)
                 .build();
         when(orderProductRepository.findById(removedId)).thenReturn(Optional.of(removedOp));
+        when(issueRepository.findAllByOrderedProductId(removedId)).thenReturn(List.of());
 
         OrderProductOperation op = new OrderProductOperation(removedId, "PROD001", 1, null, "removed");
 
-        orderService.updateOrderProducts("ORD001", List.of(op));
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
 
         // La línea se borra individualmente; NO se usa deleteByOrderId
         verify(orderProductRepository, never()).deleteByOrderId(anyString());
         verify(orderProductRepository).delete(removedOp);
+    }
+
+    @Test
+    void updateOrderProducts_WhenRemoved_ShouldCloseLinkedIssueAndRecordChange() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        UUID removedId = UUID.randomUUID();
+        OrderProduct removedOp = OrderProduct.builder().id(removedId).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+        when(orderProductRepository.findById(removedId)).thenReturn(Optional.of(removedOp));
+
+        Issue linkedIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
+        when(issueRepository.findAllByOrderedProductId(removedId)).thenReturn(List.of(linkedIssue));
+
+        OrderProductOperation op = new OrderProductOperation(removedId, "PROD001", 1, null, "removed");
+
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
+
+        // La incidencia vinculada al producto eliminado se cierra.
+        assertEquals(IssueStatus.CLOSED, linkedIssue.getStatus());
+        verify(issueRepository).save(linkedIssue);
+        // El cambio se registra en el historial del pedido.
+        verify(orderChangeService).record(eq("ORD001"), eq(removedId), eq("REMOVED"),
+                eq("ADMIN001"), isNull(), anyString(), any(), isNull());
     }
 
     @Test
@@ -556,7 +585,7 @@ class OrderServiceTest {
 
         OrderProductOperation op = new OrderProductOperation(existingId, "PROD001", 1, "{\"Talla\":\"M\"}", "modified");
 
-        orderService.updateOrderProducts("ORD001", List.of(op));
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
 
         // No se borra la línea; se reutiliza su ID aunque cambie la configuración.
         verify(orderProductRepository, never()).delete(any(OrderProduct.class));
@@ -613,6 +642,9 @@ class OrderServiceTest {
         // La incidencia de modificación se vincula SOLO al producto afectado (id2)
         verify(issueService).createIssue(List.of(id2), "Pedido modificado por administración",
                 "Cambio por WhatsApp", "ADMIN001", true);
+        // El cambio se registra vinculado a la incidencia creada.
+        verify(orderChangeService).record(eq("ORD001"), eq(id2), eq("MODIFIED"),
+                eq("ADMIN001"), eq("ISS001"), anyString(), any(), any());
     }
 
     @Test

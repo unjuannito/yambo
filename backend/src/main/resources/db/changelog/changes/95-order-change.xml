@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create order_change table -->
+    <changeSet id="95-01-create-order-change" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="order_change"/>
+            </not>
+        </preConditions>
+        <createTable tableName="order_change">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="order_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_product_id" type="UUID"/>
+            <column name="action" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)"/>
+            <column name="issue_id" type="VARCHAR(255)"/>
+            <column name="changed_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="summary" type="TEXT"/>
+            <column name="before_json" type="TEXT"/>
+            <column name="after_json" type="TEXT"/>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="order_change"
+            baseColumnNames="order_id"
+            constraintName="fk_order_change_order"
+            referencedTableName="order"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <createIndex indexName="idx_order_change_order_id" tableName="order_change">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex indexName="idx_order_change_order_product_id" tableName="order_change">
+            <column name="order_product_id"/>
+        </createIndex>
+        <createIndex indexName="idx_order_change_changed_at" tableName="order_change">
+            <column name="changed_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

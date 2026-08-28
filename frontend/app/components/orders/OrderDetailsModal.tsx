@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Order } from "~/services/orderService";
 import type { Product } from "~/services/productService";
 import type { FamilyProduct } from "~/services/familyProductService";
@@ -6,8 +7,9 @@ import { getIssueOrderedProductIds } from "~/utils/issueUtils";
 import { OrderStatus, ORDER_STATUS_CONFIG, ORDER_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
 import { IssueStatusBadge } from "~/components/issues/IssueStatusBadge";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import { OrderHistoryModal } from "./OrderHistoryModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faFileArrowDown, faUpload, faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faFileArrowDown, faUpload, faPencil, faTrash, faHistory } from "@fortawesome/free-solid-svg-icons";
 
 interface OrderDetailsModalProps {
     readonly order: Order;
@@ -48,6 +50,8 @@ export function OrderDetailsModal({
     onEdit,
     onDelete,
 }: OrderDetailsModalProps) {
+    const [showHistory, setShowHistory] = useState(false);
+
     const formatConfiguration = (configStr: string) => {
         try {
             const config = JSON.parse(configStr);
@@ -370,6 +374,16 @@ export function OrderDetailsModal({
                         </span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
+                        {isMerchAdmin && (
+                            <ButtonComponent
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setShowHistory(true)}
+                            >
+                                <FontAwesomeIcon icon={faHistory} className="w-3.5 h-3.5 mr-1.5" />
+                                Historial
+                            </ButtonComponent>
+                        )}
                         {canEdit && onEdit && order.status !== "CLOSED" && order.status !== "CANCELED" && (
                             <ButtonComponent
                                 variant="secondary"
@@ -408,6 +422,12 @@ export function OrderDetailsModal({
                     </div>
                 </div>
             </div>
+
+            <OrderHistoryModal
+                orderId={order.id}
+                isOpen={showHistory}
+                onClose={() => setShowHistory(false)}
+            />
         </div>
     );
 }

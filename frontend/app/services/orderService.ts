@@ -35,6 +35,20 @@ export interface OrderResponse {
     products: OrderProduct[];
 }
 
+export interface OrderChange {
+    id: string;
+    orderId: string;
+    orderProductId?: string;
+    action: "ADDED" | "MODIFIED" | "REMOVED" | "UNCHANGED";
+    userId?: string;
+    userName?: string;
+    issueId?: string;
+    changedAt: string;
+    summary?: string;
+    beforeJson?: string;
+    afterJson?: string;
+}
+
 export class OrderService extends ApiService {
     public async getAllOrders(page = 0, size = 20, query?: string, orderId?: string, customerName?: string, customerId?: string, status?: string[], startDate?: string, endDate?: string): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
         const params = new URLSearchParams({
@@ -57,6 +71,10 @@ export class OrderService extends ApiService {
 
     public async getOrder(id: string): Promise<Order> {
         return await this.get<Order>(`/orders/${id}`);
+    }
+
+    public async getOrderHistory(id: string): Promise<OrderChange[]> {
+        return await this.get<OrderChange[]>(`/orders/${id}/history`);
     }
 
     public async createOrder(request: CreateOrderRequest): Promise<OrderResponse> {
