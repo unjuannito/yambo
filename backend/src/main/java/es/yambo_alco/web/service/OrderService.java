@@ -283,7 +283,8 @@ public class OrderService {
     /**
      * Construye las filas del pedido para el correo de administración,
      * comparando el antes y el después (añadidas, eliminadas, modificadas y sin
-     * cambios), con flechas "antes → después" en cantidad, configuración y precio.
+     * cambios). Cada fila desglosa los cambios por valor (cantidad, opciones y
+     * precio) para que solo lo modificado llame la atención.
      */
     private List<MailService.OrderProductRow> buildOrderRows(List<OrderProduct> before,
             List<OrderProduct> after) {
@@ -292,28 +293,27 @@ public class OrderService {
 
         for (OrderProduct afterOp : after) {
             OrderProduct beforeOp = findSameLine(remainingBefore, afterOp);
-            boolean configChanged = false;
             if (beforeOp == null) {
                 beforeOp = findSameProduct(remainingBefore, afterOp.getProductId());
-                configChanged = beforeOp != null;
             }
             if (beforeOp == null) {
-                rows.add(buildRow("added", afterOp, null, "+", "#27ae60"));
+                rows.add(buildRow("added", afterOp, null));
                 continue;
             }
             remainingBefore.remove(beforeOp);
+
             boolean quantityChanged = !java.util.Objects.equals(beforeOp.getQuantity(), afterOp.getQuantity());
             boolean priceChanged = beforeOp.getPrice() != null && afterOp.getPrice() != null
                     && beforeOp.getPrice().compareTo(afterOp.getPrice()) != 0;
-            if (!quantityChanged && !configChanged && !priceChanged) {
-                rows.add(buildRow("unchanged", afterOp, beforeOp, "", "#555555"));
-            } else {
-                rows.add(buildRow("modified", afterOp, beforeOp, "~", "#f39c12"));
-            }
+            boolean optionsChanged = !java.util.Objects.equals(normalizeConfig(beforeOp.getConfiguration()),
+                    normalizeConfig(afterOp.getConfiguration()));
+
+            String type = (!quantityChanged && !priceChanged && !optionsChanged) ? "unchanged" : "modified";
+            rows.add(buildRow(type, afterOp, beforeOp));
         }
 
         for (OrderProduct beforeOp : remainingBefore) {
-            rows.add(buildRow("removed", null, beforeOp, "−", "#e74c3c"));
+            rows.add(buildRow("removed", null, beforeOp));
         }
 
         return rows;
@@ -340,64 +340,61 @@ public class OrderService {
         return product != null ? product.getName() : "Producto";
     }
 
-    private String configText(OrderProduct op) {
-        Product product = productRepository.findById(op.getProductId()).orElse(null);
-        String config = productService.formatConfiguration(op.getConfiguration(), product);
-        return config == null ? "" : config;
-    }
-
-    private MailService.OrderProductRow buildRow(String type, OrderProduct after, OrderProduct before,
-            String symbol, String color) {
+    private MailService.OrderProductRow buildRow(String type, OrderProduct after, OrderProduct before) {
         OrderProduct base = after != null ? after : before;
+        Product product = productRepository.findById(base.getProductId()).orElse(null);
+
+        Integer oldQuantity = before != null ? before.getQuantity() : null;
+        Integer newQuantity = after != null ? after.getQuantity() : null;
+        boolean quantityChanged = oldQuantity != null && newQuantity != null && !oldQuantity.equals(newQuantity);
+
+        List<MailService.OrderProductOptionChange> options = buildOptionChanges(before, after, product);
+
+        String oldPriceText = before != null ? formatPrice(before.getPrice()) : "";
+        String newPriceText = after != null ? formatPrice(after.getPrice()) : "";
+        boolean priceChanged = before != null && after != null
+                && before.getPrice() != null && after.getPrice() != null
+                && before.getPrice().compareTo(after.getPrice()) != 0;
+
         return new MailService.OrderProductRow(type, productName(base),
-                quantityText(before, after),
-                configChangeText(before, after),
-                priceText(before, after),
-                symbol, color);
+                oldQuantity, newQuantity, quantityChanged,
+                options, oldPriceText, newPriceText, priceChanged);
     }
 
-    private String quantityText(OrderProduct before, OrderProduct after) {
-        if (before == null) return String.valueOf(after.getQuantity());
-        if (after == null) return String.valueOf(before.getQuantity());
-        if (java.util.Objects.equals(before.getQuantity(), after.getQuantity())) {
-            return String.valueOf(after.getQuantity());
-        }
-        return before.getQuantity() + " → " + after.getQuantity();
-    }
+    private List<MailService.OrderProductOptionChange> buildOptionChanges(OrderProduct before, OrderProduct after,
+            Product product) {
+        java.util.Map<String, String> oldOptions = before != null
+                ? productService.formatOptionMap(before.getConfiguration(), product)
+                : java.util.Map.of();
+        java.util.Map<String, String> newOptions = after != null
+                ? productService.formatOptionMap(after.getConfiguration(), product)
+                : java.util.Map.of();
 
-    private String configChangeText(OrderProduct before, OrderProduct after) {
-        if (before == null && after == null) {
-            return "";
-        }
-        String beforeConfig = before != null ? configText(before) : "";
-        String afterConfig = after != null ? configText(after) : "";
-        if (beforeConfig.equals(afterConfig)) {
-            return afterConfig;
-        }
-        if (before == null) {
-            return afterConfig;
-        }
-        if (after == null) {
-            return beforeConfig;
-        }
-        String left = beforeConfig.isEmpty() ? "(sin opciones)" : beforeConfig;
-        String right = afterConfig.isEmpty() ? "(sin opciones)" : afterConfig;
-        return left + " → " + right;
-    }
+        java.util.LinkedHashSet<String> keys = new java.util.LinkedHashSet<>(oldOptions.keySet());
+        keys.addAll(newOptions.keySet());
 
-    private String priceText(OrderProduct before, OrderProduct after) {
-        if (before == null) return formatPrice(after.getPrice());
-        if (after == null) return formatPrice(before.getPrice());
-        if (before.getPrice() != null && after.getPrice() != null
-                && before.getPrice().compareTo(after.getPrice()) == 0) {
-            return formatPrice(after.getPrice());
+        List<MailService.OrderProductOptionChange> changes = new ArrayList<>();
+        for (String key : keys) {
+            String oldText = oldOptions.getOrDefault(key, "");
+            String newText = newOptions.getOrDefault(key, "");
+            String kind;
+            if (oldText.isEmpty() && !newText.isEmpty()) {
+                kind = "added";
+            } else if (!oldText.isEmpty() && newText.isEmpty()) {
+                kind = "removed";
+            } else if (!oldText.isEmpty() && oldText.equals(newText)) {
+                kind = "unchanged";
+            } else {
+                kind = "changed";
+            }
+            changes.add(new MailService.OrderProductOptionChange(kind, key, oldText, newText));
         }
-        return formatPrice(before.getPrice()) + " → " + formatPrice(after.getPrice());
+        return changes;
     }
 
     private String formatPrice(BigDecimal price) {
-        if (price == null) return "0.00 €";
-        return price.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString() + " €";
+        if (price == null) return "0,00 €";
+        return price.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + " €";
     }
 
     private BigDecimal calculatePrice(Product product, String configurationJson) {

@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -265,6 +266,40 @@ public class ProductService {
             // If parsing fails, return raw JSON
             return configurationJson;
         }
+    }
+
+    /**
+     * Devuelve un mapa {@code opción → valor formateado} de la configuración
+     * JSON (claves y valores legibles). Se usa para construir el desglose de
+     * cambios por valor en los correos de administración.
+     */
+    public Map<String, String> formatOptionMap(String configurationJson, Product product) {
+        Map<String, String> result = new LinkedHashMap<>();
+        if (configurationJson == null || configurationJson.trim().isEmpty() || configurationJson.equals("{}")) {
+            return result;
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> config = objectMapper.readValue(configurationJson, Map.class);
+            if (product == null || product.getOptions() == null) {
+                return result;
+            }
+            for (Map.Entry<String, Object> entry : config.entrySet()) {
+                Object value = entry.getValue();
+                if (value == null) {
+                    continue;
+                }
+                if (value instanceof String s && s.isBlank()) {
+                    continue;
+                }
+                if (isValidOption(entry.getKey(), value, product.getOptions())) {
+                    result.put(entry.getKey(), formatOptionValue(entry.getKey(), value, product.getOptions()));
+                }
+            }
+        } catch (Exception e) {
+            // Configuración ilegible: sin desglose.
+        }
+        return result;
     }
 
     private boolean isValidOption(String optionName, Object value, List<ProductOption> options) {

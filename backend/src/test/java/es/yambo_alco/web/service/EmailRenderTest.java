@@ -411,14 +411,19 @@ class EmailRenderTest {
         ctx.setVariable("orderUrl", FRONTEND_URL + "/mi-espacio/mis-pedidos?orderId=" + ORDER_ID);
         ctx.setVariable("rows", action.equals("modificado")
                 ? List.of(
-                        new MailService.OrderProductRow("modified", "Camiseta Logo 2026", "1 → 2",
-                                "Talla M → Talla L", "18.50 € → 20.50 €", "~", "#f39c12"),
-                        new MailService.OrderProductRow("unchanged", "Sudadera Yambo Negra", "1", "Talla L",
-                                "35.00 €", "", "#555555"),
-                        new MailService.OrderProductRow("removed", "Gorra Clásica", "3", "", "12.00 €", "−",
-                                "#e74c3c"))
+                        new MailService.OrderProductRow("modified", "Camiseta Logo 2026", 1, 2, true,
+                                List.of(new MailService.OrderProductOptionChange("changed", "Talla", "M", "L")),
+                                "18,50 €", "20,50 €", true),
+                        new MailService.OrderProductRow("modified", "Sudadera Yambo Negra", 1, 1, false,
+                                List.of(
+                                        new MailService.OrderProductOptionChange("unchanged", "Talla", "L", "L"),
+                                        new MailService.OrderProductOptionChange("added", "Nombre", "", "Paula")),
+                                "35,00 €", "40,00 €", true),
+                        new MailService.OrderProductRow("unchanged", "Gorra Clásica", 3, 3, false,
+                                List.of(), "12,00 €", "12,00 €", false))
                 : List.of());
-        ctx.setVariable("oldTotalPrice", action.equals("modificado") ? BigDecimal.valueOf(86.00) : BigDecimal.ZERO);
+        ctx.setVariable("oldTotalText", action.equals("modificado") ? "89,50 €" : "");
+        ctx.setVariable("newTotalText", action.equals("modificado") ? "96,50 €" : "108,00 €");
         ctx.setVariable("totalChanged", action.equals("modificado"));
 
         String html = engine.process("emails/order-admin-updated", ctx);
@@ -427,11 +432,17 @@ class EmailRenderTest {
         assertThat(html).contains(USER_NAME);
         assertThat(html).contains(action);
         assertThat(html).contains("Pedido solicitado por WhatsApp");
-        assertThat(html).contains("Ver la discusión de la incidencia");
+        assertThat(html).contains("Ver la incidencia");
         if (action.equals("modificado")) {
-            assertThat(html).contains("1 → 2");
-            assertThat(html).contains("Talla M → Talla L");
-            assertThat(html).contains("Gorra Clásica");
+            assertThat(html).contains("Talla");
+            assertThat(html).contains("Nombre");
+            assertThat(html).contains("Paula");
+            assertThat(html).contains("18,50 €");
+            assertThat(html).contains("20,50 €");
+            assertThat(html).contains("35,00 €");
+            assertThat(html).contains("40,00 €");
+            assertThat(html).contains("89,50 €");
+            assertThat(html).contains("96,50 €");
         } else {
             assertThat(html).contains("Camiseta Logo 2026");
         }

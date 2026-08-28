@@ -55,11 +55,27 @@ public interface MailService {
     }
 
     /**
-     * Fila del pedido para el correo de administración, con la comparativa
-     * anterior → nueva (cantidad, configuración y precio).
+     * Un único valor de opción del producto (p. ej. "Talla") con su valor
+     * anterior y nuevo ya formateados.
+     * {@code kind}: added / removed / changed / unchanged.
+     */
+    record OrderProductOptionChange(String kind, String label, String oldText, String newText) {
+    }
+
+    /**
+     * Fila del pedido para el correo de administración, con el desglose de
+     * cambios por valor (cantidad, opciones y precio) en lugar de la fila entera.
      * {@code type}: added / removed / modified / unchanged.
      */
-    record OrderProductRow(String type, String name, String quantityText, String configText,
-            String priceText, String symbol, String color) {
+    record OrderProductRow(
+            String type,
+            String name,
+            Integer oldQuantity,
+            Integer newQuantity,
+            boolean quantityChanged,
+            List<OrderProductOptionChange> options,
+            String oldPriceText,
+            String newPriceText,
+            boolean priceChanged) {
     }
 }

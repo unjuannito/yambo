@@ -327,6 +327,8 @@ public class HtmlMailService implements MailService {
         String headerTitle = "Pedido " + capitalize(action);
         String subject = "Pedido " + action + " por administración #" + orderId + " - "
                 + settingsService.getOrganizationName();
+        boolean totalChanged = oldTotalPrice != null && totalPrice != null
+                && oldTotalPrice.compareTo(totalPrice) != 0;
 
         send(to, subject, "emails/order-admin-updated",
                 Map.ofEntries(
@@ -343,9 +345,9 @@ public class HtmlMailService implements MailService {
                         Map.entry("issueId", issueId != null ? issueId : ""),
                         Map.entry("issueLink", issueId != null ? buildIssueLink(issueId) : ""),
                         Map.entry("rows", rows != null ? rows : List.of()),
-                        Map.entry("oldTotalPrice", oldTotalPrice != null ? oldTotalPrice : BigDecimal.ZERO),
-                        Map.entry("totalChanged", oldTotalPrice != null && totalPrice != null
-                                && oldTotalPrice.compareTo(totalPrice) != 0),
+                        Map.entry("oldTotalText", oldTotalPrice != null ? formatPrice(oldTotalPrice) : ""),
+                        Map.entry("newTotalText", formatPrice(totalPrice)),
+                        Map.entry("totalChanged", totalChanged),
                         Map.entry("headerColor", "#8B5CF6"),
                         Map.entry("headerIcon", EmailIcons.get("gear")),
                         Map.entry("orderUrl", buildOrderLink(orderId))),
@@ -368,17 +370,37 @@ public class HtmlMailService implements MailService {
         if (rows != null && !rows.isEmpty()) {
             sb.append("Productos:\n");
             for (OrderProductRow r : rows) {
-                sb.append(r.symbol()).append(" ").append(r.name()).append(" — ")
-                        .append(r.quantityText()).append(" uds");
-                if (r.configText() != null && !r.configText().isEmpty()) {
-                    sb.append(" — ").append(r.configText());
+                String prefix = "removed".equals(r.type()) ? "− " : ("added".equals(r.type()) ? "+ " : "  ");
+                sb.append(prefix).append(r.name());
+                if (r.quantityChanged()) {
+                    sb.append(" — cantidad ").append(r.oldQuantity()).append(" → ").append(r.newQuantity());
+                } else if (r.newQuantity() != null) {
+                    sb.append(" — ").append(r.newQuantity()).append(" uds");
                 }
-                sb.append(" — ").append(r.priceText()).append("\n");
+                for (OrderProductOptionChange o : r.options()) {
+                    if ("added".equals(o.kind())) {
+                        sb.append(" — +").append(o.label()).append(": ").append(o.newText());
+                    } else if ("removed".equals(o.kind())) {
+                        sb.append(" — ").append(o.label()).append(": ").append(o.oldText()).append(" (eliminado)");
+                    } else if ("changed".equals(o.kind())) {
+                        sb.append(" — ").append(o.label()).append(": ").append(o.oldText()).append(" → ")
+                                .append(o.newText());
+                    } else {
+                        sb.append(" — ").append(o.label()).append(": ").append(o.newText());
+                    }
+                }
+                if (r.priceChanged()) {
+                    sb.append(" — ").append(r.oldPriceText()).append(" → ").append(r.newPriceText());
+                } else if (r.newPriceText() != null && !r.newPriceText().isEmpty()) {
+                    sb.append(" — ").append(r.newPriceText());
+                }
+                sb.append("\n");
             }
             if (oldTotalPrice != null && totalPrice != null && oldTotalPrice.compareTo(totalPrice) != 0) {
-                sb.append("\nTotal: ").append(oldTotalPrice).append(" € → ").append(totalPrice).append(" €\n");
+                sb.append("\nTotal: ").append(formatPrice(oldTotalPrice)).append(" → ")
+                        .append(formatPrice(totalPrice)).append("\n");
             } else {
-                sb.append("\nTotal: ").append(totalPrice).append(" €\n");
+                sb.append("\nTotal: ").append(formatPrice(totalPrice)).append("\n");
             }
         } else {
             appendProductList(sb, products, totalPrice);
@@ -388,6 +410,11 @@ public class HtmlMailService implements MailService {
         }
         sb.append("\nVer tu pedido: ").append(buildOrderLink(orderId)).append("\n");
         return sb.toString();
+    }
+
+    private String formatPrice(BigDecimal price) {
+        if (price == null) return "0,00 €";
+        return price.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + " €";
     }
 
     private String capitalize(String value) {

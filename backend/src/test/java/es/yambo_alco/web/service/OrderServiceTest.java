@@ -373,12 +373,81 @@ class OrderServiceTest {
         // getOrderProducts() → findAll(Specification) devuelve el producto guardado
         when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
 
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
         Order result = orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
 
         assertEquals("ORD001", result.getId());
         // La incidencia de justificación se crea vinculada al order_product
         verify(issueService).createIssue(List.of(orderProduct.getId()), "Pedido creado por administración",
                 "Pedido por WhatsApp", "ADMIN001", true);
+    }
+
+    @Test
+    void createOrderWithJustification_ShouldSendAdminUpdateEmail_WhenUserHasEmail() {
+        User user = User.builder().id("USER001").email("buyer@test.com").name("Buyer")
+                .profiles(Set.of()).groupRoles(Set.of()).build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+
+        Product product = Product.builder().id("PROD001").name("Test Product")
+                .basePrice(BigDecimal.TEN).familyProduct(null).build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .id(UUID.randomUUID()).productId("PROD001").quantity(1).price(BigDecimal.TEN).build();
+
+        Order saved = Order.builder().id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT).createdAt(LocalDateTime.now()).build();
+        when(orderRepository.save(any(Order.class))).thenReturn(saved);
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(saved));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenReturn(orderProduct);
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
+
+        verify(mailService).sendOrderAdminUpdate(
+                eq("buyer@test.com"), eq("Buyer"), eq("ORD001"), any(LocalDateTime.class),
+                eq("creado"), anyList(), any(BigDecimal.class), eq("Pedido por WhatsApp"),
+                eq("ISS001"), eq(List.of()), isNull(), eq(OrderStatus.PENDING_PAYMENT));
+    }
+
+    @Test
+    void createOrderWithJustification_ShouldNotSendAdminUpdateEmail_WhenOrderStatusNotificationsDisabled() {
+        User user = User.builder().id("USER001").email("buyer@test.com").name("Buyer")
+                .profiles(Set.of()).groupRoles(Set.of()).build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001"))
+                .thenReturn(NotificationPreferences.builder().orderStatus(false).build());
+
+        Product product = Product.builder().id("PROD001").name("Test Product")
+                .basePrice(BigDecimal.TEN).familyProduct(null).build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .id(UUID.randomUUID()).productId("PROD001").quantity(1).price(BigDecimal.TEN).build();
+
+        Order saved = Order.builder().id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT).createdAt(LocalDateTime.now()).build();
+        when(orderRepository.save(any(Order.class))).thenReturn(saved);
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(saved));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenReturn(orderProduct);
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
+
+        verify(mailService, never()).sendOrderAdminUpdate(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
