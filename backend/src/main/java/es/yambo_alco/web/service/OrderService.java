@@ -10,6 +10,7 @@ import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.OrderProductOperation;
 import es.yambo_alco.web.model.OrderStatusHistory;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.User;
@@ -129,28 +130,32 @@ public class OrderService {
     }
 
     /**
-     * Crea la incidencia de justificación para un pedido gestionado por un admin.
-     * La incidencia se vincula a todos los order_product del pedido.
+     * Crea la incidencia de justificación vinculada a todos los order_product del
+     * pedido (caso de creación en nombre del socio).
      */
     private Issue createJustificationIssue(String orderId, String justification, String adminUserId, String action) {
-        List<OrderProduct> orderProducts = getOrderProducts(orderId);
-        List<UUID> orderedProductIds = orderProducts.stream()
+        List<UUID> orderedProductIds = getOrderProducts(orderId).stream()
                 .map(OrderProduct::getId)
                 .toList();
+        return createJustificationIssue(orderedProductIds, justification, adminUserId, action);
+    }
+
+    /**
+     * Crea la incidencia de justificación vinculada a los order_product indicados.
+     */
+    private Issue createJustificationIssue(List<UUID> orderedProductIds, String justification,
+            String adminUserId, String action) {
         String title = String.format("Pedido %s por administración", action);
         return issueService.createIssue(orderedProductIds, title, justification, adminUserId, true);
     }
 
     /**
-     * Reemplaza los productos de un pedido existente (edición admin).
+     * Aplica operaciones explícitas sobre los productos de un pedido existente
+     * (edición admin): added, modified, unchanged, removed.
      * Solo permitido si el pedido no está en estado final (CLOSED/CANCELED).
      */
     @Transactional
-    public Order updateOrderProducts(@NonNull String orderId, @NonNull List<OrderProduct> orderProducts) {
-        if (orderProducts.isEmpty()) {
-            throw new BadRequestException("Order must contain at least one product");
-        }
-
+    public Order updateOrderProducts(@NonNull String orderId, @NonNull List<OrderProductOperation> operations) {
         Order order = getOrderById(orderId);
 
         if (order.getStatus() == OrderStatus.CLOSED || order.getStatus() == OrderStatus.CANCELED) {
@@ -159,64 +164,79 @@ public class OrderService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        for (OrderProduct op : orderProducts) {
-            Product product = productRepository.findById(op.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.getProductId()));
-
-            validateProductAccessForOrder(order.getCustomerId(), product, now);
-
-            BigDecimal calculatedPrice = calculatePrice(product, op.getConfiguration());
-            op.setPrice(calculatedPrice);
-        }
-
-        // MERGE preservando IDs de order_product existentes:
-        // issue.ordered_product_id tiene FK onDelete=CASCADE → si borramos los
-        // order_product (deleteByOrderId) las incidencias vinculadas (incluida la
-        // de justificación) se borran en cascada. En su lugar:
-        //  - línea que coincide (productId + configuration) → se actualiza (conserva ID)
-        //  - línea nueva → se crea
-        //  - línea existente que ya no está → se borra (solo esa)
-        List<OrderProduct> existing = getOrderProducts(orderId);
-        List<OrderProduct> toDelete = new ArrayList<>();
-
-        for (OrderProduct existingOp : existing) {
-            boolean stillPresent = orderProducts.stream().anyMatch(newOp ->
-                    newOp.getProductId().equals(existingOp.getProductId())
-                            && java.util.Objects.equals(normalizeConfig(newOp.getConfiguration()),
-                                    normalizeConfig(existingOp.getConfiguration())));
-            if (!stillPresent) {
-                toDelete.add(existingOp);
-            }
-        }
-        for (OrderProduct op : toDelete) {
-            orderProductRepository.delete(op);
-        }
-
-        for (OrderProduct newOp : orderProducts) {
-            OrderProduct matched = existing.stream()
-                    .filter(existingOp -> existingOp.getProductId().equals(newOp.getProductId())
-                            && java.util.Objects.equals(normalizeConfig(newOp.getConfiguration()),
-                                    normalizeConfig(existingOp.getConfiguration())))
-                    .findFirst()
-                    .orElse(null);
-            if (matched != null) {
-                // Actualizar el existente: conserva el ID (y las incidencias vinculadas)
-                matched.setQuantity(newOp.getQuantity());
-                matched.setPrice(newOp.getPrice());
-                matched.setConfiguration(newOp.getConfiguration());
-                orderProductRepository.save(matched);
-            } else {
-                newOp.setOrderId(orderId);
-                orderProductRepository.save(newOp);
-            }
+        for (OrderProductOperation op : operations) {
+            applyProductOperation(orderId, order, op, now);
         }
 
         return order;
     }
 
+    private void applyProductOperation(String orderId, Order order, OrderProductOperation op, LocalDateTime now) {
+        switch (op.action()) {
+            case "removed" -> {
+                if (op.orderedProductId() != null) {
+                    orderProductRepository.findById(op.orderedProductId())
+                            .ifPresent(orderProductRepository::delete);
+                }
+            }
+            case "unchanged" -> {
+                // Se conserva tal cual.
+            }
+            case "added" -> {
+                Product product = productRepository.findById(op.productId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.productId()));
+                validateProductAccessForOrder(order.getCustomerId(), product, now);
+                BigDecimal calculatedPrice = calculatePrice(product, op.configuration());
+                OrderProduct newOp = OrderProduct.builder()
+                        .orderId(orderId)
+                        .productId(op.productId())
+                        .quantity(op.quantity())
+                        .price(calculatedPrice)
+                        .configuration(op.configuration())
+                        .build();
+                orderProductRepository.save(newOp);
+            }
+            case "modified" -> {
+                if (op.orderedProductId() == null) {
+                    throw new BadRequestException("Ordered product ID is required for action 'modified'");
+                }
+                OrderProduct existing = orderProductRepository.findById(op.orderedProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Order product not found: " + op.orderedProductId()));
+                Product product = productRepository.findById(op.productId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + op.productId()));
+                validateProductAccessForOrder(order.getCustomerId(), product, now);
+                BigDecimal calculatedPrice = calculatePrice(product, op.configuration());
+                existing.setProductId(op.productId());
+                existing.setQuantity(op.quantity());
+                existing.setPrice(calculatedPrice);
+                existing.setConfiguration(op.configuration());
+                orderProductRepository.save(existing);
+            }
+            default -> throw new BadRequestException("Unknown order product action: " + op.action());
+        }
+    }
+
     private String normalizeConfig(String configuration) {
         if (configuration == null) return null;
         return configuration.isBlank() || "{}".equals(configuration.trim()) ? null : configuration.trim();
+    }
+
+    /**
+     * Copia superficial de los campos escalares de cada order_product, para
+     * conservar los valores originales antes de una edición (las entidades
+     * gestionadas se mutan en su lugar).
+     */
+    private List<OrderProduct> snapshotOrderProducts(List<OrderProduct> products) {
+        return products.stream()
+                .map(op -> OrderProduct.builder()
+                        .id(op.getId())
+                        .orderId(op.getOrderId())
+                        .productId(op.getProductId())
+                        .quantity(op.getQuantity())
+                        .price(op.getPrice())
+                        .configuration(op.getConfiguration())
+                        .build())
+                .toList();
     }
 
     /**
@@ -226,17 +246,63 @@ public class OrderService {
      */
     @Transactional
     public Order updateOrderProductsWithJustification(@NonNull String orderId,
-            @NonNull List<OrderProduct> orderProducts,
+            @NonNull List<OrderProductOperation> operations,
             @NonNull String justification, @NonNull String adminUserId) {
         if (justification == null || justification.isBlank()) {
             throw new BadRequestException("Justification is required when editing an order");
         }
-        List<OrderProduct> before = getOrderProducts(orderId);
-        Order order = updateOrderProducts(orderId, orderProducts);
-        Issue issue = createJustificationIssue(orderId, justification, adminUserId, "modificado");
-        List<MailService.OrderProductRow> rows = buildOrderRows(before, getOrderProducts(orderId));
+        // Instantánea de los valores originales: updateOrderProducts muta las
+        // mismas entidades gestionadas, así que hay que copiarlas antes para
+        // poder calcular correctamente el diff (email y productos afectados).
+        List<OrderProduct> before = snapshotOrderProducts(getOrderProducts(orderId));
+        Order order = updateOrderProducts(orderId, operations);
+        List<OrderProduct> after = getOrderProducts(orderId);
+
+        // La incidencia de modificación se vincula solo a los productos afectados
+        // (añadidos o modificados). Si no hubo cambios, se vincula al pedido completo
+        // para mantener la trazabilidad de la edición.
+        List<UUID> affectedIds = computeAffectedProductIds(before, after);
+        if (affectedIds.isEmpty()) {
+            affectedIds = after.stream().map(OrderProduct::getId).toList();
+        }
+        Issue issue = createJustificationIssue(affectedIds, justification, adminUserId, "modificado");
+        List<MailService.OrderProductRow> rows = buildOrderRows(before, after);
         try {
             sendOrderAdminUpdateEmail(order, "modificado", justification, issue.getId(), rows,
+                    computeTotalPrice(before));
+        } catch (Exception e) {
+            log.error("Failed to send admin-modified email for order: {}. Order updated successfully.",
+                    orderId, e);
+        }
+        return order;
+    }
+
+    /**
+     * Edita un pedido (admin) vinculando el cambio a una incidencia existente.
+     * En lugar de crear una incidencia nueva, añade la justificación como
+     * comentario a la incidencia indicada (trazabilidad: issue #78 / PR #77).
+     */
+    @Transactional
+    public Order updateOrderProductsWithExistingIssue(@NonNull String orderId,
+            @NonNull List<OrderProductOperation> operations,
+            @NonNull String justification, @NonNull String issueId, @NonNull String adminUserId) {
+        if (justification == null || justification.isBlank()) {
+            throw new BadRequestException("Justification is required when editing an order");
+        }
+
+        // Verifica que la incidencia existe antes de editar.
+        issueService.getIssueWithComments(issueId);
+
+        List<OrderProduct> before = snapshotOrderProducts(getOrderProducts(orderId));
+        Order order = updateOrderProducts(orderId, operations);
+        List<OrderProduct> after = getOrderProducts(orderId);
+
+        // Registra el cambio como comentario en la incidencia existente.
+        issueService.addComment(issueId, justification, adminUserId, null);
+
+        List<MailService.OrderProductRow> rows = buildOrderRows(before, after);
+        try {
+            sendOrderAdminUpdateEmail(order, "modificado", justification, issueId, rows,
                     computeTotalPrice(before));
         } catch (Exception e) {
             log.error("Failed to send admin-modified email for order: {}. Order updated successfully.",
@@ -317,6 +383,39 @@ public class OrderService {
         }
 
         return rows;
+    }
+
+    /**
+     * Devuelve los IDs de los order_product afectados por la edición (añadidos o
+     * modificados). Las líneas eliminadas no se incluyen porque su fila ya no
+     * existe tras la actualización.
+     */
+    private List<UUID> computeAffectedProductIds(List<OrderProduct> before, List<OrderProduct> after) {
+        List<OrderProduct> remainingBefore = new ArrayList<>(before);
+        List<UUID> affected = new ArrayList<>();
+
+        for (OrderProduct afterOp : after) {
+            OrderProduct beforeOp = findSameLine(remainingBefore, afterOp);
+            if (beforeOp == null) {
+                beforeOp = findSameProduct(remainingBefore, afterOp.getProductId());
+            }
+            if (beforeOp == null) {
+                affected.add(afterOp.getId());
+                continue;
+            }
+            remainingBefore.remove(beforeOp);
+
+            boolean quantityChanged = !java.util.Objects.equals(beforeOp.getQuantity(), afterOp.getQuantity());
+            boolean priceChanged = beforeOp.getPrice() != null && afterOp.getPrice() != null
+                    && beforeOp.getPrice().compareTo(afterOp.getPrice()) != 0;
+            boolean optionsChanged = !java.util.Objects.equals(normalizeConfig(beforeOp.getConfiguration()),
+                    normalizeConfig(afterOp.getConfiguration()));
+
+            if (quantityChanged || priceChanged || optionsChanged) {
+                affected.add(afterOp.getId());
+            }
+        }
+        return affected;
     }
 
     private OrderProduct findSameLine(List<OrderProduct> list, OrderProduct target) {

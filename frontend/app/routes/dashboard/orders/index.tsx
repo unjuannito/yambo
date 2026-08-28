@@ -25,7 +25,7 @@ import type { IssueReportWindowModel } from "~/types/issueType";
 import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
 import { OrderEditorModal } from "~/components/orders/OrderEditorModal";
 import { useAuth } from "~/hooks/useAuth";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faFileExport, faXmark, faUpload, faUser } from "@fortawesome/free-solid-svg-icons";
 import type { FileRecord } from "~/types/fileType";
@@ -71,6 +71,7 @@ export default function Orders() {
     const suppressAutoOpenRef = useRef(false);
     const { hasPermission } = useAuth();
     const isMerchAdmin = hasPermission({ obj: "issue", action: "update" });
+    const canViewUsers = hasPermission({ obj: "user", action: "read" });
     const [issueWindow, setIssueWindow] = useState<IssueReportWindowModel | null>(null);
 
     const openIssueWindow = (order: Order, preselectedProductId?: string) => {
@@ -428,7 +429,18 @@ export default function Orders() {
             },
             render: (order: Order) => (
                 <div className="text-xs">
-                    <p className="font-medium text-yambo-black">{order.user?.name || "N/A"}</p>
+                    <p className="font-medium text-yambo-black">
+                        {canViewUsers && order.user?.id ? (
+                            <Link
+                                to={`/mi-espacio/admin/usuarios/${order.user.id}/perfil`}
+                                className="hover:text-yambo-green-600 transition-colors"
+                            >
+                                {order.user.name || order.user.email}
+                            </Link>
+                        ) : (
+                            order.user?.name || "N/A"
+                        )}
+                    </p>
                     <p className="text-gray-400 text-xs">
                         {order.user?.email || ""}
                     </p>
@@ -672,7 +684,16 @@ export default function Orders() {
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
                                             <p className="font-medium text-yambo-black truncate">
-                                                {order.user?.name || "N/A"}
+                                                {canViewUsers && order.user?.id ? (
+                                                    <Link
+                                                        to={`/mi-espacio/admin/usuarios/${order.user.id}/perfil`}
+                                                        className="hover:text-yambo-green-600 transition-colors"
+                                                    >
+                                                        {order.user.name || order.user.email}
+                                                    </Link>
+                                                ) : (
+                                                    order.user?.name || "N/A"
+                                                )}
                                             </p>
                                             <p className="text-xs text-gray-400 truncate">
                                                 {order.user?.email || ""}

@@ -7,6 +7,10 @@ export interface CreateOrderProduct {
     productId: string;
     quantity: number;
     configuration?: string;
+    /** ID del order_product existente (para modified/unchanged/removed). */
+    orderedProductId?: string;
+    /** "added" | "modified" | "unchanged" | "removed". */
+    action?: "added" | "modified" | "unchanged" | "removed";
 }
 
 export interface CreateOrderRequest {
@@ -15,6 +19,8 @@ export interface CreateOrderRequest {
     userId?: string;
     /** Obligatoria al crear/editar en nombre de un socio: justificación (incidencia o petición). */
     justification?: string;
+    /** Opcional: ID de una incidencia existente a la que vincular la edición. */
+    issueId?: string;
 }
 
 export interface UpdateOrderStatusRequest {

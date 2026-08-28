@@ -39,6 +39,7 @@ export interface IssueRelatedProduct {
     quantity?: number;
     unitPrice?: string;
     configuration?: string;
+    orderId?: string;
 }
 
 export interface CreateIssueRequest {

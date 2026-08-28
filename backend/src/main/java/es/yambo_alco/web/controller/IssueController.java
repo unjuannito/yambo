@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.IssueWatcher;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.IssueService;
 import es.yambo_alco.web.service.IssueWatcherService;
@@ -40,6 +41,7 @@ public class IssueController {
     private final AuthService authService;
     private final PermissionCheckService permissionCheckService;
     private final IssueWatcherService issueWatcherService;
+    private final UserRepository userRepository;
 
     @PostMapping
     @PreAuthorize("@permissionCheck.hasPermission('issue', 'create') or @permissionCheck.hasPermission('issue', 'update')")
@@ -87,7 +89,7 @@ public class IssueController {
         Page<Issue> issues = issueService.listIssues(new IssueFilter(query, issueId, title, userId, status, startDate, endDate), pageable);
         Page<IssueListResponse> response = issues.map(issue -> {
             List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
-            return new IssueListResponse(issue, relatedProducts);
+            return new IssueListResponse(issue, relatedProducts, resolveCustomerName(relatedProducts));
         });
         return ResponseEntity.ok(response);
     }
@@ -101,10 +103,11 @@ public class IssueController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             Pageable pageable) {
         User currentUser = authService.getCurrentUser(true);
-        Page<Issue> issues = issueService.listIssues(new IssueFilter(null, null, title, currentUser.getId(), status, startDate, endDate), pageable);
+        Page<Issue> issues = issueService.listMyIssues(currentUser.getId(),
+                new IssueFilter(null, null, title, null, status, startDate, endDate), pageable);
         Page<IssueListResponse> response = issues.map(issue -> {
             List<OrderProduct> relatedProducts = issueService.getIssueProductsByIssueId(issue.getId());
-            return new IssueListResponse(issue, relatedProducts);
+            return new IssueListResponse(issue, relatedProducts, resolveCustomerName(relatedProducts));
         });
         return ResponseEntity.ok(response);
     }
@@ -155,6 +158,25 @@ public class IssueController {
 
     private void verifyAccessToIssue(Issue issue) {
         authService.getCurrentUser(true);
+    }
+
+    /**
+     * Resuelve el nombre del titular del pedido relacionado con la incidencia.
+     * Si no hay pedido relacionado, devuelve null (la incidencia no pertenece a
+     * ningún titular de pedido).
+     */
+    private String resolveCustomerName(List<OrderProduct> relatedProducts) {
+        if (relatedProducts == null || relatedProducts.isEmpty()) {
+            return null;
+        }
+        OrderProduct first = relatedProducts.get(0);
+        if (first.getOrder() == null || first.getOrder().getCustomerId() == null) {
+            return null;
+        }
+        String customerId = first.getOrder().getCustomerId();
+        return userRepository.findById(customerId)
+                .map(User::getName)
+                .orElse(customerId);
     }
 
     @Data
@@ -250,6 +272,7 @@ public class IssueController {
         private Integer quantity;
         private String unitPrice;
         private String configuration;
+        private String orderId;
 
         public RelatedProductResponse(OrderProduct orderProduct) {
             this.orderedProductId = orderProduct.getId();
@@ -262,6 +285,7 @@ public class IssueController {
             this.quantity = orderProduct.getQuantity();
             this.unitPrice = orderProduct.getPrice() != null ? orderProduct.getPrice().toString() : null;
             this.configuration = orderProduct.getConfiguration();
+            this.orderId = orderProduct.getOrderId();
         }
     }
 
@@ -300,7 +324,7 @@ public class IssueController {
         private String productName;
         private String customerName;
 
-        public IssueListResponse(Issue issue, List<OrderProduct> relatedProducts) {
+        public IssueListResponse(Issue issue, List<OrderProduct> relatedProducts, String customerName) {
             this.id = issue.getId();
             this.orderedProductIds = relatedProducts.stream().map(OrderProduct::getId).toList();
             this.title = issue.getTitle();
@@ -309,6 +333,7 @@ public class IssueController {
             this.createdBy = issue.getCreatedBy();
             this.createdAt = issue.getCreatedAt().toString();
             this.updatedAt = issue.getUpdatedAt().toString();
+            this.customerName = customerName;
 
             if (!relatedProducts.isEmpty()) {
                 OrderProduct firstProduct = relatedProducts.get(0);
@@ -316,13 +341,6 @@ public class IssueController {
                 this.productName = firstProduct.getProduct() != null
                         ? firstProduct.getProduct().getName()
                         : null;
-                if (firstProduct.getOrder() != null && firstProduct.getOrder().getCustomerId() != null) {
-                    this.customerName = firstProduct.getOrder().getCustomerId();
-                }
-            }
-
-            if (issue.getCreatedByUser() != null) {
-                this.customerName = issue.getCreatedByUser().getName();
             }
         }
     }

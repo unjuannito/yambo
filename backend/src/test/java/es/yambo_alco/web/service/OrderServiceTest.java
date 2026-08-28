@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -471,10 +472,10 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderProducts_WhenMatchingLine_ShouldUpdateInPlacePreservingId() {
-        // La línea existente (mismo productId+configuration) debe ACTUALIZARSE conservando
-        // su ID — no borrarse y recrearse — porque issue.ordered_product_id tiene FK
-        // onDelete=CASCADE y borrar los order_product eliminaría las incidencias vinculadas.
+    void updateOrderProducts_WhenModified_ShouldUpdateInPlacePreservingId() {
+        // La línea existente debe ACTUALIZARSE conservando su ID — no borrarse y
+        // recrearse — porque issue.ordered_product_id tiene FK onDelete=CASCADE
+        // y borrar los order_product eliminaría las incidencias vinculadas.
         Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
         when(userRepository.findById("USER001")).thenReturn(Optional.of(
@@ -491,18 +492,13 @@ class OrderServiceTest {
                 .price(BigDecimal.TEN)
                 .configuration(null)
                 .build();
-        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(existingOp));
+        when(orderProductRepository.findById(existingId)).thenReturn(Optional.of(existingOp));
 
-        OrderProduct newOp = OrderProduct.builder()
-                .productId("PROD001")
-                .quantity(3)
-                .price(BigDecimal.TEN)
-                .configuration(null)
-                .build();
+        OrderProductOperation op = new OrderProductOperation(existingId, "PROD001", 3, null, "modified");
 
-        orderService.updateOrderProducts("ORD001", List.of(newOp));
+        orderService.updateOrderProducts("ORD001", List.of(op));
 
-        // No se borra NADA (la línea coincide) — se actualiza el existente
+        // No se borra la línea; se actualiza el existente conservando su ID.
         verify(orderProductRepository, never()).deleteByOrderId(anyString());
         verify(orderProductRepository, never()).delete(any(OrderProduct.class));
         ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
@@ -512,36 +508,142 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderProducts_WhenLineRemoved_ShouldDeleteOnlyThatLine() {
+    void updateOrderProducts_WhenRemoved_ShouldDeleteOnlyThatLine() {
         Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
         when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(userRepository.findById("USER001")).thenReturn(Optional.of(
-                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
-        when(productRepository.findById("PROD002")).thenReturn(Optional.of(
-                Product.builder().id("PROD002").name("Other").basePrice(BigDecimal.TEN).familyProduct(null).build()));
 
+        UUID removedId = UUID.randomUUID();
         OrderProduct removedOp = OrderProduct.builder()
-                .id(UUID.randomUUID())
+                .id(removedId)
                 .orderId("ORD001")
                 .productId("PROD001")
                 .quantity(1)
                 .price(BigDecimal.TEN)
                 .configuration(null)
                 .build();
-        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(removedOp));
+        when(orderProductRepository.findById(removedId)).thenReturn(Optional.of(removedOp));
 
-        OrderProduct newOp = OrderProduct.builder()
-                .productId("PROD002")
-                .quantity(1)
-                .price(BigDecimal.TEN)
-                .configuration(null)
-                .build();
+        OrderProductOperation op = new OrderProductOperation(removedId, "PROD001", 1, null, "removed");
 
-        orderService.updateOrderProducts("ORD001", List.of(newOp));
+        orderService.updateOrderProducts("ORD001", List.of(op));
 
-        // La línea vieja (PROD001) se borra individualmente; NO se usa deleteByOrderId
+        // La línea se borra individualmente; NO se usa deleteByOrderId
         verify(orderProductRepository, never()).deleteByOrderId(anyString());
         verify(orderProductRepository).delete(removedOp);
+    }
+
+    @Test
+    void updateOrderProducts_WhenModifiedWithConfigChange_ShouldPreserveOrderProductId() {
+        // Al modificar la configuración de una línea, el ID del order_product debe
+        // conservarse para no perder las incidencias vinculadas (onDelete=CASCADE).
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("Test").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID existingId = UUID.randomUUID();
+        OrderProduct existingOp = OrderProduct.builder()
+                .id(existingId)
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration("{\"Talla\":\"S\"}")
+                .build();
+        when(orderProductRepository.findById(existingId)).thenReturn(Optional.of(existingOp));
+
+        OrderProductOperation op = new OrderProductOperation(existingId, "PROD001", 1, "{\"Talla\":\"M\"}", "modified");
+
+        orderService.updateOrderProducts("ORD001", List.of(op));
+
+        // No se borra la línea; se reutiliza su ID aunque cambie la configuración.
+        verify(orderProductRepository, never()).delete(any(OrderProduct.class));
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(existingId, captor.getValue().getId());
+        assertEquals("{\"Talla\":\"M\"}", captor.getValue().getConfiguration());
+    }
+
+    @Test
+    void updateOrderProductsWithJustification_ShouldLinkIssueOnlyToAffectedProducts() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("P1").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+        when(productRepository.findById("PROD002")).thenReturn(Optional.of(
+                Product.builder().id("PROD002").name("P2").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
+        // Estado original (1ª llamada a getOrderProducts)
+        OrderProduct beforeOp1 = OrderProduct.builder().id(id1).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+        OrderProduct beforeOp2 = OrderProduct.builder().id(id2).orderId("ORD001").productId("PROD002")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+
+        // Entidad gestionada que se muta en la operación "modified" (2ª llamada)
+        OrderProduct existingOp1 = OrderProduct.builder().id(id1).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+        OrderProduct existingOp2 = OrderProduct.builder().id(id2).orderId("ORD001").productId("PROD002")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+
+        when(orderProductRepository.findAll(any(Specification.class)))
+                .thenReturn(List.of(beforeOp1, beforeOp2),      // before (snapshot)
+                        List.of(existingOp1, existingOp2));     // after (ya mutado)
+        when(orderProductRepository.findById(id2)).thenReturn(Optional.of(existingOp2));
+        when(orderProductRepository.save(any(OrderProduct.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        // Solo PROD002 cambia (cantidad 1 → 2); PROD001 queda igual.
+        OrderProductOperation op1 = new OrderProductOperation(id1, "PROD001", 1, null, "unchanged");
+        OrderProductOperation op2 = new OrderProductOperation(id2, "PROD002", 2, null, "modified");
+
+        orderService.updateOrderProductsWithJustification("ORD001", List.of(op1, op2),
+                "Cambio por WhatsApp", "ADMIN001");
+
+        // La incidencia de modificación se vincula SOLO al producto afectado (id2)
+        verify(issueService).createIssue(List.of(id2), "Pedido modificado por administración",
+                "Cambio por WhatsApp", "ADMIN001", true);
+    }
+
+    @Test
+    void updateOrderProductsWithExistingIssue_ShouldCommentOnExistingIssueInsteadOfCreatingNewOne() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("P1").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID id1 = UUID.randomUUID();
+        OrderProduct existingOp = OrderProduct.builder().id(id1).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+
+        when(orderProductRepository.findAll(any(Specification.class)))
+                .thenReturn(List.of(existingOp), List.of(existingOp));
+        when(orderProductRepository.findById(id1)).thenReturn(Optional.of(existingOp));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Issue existingIssue = Issue.builder().id("ISS001").build();
+        when(issueService.getIssueWithComments("ISS001")).thenReturn(existingIssue);
+
+        OrderProductOperation op = new OrderProductOperation(id1, "PROD001", 2, null, "modified");
+
+        orderService.updateOrderProductsWithExistingIssue("ORD001", List.of(op),
+                "Cambio por WhatsApp", "ISS001", "ADMIN001");
+
+        // Se añade un comentario a la incidencia existente y NO se crea una incidencia nueva.
+        verify(issueService).addComment(eq("ISS001"), eq("Cambio por WhatsApp"), eq("ADMIN001"), isNull());
+        verify(issueService, never()).createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean());
     }
 
     @Test

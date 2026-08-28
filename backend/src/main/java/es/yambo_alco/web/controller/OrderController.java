@@ -5,6 +5,7 @@ import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.OrderProductOperation;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
@@ -86,8 +87,17 @@ public class OrderController {
         if (request.getJustification() == null || request.getJustification().isBlank()) {
             throw new BadRequestException("Justification is required when editing an order");
         }
-        Order order = orderService.updateOrderProductsWithJustification(id, toOrderProducts(request.getProducts()),
-                request.getJustification(), currentUser.getId());
+
+        Order order;
+        List<OrderProductOperation> operations = toOperations(request.getProducts());
+        if (request.getIssueId() != null && !request.getIssueId().isBlank()) {
+            // Vincular la edición a una incidencia existente en lugar de crear una nueva.
+            order = orderService.updateOrderProductsWithExistingIssue(id, operations,
+                    request.getJustification(), request.getIssueId(), currentUser.getId());
+        } else {
+            order = orderService.updateOrderProductsWithJustification(id, operations,
+                    request.getJustification(), currentUser.getId());
+        }
         List<OrderProduct> products = orderService.getOrderProducts(order.getId());
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
     }
@@ -103,6 +113,17 @@ public class OrderController {
                                 : null)
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    private List<OrderProductOperation> toOperations(List<OrderProductRequest> requestProducts) {
+        return requestProducts.stream()
+                .map(p -> new OrderProductOperation(
+                        p.getOrderedProductId(),
+                        p.getProductId(),
+                        p.getQuantity(),
+                        p.getConfiguration(),
+                        p.getAction() == null || p.getAction().isBlank() ? "added" : p.getAction()))
+                .toList();
     }
 
     @GetMapping
@@ -251,6 +272,13 @@ public class OrderController {
          * incidencia vinculada al pedido automáticamente (trazabilidad).
          */
         private String justification;
+
+        /**
+         * Opcional: ID de una incidencia existente a la que vincular la edición.
+         * Si se indica, en lugar de crear una incidencia nueva se añade la
+         * justificación como comentario a esa incidencia.
+         */
+        private String issueId;
     }
 
     @Data
@@ -262,6 +290,12 @@ public class OrderController {
         private Integer quantity;
 
         private String configuration;
+
+        /** ID del order_product existente (modified/unchanged/removed). */
+        private java.util.UUID orderedProductId;
+
+        /** "added" | "modified" | "unchanged" | "removed" (por defecto "added"). */
+        private String action;
     }
 
     @Data

@@ -8,6 +8,7 @@ import { productViewService } from "~/services/productViewService";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ProductOptionsFields from "~/components/common/forms/ProductOptionsFields";
+import { calculateProductPrice } from "~/utils/calculatePrice";
 import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -75,28 +76,9 @@ export default function ProductPage() {
 
     useEffect(() => {
         if (product) {
-            calculatePrice();
+            setTotalPrice(calculateProductPrice(product, configuration));
         }
     }, [configuration, product]);
-
-    const calculatePrice = () => {
-        if (!product) return;
-        let price = product.basePrice;
-
-        product.options.forEach((option) => {
-            const selectedValue = configuration[option.name];
-
-            if (option.type === "select" && selectedValue) {
-                const valueId = typeof selectedValue === 'object' ? selectedValue.id : selectedValue;
-                const value = option.values?.find((v) => v.id === valueId);
-                if (value?.price) price += value.price;
-            } else if (option.type === "text_input" && selectedValue && selectedValue.trim() !== "") {
-                if (option.price) price += option.price;
-            }
-        });
-
-        setTotalPrice(price);
-    };
 
     const handleAddToCart = () => {
         if (!product) return;

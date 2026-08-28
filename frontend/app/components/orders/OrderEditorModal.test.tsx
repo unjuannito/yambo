@@ -5,6 +5,7 @@ import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService } from "~/services/familyProductService";
 import { adminUserService } from "~/services/adminUserService";
+import { issueService } from "~/services/issueService";
 import toast from "react-hot-toast";
 import type { Order } from "~/types/order";
 
@@ -30,6 +31,12 @@ vi.mock("~/services/familyProductService", () => ({
 vi.mock("~/services/adminUserService", () => ({
     adminUserService: {
         listUsers: vi.fn(),
+    },
+}));
+
+vi.mock("~/services/issueService", () => ({
+    issueService: {
+        getIssuesByOrder: vi.fn().mockResolvedValue([]),
     },
 }));
 
@@ -168,5 +175,170 @@ describe("OrderEditorModal", () => {
             expect(screen.getByDisplayValue("Paula (paula@example.com)")).toBeInTheDocument()
         );
         expect(screen.getByText(/Socio seleccionado/)).toBeInTheDocument();
+    });
+
+    it("muestra la diferencia de precio respecto al original al cambiar una opción con precio", async () => {
+        renderModal();
+
+        await waitFor(() => expect(screen.getByDisplayValue("10/11")).toBeInTheDocument());
+
+        // Cambia la talla a 12/13, que tiene un sobrecoste de +2 €
+        fireEvent.change(screen.getByDisplayValue("10/11"), { target: { value: "12/13" } });
+
+        // Precio original (20,00) tachado + nuevo (22,00) + delta (+2,00 €)
+        await waitFor(() => {
+            expect(screen.getAllByText("(+2.00 €)").length).toBeGreaterThan(0);
+            expect(screen.getAllByText("20.00 €").length).toBeGreaterThan(0);
+            expect(screen.getAllByText("22.00 €").length).toBeGreaterThan(0);
+        });
+    });
+
+    it("restaura el pedido a la versión original con el botón Restaurar original", async () => {
+        renderModal();
+
+        await waitFor(() => expect(screen.getByDisplayValue("10/11")).toBeInTheDocument());
+
+        // Cambia la talla a 12/13
+        fireEvent.change(screen.getByDisplayValue("10/11"), { target: { value: "12/13" } });
+
+        // El botón global aparece cuando hay cambios
+        const restoreAll = await screen.findByRole("button", { name: "Restaurar original" });
+        fireEvent.click(restoreAll);
+
+        await waitFor(() => {
+            expect(screen.getByDisplayValue("10/11")).toBeInTheDocument();
+        });
+        expect(screen.queryByDisplayValue("12/13")).not.toBeInTheDocument();
+    });
+
+    it("vincula la edición a una incidencia existente cuando se selecciona ese modo", async () => {
+        vi.mocked(issueService.getIssuesByOrder).mockResolvedValue([
+            {
+                id: "ISS123",
+                orderedProductIds: [],
+                title: "Cambio por WhatsApp",
+                description: "",
+                status: "OPEN",
+                createdBy: "ADMIN001",
+                createdAt: "",
+                updatedAt: "",
+            } as any,
+        ]);
+
+        renderModal();
+
+        await waitFor(() => expect(screen.getByDisplayValue("10/11")).toBeInTheDocument());
+
+        // Cambia a modo "Incidencia existente"
+        fireEvent.click(screen.getByRole("button", { name: "Incidencia existente" }));
+
+        // Selecciona la incidencia existente
+        const select = await screen.findByRole("combobox", { name: "Incidencia" });
+        fireEvent.change(select, { target: { value: "ISS123" } });
+
+        // Justificación (comentario)
+        const justification = document.querySelector("textarea");
+        expect(justification).not.toBeNull();
+        fireEvent.change(justification!, { target: { value: "motivo de prueba" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+        await waitFor(() => {
+            expect(orderService.updateOrder).toHaveBeenCalledWith(
+                "ORD001",
+                expect.objectContaining({
+                    justification: "motivo de prueba",
+                    issueId: "ISS123",
+                })
+            );
+        });
+    });
+
+    it("filtra las líneas mostrando solo los productos de la incidencia seleccionada", async () => {
+        const twoProductOrder: Order = {
+            ...mockOrder,
+            products: [
+                {
+                    id: "op-1",
+                    productId: "prod-1",
+                    productName: "Camiseta Jamboloco",
+                    quantity: 1,
+                    price: 20,
+                    configuration: '{"Talla":"10/11","Nombre":"Paula","Destinatario":"Paula (es una prueba)"}',
+                    status: "PENDING",
+                },
+                {
+                    id: "op-2",
+                    productId: "prod-1",
+                    productName: "Camiseta Jamboloco",
+                    quantity: 2,
+                    price: 20,
+                    configuration: '{"Talla":"12/13","Nombre":"Ana","Destinatario":"Ana"}',
+                    status: "PENDING",
+                },
+            ],
+        };
+
+        vi.mocked(issueService.getIssuesByOrder).mockResolvedValue([
+            {
+                id: "ISS123",
+                orderedProductIds: ["op-1"],
+                title: "Cambio por WhatsApp",
+                description: "",
+                status: "OPEN",
+                createdBy: "ADMIN001",
+                createdAt: "",
+                updatedAt: "",
+            } as any,
+        ]);
+
+        render(<OrderEditorModal order={twoProductOrder} isOpen onClose={vi.fn()} onSaved={vi.fn()} />);
+
+        await waitFor(() => expect(screen.getByDisplayValue("10/11")).toBeInTheDocument());
+
+        fireEvent.click(screen.getByRole("button", { name: "Incidencia existente" }));
+        const select = await screen.findByRole("combobox", { name: "Incidencia" });
+        fireEvent.change(select, { target: { value: "ISS123" } });
+
+        // Solo la línea op-1 (Talla 10/11) queda visible; la op-2 (12/13) se oculta.
+        await waitFor(() => {
+            expect(screen.getByDisplayValue("10/11")).toBeInTheDocument();
+            expect(screen.queryByDisplayValue("12/13")).not.toBeInTheDocument();
+        });
+        expect(screen.getByText(/Mostrando 1 de 2/)).toBeInTheDocument();
+    });
+
+    it("envía acciones explícitas por producto al guardar cambios", async () => {
+        renderModal();
+
+        await waitFor(() => expect(screen.getByDisplayValue("10/11")).toBeInTheDocument());
+
+        // Cambia la cantidad de 1 a 2 → la línea queda "modified"
+        const quantityInput = document.querySelector('input[type="number"]');
+        expect(quantityInput).not.toBeNull();
+        fireEvent.change(quantityInput!, { target: { value: "2" } });
+
+        const justification = document.querySelector("textarea");
+        expect(justification).not.toBeNull();
+        fireEvent.change(justification!, { target: { value: "motivo de prueba" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+        await waitFor(() => {
+            expect(orderService.updateOrder).toHaveBeenCalledWith(
+                "ORD001",
+                expect.objectContaining({
+                    justification: "motivo de prueba",
+                    products: [
+                        expect.objectContaining({
+                            productId: "prod-1",
+                            orderedProductId: "op-1",
+                            quantity: 2,
+                            action: "modified",
+                        }),
+                    ],
+                })
+            );
+        });
     });
 });

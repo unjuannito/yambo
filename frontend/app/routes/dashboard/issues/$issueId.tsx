@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useParams } from "react-router";
 import type { IssueDetail, IssueStatus, IssueWatcher } from "~/types/issueType";
 import { issueService } from "~/services/issueService";
+import { orderService, type OrderProduct } from "~/services/orderService";
 import { IssueStatusBadge, IssueCommentForm, IssueSidebarInfo, IssueChatMessage } from "~/components/issues";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
+import { getIssueOrderedProductIds } from "~/utils/issueUtils";
 import { useAuth } from "~/hooks/useAuth";
+import toast from "react-hot-toast";
 
 export default function IssueDetailPage() {
     const { issueId } = useParams<{ issueId: string }>();
@@ -19,6 +22,11 @@ export default function IssueDetailPage() {
     const [watchersLoading, setWatchersLoading] = useState(false);
     const [relatedOrderId, setRelatedOrderId] = useState<string | null>(null);
     const [showInfo, setShowInfo] = useState(false);
+    const [editingProducts, setEditingProducts] = useState(false);
+    const [orderAllProducts, setOrderAllProducts] = useState<OrderProduct[]>([]);
+    const [editSelectedIds, setEditSelectedIds] = useState<string[]>([]);
+    const [savingProducts, setSavingProducts] = useState(false);
+    const [productsError, setProductsError] = useState<string | null>(null);
 
     const isAdmin = useMemo(() => 
         currentUser?.permissions?.some(p => p.obj === 'issue' && p.actions.includes('update')) || false,
@@ -33,7 +41,11 @@ export default function IssueDetailPage() {
                 issueService.getAllIssues(0, 1, undefined, undefined, undefined, undefined, issueId).catch(() => null)
             ]);
             setIssue(data);
-            setRelatedOrderId(list?.content?.[0]?.orderId || null);
+            setRelatedOrderId(
+                list?.content?.[0]?.orderId
+                    || data.relatedProducts?.[0]?.orderId
+                    || null
+            );
             setError(null);
         } catch (err) {
             setError(getErrorMessage(err, "Error al cargar la incidencia"));
@@ -108,6 +120,55 @@ export default function IssueDetailPage() {
         setWatchers(p => p.filter(w => w.email !== email));
     };
 
+    const startEditProducts = async () => {
+        if (!relatedOrderId || !issue) return;
+        setProductsError(null);
+        try {
+            const order = await orderService.getOrder(relatedOrderId);
+            setOrderAllProducts(order.products);
+            setEditSelectedIds(
+                issue.relatedProducts && issue.relatedProducts.length > 0
+                    ? issue.relatedProducts.map((p) => p.orderedProductId)
+                    : getIssueOrderedProductIds(issue)
+            );
+            setEditingProducts(true);
+        } catch (err) {
+            setProductsError(getErrorMessage(err, "Error al cargar los productos"));
+        }
+    };
+
+    const cancelEditProducts = () => {
+        setEditingProducts(false);
+        setProductsError(null);
+    };
+
+    const toggleEditProduct = (id: string) => {
+        setEditSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+    };
+
+    const saveProductUpdates = async () => {
+        if (editSelectedIds.length === 0) {
+            setProductsError("Selecciona al menos un producto");
+            return;
+        }
+        setSavingProducts(true);
+        setProductsError(null);
+        try {
+            await issueService.updateIssueProducts(issueId!, editSelectedIds);
+            setEditingProducts(false);
+            await loadIssue();
+            toast.success("Incidencia actualizada correctamente");
+        } catch (err) {
+            const message = getErrorMessage(err, "No se pudo actualizar");
+            toast.error(message);
+            setProductsError(message);
+        } finally {
+            setSavingProducts(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center h-screen text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse w-full">
             Cargando incidencia...
@@ -127,7 +188,15 @@ export default function IssueDetailPage() {
             relatedOrderId={relatedOrderId}
             watchers={watchers}
             loadingWatchers={watchersLoading}
-            onUpdateProducts={() => { }}
+            editingProducts={editingProducts}
+            orderAllProducts={orderAllProducts}
+            editSelectedIds={editSelectedIds}
+            savingProducts={savingProducts}
+            productsError={productsError}
+            onStartEditProducts={startEditProducts}
+            onToggleEditProduct={toggleEditProduct}
+            onSaveProducts={saveProductUpdates}
+            onCancelEditProducts={cancelEditProducts}
             onAddWatcher={handleAddWatcher}
             onRemoveWatcher={handleRemoveWatcher}
         />
