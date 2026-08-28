@@ -206,11 +206,16 @@ pipeline {
                     when { expression { env.BE_CHANGED == 'true' } }
                     steps {
                         script {
-                            def sonarArgs = \'\'
-                            if (env.IS_PR == \'true\') {
-                                sonarArgs = \"-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}\"
-                            } else if (env.IS_MAIN != \'true\') {
-                                sonarArgs = \"-Dsonar.branch.name=${env.BRANCH_NAME}\"
+                            def sonarArgs = ''
+
+                            if (env.IS_PR == 'true') {
+
+                                sonarArgs = '--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}'
+
+                            } else if (env.IS_MAIN != 'true') {
+
+                                sonarArgs = '--define sonar.branch.name=${env.BRANCH_NAME}'
+
                             }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
@@ -234,12 +239,17 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
-                                                                 def sonarArgs = \'\'
-                            if (env.IS_PR == \'true\') {
-                                sonarArgs = \"--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}\"
-                            } else if (env.IS_MAIN != \'true\') {
-                                sonarArgs = \"--define sonar.branch.name=${env.BRANCH_NAME}\"
-                            }
+                                                                 def sonarArgs = ''
+
+                                                                 if (env.IS_PR == 'true') {
+
+                                                                     sonarArgs = '--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}'
+
+                                                                 } else if (env.IS_MAIN != 'true') {
+
+                                                                     sonarArgs = '--define sonar.branch.name=${env.BRANCH_NAME}'
+
+                                                                 }
 docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
                                        -e SONAR_SCANNER_OPTS=-Xmx1024m \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024 ${sonarArgs}'
