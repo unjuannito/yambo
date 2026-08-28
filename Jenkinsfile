@@ -201,7 +201,7 @@ pipeline {
         // ═══════════════════════════════════════════════════════════════════
         // Phase 4 — SonarQube (BUILD_HOST → sonar.cabrasky.net/.21:9000)
         // ═══════════════════════════════════════════════════════════════════
-        stage('SonarQube') {
+                stage('SonarQube') {
             when {
                 expression { env.DEPLOYABLE_CHANGED == 'true' && !params.FORCE_PROD_DEPLOY }
             }
@@ -213,13 +213,9 @@ pipeline {
                             def sonarArgs = ''
 
                             if (env.IS_PR == 'true') {
-
                                 sonarArgs = '-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}'
-
                             } else if (env.IS_MAIN != 'true') {
-
                                 sonarArgs = '-Dsonar.branch.name=${env.BRANCH_NAME}'
-
                             }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
@@ -234,27 +230,19 @@ pipeline {
                     when { expression { env.FE_CHANGED == 'true' } }
                     steps {
                         script {
-                            // Imagen oficial con Java + escaner incluidos (node:22-alpine no tiene Java)
                             // SONAR_SCANNER_OPTS limita el heap del JVM del escáner y
                             // sonar.javascript.node.maxspace limita el runtime Node.js embedded
-                            // (el análisis JS/TS delega en /opt/sonar-scanner/.sonar/js/node-runtime,
-                            // que por defecto usa ~2.2 GB de heap → satura la VM .21 → NetBird
-                            // management pierde sync y "se cae la red" durante el build).
+                            def sonarArgs = ''
+
+                            if (env.IS_PR == 'true') {
+                                sonarArgs = '--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}'
+                            } else if (env.IS_MAIN != 'true') {
+                                sonarArgs = '--define sonar.branch.name=${env.BRANCH_NAME}'
+                            }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
-                                                                 def sonarArgs = ''
-
-                                                                 if (env.IS_PR == 'true') {
-
-                                                                     sonarArgs = '--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}'
-
-                                                                 } else if (env.IS_MAIN != 'true') {
-
-                                                                     sonarArgs = '--define sonar.branch.name=${env.BRANCH_NAME}'
-
-                                                                 }
-docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
+                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
                                        -e SONAR_SCANNER_OPTS=-Xmx1024m \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024 ${sonarArgs}'
                             """
@@ -264,7 +252,6 @@ docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
         // Phase 5 — Docker Build & Push (BUILD_HOST → REGISTRY)
         // ═══════════════════════════════════════════════════════════════════
         // NOTA: builds SECUENCIALES y con --memory limitado. La VM infra (.21)
