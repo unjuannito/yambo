@@ -420,10 +420,13 @@ class EmailRenderTest {
                                         new MailService.OrderProductOptionChange("added", "Nombre", "", "Paula")),
                                 "35,00 €", "40,00 €", true),
                         new MailService.OrderProductRow("unchanged", "Gorra Clásica", 3, 3, false,
-                                List.of(), "12,00 €", "12,00 €", false))
+                                List.of(), "12,00 €", "12,00 €", false),
+                        new MailService.OrderProductRow("modified", "Bolsa de Tela Yambo", 1, 1, false,
+                                List.of(new MailService.OrderProductOptionChange("removed", "Nombre", "Paula", "")),
+                                "15,00 €", "10,00 €", true))
                 : List.of());
-        ctx.setVariable("oldTotalText", action.equals("modificado") ? "89,50 €" : "");
-        ctx.setVariable("newTotalText", action.equals("modificado") ? "96,50 €" : "108,00 €");
+        ctx.setVariable("oldTotalText", action.equals("modificado") ? "104,50 €" : "");
+        ctx.setVariable("newTotalText", action.equals("modificado") ? "106,50 €" : "108,00 €");
         ctx.setVariable("totalChanged", action.equals("modificado"));
 
         String html = engine.process("emails/order-admin-updated", ctx);
@@ -441,8 +444,11 @@ class EmailRenderTest {
             assertThat(html).contains("20,50 €");
             assertThat(html).contains("35,00 €");
             assertThat(html).contains("40,00 €");
-            assertThat(html).contains("89,50 €");
-            assertThat(html).contains("96,50 €");
+            assertThat(html).contains("Bolsa de Tela Yambo");
+            assertThat(html).contains("15,00 €");
+            assertThat(html).contains("10,00 €");
+            assertThat(html).contains("104,50 €");
+            assertThat(html).contains("106,50 €");
         } else {
             assertThat(html).contains("Camiseta Logo 2026");
         }
