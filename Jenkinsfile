@@ -213,9 +213,9 @@ pipeline {
                             def sonarArgs = ''
 
                             if (env.IS_PR == 'true') {
-                                sonarArgs = '-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}'
+                                sonarArgs = "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
                             } else if (env.IS_MAIN != 'true') {
-                                sonarArgs = '-Dsonar.branch.name=${env.BRANCH_NAME}'
+                                sonarArgs = "-Dsonar.branch.name=${env.BRANCH_NAME}"
                             }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
@@ -235,9 +235,9 @@ pipeline {
                             def sonarArgs = ''
 
                             if (env.IS_PR == 'true') {
-                                sonarArgs = '--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}'
+                                sonarArgs = "--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}"
                             } else if (env.IS_MAIN != 'true') {
-                                sonarArgs = '--define sonar.branch.name=${env.BRANCH_NAME}'
+                                sonarArgs = "--define sonar.branch.name=${env.BRANCH_NAME}"
                             }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
