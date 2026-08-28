@@ -206,12 +206,17 @@ pipeline {
                     when { expression { env.BE_CHANGED == 'true' } }
                     steps {
                         script {
-                            // Sonar Community no soporta branch analysis: no pasar sonar.branch.name
+                            def sonarArgs = \'\'
+                            if (env.IS_PR == \'true\') {
+                                sonarArgs = \"-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}\"
+                            } else if (env.IS_MAIN != \'true\') {
+                                sonarArgs = \"-Dsonar.branch.name=${env.BRANCH_NAME}\"
+                            }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/backend && \
                                      docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/backend:/app -w /app \
-                                       maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN}"'
+                                       maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} ${sonarArgs}"'
                             """
                         }
                     }
@@ -229,9 +234,15 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
-                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
+                                                                 def sonarArgs = \'\'
+                            if (env.IS_PR == \'true\') {
+                                sonarArgs = \"--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}\"
+                            } else if (env.IS_MAIN != \'true\') {
+                                sonarArgs = \"--define sonar.branch.name=${env.BRANCH_NAME}\"
+                            }
+docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
                                        -e SONAR_SCANNER_OPTS=-Xmx1024m \
-                                       sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024'
+                                       sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024 ${sonarArgs}'
                             """
                         }
                     }
