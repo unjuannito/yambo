@@ -15,6 +15,7 @@ import type { Order } from "~/types/order";
 import type { Issue } from "~/types/issueType";
 import ProductOptionsFields from "~/components/common/forms/ProductOptionsFields";
 import { calculateProductPrice } from "~/utils/calculatePrice";
+import { randomId } from "~/utils/randomId";
 
 interface OrderEditorModalProps {
     /** Pedido a editar; null = crear pedido nuevo. */
@@ -41,7 +42,7 @@ interface EditorLine {
     originalConfiguration?: Record<string, any>;
 }
 
-const EMPTY_LINE: EditorLine = { key: crypto.randomUUID(), productId: "", quantity: 1 };
+const EMPTY_LINE: EditorLine = { key: randomId(), productId: "", quantity: 1 };
 
 /** Parsea la configuración JSON de un pedido a objeto (o `undefined` si es inválida/vacía). */
 function parseConfiguration(raw?: string): Record<string, any> | undefined {
@@ -128,7 +129,7 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved, initialUserI
             ? order.products.map((p) => {
                   const config = parseConfiguration(p.configuration);
                   return {
-                      key: crypto.randomUUID(),
+                      key: randomId(),
                       productId: p.productId,
                       orderedProductId: p.id,
                       quantity: p.quantity,
@@ -203,7 +204,7 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved, initialUserI
         setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.key !== key) : [EMPTY_LINE]));
     };
 
-    const addLine = () => setLines((prev) => [...prev, { ...EMPTY_LINE, key: crypto.randomUUID() }]);
+    const addLine = () => setLines((prev) => [...prev, { ...EMPTY_LINE, key: randomId() }]);
 
     const isLineDirty = (line: EditorLine): boolean => {
         if (line.originalQuantity !== undefined && line.quantity !== line.originalQuantity) return true;
