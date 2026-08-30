@@ -1,0 +1,334 @@
+[
+  {
+    "name": "pedido-detalle-desktop",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Detalles del Pedido",
+        "xPct": 27,
+        "yPct": 8,
+        "vp": {
+          "x": 296,
+          "y": 61,
+          "w": 186,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Cliente",
+        "xPct": 38,
+        "yPct": 39,
+        "vp": {
+          "x": 412,
+          "y": 331,
+          "w": 262,
+          "h": 36
+        }
+      },
+      {
+        "n": 3,
+        "label": "Estado",
+        "xPct": 53,
+        "yPct": 39,
+        "vp": {
+          "x": 674,
+          "y": 331,
+          "w": 169,
+          "h": 36
+        }
+      },
+      {
+        "n": 4,
+        "label": "Productos",
+        "xPct": 6,
+        "yPct": 88,
+        "vp": {
+          "x": 50,
+          "y": 778,
+          "w": 67,
+          "h": 20
+        }
+      },
+      {
+        "n": 6,
+        "label": "Historial",
+        "xPct": 53,
+        "yPct": 91,
+        "vp": {
+          "x": 704,
+          "y": 799,
+          "w": 116,
+          "h": 34
+        }
+      },
+      {
+        "n": 7,
+        "label": "Editar",
+        "xPct": 61,
+        "yPct": 91,
+        "vp": {
+          "x": 827,
+          "y": 799,
+          "w": 98,
+          "h": 34
+        }
+      },
+      {
+        "n": 8,
+        "label": "Eliminar",
+        "xPct": 69,
+        "yPct": 91,
+        "vp": {
+          "x": 932,
+          "y": 799,
+          "w": 114,
+          "h": 34
+        }
+      }
+    ]
+  },
+  {
+    "name": "pedido-detalle-mobile",
+    "viewport": {
+      "w": 390,
+      "h": 844,
+      "dpr": 1
+    },
+    "image": {
+      "w": 390,
+      "h": 844
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Detalles del Pedido",
+        "xPct": 28,
+        "yPct": 14,
+        "vp": {
+          "x": 16,
+          "y": 106,
+          "w": 186,
+          "h": 28
+        }
+      },
+      {
+        "n": 3,
+        "label": "Incidencias vinculadas",
+        "xPct": 50,
+        "yPct": 84,
+        "vp": {
+          "x": 32,
+          "y": 698,
+          "w": 326,
+          "h": 16
+        }
+      },
+      {
+        "n": 4,
+        "label": "Total del pedido",
+        "xPct": 18,
+        "yPct": 91,
+        "vp": {
+          "x": 16,
+          "y": 755,
+          "w": 109,
+          "h": 20
+        }
+      },
+      {
+        "n": 5,
+        "label": "Editar pedido",
+        "xPct": 43,
+        "yPct": 96,
+        "vp": {
+          "x": 16,
+          "y": 788,
+          "w": 306,
+          "h": 44
+        }
+      }
+    ]
+  },
+  {
+    "name": "pedido-editor",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 2,
+        "label": "Tipo de incidencia",
+        "xPct": 50,
+        "yPct": 19,
+        "vp": {
+          "x": 296,
+          "y": 162,
+          "w": 848,
+          "h": 20
+        }
+      },
+      {
+        "n": 3,
+        "label": "Nueva incidencia",
+        "xPct": 35,
+        "yPct": 23,
+        "vp": {
+          "x": 296,
+          "y": 188,
+          "w": 420,
+          "h": 38
+        }
+      },
+      {
+        "n": 4,
+        "label": "Incidencia existente",
+        "xPct": 65,
+        "yPct": 23,
+        "vp": {
+          "x": 724,
+          "y": 188,
+          "w": 420,
+          "h": 38
+        }
+      },
+      {
+        "n": 5,
+        "label": "Justificación",
+        "xPct": 50,
+        "yPct": 28,
+        "vp": {
+          "x": 296,
+          "y": 246,
+          "w": 848,
+          "h": 20
+        }
+      },
+      {
+        "n": 6,
+        "label": "Productos",
+        "xPct": 6,
+        "yPct": 88,
+        "vp": {
+          "x": 50,
+          "y": 778,
+          "w": 67,
+          "h": 20
+        }
+      },
+      {
+        "n": 7,
+        "label": "Precio unitario",
+        "xPct": 27,
+        "yPct": 80,
+        "vp": {
+          "x": 308,
+          "y": 708,
+          "w": 154,
+          "h": 20
+        }
+      },
+      {
+        "n": 8,
+        "label": "Total",
+        "xPct": 79,
+        "yPct": 39,
+        "vp": {
+          "x": 1091,
+          "y": 331,
+          "w": 102,
+          "h": 36
+        }
+      },
+      {
+        "n": 9,
+        "label": "Guardar cambios",
+        "xPct": 73,
+        "yPct": 88,
+        "vp": {
+          "x": 971,
+          "y": 772,
+          "w": 173,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "pedido-historial",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Historial de cambios del pedido",
+        "xPct": 41,
+        "yPct": 17,
+        "vp": {
+          "x": 408,
+          "y": 140,
+          "w": 368,
+          "h": 32
+        }
+      },
+      {
+        "n": 2,
+        "label": "Añadido",
+        "xPct": 31,
+        "yPct": 38,
+        "vp": {
+          "x": 421,
+          "y": 332,
+          "w": 61,
+          "h": 20
+        }
+      },
+      {
+        "n": 3,
+        "label": "Modificado",
+        "xPct": 32,
+        "yPct": 60,
+        "vp": {
+          "x": 421,
+          "y": 530,
+          "w": 76,
+          "h": 20
+        }
+      },
+      {
+        "n": 4,
+        "label": "Eliminado",
+        "xPct": 32,
+        "yPct": 27,
+        "vp": {
+          "x": 421,
+          "y": 234,
+          "w": 69,
+          "h": 20
+        }
+      }
+    ]
+  }
+]
