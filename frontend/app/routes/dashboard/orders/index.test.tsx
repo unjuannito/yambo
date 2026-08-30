@@ -292,7 +292,7 @@ describe('Orders route', () => {
                 expect(screen.getByText('Test Product')).toBeInTheDocument();
             });
 
-            const closeButton = container.querySelector('button.text-gray-300') as HTMLButtonElement | null;
+            const closeButton = container.querySelector('button[aria-label="Cerrar"]') as HTMLButtonElement | null;
             expect(closeButton).not.toBeNull();
 
             if (closeButton) {

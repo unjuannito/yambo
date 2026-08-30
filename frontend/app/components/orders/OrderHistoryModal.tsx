@@ -40,7 +40,7 @@ export function OrderHistoryModal({ orderId, isOpen, onClose }: OrderHistoryModa
     }, [isOpen, orderId]);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} size="md" title="Historial de cambios del pedido">
+        <Modal isOpen={isOpen} onClose={onClose} size="md" variant="bottom-sheet" title="Historial de cambios del pedido">
             {loading && <p className="text-sm text-gray-400 py-4">Cargando…</p>}
             {error && <p className="text-sm text-red-500 py-4">{error}</p>}
             {!loading && !error && changes.length === 0 && (

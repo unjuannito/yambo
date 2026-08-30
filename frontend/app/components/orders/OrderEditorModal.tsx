@@ -361,7 +361,7 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved, initialUserI
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} size="lg" title={isEdit ? t("orders.editor.editTitle") : t("orders.editor.createTitle")}>
+        <Modal isOpen={isOpen} onClose={onClose} size="lg" variant="bottom-sheet" title={isEdit ? t("orders.editor.editTitle") : t("orders.editor.createTitle")}>
             {/* Buscador de socio (solo crear) */}
             {!isEdit && (
                 <div className="mb-5">
