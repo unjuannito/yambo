@@ -31,6 +31,15 @@ const sizeClasses = {
 /** Umbral (px) para descartar la hoja inferior al arrastrar hacia abajo. */
 const DISMISS_THRESHOLD_PX = 120;
 
+/**
+ * Altura máxima de la hoja inferior (bottom-sheet).
+ * Cámbiala aquí para ajustar la altura:
+ *   - móvil: `max-h-[92vh]`
+ *   - sm+  : `sm:max-h-[90vh]`
+ * P. ej. para una hoja más baja usa `max-h-[60vh] sm:max-h-[70vh]`.
+ */
+const SHEET_MAX_HEIGHT = "max-h-[92dvh] sm:max-h-[90dvh]"; // 92% de la altura de la ventana (móvil), 90% en pantallas sm+
+
 export function Modal({
     isOpen,
     onClose,
@@ -57,7 +66,7 @@ export function Modal({
         : "fixed inset-0 flex items-center justify-center p-3 sm:p-4 z-[60]";
 
     const cardClass = isSheet
-        ? `bg-white rounded-t-3xl sm:rounded-3xl ${sizeClasses[size]} w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col shadow-2xl sheet-in overflow-hidden`
+        ? `bg-white rounded-t-3xl sm:rounded-3xl ${sizeClasses[size]} w-full ${SHEET_MAX_HEIGHT} flex flex-col shadow-2xl sheet-in overflow-hidden`
         : `bg-white rounded-2xl sm:rounded-3xl ${sizeClasses[size]} w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col shadow-2xl bounce-in overflow-hidden`;
 
     const bodyClasses = bodyClassName ?? "p-4 sm:p-6";
@@ -110,13 +119,13 @@ export function Modal({
                 {/* Asa de arrastre (solo móvil, bottom-sheet) */}
                 {isSheet && (
                     <div
-                        className="sm:hidden flex flex-col items-center pt-2 pb-1 shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
+                        className="sm:hidden flex flex-col items-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
                         onPointerUp={endDrag}
                         onPointerCancel={endDrag}
                     >
-                        <div className="w-10 h-1 rounded-full bg-gray-200" />
+                        <div className="w-16 h-1.5 rounded-full bg-gray-300" />
                     </div>
                 )}
 
