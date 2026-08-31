@@ -477,7 +477,11 @@ export function FilterableTable<T>({
             <div className="flex flex-col items-center gap-2 py-2">
               {loadMoreInfo && (
                 <span className="text-xs text-gray-400">
-                  {t('table.showing') || "Mostrando"} {loadMoreInfo.shown} {t('common.of')} {loadMoreInfo.total}
+                  {t('table.showing', {
+                    from: loadMoreInfo.shown > 0 ? 1 : 0,
+                    to: loadMoreInfo.shown,
+                    total: loadMoreInfo.total,
+                  })}
                 </span>
               )}
               <ButtonComponent
@@ -532,7 +536,11 @@ export function FilterableTable<T>({
           <div className="flex flex-col items-center gap-2 py-2">
             {loadMoreInfo && (
               <span className="text-xs text-gray-400">
-                {t('table.showing') || "Mostrando"} {loadMoreInfo.shown} {t('common.of')} {loadMoreInfo.total}
+                {t('table.showing', {
+                  from: loadMoreInfo.shown > 0 ? 1 : 0,
+                  to: loadMoreInfo.shown,
+                  total: loadMoreInfo.total,
+                })}
               </span>
             )}
             <ButtonComponent
