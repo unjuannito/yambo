@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
+import { faBookOpen, faInfo, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "react-i18next";
 
 interface WikiGuideLinkProps {
@@ -23,10 +23,10 @@ export function WikiGuideLink({ slug, hash, className }: WikiGuideLinkProps) {
     return (
         <Link
             to={href}
+            aria-label={t("component.statusWorkflow.wikiLink")}
             className={`inline-flex items-center gap-1.5 text-xs text-yambo-green-600 hover:text-yambo-green-800 hover:underline transition-colors ${className ?? ""}`}
         >
-            <FontAwesomeIcon icon={faBookOpen} className="w-3.5 h-3.5" />
-            {t("component.statusWorkflow.wikiLink")}
+            <FontAwesomeIcon icon={faCircleInfo} className="w-3.5 h-3.5" />
         </Link>
     );
 }

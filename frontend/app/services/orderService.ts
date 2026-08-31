@@ -64,6 +64,7 @@ export class OrderService extends ApiService {
         }
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
+        params.append('sort', 'createdAt,desc');
 
         const response = await this.get<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }>(`/orders?${params}`);
         return response;

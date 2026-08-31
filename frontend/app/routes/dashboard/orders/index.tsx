@@ -659,6 +659,7 @@ export default function Orders() {
                 )}
 
                 <FilterableTable
+                    key={activeTab}
                     columns={orderTableColumns}
                     keyField="id"
                     display={{
@@ -740,7 +741,7 @@ export default function Orders() {
                             );
                         },
                     }}
-                    features={{ enableLoadMore: true, globalSearch: true }}
+                    features={{ enablePagination: true, enableLoadMore: true, globalSearch: true }}
                     serverSide={{ fetchData: fetchOrdersData }}
                 />
             </PageContainer>
