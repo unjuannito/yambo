@@ -674,7 +674,11 @@ export default function Orders() {
                                     0,
                                 ) || 0;
                             return (
-                                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                                <div
+                                    className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2 cursor-pointer"
+                                    onClick={() => openOrderDetail(order)}
+                                    aria-label={`Pedido #${order.id}, ${productCount} productos, total ${total.toFixed(2)} €, estado ${config?.shortLabel || order.status}`}
+                                >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
                                             <p className="font-medium text-yambo-black truncate">
@@ -682,6 +686,7 @@ export default function Orders() {
                                                     <Link
                                                         to={`/mi-espacio/admin/usuarios/${order.user.id}/perfil`}
                                                         className="hover:text-yambo-green-600 transition-colors"
+                                                        onClick={(e) => e.stopPropagation()}
                                                     >
                                                         {order.user.name || order.user.email}
                                                     </Link>
@@ -697,6 +702,7 @@ export default function Orders() {
                                             type="checkbox"
                                             checked={selectedOrders.includes(order.id)}
                                             onChange={() => toggleOrderSelection(order.id)}
+                                            onClick={(e) => e.stopPropagation()}
                                             className="w-4 h-4 text-yambo-green-600 rounded focus:ring-2 focus:ring-yambo-green-500/50 cursor-pointer shrink-0"
                                         />
                                     </div>
@@ -721,14 +727,6 @@ export default function Orders() {
                                         <span className="font-bold text-yambo-black">
                                             {total.toFixed(2)} €
                                         </span>
-                                    </div>
-                                    <div className="flex gap-2 pt-1">
-                                        <button type="button"
-                                            onClick={() => openOrderDetail(order)}
-                                            className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
-                                        >
-                                            Ver
-                                        </button>
                                     </div>
                                 </div>
                             );
