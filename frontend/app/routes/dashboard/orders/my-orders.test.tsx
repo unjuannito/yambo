@@ -41,11 +41,6 @@ vi.mock('~/services/familyProductService', () => ({
     },
 }));
 
-vi.mock('~/components/common/ViewTabs', () => ({
-    ViewTabs: () => null,
-    useViewTab: () => ({ activeTab: 'actual', setActiveTab: vi.fn() }),
-}));
-
 vi.mock('~/components/orders/ConfirmDeliveryButton', () => ({
     ConfirmDeliveryButton: () => null,
 }));

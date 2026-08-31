@@ -71,11 +71,6 @@ vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
     ),
 }));
 
-vi.mock('~/components/common/ViewTabs', () => ({
-    ViewTabs: () => null,
-    useViewTab: () => ({ activeTab: 'actual', setActiveTab: vi.fn() }),
-}));
-
 vi.mock('~/components/common/RequirePermission', () => ({
     RequirePermission: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

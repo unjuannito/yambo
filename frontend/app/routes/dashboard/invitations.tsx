@@ -25,9 +25,7 @@ import {
 } from "~/services/projectRoleInvitationService";
 import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { PageHeader } from "~/components/common/PageHeader";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -74,7 +72,6 @@ function InvitationsGeneral({
         title: string;
         items: BeneficiaryItem[];
     } | null>(null);
-    const { activeTab, setActiveTab } = useViewTab("actual");
 
     interface BeneficiaryItem {
         userId: string;
@@ -115,10 +112,9 @@ function InvitationsGeneral({
         try {
             setLoading(true);
             setError(null);
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const [profilesResponse, invitationsResponse, projectsData, roleLinks] = await Promise.all([
                 profileService.getAllProfiles(),
-                invitationService.listInvitations(startDate),
+                invitationService.listInvitations(),
                 projectService.listProjects(0, 200),
                 projectRoleInvitationService.getInvitations(),
             ]);
@@ -143,7 +139,7 @@ function InvitationsGeneral({
         } finally {
             setLoading(false);
         }
-    }, [activeTab, t]);
+    }, [t]);
 
     useEffect(() => {
         void loadProfiles();
@@ -273,8 +269,7 @@ function InvitationsGeneral({
             setEndTms("");
             setIsModalOpen(false);
             toast.success(t("invitations.createdSuccess"));
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-            const updated = await invitationService.listInvitations(startDate);
+            const updated = await invitationService.listInvitations();
             setInvitations(updated);
         } catch (err) {
             toast.error(getErrorMessage(err, t("invitations.createError")));
@@ -425,8 +420,7 @@ function InvitationsGeneral({
                             await invitationService.disableInvitation(
                                 invitation.id,
                             );
-                            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-                            const updated = await invitationService.listInvitations(startDate);
+                            const updated = await invitationService.listInvitations();
                             setInvitations(updated);
                             toast.success(t("invitations.disabledSuccess"));
                         } catch (err) {
@@ -447,7 +441,7 @@ function InvitationsGeneral({
                 },
             },
         ],
-        [profiles, profileOptions, t, baseUrl, isExpired, activeTab, formatDateTime],
+        [profiles, profileOptions, t, baseUrl, isExpired, formatDateTime],
     );
 
     const enrichedInvitations = useMemo(() => {
@@ -507,8 +501,6 @@ function InvitationsGeneral({
                         {t("invitations.nominativeTitle")}
                     </button>
                 </div>
-
-                <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
                 {loading && (
                     <div className="flex justify-center py-8">

@@ -10,7 +10,6 @@ import type {
 } from "./FilterableTable";
 import type { FeaturesConfig, DisplayConfig } from "./FilterableTable";
 import type { PagedResponse } from "~/types/apiType";
-import { ViewTabs, type ViewTabKey } from "./ViewTabs";
 import { PageHeader } from "./PageHeader";
 import type { WikiGuideLinkProps } from "./WikiGuideLink";
 import { twMerge } from "tailwind-merge";
@@ -29,11 +28,6 @@ const STAT_COLORS: Record<CompactStat["color"], string> = {
   slate: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-interface TabConfig {
-  activeTab: ViewTabKey;
-  onTabChange: (tab: ViewTabKey) => void;
-}
-
 interface ServerSideConfig<T> {
   fetchData: (params: FetchDataParams) => Promise<PagedResponse<T> | null>;
 }
@@ -45,7 +39,6 @@ interface ListPageShellProps<T> {
   /** Enlace "Ver en la wiki" — se muestra debajo del título/subtítulo. */
   wiki?: WikiGuideLinkProps;
   compactStats?: CompactStat[];
-  tabs?: TabConfig;
   children?: React.ReactNode;
   // FilterableTable props
   columns: FilterableColumn<T>[];
@@ -66,7 +59,6 @@ export default function ListPageShell<T>({
   actions,
   wiki,
   compactStats,
-  tabs,
   children,
   columns,
   keyField,
@@ -99,13 +91,6 @@ export default function ListPageShell<T>({
               {stat.label}: {stat.value}
             </span>
           ))}
-        </div>
-      )}
-
-      {/* Tabs */}
-      {tabs && (
-        <div className="-mx-3 md:-mx-4 px-3 md:px-4">
-          <ViewTabs activeTab={tabs.activeTab} onTabChange={tabs.onTabChange} />
         </div>
       )}
 

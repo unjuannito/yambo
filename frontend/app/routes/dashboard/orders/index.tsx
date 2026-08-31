@@ -8,8 +8,6 @@ import type {
     FilterableColumn,
     FetchDataParams,
 } from "~/components/common/FilterableTable";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
@@ -46,7 +44,6 @@ export function meta({}: Route.MetaArgs) {
 export default function Orders() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { activeTab, setActiveTab } = useViewTab("actual");
     const [refreshKey, setRefreshKey] = useState(0);
     const [isExporting, setIsExporting] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -204,14 +201,13 @@ export default function Orders() {
 
     const fetchOrdersData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
             const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
             const effectiveStartDate = dateRange?.startDate
                 ? new Date(dateRange.startDate).toISOString()
-                : startDate;
+                : undefined;
             const effectiveEndDate = dateRange?.endDate
                 ? new Date(dateRange.endDate + "T23:59:59").toISOString()
                 : undefined;
@@ -231,7 +227,7 @@ export default function Orders() {
             setSelectedOrders([]);
             return result;
         },
-        [refreshKey, activeTab],
+        [refreshKey],
     );
 
     const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -620,8 +616,6 @@ export default function Orders() {
                     }
                 />
 
-                <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
-
                 {/* Bulk Actions Toolbar */}
                 <BulkActionsToolbar
                     selectedOrders={selectedOrders}
@@ -659,7 +653,6 @@ export default function Orders() {
                 )}
 
                 <FilterableTable
-                    key={activeTab}
                     columns={orderTableColumns}
                     keyField="id"
                     display={{

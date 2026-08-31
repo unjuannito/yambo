@@ -23,8 +23,6 @@ import { projectService, type Project } from "~/services/projectService";
 import { profileService } from "~/services/profileService";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
 import type { GroupRole } from "~/types/role";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -59,7 +57,6 @@ export function NominativeInvitationsView({
         { value: string; label: string }[]
     >([]);
     const [projects, setProjects] = useState<Project[]>([]);
-    const { activeTab, setActiveTab } = useViewTab("actual");
     const [form, setForm] = useState<CreateNominativeInvitationRequest & { projectId: string; role: GroupRole }>({
         email: "",
         name: "",
@@ -74,9 +71,8 @@ export function NominativeInvitationsView({
         try {
             setLoading(true);
             setError(null);
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const [invData, profiles, projData] = await Promise.all([
-                nominativeInvitationService.getAllInvitations(startDate),
+                nominativeInvitationService.getAllInvitations(),
                 profileService.getAllProfiles(),
                 projectService.listProjects(0, 200),
             ]);
@@ -92,7 +88,7 @@ export function NominativeInvitationsView({
         } finally {
             setLoading(false);
         }
-    }, [activeTab, t]);
+    }, [t]);
 
     useEffect(() => {
         void fetchData();

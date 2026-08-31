@@ -10,8 +10,6 @@ import { FilterableTable, type FilterableColumn, type FetchDataParams } from "~/
 import { issueService, type IssueListItem } from "~/services/issueService";
 import { type Issue, IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
 interface AdminIssueRow {
     id: string;
@@ -36,7 +34,6 @@ export default function AdminIssuesPage() {
 function AdminIssuesContent() {
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const { activeTab, setActiveTab } = useViewTab("actual");
     const [searchParams, setSearchParams] = useSearchParams();
     const [refreshKey, setRefreshKey] = useState(0);
     const [stats, setStats] = useState({
@@ -57,14 +54,13 @@ function AdminIssuesContent() {
 
     const fetchIssuesData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
             const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
             const effectiveStartDate = dateRange?.startDate
                 ? new Date(dateRange.startDate).toISOString()
-                : startDate;
+                : undefined;
             const effectiveEndDate = dateRange?.endDate
                 ? new Date(dateRange.endDate + "T23:59:59").toISOString()
                 : undefined;
@@ -106,7 +102,7 @@ function AdminIssuesContent() {
                 page: result.page,
             };
         },
-        [refreshKey, activeTab],
+        [refreshKey],
     );
 
     const columns = useMemo<FilterableColumn<AdminIssueRow>[]>(
@@ -228,10 +224,6 @@ function AdminIssuesContent() {
                 ),
             }}
             features={{ globalSearch: true, enableFilters: true, enablePagination: true }}
-            tabs={{
-                activeTab,
-                onTabChange: (tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); },
-            }}
             serverSide={{ fetchData: fetchIssuesData }}
             wiki={{ slug: "flujos-de-trabajo", hash: "incidencias" }}
         >

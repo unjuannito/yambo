@@ -20,9 +20,7 @@ import { IssueStatusBadge } from "~/components/issues/IssueStatusBadge";
 import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
 import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
 import { ConfirmDeliveryButton } from "~/components/orders/ConfirmDeliveryButton";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBox, faClipboard, faTriangleExclamation, faUpload, faClock, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import toast from "react-hot-toast";
@@ -39,7 +37,6 @@ export default function MyOrdersPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeTab, setActiveTab } = useViewTab("actual");
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [drops, setDrops] = useState<FamilyProduct[]>([]);
@@ -85,7 +82,7 @@ export default function MyOrdersPage() {
     if (isAuthenticated()) {
       loadOrders();
     }
-  }, [isAuthenticated, activeTab]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const orderId = searchParams.get("orderId");
@@ -101,9 +98,8 @@ export default function MyOrdersPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
       const [ordersResponse, productsResponse, dropsResponse] = await Promise.all([
-        orderService.getMyOrders(0, 200, startDate),
+        orderService.getMyOrders(0, 200),
         productService.getAllProducts(0, 200),
         familyProductService.listFamilyProducts(0, 200),
       ]);
@@ -269,8 +265,6 @@ export default function MyOrdersPage() {
             Mis Pedidos
         </h1>
       </div>
-
-      <ViewTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="mb-4">
         <MultiSelectComponent
