@@ -15,10 +15,10 @@
         "n": 1,
         "label": "Detalles del Pedido",
         "xPct": 27,
-        "yPct": 8,
+        "yPct": 23,
         "vp": {
           "x": 296,
-          "y": 61,
+          "y": 197,
           "w": 186,
           "h": 28
         }
@@ -26,47 +26,59 @@
       {
         "n": 2,
         "label": "Cliente",
-        "xPct": 38,
-        "yPct": 39,
+        "xPct": 35,
+        "yPct": 34,
         "vp": {
-          "x": 412,
-          "y": 331,
-          "w": 262,
-          "h": 36
+          "x": 296,
+          "y": 294,
+          "w": 416,
+          "h": 20
         }
       },
       {
         "n": 3,
         "label": "Estado",
-        "xPct": 53,
-        "yPct": 39,
+        "xPct": 65,
+        "yPct": 34,
         "vp": {
-          "x": 674,
-          "y": 331,
-          "w": 169,
-          "h": 36
+          "x": 728,
+          "y": 294,
+          "w": 416,
+          "h": 20
         }
       },
       {
         "n": 4,
         "label": "Productos",
-        "xPct": 6,
-        "yPct": 88,
+        "xPct": 24,
+        "yPct": 52,
         "vp": {
-          "x": 50,
-          "y": 778,
-          "w": 67,
-          "h": 20
+          "x": 296,
+          "y": 455,
+          "w": 93,
+          "h": 28
+        }
+      },
+      {
+        "n": 5,
+        "label": "Total del pedido:",
+        "xPct": 28,
+        "yPct": 76,
+        "vp": {
+          "x": 296,
+          "y": 664,
+          "w": 221,
+          "h": 32
         }
       },
       {
         "n": 6,
         "label": "Historial",
-        "xPct": 53,
-        "yPct": 91,
+        "xPct": 51,
+        "yPct": 76,
         "vp": {
-          "x": 704,
-          "y": 799,
+          "x": 670,
+          "y": 663,
           "w": 116,
           "h": 34
         }
@@ -74,24 +86,24 @@
       {
         "n": 7,
         "label": "Editar",
-        "xPct": 61,
-        "yPct": 91,
+        "xPct": 58,
+        "yPct": 76,
         "vp": {
-          "x": 827,
-          "y": 799,
+          "x": 794,
+          "y": 663,
           "w": 98,
           "h": 34
         }
       },
       {
         "n": 8,
-        "label": "Eliminar",
-        "xPct": 69,
-        "yPct": 91,
+        "label": "Cancelar pedido",
+        "xPct": 68,
+        "yPct": 76,
         "vp": {
-          "x": 932,
-          "y": 799,
-          "w": 114,
+          "x": 899,
+          "y": 663,
+          "w": 147,
           "h": 34
         }
       }
@@ -113,24 +125,36 @@
         "n": 1,
         "label": "Detalles del Pedido",
         "xPct": 28,
-        "yPct": 14,
+        "yPct": 24,
         "vp": {
           "x": 16,
-          "y": 106,
+          "y": 190,
           "w": 186,
           "h": 28
         }
       },
       {
-        "n": 3,
-        "label": "Incidencias vinculadas",
-        "xPct": 50,
-        "yPct": 84,
+        "n": 2,
+        "label": "Productos",
+        "xPct": 16,
+        "yPct": 59,
         "vp": {
-          "x": 32,
-          "y": 698,
-          "w": 326,
-          "h": 16
+          "x": 16,
+          "y": 480,
+          "w": 93,
+          "h": 28
+        }
+      },
+      {
+        "n": 3,
+        "label": "+ Nueva incidencia",
+        "xPct": 50,
+        "yPct": 62,
+        "vp": {
+          "x": 16,
+          "y": 516,
+          "w": 358,
+          "h": 20
         }
       },
       {
@@ -171,6 +195,18 @@
       "h": 900
     },
     "callouts": [
+      {
+        "n": 1,
+        "label": "Editar pedido",
+        "xPct": 26,
+        "yPct": 11,
+        "vp": {
+          "x": 296,
+          "y": 82,
+          "w": 164,
+          "h": 32
+        }
+      },
       {
         "n": 2,
         "label": "Tipo de incidencia",
@@ -222,12 +258,12 @@
       {
         "n": 6,
         "label": "Productos",
-        "xPct": 6,
-        "yPct": 88,
+        "xPct": 23,
+        "yPct": 45,
         "vp": {
-          "x": 50,
-          "y": 778,
-          "w": 67,
+          "x": 296,
+          "y": 396,
+          "w": 72,
           "h": 20
         }
       },
@@ -246,13 +282,13 @@
       {
         "n": 8,
         "label": "Total",
-        "xPct": 79,
-        "yPct": 39,
+        "xPct": 75,
+        "yPct": 80,
         "vp": {
-          "x": 1091,
-          "y": 331,
-          "w": 102,
-          "h": 36
+          "x": 1016,
+          "y": 708,
+          "w": 116,
+          "h": 20
         }
       },
       {

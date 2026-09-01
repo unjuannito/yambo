@@ -99,7 +99,7 @@ SCENES: list[Scene] = [
         viewport=(1440, 900),
         targets=[
             "Detalles del Pedido", "Cliente", "Estado", "Productos",
-            "Total del pedido", "Historial", "Editar", "Eliminar",
+            "Total del pedido:", "Historial", "Editar", "Cancelar pedido",
         ],
     ),
     Scene(
@@ -107,7 +107,7 @@ SCENES: list[Scene] = [
         url=f"/mi-espacio/admin/pedidos?orderId={ORDER_ID}",
         viewport=(390, 844),
         targets=[
-            "Detalles del Pedido", "Productos", "Incidencias vinculadas",
+            "Detalles del Pedido", "Productos", "+ Nueva incidencia",
             "Total del pedido", "Editar pedido",
         ],
     ),
