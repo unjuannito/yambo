@@ -856,42 +856,6 @@ class OrderServiceTest {
     }
 
     @Test
-    void deleteOrder_WhenDelivered_ShouldThrowException() {
-        Order order = Order.builder().id("ORD001").status(OrderStatus.CLOSED).build();
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.deleteOrder("ORD001"));
-        assertEquals("Cannot delete closed order", exception.getMessage());
-        verify(orderRepository, never()).delete(any(Order.class));
-    }
-
-    @Test
-    void deleteOrder_WhenValid_ShouldDeleteOrderAndProducts() {
-        Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).build();
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
-
-        orderService.deleteOrder("ORD001");
-
-        verify(orderProductRepository).deleteByOrderId("ORD001");
-        verify(orderRepository).delete(order);
-    }
-
-    @Test
-    void deleteOrder_WhenHasLinkedIssues_ShouldThrowException() {
-        Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).build();
-        Issue issue = Issue.builder().id("ISS001").build();
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(issue));
-
-        BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> orderService.deleteOrder("ORD001"));
-        assertEquals("Cannot delete order with linked issues", exception.getMessage());
-        verify(orderRepository, never()).delete(any(Order.class));
-    }
-
-    @Test
     void listOrders_ShouldDelegateToRepository() {
         var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
         when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
@@ -2421,44 +2385,6 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.CANCELED, result.getStatus());
         verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
-    }
-
-    // ---- deleteOrder edge cases ----
-
-    @Test
-    void deleteOrder_WhenCanceled_ShouldAllowDeletion() {
-        Order order = Order.builder()
-                .id("ORD001")
-                .status(OrderStatus.CANCELED)
-                .build();
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-
-        orderService.deleteOrder("ORD001");
-
-        verify(orderProductRepository).deleteByOrderId("ORD001");
-        verify(orderRepository).delete(order);
-    }
-
-    @Test
-    void deleteOrder_WhenPendingPayment_ShouldAllowDeletion() {
-        Order order = Order.builder()
-                .id("ORD001")
-                .status(OrderStatus.PENDING_PAYMENT)
-                .build();
-        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
-
-        orderService.deleteOrder("ORD001");
-
-        verify(orderProductRepository).deleteByOrderId("ORD001");
-        verify(orderRepository).delete(order);
-    }
-
-    @Test
-    void deleteOrder_WhenNotFound_ShouldThrowException() {
-        when(orderRepository.findById("ORD404")).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> orderService.deleteOrder("ORD404"));
     }
 
     // ---- uploadReceipt tests ----

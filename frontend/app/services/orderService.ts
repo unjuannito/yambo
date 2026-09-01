@@ -90,10 +90,6 @@ export class OrderService extends ApiService {
         return await this.put<Order, UpdateOrderStatusRequest>(`/orders/${id}/status`, { status });
     }
 
-    public async deleteOrder(id: string): Promise<void> {
-        return await this.delete<void>(`/orders/${id}`);
-    }
-
     public async getMyOrders(page = 0, size = 50, startDate?: string, endDate?: string, status?: string[]): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
         const params = new URLSearchParams({
             page: page.toString(),

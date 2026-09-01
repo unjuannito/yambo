@@ -3,7 +3,6 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
-import es.yambo_alco.web.model.OrderChange;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.OrderProductOperation;
@@ -218,13 +217,6 @@ public class OrderController {
         Order order = orderService.updateOrderStatus(id, request.getStatus());
         List<OrderProduct> products = orderService.getOrderProducts(id);
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("@permissionCheck.hasPermission('order', 'delete')")
-    public ResponseEntity<Void> deleteOrder(@PathVariable String id) {
-        orderService.deleteOrder(id);
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my")

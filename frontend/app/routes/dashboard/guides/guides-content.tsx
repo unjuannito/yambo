@@ -550,7 +550,7 @@ export function GuideFlujosDeTrabajo() {
 
                     <h4 className="mt-5 font-bold text-yambo-black text-sm">Gestión de pedidos por administradores</h4>
                     <p className="mt-2 text-sm">
-                        Los administradores (perfil Administrador o Gestor de Merch) pueden crear, modificar y eliminar pedidos de cualquier socio desde la página <strong>Pedidos</strong>:
+                        Los administradores (perfil Administrador o Gestor de Merch) pueden crear, modificar y cancelar pedidos de cualquier socio desde la página <strong>Pedidos</strong>:
                     </p>
                     <ul className="mt-2 space-y-1.5 text-sm">
                         <li className="flex items-start gap-2">
@@ -563,7 +563,7 @@ export function GuideFlujosDeTrabajo() {
                         </li>
                         <li className="flex items-start gap-2">
                             <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-yambo-green-500 mt-0.5 shrink-0" />
-                            <span><strong>Eliminar un pedido:</strong> botón «Eliminar» en el detalle → borra el pedido definitivamente (pide confirmación). No se puede eliminar un pedido cerrado o con incidencias vinculadas: primero resuélvelas o cancélalo.</span>
+                            <span><strong>Cancelar un pedido:</strong> botón «Cancelar pedido» en el detalle → pasa el pedido a estado «Cancelado» (pide confirmación). Solo se puede cancelar un pedido «Pendiente de Pago» o «Confirmando Pago».</span>
                         </li>
                         <li className="flex items-start gap-2">
                             <FontAwesomeIcon icon={faCheckCircle} className="w-4 h-4 text-yambo-green-500 mt-0.5 shrink-0" />

@@ -11,7 +11,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { Modal } from "~/components/common/Modal";
 import { OrderHistoryModal } from "./OrderHistoryModal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faFileArrowDown, faUpload, faPencil, faTrash, faHistory, faEllipsisVertical, faClock } from "@fortawesome/free-solid-svg-icons";
+import { faXmark, faFileArrowDown, faUpload, faPencil, faHistory, faEllipsisVertical, faClock } from "@fortawesome/free-solid-svg-icons";
 
 interface OrderDetailsModalProps {
     readonly order?: Order;
@@ -28,9 +28,7 @@ interface OrderDetailsModalProps {
     readonly onOpenIssueWindow: (order: Order, preselectedProductId?: string) => void;
     readonly onViewIssue: (issueId: string) => void;
     readonly canEdit?: boolean;
-    readonly canDelete?: boolean;
     readonly onEdit?: (order: Order) => void;
-    readonly onDelete?: (order: Order) => void;
 }
 
 // Mocks de desarrollo para previsualizar el modal con grupos y configuraciones.
@@ -135,9 +133,7 @@ export function OrderDetailsModal({
     onOpenIssueWindow,
     onViewIssue,
     canEdit,
-    canDelete,
     onEdit,
-    onDelete,
 }: OrderDetailsModalProps) {
     const { t } = useTranslation();
     const [showHistory, setShowHistory] = useState(false);
@@ -161,8 +157,7 @@ export function OrderDetailsModal({
     };
 
     const canEditOrder = !!canEdit && !!onEdit && order.status !== "CLOSED" && order.status !== "CANCELED";
-    const canDeleteOrder = !!canDelete && !!onDelete && order.status !== "CLOSED";
-    const canCancelOrder = order.status === "PENDING_PAYMENT" || order.status === "CONFIRMING_PAYMENT";
+    const canCancelOrder = order.status !== "CLOSED" && order.status !== "CANCELED";
     const orderTotal = order.products?.reduce((total, p) => total + p.price * p.quantity, 0) ?? 0;
 
     const groupedProducts = useMemo(() => {
@@ -228,15 +223,6 @@ export function OrderDetailsModal({
                                             {t("orders.details.viewHistory")}
                                         </button>
                                     )}
-                                    {canDeleteOrder && (
-                                        <button type="button"
-                                            onClick={() => { setShowActionsMenu(false); onDelete?.(order); }}
-                                            className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 text-left transition-colors border-t border-gray-100"
-                                        >
-                                            <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                                            {t("orders.details.deleteOrder")}
-                                        </button>
-                                    )}
                                     {canCancelOrder && (
                                         <button type="button"
                                             onClick={() => { setShowActionsMenu(false); onRequestCancel(order); }}
@@ -287,7 +273,7 @@ export function OrderDetailsModal({
 
                         {/* Modal Footer (escritorio) */}
                         <div className="hidden sm:flex bg-yambo-green-50/30 px-6 py-4 border-t border-gray-100 justify-between items-center">
-                            <div className="text-lg font-bold text-yambo-black">
+                            <div className="text-s text-yambo-black">
                                 {t("orders.details.total")}:
                                 <span className="ml-2 text-2xl text-yambo-green-600 font-extrabold">
                                     {orderTotal.toFixed(2)} €
@@ -312,16 +298,6 @@ export function OrderDetailsModal({
                                     >
                                         <FontAwesomeIcon icon={faPencil} className="w-3.5 h-3.5 mr-1.5" />
                                         {t("common.edit")}
-                                    </ButtonComponent>
-                                )}
-                                {canDeleteOrder && (
-                                    <ButtonComponent
-                                        variant="danger-text"
-                                        size="sm"
-                                        onClick={() => onDelete?.(order)}
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5 mr-1.5" />
-                                        {t("common.delete")}
                                     </ButtonComponent>
                                 )}
                                 {canCancelOrder && (
@@ -474,11 +450,11 @@ export function OrderDetailsModal({
                                     return (
                                         <fieldset key={group.key} className="border border-yambo-green-500 rounded-xl p-0 w-full min-w-0">
                                             {group.drop && (
-                                                <legend className="ml-4 px-2 bg-white text-sm font-semibold text-yambo-green-700">
+                                                <legend className="ml-4 px-2 bg-white text-sm font-bold text-yambo-green-700">
                                                     {group.drop.name}
                                                 </legend>
                                             )}
-                                            <div className="overflow-hidden rounded-xl pt-3">
+                                            <div className="overflow-hidden rounded-xl">
                                                 <div className="divide-y divide-gray-100">
                                                     {group.items.map((product) => {
                                                         const configEntries = parseConfig(product.configuration ?? "");
@@ -488,20 +464,47 @@ export function OrderDetailsModal({
                                                         const productKey = product.id || product.productId;
                                                         const isExpanded = expandedIssuesProductId === productKey;
                                                         return (
-                                                            <div key={productKey}>
-                                                                <div className="px-4 py-3 flex justify-between">
-                                                                    <div className="flex items-center justify-end gap-3 mt-2">
-                                                                        <span className="font-semibold text-yambo-black whitespace-nowrap align-middle row-span-2">
-                                                                            {product.productName || product.productId}
-                                                                        </span>
-                                                                        {productIssues.length > 0 && (
-                                                                            <button type="button"
-                                                                                onClick={() => setExpandedIssuesProductId(isExpanded ? null : productKey)}
-                                                                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
-                                                                            >
-                                                                                {t("orders.details.issueCount", { count: productIssues.length })}
-                                                                            </button>
-                                                                        )}
+                                                            <div key={productKey} className="px-4 py-2 hover:bg-gray-50 transition-colors">
+                                                                <div>
+                                                                    <div className="flex justify-between w-full sm:flex-row flex-col gap-0 sm:gap-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="font-semibold text-yambo-black whitespace-nowrap">
+                                                                                {product.productName || product.productId}
+                                                                            </span>
+                                                                            {productIssues.length > 0 && (
+                                                                                <button type="button"
+                                                                                    onClick={() => setExpandedIssuesProductId(isExpanded ? null : productKey)}
+                                                                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
+                                                                                >
+                                                                                    {t("orders.details.issueCount", { count: productIssues.length })}
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1 gap-0">
+                                                                            <div className="text-gray-500 whitespace-nowrap">
+                                                                                {t("orders.details.quantityShort", {
+                                                                                    count: product.quantity,
+                                                                                })}
+
+                                                                                {product.quantity > 1 && (
+                                                                                    <span className="text-gray-400 text-xs ml-1">
+                                                                                        {t("orders.details.unitPriceHint", {
+                                                                                            price: product.price.toFixed(2),
+                                                                                        })}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+
+                                                                            <div className="font-bold text-yambo-black whitespace-nowrap">
+                                                                                {product.quantity > 1
+                                                                                    ? t("orders.details.subtotal")
+                                                                                    : t("orders.details.price")}
+                                                                                : {(product.price * product.quantity).toFixed(2)} €
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between gap-2 mt-1 mb-2">
+                                                                        
                                                                         <div
                                                                             className="grid items-start gap-x-6 gap-y-1 "
                                                                             style={{ gridTemplateColumns: `max-content repeat(${configEntries.length}, max-content)` }}
@@ -519,18 +522,9 @@ export function OrderDetailsModal({
                                                                             ))}
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex items-center justify-end gap-3 mt-2">
-                                                                        <span className="text-gray-500 whitespace-nowrap">{t("orders.details.quantityShort", { count: product.quantity })}</span>
-                                                                        {product.quantity > 1 && (
-                                                                            <span className="text-gray-400 text-xs whitespace-nowrap">
-                                                                                {t("orders.details.unitPriceHint", { price: product.price.toFixed(2) })}
-                                                                            </span>
-                                                                        )}
-                                                                        <span className="font-bold text-yambo-black whitespace-nowrap"> {product.quantity > 1 ? t("orders.details.subtotal") : t("orders.details.price")}: {(product.price * product.quantity).toFixed(2)} €</span>
-                                                                    </div>
                                                                 </div>
                                                                 {isExpanded && productIssues.length > 0 && (
-                                                                    <div className="px-4 pb-3">
+                                                                    <div className="px-4 pb-2">
                                                                         <ul className="space-y-1.5">
                                                                             {productIssues.map(issue => (
                                                                                 <li key={issue.id} className="flex items-center gap-2">

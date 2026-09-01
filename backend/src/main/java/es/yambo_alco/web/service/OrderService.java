@@ -657,11 +657,6 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CLOSED) {
             throw new BadRequestException("Cannot change status of closed order");
         }
-        if (status == OrderStatus.CANCELED
-                && order.getStatus() != OrderStatus.PENDING_PAYMENT
-                && order.getStatus() != OrderStatus.CONFIRMING_PAYMENT) {
-            throw new BadRequestException("Order can only be canceled when pending payment or confirming payment");
-        }
 
         OrderStatus previousStatus = order.getStatus();
         order.setStatus(status);
@@ -904,26 +899,6 @@ public class OrderService {
 
     public boolean hasOpenIssues(@NonNull String orderId) {
         return issueRepository.findByOrderId(orderId).stream().anyMatch(this::isOpenIssue);
-    }
-
-    @Transactional
-    public void deleteOrder(@NonNull String orderId) {
-        Order order = getOrderById(orderId);
-
-        if (order.getStatus() == OrderStatus.CLOSED) {
-            throw new BadRequestException("Cannot delete closed order");
-        }
-
-        // Un pedido con incidencias vinculadas no se puede borrar físicamente:
-        // issue.ordered_product_id tiene FK a order_product. El admin debe
-        // resolver/eliminar las incidencias primero (o cancelar el pedido).
-        if (!issueRepository.findByOrderId(orderId).isEmpty()) {
-            throw new BadRequestException("Cannot delete order with linked issues");
-        }
-
-        // Delete order products first (cascade should handle this, but being explicit)
-        orderProductRepository.deleteByOrderId(orderId);
-        orderRepository.delete(order);
     }
 
     /**

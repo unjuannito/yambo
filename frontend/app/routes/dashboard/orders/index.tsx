@@ -59,8 +59,6 @@ export default function Orders() {
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
     const [editorOrder, setEditorOrder] = useState<Order | null | undefined>(undefined);
-    const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
     const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
     const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
@@ -257,24 +255,6 @@ export default function Orders() {
         } finally {
             setIsCanceling(false);
             setOrderToCancel(null);
-        }
-    };
-
-    const handleDeleteOrder = async () => {
-        if (!orderToDelete) return;
-        setIsDeleting(true);
-        try {
-            await orderService.deleteOrder(orderToDelete.id);
-            toast.success(`Pedido #${orderToDelete.id} eliminado`);
-            setRefreshKey((prev) => prev + 1);
-            if (selectedOrder?.id === orderToDelete.id) {
-                closeOrderDetail();
-            }
-        } catch (err) {
-            toast.error(getErrorMessage(err, "No se pudo eliminar el pedido"));
-        } finally {
-            setIsDeleting(false);
-            setOrderToDelete(null);
         }
     };
 
@@ -772,9 +752,7 @@ export default function Orders() {
                         navigate(`/mi-espacio/incidencias/${issueId}`);
                     }}
                     canEdit={hasPermission({ obj: "order", action: "update" })}
-                    canDelete={hasPermission({ obj: "order", action: "delete" })}
                     onEdit={(order) => openEditor(order)}
-                    onDelete={(order) => setOrderToDelete(order)}
                 />
             )}
             {/* Create Issue Modal (Merch Admin) */}
@@ -820,19 +798,6 @@ export default function Orders() {
                 onClose={() => setEditorOrder(undefined)}
                 onSaved={() => setRefreshKey((prev) => prev + 1)}
                 initialUserId={editorOrder === null ? (searchParams.get("customerId") ?? undefined) : undefined}
-            />
-
-            {/* Delete Order Confirmation Dialog */}
-            <ConfirmDialog
-                isOpen={!!orderToDelete}
-                onClose={() => setOrderToDelete(null)}
-                onConfirm={handleDeleteOrder}
-                title="¿Eliminar pedido?"
-                message={`¿Estás seguro de que quieres eliminar el pedido #${orderToDelete?.id ?? ""}? Esta acción no se puede deshacer.`}
-                confirmLabel="Sí, eliminar"
-                cancelLabel="Volver"
-                variant="danger"
-                isLoading={isDeleting}
             />
         </RequirePermission>
 

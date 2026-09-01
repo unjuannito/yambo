@@ -321,7 +321,6 @@
       "title": "Detalles del Pedido",
       "id": "ID: {{id}}",
       "viewHistory": "Ver historial",
-      "deleteOrder": "Eliminar pedido",
       "cancelOrder": "Cancelar pedido",
       "total": "Total del pedido",
       "editOrder": "Editar pedido",
