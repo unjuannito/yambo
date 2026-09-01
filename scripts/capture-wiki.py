@@ -90,6 +90,8 @@ class Scene:
     targets: list[str]
     # Nombre del botón que hay que pulsar para abrir el modal (None si se abre solo).
     open_action: str | None = None
+    # Selector CSS que delimita dónde buscar los targets (None = toda la página).
+    scope: str | None = CARD_SELECTOR
 
 
 SCENES: list[Scene] = [
@@ -128,6 +130,134 @@ SCENES: list[Scene] = [
         viewport=(1440, 900),
         targets=["Historial de cambios del pedido", "Añadido", "Modificado", "Eliminado"],
         open_action="Historial",
+    ),
+    # ── Páginas reales documentadas por las guías ──────────────────────────────
+    Scene(
+        name="guia-configuracion",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración General", "OAuth / Inicio de Sesión", "Configuración de la Organización", "Guardar Configuración de la Organización"],
+        scope="main",
+    ),
+    Scene(
+        name="guia-pagina-principal",
+        url="/mi-espacio/admin/pagina-principal",
+        viewport=(1440, 900),
+        targets=["Editor de Página Principal", "Secciones", "Configuración de Secciones"],
+        scope="main",
+    ),
+    Scene(
+        name="guia-invitaciones",
+        url="/mi-espacio/admin/invitaciones",
+        viewport=(1440, 900),
+        targets=["Gestión de invitaciones", "+ Nueva Invitación", "Invitaciones nominativas"],
+        scope="main",
+    ),
+    Scene(
+        name="guia-perfiles",
+        url="/mi-espacio/admin/perfiles",
+        viewport=(1440, 900),
+        targets=["Perfiles", "+ Nuevo Perfil"],
+        scope="main",
+    ),
+    Scene(
+        name="guia-seo",
+        url="/mi-espacio/admin/seo",
+        viewport=(1440, 900),
+        targets=["SEO", "Generar faltantes", "Filtrar"],
+        scope="main",
+    ),
+    Scene(
+        name="guia-oauth-google",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["OAuth / Inicio de Sesión", "Google", "Client ID", "Guardar configuración OAuth"],
+        open_action="OAuth / Inicio de Sesión",
+        scope="main",
+    ),
+    # ── Subpestañas / secciones de las páginas documentadas ─────────────────────
+    # Configuración: resto de pestañas
+    Scene(
+        name="configuracion-aplicacion",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración de la Aplicación", "Guardar Configuración de la Aplicación"],
+        open_action="Aplicación",
+        scope="main",
+    ),
+    Scene(
+        name="configuracion-banco",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración Bancaria", "Guardar Configuración Bancaria"],
+        open_action="Banco",
+        scope="main",
+    ),
+    Scene(
+        name="configuracion-email",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración de Correo Electrónico", "Guardar Configuración de Email"],
+        open_action="Email",
+        scope="main",
+    ),
+    Scene(
+        name="configuracion-contacto",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración de Contacto", "Guardar Configuración de Contacto"],
+        open_action="Contacto",
+        scope="main",
+    ),
+    Scene(
+        name="configuracion-archivos",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración de Archivos", "Guardar Configuración de Archivos"],
+        open_action="Archivos",
+        scope="main",
+    ),
+    Scene(
+        name="configuracion-ia",
+        url="/mi-espacio/admin/configuracion",
+        viewport=(1440, 900),
+        targets=["Configuración de IA (Ollama)", "Guardar Configuración de IA"],
+        open_action="IA",
+        scope="main",
+    ),
+    # Página principal: pestañas Hero y Sobre Nosotros
+    Scene(
+        name="pagina-principal-hero",
+        url="/mi-espacio/admin/pagina-principal",
+        viewport=(1440, 900),
+        targets=["Sección Hero", "Guardar Hero"],
+        open_action="Hero",
+        scope="main",
+    ),
+    Scene(
+        name="pagina-principal-sobre-nosotros",
+        url="/mi-espacio/admin/pagina-principal",
+        viewport=(1440, 900),
+        targets=["Sección Sobre Nosotros", "Guardar Sobre Nosotros"],
+        open_action="Sobre Nosotros",
+        scope="main",
+    ),
+    # Invitaciones: pestaña nominativas
+    Scene(
+        name="invitaciones-nominativas",
+        url="/mi-espacio/admin/invitaciones",
+        viewport=(1440, 900),
+        targets=["Invitaciones nominativas", "Nueva Invitación Nominativa"],
+        open_action="Invitaciones nominativas",
+        scope="main",
+    ),
+    # Pedidos: listado general
+    Scene(
+        name="pedidos-lista",
+        url="/mi-espacio/admin/pedidos",
+        viewport=(1440, 900),
+        targets=["Pedidos", "Nuevo pedido", "Exportar a Excel"],
+        scope="main",
     ),
 ]
 
@@ -178,22 +308,23 @@ def click_button(page: Page, label: str) -> None:
     raise RuntimeError(f"No se pudo pulsar «{label}» tras {CLICK_RETRIES} intentos: {last_err}")
 
 
-def find_target(page: Page, label: str):
-    """Localiza un target DENTRO de la tarjeta del modal.
+def find_target(page: Page, label: str, scope: str | None = CARD_SELECTOR):
+    """Localiza un target DENTRO del contenedor indicado (modal o artículo).
 
     Buscar en toda la página (page.get_by_text) hace que un texto genérico como
     «Productos» case con el enlace del menú lateral en vez del encabezado del
-    modal. Acotar la búsqueda a la tarjeta (CARD_SELECTOR) elimina esos falsos
-    positivos; el bounding_box devuelto sigue en píxeles CSS del viewport.
+    modal. Acotar la búsqueda a un contenedor (CARD_SELECTOR para modales,
+    «article» para las guías) elimina esos falsos positivos; el bounding_box
+    devuelto sigue en píxeles CSS del viewport.
 
     Prioridad:
       1. get_by_text(exact=True) → evita que «Total» case con «Subtotal».
       2. Fallback: locator(text=label) (substring, case-insensitive) — último recurso.
     """
-    scope = page.locator(CARD_SELECTOR).last
+    root = page.locator(scope).last if scope else page
     # 1) exacto
     try:
-        loc = scope.get_by_text(label, exact=True).first
+        loc = root.get_by_text(label, exact=True).first
         box = loc.bounding_box()
         if box:
             return box
@@ -201,7 +332,7 @@ def find_target(page: Page, label: str):
         pass
     # 2) fallback substring
     try:
-        loc = scope.locator(f"text={label}").first
+        loc = root.locator(f"text={label}").first
         box = loc.bounding_box()
         if box:
             return box
@@ -230,7 +361,7 @@ def capture_scene(page: Page, scene: Scene, dpr: int) -> dict:
 
     callouts = []
     for i, label in enumerate(scene.targets, start=1):
-        b = find_target(page, label)
+        b = find_target(page, label, scene.scope)
         if not b:
             print(f"  – target '{label}' no encontrado (se omite)")
             continue

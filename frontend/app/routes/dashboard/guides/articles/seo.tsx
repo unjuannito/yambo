@@ -1,5 +1,12 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faLightbulb } from "@fortawesome/free-solid-svg-icons";
+import { AnnotatedFigure, type Callout } from "./shared";
+
+const OVERVIEW_CALLOUTS: Callout[] = [
+    { n: 1, desc: "Título de la página", xPct: 32, yPct: 12 },
+    { n: 2, desc: "Generar metadatos faltantes", xPct: 91, yPct: 13 },
+    { n: 3, desc: "Filtrar páginas", xPct: 21, yPct: 21 },
+];
 
 export function GuideSeo() {
     return (
@@ -15,13 +22,15 @@ export function GuideSeo() {
             </div>
 
             <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                <AnnotatedFigure src="/images/wiki/guia-seo.png" alt="Página de SEO con sus elementos señalados" width={1440} height={900} callouts={OVERVIEW_CALLOUTS} />
                 <div>
                     <h3 className="font-bold text-yambo-black text-base">Qué se puede editar</h3>
                     <ul className="mt-1 space-y-1 list-disc pl-5">
-                        <li><strong>Título</strong> de la página (lo que aparece en la pestaña del navegador y en Google)</li>
-                        <li><strong>Descripción</strong> (el texto bajo el título en los resultados de búsqueda)</li>
-                        <li><strong>Imagen</strong> de vista previa al compartir el enlace</li>
+                        <li><strong>Título</strong> de la página: lo que aparece en la pestaña del navegador y como enlace en Google.</li>
+                        <li><strong>Descripción</strong>: el texto que se muestra bajo el título en los resultados de búsqueda.</li>
+                        <li><strong>Imagen</strong> de vista previa: la que se ve al compartir el enlace en WhatsApp o redes sociales.</li>
                     </ul>
+                    <p className="mt-2">Cada página pública de la web (inicio, actividades, proyectos, contacto…) tiene sus propios metadatos. Si alguna página no los tiene, pulsa <strong>«Generar faltantes»</strong> para que la web cree automáticamente los metadatos que falten y no dejes ninguna página sin posicionar.</p>
                 </div>
 
                 <div>

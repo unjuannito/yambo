@@ -1,5 +1,11 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShieldHalved, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { AnnotatedFigure, type Callout } from "./shared";
+
+const OVERVIEW_CALLOUTS: Callout[] = [
+    { n: 1, desc: "Título de la página", xPct: 20, yPct: 11 },
+    { n: 2, desc: "Crear un nuevo perfil", xPct: 94, yPct: 12 },
+];
 
 export function GuidePerfiles() {
     return (
@@ -15,9 +21,11 @@ export function GuidePerfiles() {
             </div>
 
             <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                <AnnotatedFigure src="/images/wiki/guia-perfiles.png" alt="Página de Perfiles con sus elementos señalados" width={1440} height={900} callouts={OVERVIEW_CALLOUTS} />
                 <div>
                     <h3 className="font-bold text-yambo-black text-base">¿Qué es un perfil?</h3>
-                    <p className="mt-1">Un perfil es un conjunto de permisos (ver usuarios, editar productos, gestionar incidencias…). A cada usuario se le asigna uno o varios perfiles.</p>
+                    <p className="mt-1">Un perfil es un conjunto de permisos. Cada permiso autoriza una acción concreta: ver usuarios, editar productos, gestionar incidencias, crear invitaciones, administrar pedidos, etc. A cada usuario se le asigna uno o varios perfiles, y la suma de todos sus perfiles determina lo que puede hacer en la web.</p>
+                    <p className="mt-1">Ejemplos típicos: el perfil <strong>Administrador</strong> (acceso total), <strong>Gestor de Merch</strong> (productos y pedidos) o perfiles de solo lectura para monitores y coordinadores.</p>
                 </div>
 
                 <div>

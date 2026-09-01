@@ -1,6 +1,14 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { faLightbulb, faExternalLinkAlt, faTriangleExclamation, faShield } from "@fortawesome/free-solid-svg-icons";
+import { AnnotatedFigure, type Callout } from "./shared";
+
+const OVERVIEW_CALLOUTS: Callout[] = [
+    { n: 1, desc: "Sección OAuth / Inicio de Sesión", xPct: 70, yPct: 23 },
+    { n: 2, desc: "Proveedor Google", xPct: 26, yPct: 49 },
+    { n: 3, desc: "Campo Client ID", xPct: 58, yPct: 55 },
+    { n: 4, desc: "Guardar configuración OAuth", xPct: 87, yPct: 81 },
+];
 
 export function GuideOauthGoogle() {
     return (
@@ -16,6 +24,7 @@ export function GuideOauthGoogle() {
             </div>
 
             <div className="prose prose-sm max-w-none text-gray-600 space-y-6">
+                <AnnotatedFigure src="/images/wiki/guia-oauth-google.png" alt="Sección OAuth / Inicio de Sesión con sus campos señalados" width={1440} height={900} callouts={OVERVIEW_CALLOUTS} />
                 {/* Introducción */}
                 <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl p-4 text-sm">
                     <div className="flex items-start gap-3">

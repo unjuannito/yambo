@@ -366,5 +366,673 @@
         }
       }
     ]
+  },
+  {
+    "name": "guia-configuracion",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración General",
+        "xPct": 30,
+        "yPct": 12,
+        "vp": {
+          "x": 248,
+          "y": 90,
+          "w": 376,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "OAuth / Inicio de Sesión",
+        "xPct": 70,
+        "yPct": 23,
+        "vp": {
+          "x": 915,
+          "y": 193,
+          "w": 192,
+          "h": 36
+        }
+      },
+      {
+        "n": 3,
+        "label": "Configuración de la Organización",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 4,
+        "label": "Guardar Configuración de la Organización",
+        "xPct": 84,
+        "yPct": 70,
+        "vp": {
+          "x": 1027,
+          "y": 603,
+          "w": 364,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "guia-pagina-principal",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Editor de Página Principal",
+        "xPct": 32,
+        "yPct": 12,
+        "vp": {
+          "x": 248,
+          "y": 90,
+          "w": 414,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "Secciones",
+        "xPct": 21,
+        "yPct": 22,
+        "vp": {
+          "x": 248,
+          "y": 176,
+          "w": 101,
+          "h": 38
+        }
+      },
+      {
+        "n": 3,
+        "label": "Configuración de Secciones",
+        "xPct": 58,
+        "yPct": 31,
+        "vp": {
+          "x": 273,
+          "y": 264,
+          "w": 1118,
+          "h": 28
+        }
+      }
+    ]
+  },
+  {
+    "name": "guia-invitaciones",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Gestión de invitaciones",
+        "xPct": 36,
+        "yPct": 14,
+        "vp": {
+          "x": 248,
+          "y": 110,
+          "w": 530,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "+ Nueva Invitación",
+        "xPct": 92,
+        "yPct": 13,
+        "vp": {
+          "x": 1231,
+          "y": 90,
+          "w": 185,
+          "h": 46
+        }
+      },
+      {
+        "n": 3,
+        "label": "Invitaciones nominativas",
+        "xPct": 35,
+        "yPct": 23,
+        "vp": {
+          "x": 394,
+          "y": 192,
+          "w": 224,
+          "h": 36
+        }
+      }
+    ]
+  },
+  {
+    "name": "guia-perfiles",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Perfiles",
+        "xPct": 20,
+        "yPct": 11,
+        "vp": {
+          "x": 240,
+          "y": 82,
+          "w": 108,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "+ Nuevo Perfil",
+        "xPct": 94,
+        "yPct": 12,
+        "vp": {
+          "x": 1274,
+          "y": 82,
+          "w": 150,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "guia-seo",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "SEO",
+        "xPct": 32,
+        "yPct": 12,
+        "vp": {
+          "x": 248,
+          "y": 90,
+          "w": 423,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "Generar faltantes",
+        "xPct": 91,
+        "yPct": 13,
+        "vp": {
+          "x": 1213,
+          "y": 90,
+          "w": 203,
+          "h": 46
+        }
+      },
+      {
+        "n": 3,
+        "label": "Filtrar",
+        "xPct": 21,
+        "yPct": 21,
+        "vp": {
+          "x": 286,
+          "y": 182,
+          "w": 37,
+          "h": 20
+        }
+      }
+    ]
+  },
+  {
+    "name": "guia-oauth-google",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "OAuth / Inicio de Sesión",
+        "xPct": 70,
+        "yPct": 23,
+        "vp": {
+          "x": 915,
+          "y": 193,
+          "w": 192,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "Google",
+        "xPct": 26,
+        "yPct": 49,
+        "vp": {
+          "x": 346,
+          "y": 432,
+          "w": 55,
+          "h": 24
+        }
+      },
+      {
+        "n": 3,
+        "label": "Client ID",
+        "xPct": 58,
+        "yPct": 55,
+        "vp": {
+          "x": 294,
+          "y": 488,
+          "w": 1076,
+          "h": 20
+        }
+      },
+      {
+        "n": 4,
+        "label": "Guardar configuración OAuth",
+        "xPct": 87,
+        "yPct": 81,
+        "vp": {
+          "x": 1123,
+          "y": 709,
+          "w": 268,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "configuracion-aplicacion",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración de la Aplicación",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Guardar Configuración de la Aplicación",
+        "xPct": 85,
+        "yPct": 70,
+        "vp": {
+          "x": 1048,
+          "y": 603,
+          "w": 343,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "configuracion-banco",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración Bancaria",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Guardar Configuración Bancaria",
+        "xPct": 87,
+        "yPct": 55,
+        "vp": {
+          "x": 1102,
+          "y": 471,
+          "w": 289,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "configuracion-email",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración de Correo Electrónico",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Guardar Configuración de Email",
+        "xPct": 87,
+        "yPct": 80,
+        "vp": {
+          "x": 1105,
+          "y": 699,
+          "w": 286,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "configuracion-contacto",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración de Contacto",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Guardar Configuración de Contacto",
+        "xPct": 86,
+        "yPct": 76,
+        "vp": {
+          "x": 1074,
+          "y": 663,
+          "w": 317,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "configuracion-archivos",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración de Archivos",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Guardar Configuración de Archivos",
+        "xPct": 86,
+        "yPct": 59,
+        "vp": {
+          "x": 1077,
+          "y": 507,
+          "w": 314,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "configuracion-ia",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Configuración de IA (Ollama)",
+        "xPct": 58,
+        "yPct": 34,
+        "vp": {
+          "x": 273,
+          "y": 295,
+          "w": 1118,
+          "h": 28
+        }
+      },
+      {
+        "n": 2,
+        "label": "Guardar Configuración de IA",
+        "xPct": 88,
+        "yPct": 74,
+        "vp": {
+          "x": 1130,
+          "y": 639,
+          "w": 261,
+          "h": 46
+        }
+      }
+    ]
+  },
+  {
+    "name": "pagina-principal-hero",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Sección Hero",
+        "xPct": 58,
+        "yPct": 31,
+        "vp": {
+          "x": 273,
+          "y": 264,
+          "w": 1118,
+          "h": 28
+        }
+      }
+    ]
+  },
+  {
+    "name": "pagina-principal-sobre-nosotros",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Sección Sobre Nosotros",
+        "xPct": 58,
+        "yPct": 31,
+        "vp": {
+          "x": 273,
+          "y": 264,
+          "w": 1118,
+          "h": 28
+        }
+      }
+    ]
+  },
+  {
+    "name": "invitaciones-nominativas",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Invitaciones nominativas",
+        "xPct": 29,
+        "yPct": 11,
+        "vp": {
+          "x": 240,
+          "y": 82,
+          "w": 362,
+          "h": 36
+        }
+      }
+    ]
+  },
+  {
+    "name": "pedidos-lista",
+    "viewport": {
+      "w": 1440,
+      "h": 900,
+      "dpr": 1
+    },
+    "image": {
+      "w": 1440,
+      "h": 900
+    },
+    "callouts": [
+      {
+        "n": 1,
+        "label": "Pedidos",
+        "xPct": 31,
+        "yPct": 12,
+        "vp": {
+          "x": 248,
+          "y": 90,
+          "w": 383,
+          "h": 36
+        }
+      },
+      {
+        "n": 2,
+        "label": "Nuevo pedido",
+        "xPct": 79,
+        "yPct": 13,
+        "vp": {
+          "x": 1049,
+          "y": 90,
+          "w": 169,
+          "h": 46
+        }
+      },
+      {
+        "n": 3,
+        "label": "Exportar a Excel",
+        "xPct": 92,
+        "yPct": 13,
+        "vp": {
+          "x": 1230,
+          "y": 90,
+          "w": 186,
+          "h": 46
+        }
+      }
+    ]
   }
 ]
