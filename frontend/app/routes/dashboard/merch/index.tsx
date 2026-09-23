@@ -14,6 +14,7 @@ import type { FilterableColumn, ContentInfo, FilterValues, FilterField } from "~
 import ImageCarousel from "~/components/common/ImageCarousel";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -151,7 +152,7 @@ export default function Merch() {
                         {searchQuery?.trim() && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-yambo-green-50 text-yambo-green-700 text-xs rounded-full font-medium">
                                 {t("merch.filterName", { query: searchQuery.trim() })}
-                                <button
+                                <button type="button"
                                     onClick={() => updateFilter("name", undefined)}
                                     className="hover:text-yambo-green-900 font-bold"
                                     aria-label={t("merch.removeNameFilter")}
@@ -166,7 +167,7 @@ export default function Merch() {
                             return (
                                 <span key={dropId} className="inline-flex items-center gap-1 px-2.5 py-1 bg-yambo-green-50 text-yambo-green-700 text-xs rounded-full font-medium">
                                     {t("merch.collection", { name: drop.name })}
-                                    <button
+                                    <button type="button"
                                         onClick={() => updateFilter("familyProductId", selectedDrops.filter(id => id !== dropId))}
                                         className="hover:text-yambo-green-900 font-bold"
                                         aria-label={t("merch.removeCollectionFilter", { name: drop.name })}
@@ -176,7 +177,7 @@ export default function Merch() {
                                 </span>
                             );
                         })}
-                        <button
+                        <button type="button"
                             onClick={clearFilters}
                             className="text-xs text-gray-400 hover:text-gray-600 underline ml-auto"
                         >
@@ -277,7 +278,7 @@ export default function Merch() {
                             </p>
                         </div>
                         {hasPermission({ obj: "product", action: "update" }) && (
-                            <button
+                            <button type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     navigate(`/mi-espacio/articulos/${product.id}/configurar`);
@@ -304,21 +305,21 @@ export default function Merch() {
 
     if (loading) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("merch.articles")}</h1>
                 <div className="flex justify-center py-12">
                     <LoadingSpinner size="lg" message={t("merch.loadingArticles")} />
                 </div>
-            </main>
+            </PageContainer>
         );
     }
 
     if (error) {
         return (
-            <main className="flex flex-col p-4 md:p-6 w-full">
+            <PageContainer>
                 <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("merch.articles")}</h1>
                 <ErrorMessage message={error} />
-            </main>
+            </PageContainer>
         );
     }
 
@@ -369,7 +370,7 @@ export default function Merch() {
                     aria-label={`${t("merch.productImages")} - ${selectedProduct.name}`}
                 >
                     <div className="relative max-w-4xl max-h-full p-4">
-                        <button
+                        <button type="button"
                             onClick={closeImageModal}
                             className="absolute top-6 right-6 z-10 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
                             aria-label={t("merch.closeImage")}
@@ -386,7 +387,7 @@ export default function Merch() {
 
                         {selectedProduct.images.length > 1 && (
                             <>
-                                <button
+                                <button type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         prevImage();
@@ -396,7 +397,7 @@ export default function Merch() {
                                 >
                                     ‹
                                 </button>
-                                <button
+                                <button type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         nextImage();

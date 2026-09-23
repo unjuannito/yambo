@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -12,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faGear, faEye, faEyeSlash, faExternalLinkAlt, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { useTranslation } from "react-i18next";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -276,9 +278,9 @@ export default function Settings() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <LoadingSpinner message={t('settings.loadingSettings')} size="lg" />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
@@ -286,30 +288,35 @@ export default function Settings() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6 flex items-center gap-2">
                         <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
                         {t('settings.generalSettings')}
                     </h1>
                     <ErrorMessage message={error} onRetry={loadSettings} />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
-                    Configuración General
-                </h1>
-                <p className="text-gray-400 mb-6">{t('settings.manageSettingsHint')}</p>
+            <PageContainer>
+                <PageHeader
+                    title={
+                        <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faGear} className="text-yambo-green-500" />
+                            Configuración General
+                        </span>
+                    }
+                    description={t('settings.manageSettingsHint')}
+                    wiki={{ slug: "configuracion" }}
+                />
 
                 <section className="bg-white rounded-2xl border border-gray-100 p-4 mb-6">
                     <div className="flex flex-wrap gap-2">
                         {tabItems.map((tab) => (
-                            <button
+                            <button type="button"
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
                                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
@@ -407,7 +414,7 @@ export default function Settings() {
                             <InputComponent label={t('settings.emailFrom')} type="email" value={emailConfig.from} onChange={(e) => setEmailConfig({ ...emailConfig, from: e.target.value })} placeholder={t('settings.emailFromPlaceholder')} required />
                             <InputComponent label={t('settings.emailFromName')} type="text" value={emailConfig.fromName || ""} onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })} placeholder={t('settings.emailFromNamePlaceholder')} />
                         </div>
-                        <button onClick={() => setSmtpAdvancedVisible(!smtpAdvancedVisible)} className="flex items-center gap-2 text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium">
+                        <button type="button" onClick={() => setSmtpAdvancedVisible(!smtpAdvancedVisible)} className="flex items-center gap-2 text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium">
                             <FontAwesomeIcon icon={smtpAdvancedVisible ? faChevronUp : faChevronDown} className="w-3 h-3" />
                             {t('settings.smtpAdvanced')}
                         </button>
@@ -573,6 +580,7 @@ export default function Settings() {
                                                         type="button"
                                                         onClick={() => setShowClientSecret(prev => ({ ...prev, [provider.name]: !prev[provider.name] }))}
                                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                        aria-label={showClientSecret[provider.name] ? "Ocultar Client Secret" : "Mostrar Client Secret"}
                                                     >
                                                         <FontAwesomeIcon icon={showClientSecret[provider.name] ? faEyeSlash : faEye} className="w-4 h-4" />
                                                     </button>
@@ -603,7 +611,7 @@ export default function Settings() {
                         </RequirePermission>
                     </section>
                 )}
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

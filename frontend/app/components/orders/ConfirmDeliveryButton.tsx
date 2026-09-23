@@ -28,7 +28,7 @@ export function ConfirmDeliveryButton({ orderId, onConfirmed }: ConfirmDeliveryB
     };
 
     return (
-        <button
+        <button type="button"
             onClick={handleClick}
             disabled={isConfirming}
             className="mt-3 text-sm text-yambo-green-600 hover:text-yambo-green-800 disabled:text-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-1"

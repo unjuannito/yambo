@@ -10,6 +10,7 @@ export interface Project {
   image?: string | null;
   featured: boolean;
   signatureColor?: string | null;
+  coordinationEmail?: string | null;
 }
 
 export interface CreateProjectRequest {
@@ -20,6 +21,7 @@ export interface CreateProjectRequest {
   image?: string | null;
   featured?: boolean;
   signatureColor?: string | null;
+  coordinationEmail?: string | null;
 }
 
 export interface UpdateProjectRequest {
@@ -30,6 +32,7 @@ export interface UpdateProjectRequest {
   image?: string | null;
   featured?: boolean;
   signatureColor?: string | null;
+  coordinationEmail?: string | null;
 }
 
 export interface ProjectGroup {

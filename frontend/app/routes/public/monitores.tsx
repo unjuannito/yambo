@@ -98,7 +98,7 @@ export default function Monitores() {
             {/* Project filter */}
             {projectsWithMonitors.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                <button
+                <button type="button"
                   onClick={() => setSelectedProjectId(null)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                     selectedProjectId === null
@@ -112,7 +112,7 @@ export default function Monitores() {
                   const colors = projectColor(project.id, project.signatureColor);
                   const isSelected = selectedProjectId === project.id;
                   return (
-                    <button
+                    <button type="button"
                       key={project.id}
                       onClick={() => setSelectedProjectId(project.id === selectedProjectId ? null : project.id)}
                       className="px-4 py-2 rounded-full text-sm font-semibold transition-all border hover:brightness-90"
@@ -137,7 +137,7 @@ export default function Monitores() {
             <span>
               {t('public.monitorsFilteredResult', { count: filteredMonitors.length })}
             </span>
-            <button
+            <button type="button"
               onClick={() => { setSelectedProjectId(null); setSearchText(""); }}
                 className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
             >

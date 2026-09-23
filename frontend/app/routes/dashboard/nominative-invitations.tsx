@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import i18n from "~/i18n/config";
 import type { Route } from "./+types/nominative-invitations";
@@ -8,20 +9,24 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import InputComponent from "~/components/common/forms/InputComponent";
+import SelectComponent from "~/components/common/forms/SelectComponent";
 import { nominativeInvitationService } from "~/services/nominativeInvitationService";
 import type {
     NominativeInvitation,
     CreateNominativeInvitationRequest,
 } from "~/services/nominativeInvitationService";
+import { projectService, type Project } from "~/services/projectService";
 import { profileService } from "~/services/profileService";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import { getErrorMessage } from "~/types/error";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import toast from "react-hot-toast";
+import type { GroupRole } from "~/types/role";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEnvelope, faEnvelopesBulk } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -30,7 +35,11 @@ export function meta({}: Route.MetaArgs) {
     ];
 }
 
-export default function NominativeInvitations() {
+export function NominativeInvitationsView({
+    onBackToGeneral,
+}: {
+    onBackToGeneral?: () => void;
+}) {
     const { t } = useTranslation();
     const [invitations, setInvitations] = useState<NominativeInvitation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -38,27 +47,34 @@ export default function NominativeInvitations() {
     const [saving, setSaving] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
     const [batchEmails, setBatchEmails] = useState("");
     const [batchProfileIds, setBatchProfileIds] = useState<string[]>([]);
+    const [batchProjectId, setBatchProjectId] = useState("");
+    const [batchRole, setBatchRole] = useState<GroupRole>("MONITOR");
     const [batchSaving, setBatchSaving] = useState(false);
     const [profileOptions, setProfileOptions] = useState<
         { value: string; label: string }[]
     >([]);
-    const { activeTab, setActiveTab } = useViewTab("actual");
-    const [form, setForm] = useState<CreateNominativeInvitationRequest>({
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [form, setForm] = useState<CreateNominativeInvitationRequest & { projectId: string; role: GroupRole }>({
         email: "",
         name: "",
         profileIds: [],
+        projectId: "",
+        role: "MONITOR",
     });
+    const [invitationType, setInvitationType] = useState<"profile" | "role">("profile");
+    const [batchType, setBatchType] = useState<"profile" | "role">("profile");
 
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
-            const [invData, profiles] = await Promise.all([
-                nominativeInvitationService.getAllInvitations(startDate),
+            const [invData, profiles, projData] = await Promise.all([
+                nominativeInvitationService.getAllInvitations(),
                 profileService.getAllProfiles(),
+                projectService.listProjects(0, 200),
             ]);
             setInvitations(invData);
             const options = profiles.map((profile) => ({
@@ -66,37 +82,45 @@ export default function NominativeInvitations() {
                 label: profile.name,
             }));
             setProfileOptions(options);
+            setProjects(projData.content || []);
         } catch (err) {
             setError(getErrorMessage(err, t("invitations.dataLoadingError")));
         } finally {
             setLoading(false);
         }
-    }, [activeTab, t]);
+    }, [t]);
 
     useEffect(() => {
         void fetchData();
     }, [fetchData]);
 
     const resetForm = () => {
-        setForm({ email: "", name: "", profileIds: [] });
+        setForm({ email: "", name: "", profileIds: [], projectId: "", role: "MONITOR" });
+        setInvitationType("profile");
         setIsModalOpen(false);
         setSaving(false);
     };
 
     const openCreateModal = () => {
-        setForm({ email: "", name: "", profileIds: [] });
+        setForm({ email: "", name: "", profileIds: [], projectId: "", role: "MONITOR" });
+        setInvitationType("profile");
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm(t("invitations.deleteConfirm"))) {
-            try {
-                await nominativeInvitationService.deleteInvitation(id);
-                setInvitations((prev) => prev.filter((inv) => inv.id !== id));
-                toast.success(t("invitations.deleteSuccess"));
-            } catch (err) {
-                toast.error(getErrorMessage(err, t("invitations.deleteError")));
-            }
+    const handleDelete = (id: string) => {
+        setConfirmDelete(id);
+    };
+
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
+        try {
+            await nominativeInvitationService.deleteInvitation(confirmDelete);
+            setInvitations((prev) => prev.filter((inv) => inv.id !== confirmDelete));
+            toast.success(t("invitations.deleteSuccess"));
+        } catch (err) {
+            toast.error(getErrorMessage(err, t("invitations.deleteError")));
+        } finally {
+            setConfirmDelete(null);
         }
     };
 
@@ -108,7 +132,16 @@ export default function NominativeInvitations() {
 
         try {
             setSaving(true);
-            const newInvitation = await nominativeInvitationService.createInvitation(form);
+            const payload: any = {
+                email: form.email.trim(),
+                name: form.name.trim(),
+                profileIds: invitationType === "profile" ? form.profileIds : [],
+            };
+            if (invitationType === "role" && form.projectId && form.role) {
+                payload.projectId = form.projectId;
+                payload.role = form.role;
+            }
+            const newInvitation = await nominativeInvitationService.createInvitation(payload);
             setInvitations((prev) => [newInvitation, ...prev]);
             toast.success(t("invitations.createNominativeSuccess"));
             resetForm();
@@ -122,19 +155,24 @@ export default function NominativeInvitations() {
     const openBatchModal = () => {
         setBatchEmails("");
         setBatchProfileIds([]);
+        setBatchProjectId("");
+        setBatchRole("MONITOR");
+        setBatchType("profile");
         setIsBatchModalOpen(true);
     };
 
     const closeBatchModal = () => {
         setBatchEmails("");
         setBatchProfileIds([]);
+        setBatchProjectId("");
+        setBatchRole("MONITOR");
         setIsBatchModalOpen(false);
         setBatchSaving(false);
     };
 
     const handleBatchSave = async () => {
         const emails = batchEmails
-            .split(/[,\\n]+/)
+            .split(/[,\\\n]+/)
             .map((e) => e.trim())
             .filter((e) => e.length > 0);
 
@@ -152,10 +190,15 @@ export default function NominativeInvitations() {
 
         try {
             setBatchSaving(true);
-            const result = await nominativeInvitationService.createBatchInvitations({
+            const payload: any = {
                 emails,
-                profileIds: batchProfileIds,
-            });
+                profileIds: batchType === "profile" ? batchProfileIds : [],
+            };
+            if (batchType === "role" && batchProjectId && batchRole) {
+                payload.projectId = batchProjectId;
+                payload.role = batchRole;
+            }
+            const result = await nominativeInvitationService.createBatchInvitations(payload);
             setInvitations((prev) => [...result.invitations, ...prev]);
             toast.success(
                 t("invitations.batchCreated", { count: result.invitations.length }),
@@ -167,6 +210,17 @@ export default function NominativeInvitations() {
             setBatchSaving(false);
         }
     };
+
+    const projectOptions = useMemo(
+        () => projects.map((p) => ({ value: p.id, label: p.name })),
+        [projects],
+    );
+
+    const roleOptions = [
+        { value: "MONITOR", label: t("invitations.roleMonitor") },
+        { value: "COORDINATOR", label: t("invitations.roleCoordinator") },
+        { value: "PARENT", label: t("invitations.roleParent") },
+    ];
 
     const invitationColumns: FilterableColumn<NominativeInvitation & { usedLabel: string }>[] = [
         {
@@ -188,7 +242,6 @@ export default function NominativeInvitations() {
             render: (invitation) => (
                 <div>
                     <span className="font-medium text-yambo-black">{invitation.email}</span>
-                    <p className="text-xs text-gray-400 sm:hidden">{invitation.invitedByUser?.name || t("invitations.freeEntry")}</p>
                 </div>
             ),
         },
@@ -196,9 +249,17 @@ export default function NominativeInvitations() {
             key: "invitedByUser" as any,
             header: t("invitations.invitedBy"),
             className: "hidden sm:table-cell",
-            render: (invitation) => (
-                <span className="text-gray-500">{invitation.invitedByUser?.name || t("invitations.freeEntry")}</span>
-            ),
+            render: (invitation) =>
+                invitation.invitedByUser ? (
+                    <Link
+                        to={`/mi-espacio/admin/usuarios/${invitation.invitedByUser.id}/perfil`}
+                        className="text-gray-500 hover:text-yambo-green-600 transition-colors"
+                    >
+                        {invitation.invitedByUser.name}
+                    </Link>
+                ) : (
+                    <span className="text-gray-500">{t("invitations.freeEntry")}</span>
+                ),
         },
         {
             key: "createdAt",
@@ -244,6 +305,30 @@ export default function NominativeInvitations() {
                     {invitation.used ? t("invitations.usedYes") : t("invitations.usedNo")}
                 </span>
             ),
+        },
+        {
+            key: "usedByUser" as any,
+            header: t("invitations.usedBy"),
+            render: (invitation) => {
+                if (!invitation.usedByUser) {
+                    return <span className="text-sm text-gray-400">—</span>;
+                }
+                return (
+                    <div className="flex items-center gap-1.5 text-sm">
+                        <Link
+                            to={`/mi-espacio/admin/usuarios/${invitation.usedByUser.id}/perfil`}
+                            className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors"
+                        >
+                            {invitation.usedByUser.name}
+                        </Link>
+                        {invitation.usedAt && (
+                            <span className="text-xs text-gray-400">
+                                {new Date(invitation.usedAt).toLocaleDateString()}
+                            </span>
+                        )}
+                    </div>
+                );
+            },
         },
         {
             key: "id",
@@ -295,12 +380,79 @@ export default function NominativeInvitations() {
                 display={{
                     emptyMessage: t("invitations.noInvitations"),
                     loadingMessage: t("invitations.loading"),
+                    renderMobileCard: (invitation) => (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="font-medium text-yambo-black truncate">
+                                        {invitation.email}
+                                    </p>
+                                    <p className="text-xs text-gray-400 font-mono truncate">
+                                        {invitation.id}
+                                    </p>
+                                </div>
+                                <span
+                                    className={`px-2.5 py-1 text-xs font-medium rounded-full shrink-0 ${
+                                        invitation.used
+                                            ? "bg-yambo-green-50 text-yambo-green-700"
+                                            : "bg-coral/10 text-coral"
+                                    }`}
+                                >
+                                    {invitation.used ? t("invitations.usedYes") : t("invitations.usedNo")}
+                                </span>
+                            </div>
+                            {invitation.invitedByUser && (
+                                <p className="text-xs text-gray-500">
+                                    {t("invitations.invitedBy")}: {invitation.invitedByUser.name}
+                                </p>
+                            )}
+                            <p className="text-xs text-gray-400">
+                                {t("invitations.expiresAt")}: {new Date(invitation.expiresAt).toLocaleDateString()}
+                            </p>
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                                {invitation.usedByUser ? (
+                                    <span className="text-xs text-gray-500 truncate">
+                                        {t("invitations.usedBy")}: {invitation.usedByUser.name}
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                )}
+                                <ButtonComponent
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDelete(invitation.id)}
+                                    disabled={invitation.used}
+                                >
+                                    {t("invitations.deleteButton")}
+                                </ButtonComponent>
+                            </div>
+                        </div>
+                    ),
                 }}
                 features={{
                     enableFilters: true,
                     enablePagination: true,
                 }}
             >
+                {onBackToGeneral && (
+                    <div className="flex gap-1 bg-gray-100/80 rounded-lg p-1 w-fit -mt-1 mb-2">
+                        <button
+                            type="button"
+                            onClick={onBackToGeneral}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-gray-500 hover:text-gray-700"
+                        >
+                            <FontAwesomeIcon icon={faEnvelopesBulk} className="w-4 h-4" />
+                            {t("invitations.title")}
+                        </button>
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-yambo-black shadow-sm"
+                        >
+                            <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4" />
+                            {t("invitations.nominativeTitle")}
+                        </button>
+                    </div>
+                )}
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner size="md" message={t("invitations.loading")} />
@@ -311,6 +463,7 @@ export default function NominativeInvitations() {
                 )}
             </ListPageShell>
 
+            {/* Individual creation modal */}
             <Modal
                     isOpen={isModalOpen}
                     onClose={resetForm}
@@ -347,26 +500,98 @@ export default function NominativeInvitations() {
                             }
                             required
                         />
-                        <MultiSelectComponent
-                            label={t("invitations.profiles")}
-                            name="profileIds"
-                            value={form.profileIds}
-                            options={profileOptions}
-                            onChange={(e) => {
-                                const selected = Array.from(
-                                    (e.target as HTMLSelectElement).selectedOptions,
-                                    option => option.value
-                                );
+                        <InputComponent
+                            label={t("invitations.name")}
+                            type="text"
+                            value={form.name}
+                            onChange={(e) =>
                                 setForm((prev) => ({
                                     ...prev,
-                                    profileIds: selected,
-                                }));
-                            }}
-                            placeholder={t("invitations.selectProfilesPlaceholder")}
+                                    name: e.target.value,
+                                }))
+                            }
+                            placeholder={t("invitations.namePlaceholder")}
                         />
+
+                        {/* Invitation type tabs */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                                {t("invitations.invitationType")}
+                            </label>
+                            <div className="flex gap-2 bg-gray-100/80 rounded-lg p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setInvitationType("profile")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        invitationType === "profile"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProfile")}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setInvitationType("role")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        invitationType === "role"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProjectRole")}
+                                </button>
+                            </div>
+                        </div>
+
+                        {invitationType === "profile" ? (
+                            <MultiSelectComponent
+                                label={t("invitations.profiles")}
+                                name="profileIds"
+                                value={form.profileIds}
+                                options={profileOptions}
+                                onChange={(e) => {
+                                    const selected = Array.from(
+                                        (e.target as HTMLSelectElement).selectedOptions,
+                                        option => option.value
+                                    );
+                                    setForm((prev) => ({
+                                        ...prev,
+                                        profileIds: selected,
+                                    }));
+                                }}
+                                placeholder={t("invitations.selectProfilesPlaceholder")}
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                <SelectComponent
+                                    label={t("invitations.project")}
+                                    value={form.projectId}
+                                    options={projectOptions}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            projectId: e.target.value,
+                                        }))
+                                    }
+                                />
+                                <SelectComponent
+                                    label={t("invitations.role")}
+                                    value={form.role}
+                                    options={roleOptions}
+                                    onChange={(e) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            role: e.target.value as GroupRole,
+                                        }))
+                                    }
+                                />
+                            </div>
+                        )}
                     </div>
                 </Modal>
 
+                {/* Batch creation modal */}
                 <Modal
                     isOpen={isBatchModalOpen}
                     onClose={closeBatchModal}
@@ -403,22 +628,90 @@ export default function NominativeInvitations() {
                                 placeholder={t("invitations.emailPlaceholderExample")}
                             />
                         </div>
-                        <MultiSelectComponent
-                            label={t("invitations.profiles")}
-                            name="batchProfileIds"
-                            value={batchProfileIds}
-                            options={profileOptions}
-                            onChange={(e) => {
-                                const selected = Array.from(
-                                    (e.target as HTMLSelectElement).selectedOptions,
-                                    option => option.value,
-                                );
-                                setBatchProfileIds(selected);
-                            }}
-                            placeholder={t("invitations.selectProfilesPlaceholder")}
-                        />
+
+                        {/* Batch type tabs */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                                {t("invitations.invitationType")}
+                            </label>
+                            <div className="flex gap-2 bg-gray-100/80 rounded-lg p-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setBatchType("profile")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        batchType === "profile"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProfile")}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBatchType("role")}
+                                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                        batchType === "role"
+                                            ? "bg-white text-yambo-green-700 shadow-sm"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    }`}
+                                >
+                                    {t("invitations.byProjectRole")}
+                                </button>
+                            </div>
+                        </div>
+
+                        {batchType === "profile" ? (
+                            <MultiSelectComponent
+                                label={t("invitations.profiles")}
+                                name="batchProfileIds"
+                                value={batchProfileIds}
+                                options={profileOptions}
+                                onChange={(e) => {
+                                    const selected = Array.from(
+                                        (e.target as HTMLSelectElement).selectedOptions,
+                                        option => option.value,
+                                    );
+                                    setBatchProfileIds(selected);
+                                }}
+                                placeholder={t("invitations.selectProfilesPlaceholder")}
+                            />
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                <SelectComponent
+                                    label={t("invitations.project")}
+                                    value={batchProjectId}
+                                    options={projectOptions}
+                                    onChange={(e) =>
+                                        setBatchProjectId(e.target.value)
+                                    }
+                                />
+                                <SelectComponent
+                                    label={t("invitations.role")}
+                                    value={batchRole}
+                                    options={roleOptions}
+                                    onChange={(e) =>
+                                        setBatchRole(e.target.value as GroupRole)
+                                    }
+                                />
+                            </div>
+                        )}
                     </div>
                 </Modal>
+            <ConfirmDialog
+                isOpen={confirmDelete !== null}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={executeDelete}
+                title={t("invitations.deleteConfirmTitle")}
+                message={t("invitations.deleteConfirm")}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
         </RequirePermission>
     );
+}
+
+import { Navigate } from "react-router";
+
+export default function NominativeInvitationsRedirect() {
+    return <Navigate to="/mi-espacio/admin/invitaciones" replace />;
 }

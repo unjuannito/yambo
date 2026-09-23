@@ -7,8 +7,6 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { issueService, type IssueListItem } from "~/services/issueService";
 import { IssueStatus, ISSUE_STATUS_CONFIG } from "~/types/issueType";
 import { IssueStatusBadge } from "~/components/issues";
-import { useViewTab } from "~/components/common/ViewTabs";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 
 interface UserIssueRow {
     id: string;
@@ -24,7 +22,6 @@ interface UserIssueRow {
 export default function IssuesPage() {
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const { activeTab, setActiveTab } = useViewTab("actual");
     const [refreshKey, setRefreshKey] = useState(0);
     const [stats, setStats] = useState({
         open: 0,
@@ -40,21 +37,15 @@ export default function IssuesPage() {
         [],
     );
 
-    const handleTabChange = useCallback((tab: "actual" | "historico") => {
-        setActiveTab(tab);
-        setRefreshKey((prev) => prev + 1);
-    }, [setActiveTab]);
-
     const fetchIssuesData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
             const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
             const effectiveStartDate = dateRange?.startDate
                 ? new Date(dateRange.startDate).toISOString()
-                : startDate;
+                : undefined;
             const effectiveEndDate = dateRange?.endDate
                 ? new Date(dateRange.endDate + "T23:59:59").toISOString()
                 : undefined;
@@ -89,7 +80,7 @@ export default function IssuesPage() {
                 page: result.page,
             };
         },
-        [refreshKey, activeTab],
+        [refreshKey],
     );
 
     const columns = useMemo<FilterableColumn<UserIssueRow>[]>(
@@ -177,16 +168,47 @@ export default function IssuesPage() {
                 { label: t('issues.statOpen'), value: stats.open, color: "red" },
                 { label: t('issues.statInProgress'), value: stats.inProgress, color: "orange" },
             ]}
-            tabs={{
-                activeTab,
-                onTabChange: handleTabChange,
-            }}
             columns={columns}
             keyField="id"
             serverSide={{ fetchData: fetchIssuesData }}
             features={{
                 enableFilters: true,
                 enablePagination: true,
+            }}
+            display={{
+                emptyMessage: t('issues.noIssues'),
+                loadingMessage: t('issues.loading'),
+                renderMobileCard: (row: UserIssueRow) => (
+                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <p className="font-medium text-yambo-black truncate">{row.title}</p>
+                                <p className="text-xs text-gray-400 font-mono">#{row.id}</p>
+                            </div>
+                            <IssueStatusBadge status={row.status} />
+                        </div>
+                        {row.orderId && (
+                            <p className="text-xs text-gray-400">
+                                {t('issues.orderId')} #{row.orderId}
+                            </p>
+                        )}
+                        {row.productName && (
+                            <p className="text-xs text-gray-400">{row.productName}</p>
+                        )}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                            <span className="text-xs text-gray-400">
+                                {new Date(row.updatedAt).toLocaleString("es-ES")}
+                            </span>
+                            <ButtonComponent
+                                onClick={() => navigate(`/mi-espacio/incidencias/${row.id}`)}
+                                size="sm"
+                                variant="neutral"
+                            >
+                                {t('issues.viewShort')}
+                            </ButtonComponent>
+                        </div>
+                    </div>
+                ),
             }}
         />
     );

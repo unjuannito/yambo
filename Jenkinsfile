@@ -34,7 +34,7 @@ pipeline {
     environment {
         // ── Credenciales Jenkins (configurar en Manage Jenkins → Credentials) ──
         //   yambo-ssh-key        : SSH private key (id_deploy) para BUILD_HOST
-        //   yambo-build-host     : "root@192.168.1.21"
+        //   yambo-build-host     : "<usuario>@192.168.1.21" (no root; grupo docker)
         //   yambo-registry       : "192.168.1.21:5000"
         //   yambo-registry-user  : usuario registry (Fase 3)
         //   yambo-registry-pass  : password registry (Fase 3)
@@ -61,12 +61,6 @@ pipeline {
         // ── Dominios públicos (DNS gestionado en BIND .21 + Cloudflare) ──────
         PROD_DOMAIN = 'yambo.cabrasky.net'
         DEV_DOMAIN  = 'dev.yambo.cabrasky.net'
-
-        // ── Kubeconfigs (en BUILD_HOST .21) ──────────────────────────────────
-        //   Local   : /root/.kube/config      (k3s .22)
-        //   Hetzner : /root/.kube/hetzner.yaml (k3s CX33 vía NetBird)
-        KUBECONFIG_LOCAL   = '/root/.kube/config'
-        KUBECONFIG_HETZNER = '/root/.kube/hetzner.yaml'
 
         // ── Namespaces ───────────────────────────────────────────────────────
         NS_PROD = 'yambo'
@@ -103,13 +97,14 @@ pipeline {
                     ).trim()
 
                     // Tags de imagen
+                    def shortSha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     if (env.IS_MAIN == 'true') {
                         env.FRONTEND_TAG = env.FRONTEND_VER
                         env.BACKEND_TAG  = env.BACKEND_VER
                     } else {
                         def slug = env.BRANCH_NAME.toLowerCase().replaceAll('[^a-z0-9]+', '-').replaceAll('^-+|-+$', '')
-                        env.FRONTEND_TAG = "branch-${slug}"
-                        env.BACKEND_TAG  = "branch-${slug}"
+                        env.FRONTEND_TAG = "branch-${slug}-${shortSha}"
+                        env.BACKEND_TAG  = "branch-${slug}-${shortSha}"
                     }
 
                     // Cambios (solo main/develop hacen deploy)
@@ -119,7 +114,11 @@ pipeline {
                         returnStdout: true
                     ).trim().split('\n').findAll { it?.trim() }
 
-                    if (changedFiles.isEmpty() && !params.FORCE_REBUILD) {
+                    if (params.FORCE_REBUILD) {
+                        env.FE_CHANGED  = 'true'
+                        env.BE_CHANGED  = 'true'
+                        env.INFRA_CHANGED = 'true'
+                    } else if (changedFiles.isEmpty()) {
                         env.FE_CHANGED  = 'true'
                         env.BE_CHANGED  = 'true'
                         env.INFRA_CHANGED = 'false'
@@ -141,6 +140,11 @@ pipeline {
         // Necesario SIEMPRE que haya deploy (aunque solo cambie infra):
         // los stages Test/Sonar se saltan si no hay cambios FE/BE y el
         // deploy necesita /tmp/yambo-ci con el código.
+        // FIX 2026-09-23: los contenedores de Test/Sonar (maven, node) escriben
+        // backend/target y frontend/node_modules vía bind mount con otro owner
+        // → el `rm -rf` del usuario ssh fallaba con "Permission denied". Si el
+        // rm normal falla, se borra desde un contenedor (mismo daemon docker
+        // que creó los ficheros, así que siempre tiene permiso).
         stage('Prepare Build Host') {
             when {
                 expression { env.DEPLOYABLE_CHANGED == 'true' && !params.FORCE_PROD_DEPLOY }
@@ -149,7 +153,12 @@ pipeline {
                 sh """
                     tar czf - --exclude=.git --exclude=node_modules --exclude=frontend/node_modules --exclude=backend/target . | \
                     ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                        'rm -rf /tmp/yambo-ci && mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && ls /tmp/yambo-ci | head -20'
+                        'if [ -e /tmp/yambo-ci ]; then \
+                           rm -rf /tmp/yambo-ci 2>/dev/null || \
+                           docker run --rm -v /tmp:/host-tmp alpine:3 rm -rf /host-tmp/yambo-ci; \
+                         fi && \
+                         [ ! -e /tmp/yambo-ci ] && \
+                         mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && ls /tmp/yambo-ci | head -20'
                 """
             }
         }
@@ -170,7 +179,7 @@ pipeline {
                                 tar czf - --exclude=.git --exclude=node_modules backend | \
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && \
-                                     docker run --rm -v /tmp/yambo-ci/backend:/app -w /app \
+                                     docker run --rm --cpus=1 -v /tmp/yambo-ci/backend:/app -w /app \
                                        maven:3.9-eclipse-temurin-21 sh -c "chmod +x mvnw && ./mvnw verify -T 1C -B -q"'
                             """
                         }
@@ -184,7 +193,7 @@ pipeline {
                                 tar czf - --exclude=.git --exclude=node_modules frontend | \
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && \
-                                     docker run --rm -v /tmp/yambo-ci/frontend:/app -w /app \
+                                     docker run --rm --cpus=1 -v /tmp/yambo-ci/frontend:/app -w /app \
                                        node:22-alpine sh -c "npm install --no-audit --no-fund && npm run typecheck && npm run build"'
                             """
                         }
@@ -196,7 +205,7 @@ pipeline {
         // ═══════════════════════════════════════════════════════════════════
         // Phase 4 — SonarQube (BUILD_HOST → sonar.cabrasky.net/.21:9000)
         // ═══════════════════════════════════════════════════════════════════
-        stage('SonarQube') {
+                stage('SonarQube') {
             when {
                 expression { env.DEPLOYABLE_CHANGED == 'true' && !params.FORCE_PROD_DEPLOY }
             }
@@ -205,12 +214,18 @@ pipeline {
                     when { expression { env.BE_CHANGED == 'true' } }
                     steps {
                         script {
-                            def branchArgs = (env.IS_MAIN == 'true') ? '' : "-Dsonar.branch.name=${env.BRANCH_NAME}"
+                            def sonarArgs = ''
+
+                            if (env.IS_PR == 'true') {
+                                sonarArgs = "-Dsonar.pullrequest.key=${env.CHANGE_ID} -Dsonar.pullrequest.branch=${env.CHANGE_BRANCH} -Dsonar.pullrequest.base=${env.CHANGE_TARGET}"
+                            } else if (env.IS_MAIN != 'true') {
+                                sonarArgs = "-Dsonar.branch.name=${env.BRANCH_NAME}"
+                            }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/backend && \
-                                     docker run --rm -v /tmp/yambo-ci/backend:/app -w /app \
-                                       maven:3.9-eclipse-temurin-21 sh -c "./mvnw sonar:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.token=${SONAR_AUTH_TOKEN} ${branchArgs}"'
+                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/backend:/app -w /app \
+                                       maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} ${sonarArgs}"'
                             """
                         }
                     }
@@ -219,12 +234,21 @@ pipeline {
                     when { expression { env.FE_CHANGED == 'true' } }
                     steps {
                         script {
-                            def branchArgs = (env.IS_MAIN == 'true') ? '' : "--define sonar.branch.name=${env.BRANCH_NAME}"
+                            // SONAR_SCANNER_OPTS limita el heap del JVM del escáner y
+                            // sonar.javascript.node.maxspace limita el runtime Node.js embedded
+                            def sonarArgs = ''
+
+                            if (env.IS_PR == 'true') {
+                                sonarArgs = "--define sonar.pullrequest.key=${env.CHANGE_ID} --define sonar.pullrequest.branch=${env.CHANGE_BRANCH} --define sonar.pullrequest.base=${env.CHANGE_TARGET}"
+                            } else if (env.IS_MAIN != 'true') {
+                                sonarArgs = "--define sonar.branch.name=${env.BRANCH_NAME}"
+                            }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd /tmp/yambo-ci/frontend && \
-                                     docker run --rm -v /tmp/yambo-ci/frontend:/app -w /app \
-                                       node:22-alpine sh -c "npm install --no-audit --no-fund && npx sonar-scanner --define sonar.host.url=${SONAR_HOST_URL} --define sonar.token=${SONAR_AUTH_TOKEN} ${branchArgs}"'
+                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
+                                       -e SONAR_SCANNER_OPTS=-Xmx1024m \
+                                       sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024 ${sonarArgs}'
                             """
                         }
                     }
@@ -232,7 +256,6 @@ pipeline {
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
         // Phase 5 — Docker Build & Push (BUILD_HOST → REGISTRY)
         // ═══════════════════════════════════════════════════════════════════
         // NOTA: builds SECUENCIALES y con --memory limitado. La VM infra (.21)
@@ -289,24 +312,54 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/hetzner"
-                    // Para Hetzner: push de imágenes al registry vía NetBird
-                    // y usar el nombre overlay del registry (100.111.131.248:5000)
-                    sh """
+                    // kubeconfig efímero por build: se inyecta desde la credencial
+                    // Jenkins 'yambo-kubeconfig-prod' (Secret file), se copia por scp
+                    // al build host y se borra al terminar (ver finally). Antes se
+                    // dependía de ~/.kube/hetzner.yaml existiendo en el host (frágil).
+                    def kubeconfig = "/tmp/.yambo-kubeconfig-prod-${env.BUILD_NUMBER}"
+                    // FIX 2026-08-21 (mismo bug que Deploy Develop): solo se
+                    // tag/push la imagen del componente que se construyó en este
+                    // build. Antes el docker tag de ambas fallaba si el push solo
+                    // tocaba un componente (imagen local inexistente). El
+                    // componente no cambiado conserva el tag desplegado.
+                    withCredentials([file(credentialsId: 'yambo-kubeconfig-prod', variable: 'KUBECFG')]) {
+                        try {
+                            sh "scp -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} \$KUBECFG ${BUILD_HOST}:${kubeconfig}"
+                            sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
                              echo ${REGISTRY_PASS} | docker login ${REGISTRY_HETZNER} -u ${REGISTRY_USER} --password-stdin && \
-                             docker tag ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
-                             docker push ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
-                             docker tag ${BACKEND_IMAGE}:${env.BACKEND_TAG} ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
-                             docker push ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               docker tag ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
+                               docker push ${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG}; \
+                             fi && \
+                             if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               docker tag ${BACKEND_IMAGE}:${env.BACKEND_TAG} ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                               docker push ${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG}; \
+                             fi && \
                              cd ${overlayDir} && \
-                             kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG} && \
-                             kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG} && \
+                             if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG}; \
+                             else \
+                               FE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-frontend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:\${FE_CUR}; \
+                             fi && \
+                             if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG}; \
+                             else \
+                               BE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-backend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:\${BE_CUR}; \
+                             fi && \
                              cd /tmp/yambo-ci && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
-                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s'
-                    """
+                             KUBECONFIG=${kubeconfig} kubectl kustomize ${overlayDir} | \
+                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${kubeconfig} kubectl apply -f - && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s'
+                            """
+                        } finally {
+                            sh "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} 'rm -f ${kubeconfig}' || true"
+                        }
+                    }
                 }
             }
         }
@@ -322,16 +375,44 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/develop"
-                    sh """
+                    // kubeconfig efímero por build: se inyecta desde la credencial
+                    // Jenkins 'yambo-kubeconfig-dev' (Secret file), se copia por scp
+                    // al build host y se borra al terminar (ver finally). Antes se
+                    // usaba ~/.kube/config en el host, que NO existía para el usuario
+                    // build → kubectl caía a http://localhost:8080 (nginx) y devolvía
+                    // 404 "the server could not find the requested resource".
+                    def kubeconfig = "/tmp/.yambo-kubeconfig-dev-${env.BUILD_NUMBER}"
+                    // FIX 2026-08-21: `kustomize edit set image` se aplica SOLO al
+                    // componente que se construyó en este build (FE/BE/INFRA_CHANGED).
+                    // Antes se seteaban ambos tags SIEMPRE → si el push solo tocaba
+                    // frontend, el backend apuntaba a un tag inexistente en el
+                    // registry → ImagePullBackOff (rollout atascado y build SUCCESS
+                    // engañoso). El componente no cambiado conserva el tag que ya
+                    // tiene desplegado el cluster. Además se espera el rollout del
+                    // backend (antes solo frontend).
+                    withCredentials([file(credentialsId: 'yambo-kubeconfig-dev', variable: 'KUBECFG')]) {
+                        try {
+                            sh "scp -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} \$KUBECFG ${BUILD_HOST}:${kubeconfig}"
+                            sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
                              cd ${overlayDir} && \
-                             kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG} && \
-                             kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG} && \
+                             if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG}; \
+                             else \
+                               FE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-frontend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:\${FE_CUR}; \
+                             fi && \
+                             if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG}; \
+                             else \
+                               BE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-backend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:\${BE_CUR}; \
+                             fi && \
                              cd /tmp/yambo-ci && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
-                             if ! KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
-                               KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create secret generic yambo-secrets -n ${NS_DEV} \
+                             KUBECONFIG=${kubeconfig} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${kubeconfig} kubectl apply -f - && \
+                             if ! KUBECONFIG=${kubeconfig} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
+                               KUBECONFIG=${kubeconfig} kubectl create secret generic yambo-secrets -n ${NS_DEV} \
                                  --from-literal=DB_USER=${REGISTRY_USER} \
                                  --from-literal=DB_PASS=${REGISTRY_PASS} \
                                  --from-literal=JWT_SECRET=\$(openssl rand -hex 32) \
@@ -340,10 +421,15 @@ pipeline {
                                  --from-literal=MAIL_PASSWORD=CHANGE_ME \
                                  --from-literal=MAIL_FROM=noreply@yambo-alco.es; \
                              fi && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl kustomize ${overlayDir} | \
-                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s'
-                    """
+                             KUBECONFIG=${kubeconfig} kubectl kustomize ${overlayDir} | \
+                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${kubeconfig} kubectl apply -f - && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s'
+                            """
+                        } finally {
+                            sh "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} 'rm -f ${kubeconfig}' || true"
+                        }
+                    }
                 }
             }
         }

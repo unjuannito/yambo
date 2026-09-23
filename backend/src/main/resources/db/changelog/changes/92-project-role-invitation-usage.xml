@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="92" author="cabrasky">
+        <comment>Project role invitations: max uses, enabled flag, usage count + usage history table</comment>
+
+        <addColumn tableName="project_role_invitation">
+            <column name="max_uses" type="int"/>
+            <column name="usage_count" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <createTable tableName="project_role_invitation_usage">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="invitation_id" type="bigint">
+                <constraints nullable="false"
+                    foreignKeyName="fk_invitation_usage_invitation"
+                    referencedTableName="project_role_invitation"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="user_id" type="varchar(8)">
+                <constraints nullable="false"
+                    foreignKeyName="fk_invitation_usage_user"
+                    referencedTableName="user"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="user_email" type="varchar(320)"/>
+            <column name="user_name" type="varchar(200)"/>
+            <column name="was_new_registration" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="used_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="project_role_invitation_usage" indexName="idx_invitation_usage_invitation">
+            <column name="invitation_id"/>
+        </createIndex>
+
+        <!-- Backfill: invitaciones ya usadas → registrar el uso histórico y marcar max_uses=1 -->
+        <sql>
+            UPDATE project_role_invitation SET max_uses = 1 WHERE used_by_user_id IS NOT NULL;
+
+            INSERT INTO project_role_invitation_usage (invitation_id, user_id, user_email, user_name, was_new_registration, used_at)
+            SELECT pri.id, pri.used_by_user_id, u.email, u.name, false, pri.used_at
+            FROM project_role_invitation pri
+            LEFT JOIN "user" u ON u.id = pri.used_by_user_id
+            WHERE pri.used_by_user_id IS NOT NULL;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

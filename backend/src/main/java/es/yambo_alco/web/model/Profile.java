@@ -40,9 +40,6 @@ public class Profile implements GrantedAuthority {
     @Builder.Default
     private Set<Permission> permissions = Set.of();
 
-    @OneToOne(mappedBy = "profile", fetch = FetchType.LAZY)
-    private FamilyProduct familyProduct;
-
     @Override
     public String getAuthority() {
         return id;

@@ -8,6 +8,7 @@ import type {
     FetchDataParams,
 } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import InputComponent from "~/components/common/forms/InputComponent";
@@ -20,6 +21,7 @@ import {
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta({}: Route.MetaArgs) {
     return [
@@ -46,6 +48,7 @@ export default function Profiles() {
     const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
     const [editing, setEditing] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
     useEffect(() => {
         loadPermissions();
@@ -128,18 +131,21 @@ export default function Profiles() {
         }
     };
 
-    const handleDelete = async (profileId: string) => {
-        if (!confirm(t("profiles.confirmDelete", { id: profileId }))) {
-            return;
-        }
+    const handleDelete = (profileId: string) => {
+        setConfirmDelete(profileId);
+    };
 
+    const executeDelete = async () => {
+        if (!confirmDelete) return;
         try {
-            await profileService.deleteProfile(profileId);
+            await profileService.deleteProfile(confirmDelete);
             toast.success(t("profiles.deleted"));
         } catch (err) {
             toast.error(
                 getErrorMessage(err, t("profiles.deleteError")),
             );
+        } finally {
+            setConfirmDelete(null);
         }
     };
 
@@ -242,12 +248,12 @@ export default function Profiles() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("profiles.title")}</h1>
                     <div className="flex justify-center py-12">
                         <LoadingSpinner size="lg" message={t("profiles.loading")} />
                     </div>
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
@@ -256,6 +262,7 @@ export default function Profiles() {
         <RequirePermission permission={{ obj: "profile", action: "read" }} redirectTo="/mi-espacio">
             <ListPageShell<Profile>
                 title={t("profiles.title")}
+                wiki={{ slug: "perfiles" }}
                 actions={
                     <RequirePermission permission={{ obj: "profile", action: "create" }} redirect={false}>
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
@@ -268,6 +275,61 @@ export default function Profiles() {
                 display={{
                     emptyMessage: t("profiles.noProfiles"),
                     loadingMessage: t("profiles.loading"),
+                    renderMobileCard: (profile: Profile) => (
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                                <span className="font-medium text-yambo-black">
+                                    {profile.name}
+                                </span>
+                                {profile.system && (
+                                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs shrink-0">
+                                        {t("profiles.system")}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                                {profile.permissions.length > 0 ? (
+                                    <>
+                                        {profile.permissions.slice(0, 4).map((permission) => (
+                                            <span
+                                                key={permission.id}
+                                                className="px-2 py-1 bg-yambo-green-50 text-yambo-green-700 rounded-full text-xs"
+                                            >
+                                                {permission.description}
+                                            </span>
+                                        ))}
+                                        {profile.permissions.length > 4 && (
+                                            <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                                +{profile.permissions.length - 4}
+                                            </span>
+                                        )}
+                                    </>
+                                ) : (
+                                    <span className="text-gray-400 text-xs italic">
+                                        {t("profiles.noPermissions")}
+                                    </span>
+                                )}
+                            </div>
+                            {!profile.system && (
+                                <div className="flex gap-2 pt-1">
+                                    <ButtonComponent
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() => startEdit(profile)}
+                                    >
+                                        {t("common.edit")}
+                                    </ButtonComponent>
+                                    <ButtonComponent
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleDelete(profile.id)}
+                                    >
+                                        {t("common.delete")}
+                                    </ButtonComponent>
+                                </div>
+                            )}
+                        </div>
+                    ),
                 }}
                 features={{ globalSearch: true }}
                 serverSide={{ fetchData: fetchProfilesData }}
@@ -326,6 +388,15 @@ export default function Profiles() {
                         />
                     </div>
                 </Modal>
+            <ConfirmDialog
+                isOpen={confirmDelete !== null}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={executeDelete}
+                title={t("profiles.confirmDeleteTitle")}
+                message={confirmDelete ? t("profiles.confirmDelete", { id: confirmDelete }) : ""}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

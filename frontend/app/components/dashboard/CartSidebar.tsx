@@ -1,12 +1,15 @@
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { useNavigate } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBagShopping, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 export default function CartSidebar() {
   const { t } = useTranslation();
+  const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
   const {
     items,
     removeItem,
@@ -76,12 +79,8 @@ export default function CartSidebar() {
         <div className="flex items-center justify-between p-5 border-b border-yambo-green-100/50">
           <h2 className="text-lg font-bold font-display">{t('merch.cartTitle')}</h2>
           {items.length > 0 && (
-            <button
-              onClick={() => {
-                if (confirm(t('merch.clearCartConfirm'))) {
-                  clearCart();
-                }
-              }}
+            <button type="button"
+              onClick={() => setShowClearCartConfirm(true)}
               className="text-sm text-gray-500 hover:text-red-500 underline transition-colors"
             >
               {t('dashboard.clearAll')}
@@ -142,11 +141,12 @@ export default function CartSidebar() {
                               {item.product.name}
                             </a>
                           </h3>
-                          <button
+                          <button type="button"
                             onClick={() =>
                               removeItem(item.product.id, configKey)
                             }
                             className="text-gray-300 hover:text-red-400 flex-shrink-0 transition-colors"
+                            aria-label={`Quitar ${item.product.name}`}
                           >
                             <FontAwesomeIcon
                               icon={faXmark}
@@ -167,7 +167,7 @@ export default function CartSidebar() {
                           </p>
 
                           <div className="flex items-center gap-1.5">
-                            <button
+                            <button type="button"
                               onClick={() =>
                                 updateQuantity(
                                   item.product.id,
@@ -182,7 +182,7 @@ export default function CartSidebar() {
                             <span className="text-sm font-semibold w-6 text-center">
                               {item.quantity}
                             </span>
-                            <button
+                            <button type="button"
                               onClick={() =>
                                 updateQuantity(
                                   item.product.id,
@@ -224,6 +224,21 @@ export default function CartSidebar() {
           </div>
         )}
       </aside>
+
+      {/* Clear Cart Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showClearCartConfirm}
+        onClose={() => setShowClearCartConfirm(false)}
+        onConfirm={() => {
+          clearCart();
+          setShowClearCartConfirm(false);
+        }}
+        title={t('merch.clearCart')}
+        message={t('merch.clearCartConfirm')}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        variant="warning"
+      />
     </>
   );
 }

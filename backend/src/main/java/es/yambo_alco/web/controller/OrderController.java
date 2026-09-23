@@ -1,14 +1,17 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ForbiddenException;
 import es.yambo_alco.web.model.Order;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.OrderProduct;
+import es.yambo_alco.web.model.OrderProductOperation;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.OrderChangeService;
 import es.yambo_alco.web.service.OrderExportService;
 import es.yambo_alco.web.service.export.ExportReportType;
 import es.yambo_alco.web.service.OrderService;
@@ -33,6 +36,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -46,12 +50,93 @@ public class OrderController {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final PermissionCheckService permissionCheck;
+    private final OrderChangeService orderChangeService;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         User currentUser = authService.getCurrentUser(true);
-        List<OrderProduct> orderProducts = request.getProducts().stream()
+        List<OrderProduct> orderProducts = toOrderProducts(request.getProducts());
+
+        String customerId = currentUser.getId();
+        if (request.getUserId() != null && !request.getUserId().isBlank()) {
+            // Un admin puede crear pedidos en nombre de un socio
+            if (!permissionCheck.hasPermission("order", "create")) {
+                throw new ForbiddenException("You do not have permission to create orders for other users");
+            }
+            customerId = request.getUserId();
+            if (request.getJustification() == null || request.getJustification().isBlank()) {
+                throw new BadRequestException("Justification is required when creating an order for another user");
+            }
+            Order order = orderService.createOrderWithJustification(customerId, orderProducts,
+                    request.getJustification(), currentUser.getId());
+            List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
+        }
+
+        Order order = orderService.createOrder(customerId, orderProducts);
+        List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("@permissionCheck.hasPermission('order', 'update')")
+    public ResponseEntity<OrderResponse> updateOrder(
+            @PathVariable String id,
+            @Valid @RequestBody CreateOrderRequest request) {
+        User currentUser = authService.getCurrentUser(true);
+        if (request.getJustification() == null || request.getJustification().isBlank()) {
+            throw new BadRequestException("Justification is required when editing an order");
+        }
+
+        Order order;
+        List<OrderProductOperation> operations = toOperations(request.getProducts());
+        if (request.getIssueId() != null && !request.getIssueId().isBlank()) {
+            // Vincular la edición a una incidencia existente en lugar de crear una nueva.
+            order = orderService.updateOrderProductsWithExistingIssue(id, operations,
+                    request.getJustification(), request.getIssueId(), currentUser.getId());
+        } else {
+            order = orderService.updateOrderProductsWithJustification(id, operations,
+                    request.getJustification(), currentUser.getId());
+        }
+        List<OrderProduct> products = orderService.getOrderProducts(order.getId());
+        return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    }
+
+    @GetMapping("/{id}/history")
+    @PreAuthorize("@permissionCheck.hasPermission('order', 'read')")
+    public ResponseEntity<List<OrderChangeResponse>> getOrderHistory(@PathVariable String id) {
+        orderService.getOrderById(id);
+        List<OrderChangeResponse> history = orderChangeService.getOrderHistory(id).stream()
+                .map(change -> new OrderChangeResponse(
+                        change.getId(),
+                        change.getOrderId(),
+                        change.getOrderProductId(),
+                        change.getAction(),
+                        change.getUserId(),
+                        resolveUserName(change.getUserId()),
+                        change.getIssueId(),
+                        change.getChangedAt(),
+                        change.getSummary(),
+                        change.getBeforeJson(),
+                        change.getAfterJson()))
+                .toList();
+        return ResponseEntity.ok(history);
+    }
+
+    private String resolveUserName(String userId) {
+        if (userId == null) return null;
+        return userRepository.findById(userId).map(User::getName).orElse(userId);
+    }
+
+    public record OrderChangeResponse(UUID id, String orderId, UUID orderProductId, String action,
+            String userId, String userName, String issueId, LocalDateTime changedAt,
+            String summary, String beforeJson, String afterJson) {}
+
+    private List<OrderProduct> toOrderProducts(List<OrderProductRequest> requestProducts) {
+        return requestProducts.stream()
                 .map(p -> OrderProduct.builder()
                         .productId(p.getProductId())
                         .quantity(p.getQuantity())
@@ -61,11 +146,17 @@ public class OrderController {
                                 : null)
                         .build())
                 .collect(Collectors.toList());
+    }
 
-        Order order = orderService.createOrder(currentUser.getId(), orderProducts);
-        List<OrderProduct> products = orderService.getOrderProducts(order.getId());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new OrderResponse(order, products, userRepository, productRepository, orderService));
+    private List<OrderProductOperation> toOperations(List<OrderProductRequest> requestProducts) {
+        return requestProducts.stream()
+                .map(p -> new OrderProductOperation(
+                        p.getOrderedProductId(),
+                        p.getProductId(),
+                        p.getQuantity(),
+                        p.getConfiguration(),
+                        p.getAction() == null || p.getAction().isBlank() ? "added" : p.getAction()))
+                .toList();
     }
 
     @GetMapping
@@ -126,13 +217,6 @@ public class OrderController {
         Order order = orderService.updateOrderStatus(id, request.getStatus());
         List<OrderProduct> products = orderService.getOrderProducts(id);
         return ResponseEntity.ok(new OrderResponse(order, products, userRepository, productRepository, orderService));
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("@permissionCheck.hasPermission('order', 'delete')")
-    public ResponseEntity<Void> cancelOrder(@PathVariable String id) {
-        orderService.cancelOrder(id, true);
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/my")
@@ -204,6 +288,23 @@ public class OrderController {
     public static class CreateOrderRequest {
         @NotEmpty(message = "Order must contain at least one product")
         private List<OrderProductRequest> products;
+
+        /** Opcional: ID del socio para el que se crea el pedido (solo con permiso 'order','create'). */
+        private String userId;
+
+        /**
+         * Obligatorio cuando se crea/modifica un pedido en nombre de un socio (userId presente):
+         * justificación con una incidencia o petición. Con esta justificación se crea una
+         * incidencia vinculada al pedido automáticamente (trazabilidad).
+         */
+        private String justification;
+
+        /**
+         * Opcional: ID de una incidencia existente a la que vincular la edición.
+         * Si se indica, en lugar de crear una incidencia nueva se añade la
+         * justificación como comentario a esa incidencia.
+         */
+        private String issueId;
     }
 
     @Data
@@ -215,6 +316,12 @@ public class OrderController {
         private Integer quantity;
 
         private String configuration;
+
+        /** ID del order_product existente (modified/unchanged/removed). */
+        private java.util.UUID orderedProductId;
+
+        /** "added" | "modified" | "unchanged" | "removed" (por defecto "added"). */
+        private String action;
     }
 
     @Data

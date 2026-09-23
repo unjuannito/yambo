@@ -1,10 +1,9 @@
 package es.yambo_alco.web.repository.spec;
 
 import es.yambo_alco.web.model.FamilyProduct;
-import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -52,27 +51,23 @@ public final class FamilyProductSpecifications {
         };
     }
 
-    public static Specification<FamilyProduct> hasProfileId(String profileId) {
+    /**
+     * Filtra los drops accesibles segun los proyectos y roles del usuario.
+     * Reemplaza el filtro por perfil auto-creado.
+     */
+    public static Specification<FamilyProduct> hasRoleAccess(Set<String> projectIds, Set<UserProjectGroupRole> roles) {
         return (root, query, cb) -> {
-            if (profileId == null) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-            return cb.equal(profileJoin.get("id"), profileId);
-        };
-    }
+            if (projectIds == null || projectIds.isEmpty() || roles == null || roles.isEmpty()) {
+                return null;
+            }
+            // Distinct para evitar duplicados por el join con la coleccion
+            query.distinct(true);
 
-    public static Specification<FamilyProduct> hasAnyProfile(Set<String> profileIds) {
-        return (root, query, cb) -> {
-            if (profileIds == null || profileIds.isEmpty()) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-            return profileJoin.get("id").in(profileIds);
-        };
-    }
-
-    public static Specification<FamilyProduct> hasProfileName(String profileName) {
-        return (root, query, cb) -> {
-            if (profileName == null) return null;
-            Join<FamilyProduct, Profile> profileJoin = root.join("profile", JoinType.LEFT);
-            return cb.like(cb.lower(profileJoin.get("name")), "%" + profileName.toLowerCase() + "%");
+            var roleAccessJoin = root.join("roleAccess", JoinType.INNER);
+            return cb.and(
+                roleAccessJoin.get("projectId").in(projectIds),
+                roleAccessJoin.get("role").in(roles)
+            );
         };
     }
 }

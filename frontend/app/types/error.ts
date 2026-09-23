@@ -83,6 +83,7 @@ const ERROR_TRANSLATIONS: Record<string, string> = {
   "Cannot delete closed order": "¡Un pedido cerrado es para siempre!",
   // Projects & profiles
   "Project name already exists": "¡Ese nombre de proyecto ya está pillado!",
+  "Invalid coordination email": "¡Ese correo de coordinación no tiene buena pinta!",
   "Cannot modify permissions of a system profile": "¡Los permisos de un perfil del sistema son sagrados!",
   "Cannot modify a system profile": "¡Los perfiles del sistema son intocables!",
   "Cannot delete a system profile": "¡Los perfiles del sistema son inmortales!",

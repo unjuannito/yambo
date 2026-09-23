@@ -43,6 +43,7 @@ public class UserService {
 	private final ProjectGroupRepository projectGroupRepository;
 	private final UserProjectGroupRepository userProjectGroupRepository;
 	private final PendingDeletionService pendingDeletionService;
+	private final AccessGrantService accessGrantService;
 
 	private static final String MONITOR_PROFILE_ID = "P0000004";
 	private static final String COORDINATOR_PROFILE_ID = "P0000005";
@@ -75,6 +76,8 @@ public class UserService {
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 		if (filter.role() != null && !filter.role().isBlank())
 			spec = spec.and(UserSpecifications.hasGroupRole(filter.role()));
+		if (filter.canHaveExtraProfileData() != null && filter.canHaveExtraProfileData())
+			spec = spec.and(UserSpecifications.hasMonitorOrCoordinatorRole());
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -101,14 +104,20 @@ public class UserService {
 			user.setEmail(normalizedEmail);
 		}
 
-		if (photo != null) {
-			user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
-		}
-		if (bio != null) {
-			user.setBio(bio.trim().isEmpty() ? null : bio.trim());
-		}
-		if (funFact != null) {
-			user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+		if (photo != null || bio != null || funFact != null) {
+			if (!user.canHaveExtraProfileData()) {
+				throw new BadRequestException(
+						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact)");
+			}
+			if (photo != null) {
+				user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
+			}
+			if (bio != null) {
+				user.setBio(bio.trim().isEmpty() ? null : bio.trim());
+			}
+			if (funFact != null) {
+				user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+			}
 		}
 
 		return userRepository.save(user);
@@ -117,14 +126,24 @@ public class UserService {
 	@Transactional
 	public User assignGroupRole(@NonNull String userId, @NonNull String groupId,
 			@NonNull UserProjectGroupRole role) {
+		// Sin grantedBy: usado por invitaciones (registran su propio grant INVITATION)
+		return assignGroupRole(userId, groupId, role, null);
+	}
+
+	@Transactional
+	public User assignGroupRole(@NonNull String userId, @NonNull String groupId,
+			@NonNull UserProjectGroupRole role, String grantedBy) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 		ProjectGroup group = projectGroupRepository.findById(groupId)
 				.orElseThrow(() -> new ResourceNotFoundException("Group not found"));
 
-		// Coordinators must be assigned to project-level groups (name=null)
-		if (role == UserProjectGroupRole.COORDINATOR && group.getName() != null) {
-			throw new BadRequestException("Coordinators must be assigned to the project-level group");
+		// Coordinators and Parents must be assigned to project-level groups (name=null)
+		if ((role == UserProjectGroupRole.COORDINATOR || role == UserProjectGroupRole.PARENT)
+				&& group.getName() != null) {
+			throw new BadRequestException(
+					role == UserProjectGroupRole.COORDINATOR ? "Coordinators" : "Parents"
+							+ " must be assigned to the project-level group");
 		}
 
 		boolean alreadyExists = user.getGroupRoles().stream()
@@ -142,7 +161,14 @@ public class UserService {
 
 		syncRoleProfile(user, role, true);
 
-		return userRepository.save(user);
+		User saved = userRepository.save(user);
+
+		// Origen: asignación manual por una persona (grantedBy != null)
+		if (grantedBy != null) {
+			accessGrantService.recordManualGroupRoleGrant(userId, groupId, role, grantedBy);
+		}
+
+		return saved;
 	}
 
 	@Transactional
@@ -161,7 +187,12 @@ public class UserService {
 			syncRoleProfile(user, role, false);
 		}
 
-		return userRepository.save(user);
+		User saved = userRepository.save(user);
+
+		// Historial: la concesión de este rol de grupo queda revocada
+		accessGrantService.revokeGroupRoleGrants(userId, groupId, role);
+
+		return saved;
 	}
 
 	public List<UserProjectGroup> getUserGroupRoles(@NonNull String userId) {
@@ -172,6 +203,10 @@ public class UserService {
 	}
 
 	private void syncRoleProfile(User user, UserProjectGroupRole role, boolean shouldHave) {
+		// Parents don't have a synced profile
+		if (role == UserProjectGroupRole.PARENT) {
+			return;
+		}
 		String profileId = role == UserProjectGroupRole.MONITOR ? MONITOR_PROFILE_ID : COORDINATOR_PROFILE_ID;
 		boolean hasProfile = user.getProfiles().stream()
 				.anyMatch(p -> p.getId().equals(profileId));
@@ -198,6 +233,11 @@ public class UserService {
 	}
 
 	public User updateUserProfiles(@NonNull String userId, Set<String> profileIds) {
+		// Sin grantedBy: usado por flujos internos (sin auditoría de quién)
+		return updateUserProfiles(userId, profileIds, null);
+	}
+
+	public User updateUserProfiles(@NonNull String userId, Set<String> profileIds, String grantedBy) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -227,8 +267,29 @@ public class UserService {
 				.filter(p -> ROLE_PROFILE_IDS.contains(p.getId()))
 				.forEach(profilesSet::add);
 
+		// Historial: revocar perfiles quitados (no role-managed)
+		Set<String> before = user.getProfiles().stream()
+				.filter(p -> !ROLE_PROFILE_IDS.contains(p.getId()))
+				.map(Profile::getId)
+				.collect(Collectors.toSet());
+		Set<String> after = filteredProfileIds;
+		for (String removedId : before) {
+			if (!after.contains(removedId)) {
+				accessGrantService.revokeProfileGrants(userId, removedId);
+			}
+		}
+
 		user.setProfiles(profilesSet);
-		return userRepository.save(user);
+		User saved = userRepository.save(user);
+
+		// Historial: registrar perfiles añadidos (origen MANUAL, quién = grantedBy)
+		for (String addedId : after) {
+			if (!before.contains(addedId)) {
+				accessGrantService.recordManualProfileGrant(userId, addedId, grantedBy);
+			}
+		}
+
+		return saved;
 	}
 
 	public User updateUser(@NonNull String userId, @NonNull String name, @NonNull String email,

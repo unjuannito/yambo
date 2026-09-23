@@ -10,7 +10,8 @@ import type {
 } from "./FilterableTable";
 import type { FeaturesConfig, DisplayConfig } from "./FilterableTable";
 import type { PagedResponse } from "~/types/apiType";
-import { ViewTabs, type ViewTabKey } from "./ViewTabs";
+import { PageHeader } from "./PageHeader";
+import type { WikiGuideLinkProps } from "./WikiGuideLink";
 import { twMerge } from "tailwind-merge";
 
 export interface CompactStat {
@@ -27,11 +28,6 @@ const STAT_COLORS: Record<CompactStat["color"], string> = {
   slate: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
-interface TabConfig {
-  activeTab: ViewTabKey;
-  onTabChange: (tab: ViewTabKey) => void;
-}
-
 interface ServerSideConfig<T> {
   fetchData: (params: FetchDataParams) => Promise<PagedResponse<T> | null>;
 }
@@ -40,8 +36,9 @@ interface ListPageShellProps<T> {
   title: ReactNode;
   subtitle?: string;
   actions?: React.ReactNode;
+  /** Enlace "Ver en la wiki" — se muestra debajo del título/subtítulo. */
+  wiki?: WikiGuideLinkProps;
   compactStats?: CompactStat[];
-  tabs?: TabConfig;
   children?: React.ReactNode;
   // FilterableTable props
   columns: FilterableColumn<T>[];
@@ -60,8 +57,8 @@ export default function ListPageShell<T>({
   title,
   subtitle,
   actions,
+  wiki,
   compactStats,
-  tabs,
   children,
   columns,
   keyField,
@@ -79,40 +76,21 @@ export default function ListPageShell<T>({
   return (
     <main className="flex flex-col gap-4 p-3 md:p-4 w-full">
       {/* Header row */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl md:text-2xl font-extrabold font-display text-yambo-black">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5">{subtitle}</p>
-          )}
-          {compactStats && compactStats.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              {compactStats.map((stat) => (
-                <span
-                  key={stat.label}
-                  className={twMerge(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border",
-                    STAT_COLORS[stat.color],
-                  )}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  {stat.label}: {stat.value}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        {actions && (
-          <div className="flex items-center gap-2 shrink-0">{actions}</div>
-        )}
-      </div>
-
-      {/* Tabs */}
-      {tabs && (
-        <div className="-mx-3 md:-mx-4 px-3 md:px-4">
-          <ViewTabs activeTab={tabs.activeTab} onTabChange={tabs.onTabChange} />
+      <PageHeader title={title} description={subtitle} actions={actions} wiki={wiki} />
+      {compactStats && compactStats.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 -mt-3 mb-4">
+          {compactStats.map((stat) => (
+            <span
+              key={stat.label}
+              className={twMerge(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border",
+                STAT_COLORS[stat.color],
+              )}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+              {stat.label}: {stat.value}
+            </span>
+          ))}
         </div>
       )}
 

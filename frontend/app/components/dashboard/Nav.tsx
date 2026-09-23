@@ -86,7 +86,7 @@ export default function SociosNav({ links }: SociosNavProps) {
 
       {/* Bottom section with logout */}
       <div className="border-t border-yambo-green-100/50 p-3">
-        <button
+        <button type="button"
           onClick={handleLogout}
           className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
         >

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router';
 import { WatcherManager } from './WatcherManager';
 import type { IssueWatcher } from '~/types/issueType';
 import { useAuth } from '~/hooks/useAuth';
@@ -166,5 +167,41 @@ describe('WatcherManager', () => {
 
         expect(screen.queryByRole('button', { name: 'Añadirme' })).not.toBeInTheDocument();
         expect(mockOnAdd).not.toHaveBeenCalled();
+    });
+
+    it('renders user name as a link when watcher has userId', () => {
+        const watcherWithId: IssueWatcher = {
+            ...mockWatcher,
+            userId: 'USR001',
+        };
+
+        render(
+            <MemoryRouter>
+                <WatcherManager
+                    watchers={[watcherWithId]}
+                    onAdd={mockOnAdd}
+                    onRemove={mockOnRemove}
+                />
+            </MemoryRouter>
+        );
+
+        const link = screen.getByRole('link', { name: 'Test Watcher' });
+        expect(link).toBeInTheDocument();
+        expect(link).toHaveAttribute('href', '/mi-espacio/admin/usuarios/USR001/perfil');
+    });
+
+    it('renders user name as plain text when watcher has no userId', () => {
+        render(
+            <MemoryRouter>
+                <WatcherManager
+                    watchers={[mockWatcher]}
+                    onAdd={mockOnAdd}
+                    onRemove={mockOnRemove}
+                />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByText('Test Watcher')).toBeInTheDocument();
+        expect(screen.queryByRole('link')).not.toBeInTheDocument();
     });
 });

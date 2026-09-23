@@ -100,6 +100,12 @@ public class User implements UserDetails {
                 .collect(Collectors.toSet());
     }
 
+    public boolean canHaveExtraProfileData() {
+        return groupRoles.stream()
+                .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.MONITOR
+                        || gr.getRole() == UserProjectGroupRole.COORDINATOR);
+    }
+
     public boolean hasRoleInProject(UserProjectGroupRole role, String projectId) {
         return groupRoles.stream()
                 .anyMatch(gr -> gr.getRole() == role

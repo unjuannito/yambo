@@ -52,12 +52,15 @@ class NominativeInvitationServiceTest {
     @Mock
     private SettingsService settingsService;
 
+    @Mock
+    private AccessGrantService accessGrantService;
+
     private NominativeInvitationService nominativeInvitationService;
 
     @BeforeEach
     void setUp() {
         nominativeInvitationService = new NominativeInvitationService(nominativeInvitationRepository, roleRepository, userRepository, passwordEncoder,
-                mailService, settingsService);
+                mailService, settingsService, accessGrantService);
         ReflectionTestUtils.setField(nominativeInvitationService, "expirationHours", 72L);
         lenient().when(settingsService.getDomain()).thenReturn("http://localhost:5173");
         lenient().when(settingsService.getOrganizationName()).thenReturn("Yambo");

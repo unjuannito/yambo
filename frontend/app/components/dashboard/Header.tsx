@@ -9,7 +9,7 @@ export default function Header({ links: _links }: HeaderProps) {
   const { t } = useTranslation();
   return (
     <header className="w-full glass sticky top-0 z-50 border-b border-white/20">
-      <div className="+mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+      <div className="+mx-auto px-4 sm:px-6 flex items-center justify-between h-16 border-b-1 border-yambo-green-100/50">
         <a
           href="/mi-espacio"
           className="flex items-center space-x-2 group"

@@ -21,11 +21,13 @@ import {
     type FetchDataParams,
     type FilterableColumn,
 } from "~/components/common/FilterableTable";
+import { PageHeader } from "~/components/common/PageHeader";
 import { Modal } from "~/components/common/Modal";
 import { projectService } from "~/services/projectService";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "~/types/error";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export default function ActivitiesAdminPage() {
     const { t } = useTranslation();
@@ -421,8 +423,11 @@ export default function ActivitiesAdminPage() {
     };
 
     return (
-        <main className="flex flex-col p-4 md:p-6 w-full">
-            <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-6">{t("activities.panelTitle")}</h1>
+        <PageContainer>
+            <PageHeader
+                title={t("activities.panelTitle")}
+                wiki={{ slug: "flujos-de-trabajo", hash: "actividades" }}
+            />
             <div className="mb-4">
                 <ButtonComponent variant="success" onClick={handleCreateClick}>
                     {t("activities.createNew")}
@@ -469,12 +474,12 @@ export default function ActivitiesAdminPage() {
                                 )}
                             </div>
                             <div className="flex gap-1.5 pt-1">
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); handleCloneClick(a); }}
                                     className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                                     title={t("activities.clone")}
                                 ><FontAwesomeIcon icon={faCopy} className="w-3.5 h-3.5" /></button>
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); handleEditClick(a); }}
                                     className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                                     title={t("common.edit")}
@@ -507,6 +512,6 @@ export default function ActivitiesAdminPage() {
                     submitLabel={editing ? t("common.save") : t("common.create")}
                 />
             </Modal>
-        </main>
+        </PageContainer>
     );
 }

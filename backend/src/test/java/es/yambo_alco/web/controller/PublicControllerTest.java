@@ -158,6 +158,73 @@ class PublicControllerTest {
                 .andExpect(jsonPath("$.seo").doesNotExist());
     }
 
+    // ── Coordination email ──────────────────────────────────────────────
+
+    @Test
+    @WithAnonymousUser
+    void getProjectDetail_ShouldIncludeOwnCoordinationEmail() throws Exception {
+        Project project = Project.builder().id("PRJ001").name("Barrio").active(true)
+                .coordinationEmail("barrio@yambo.es").build();
+
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
+        when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/public/projects/PRJ001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coordinationEmail").value("barrio@yambo.es"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getProjectDetail_WithoutCoordinationEmail_ShouldReturnNull() throws Exception {
+        Project project = Project.builder().id("PRJ001").name("Barrio").active(true).build();
+
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
+        when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/public/projects/PRJ001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coordinationEmail").doesNotExist());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getActiveProjects_ShouldKeepEachEmailWithItsProject() throws Exception {
+        Project first = Project.builder().id("PRJ001").name("Barrio").active(true)
+                .coordinationEmail("barrio@yambo.es").build();
+        Project second = Project.builder().id("PRJ002").name("Campamento").active(true)
+                .coordinationEmail("campa@yambo.es").build();
+        Project third = Project.builder().id("PRJ003").name("Sin correo").active(true).build();
+
+        when(projectRepository.findByActiveTrue()).thenReturn(List.of(first, second, third));
+
+        mockMvc.perform(get("/public/projects/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("PRJ001"))
+                .andExpect(jsonPath("$[0].coordinationEmail").value("barrio@yambo.es"))
+                .andExpect(jsonPath("$[1].id").value("PRJ002"))
+                .andExpect(jsonPath("$[1].coordinationEmail").value("campa@yambo.es"))
+                .andExpect(jsonPath("$[2].id").value("PRJ003"))
+                .andExpect(jsonPath("$[2].coordinationEmail").doesNotExist());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getFeaturedProjects_ShouldIncludeCoordinationEmail() throws Exception {
+        Project project = Project.builder().id("PRJ001").name("Barrio").active(true).featured(true)
+                .coordinationEmail("barrio@yambo.es").build();
+
+        when(projectRepository.findByActiveTrueAndFeaturedTrue()).thenReturn(List.of(project));
+
+        mockMvc.perform(get("/public/projects/featured"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].coordinationEmail").value("barrio@yambo.es"));
+    }
+
     // ── GET /public/activities ──────────────────────────────────────────
 
     @Test

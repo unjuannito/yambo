@@ -1,6 +1,6 @@
+import { Link } from "react-router";
 import React, { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faArrowRight,
@@ -23,7 +23,15 @@ const OrderRow = React.memo(function OrderRow({ order }: { order: DashboardOrder
                 <p className="text-sm font-semibold text-yambo-black truncate">
                     {order.products.length} {t('orders.product')}{order.products.length !== 1 ? "s" : ""}
                     {order.user && (
-                        <span className="text-gray-400 font-normal"> · {order.user.name}</span>
+                        <span className="text-gray-400 font-normal">
+                            {' · '}
+                            <Link
+                                to={`/mi-espacio/admin/usuarios/${order.user.id}/perfil`}
+                                className="hover:text-yambo-green-600 transition-colors"
+                            >
+                                {order.user.name}
+                            </Link>
+                        </span>
                     )}
                 </p>
                 <p className="text-xs text-gray-400">
@@ -130,7 +138,7 @@ export default function RecentOrdersList({ orders }: RecentOrdersListProps) {
                     className="w-full pl-8 pr-3 py-2 bg-gray-50 rounded-xl text-xs outline-none focus:ring-1 focus:ring-yambo-green-300 focus:bg-white transition-all placeholder:text-gray-400"
                 />
                 {searchQuery && (
-                    <button
+                    <button type="button"
                         onClick={() => setSearchQuery("")}
                         className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 hover:text-gray-600 font-medium"
                     >

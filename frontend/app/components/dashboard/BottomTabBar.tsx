@@ -91,9 +91,10 @@ export default function BottomTabBar({ links }: BottomTabBarProps) {
                         <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">
                             {t('dashboard.moreOptions')}
                         </span>
-                        <button
+                        <button type="button"
                             onClick={() => setSheetOpen(false)}
                             className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                            aria-label={t('common.close')}
                         >
                             <FontAwesomeIcon
                                 icon={faXmark}
@@ -158,7 +159,7 @@ export default function BottomTabBar({ links }: BottomTabBarProps) {
                             </a>
 
                             {/* Logout */}
-                            <button
+                            <button type="button"
                                 onClick={handleLogout}
                                 className="flex items-center justify-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-colors whitespace-nowrap"
                             >
@@ -205,7 +206,7 @@ export default function BottomTabBar({ links }: BottomTabBarProps) {
                 })}
 
                 {/* "Más" button */}
-                <button
+                <button type="button"
                     ref={moreButtonRef}
                     onClick={() => setSheetOpen((o) => !o)}
                     className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[60px] ${

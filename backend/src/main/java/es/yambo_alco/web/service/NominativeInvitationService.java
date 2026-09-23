@@ -5,6 +5,7 @@ import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.NominativeInvitation;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.enums.InvitationType;
 import es.yambo_alco.web.repository.NominativeInvitationRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -33,6 +34,7 @@ public class NominativeInvitationService {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final SettingsService settingsService;
+    private final AccessGrantService accessGrantService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${invitation.expiration.hours:72}")
@@ -133,7 +135,6 @@ public class NominativeInvitationService {
         }
 
         invitation.setUsed(true);
-        nominativeInvitationRepository.save(invitation);
 
         User user = User.builder()
                 .email(invitation.getEmail())
@@ -144,7 +145,18 @@ public class NominativeInvitationService {
                 .profiles(new HashSet<>(invitation.getProfiles()))
                 .build();
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+
+        // Quién usó la invitación y cuándo (link beneficiario) — un único save con todo
+        invitation.setUsedByUserId(saved.getId());
+        invitation.setUsedAt(LocalDateTime.now());
+        nominativeInvitationRepository.save(invitation);
+        // Historial: perfiles obtenidos a través de esta invitación (origen INVITATION/NOMINATIVE)
+        accessGrantService.recordInvitationProfileGrants(
+                saved.getId(), invitation.getId(), InvitationType.NOMINATIVE,
+                invitation.getProfiles(), invitation.getInvitedBy());
+
+        return saved;
     }
 
     private String buildInvitationLink(String token) {

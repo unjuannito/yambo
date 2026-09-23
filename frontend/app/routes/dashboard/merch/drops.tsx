@@ -7,6 +7,7 @@ import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
 import { Modal } from "~/components/common/Modal";
 import { WatcherManager } from "~/components/common/WatcherManager";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import InputComponent from "~/components/common/forms/InputComponent";
 import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
@@ -17,10 +18,9 @@ import { familyProductService, type FamilyProduct } from "~/services/familyProdu
 import { projectService, type Project } from "~/services/projectService";
 import { getErrorMessage } from "~/types/error";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faPenToSquare, faTrashCan, faCalendarDays, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
 import type { DropWatcher } from "~/types/issueType";
 import { FamilyProductStatus, FAMILY_PRODUCT_STATUS_CONFIG, FAMILY_PRODUCT_WORKFLOW_TRANSITIONS } from "~/constants/orderStatus";
-import { StatusWorkflow } from "~/components/common/StatusWorkflow";
 import toast from "react-hot-toast";
 
 export function meta() {
@@ -35,6 +35,7 @@ type DropForm = {
     startTms: string;
     endTms: string;
     projectIds: string[];
+    roleAccess: { projectId: string; role: 'MONITOR' | 'COORDINATOR' | 'PARENT' }[];
 };
 
 const EMPTY_FORM: DropForm = {
@@ -42,6 +43,7 @@ const EMPTY_FORM: DropForm = {
     startTms: "",
     endTms: "",
     projectIds: [],
+    roleAccess: [],
 };
 
 export default function MerchFamilies() {
@@ -63,6 +65,8 @@ export default function MerchFamilies() {
     const [watchersDrop, setWatchersDrop] = useState<FamilyProduct | null>(null);
     const [watchers, setWatchers] = useState<DropWatcher[]>([]);
     const [watchersLoading, setWatchersLoading] = useState(false);
+
+    const [dropToDelete, setDropToDelete] = useState<FamilyProduct | null>(null);
 
     const openWatchers = async (drop: FamilyProduct) => {
         setWatchersDrop(drop);
@@ -138,6 +142,7 @@ export default function MerchFamilies() {
                     startTms: form.startTms,
                     endTms: form.endTms,
                     projectIds: form.projectIds,
+                    roleAccess: form.roleAccess,
                 });
                 toast.success(t("merch.collectionUpdated"));
             } else {
@@ -146,6 +151,7 @@ export default function MerchFamilies() {
                     startTms: form.startTms,
                     endTms: form.endTms,
                     projectIds: form.projectIds,
+                    roleAccess: form.roleAccess,
                 });
                 toast.success(t("merch.collectionCreated"));
             }
@@ -165,18 +171,25 @@ export default function MerchFamilies() {
             startTms: drop.startTms?.slice(0, 16) || "",
             endTms: drop.endTms?.slice(0, 16) || "",
             projectIds: drop.projectIds ?? [],
+            roleAccess: drop.roleAccess ?? [],
         });
         setIsModalOpen(true);
     };
 
     const handleDelete = async (drop: FamilyProduct) => {
-        if (!confirm(`${t("common.delete")} "${drop.name}"?`)) return;
+        setDropToDelete(drop);
+    };
+
+    const confirmDelete = async () => {
+        if (!dropToDelete) return;
         try {
-            await familyProductService.deleteFamilyProduct(drop.id);
+            await familyProductService.deleteFamilyProduct(dropToDelete.id);
             toast.success(t("merch.collectionDeleted"));
             await loadData();
         } catch (err) {
             toast.error(getErrorMessage(err, t("merch.collectionDeleteError")));
+        } finally {
+            setDropToDelete(null);
         }
     };
 
@@ -194,6 +207,16 @@ export default function MerchFamilies() {
         value: project.id,
         label: project.name,
     })), [projects]);
+
+    const renderStatusBadge = useCallback((drop: FamilyProduct) => {
+        const statusKey = drop.status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG;
+        const statusConfig = statusKey ? FAMILY_PRODUCT_STATUS_CONFIG[statusKey] : null;
+        return statusConfig ? (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${statusConfig.className}`}>
+                {statusConfig.label}
+            </span>
+        ) : <span className="text-sm text-gray-400">{drop.status || "-"}</span>;
+    }, []);
 
     const columns: FilterableColumn<FamilyProduct>[] = useMemo(() => [
         {
@@ -314,10 +337,79 @@ export default function MerchFamilies() {
         },
     ], [projects, canUpdate, canDelete, t]);
 
+    const renderMobileCard = useCallback((drop: FamilyProduct) => {
+        const projectNames = (drop.projectIds ?? [])
+            .map((id) => projects.find((p) => p.id === id)?.name || id)
+            .join(", ");
+        const transitions = FAMILY_PRODUCT_WORKFLOW_TRANSITIONS[(drop.status || "OPEN") as FamilyProductStatus] || [];
+        const statusKey = drop.status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG;
+        const statusConfig = statusKey ? FAMILY_PRODUCT_STATUS_CONFIG[statusKey] : null;
+
+        return (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-yambo-black text-sm leading-tight line-clamp-2 flex-1">{drop.name}</span>
+                    {canUpdate && transitions.length > 0 ? (
+                        <select
+                            value={drop.status || "OPEN"}
+                            onChange={(e) => handleStatusChange(drop, e.target.value)}
+                            className={`text-[10px] font-medium rounded-full px-2 py-0.5 border-0 cursor-pointer shrink-0 ${statusConfig?.className || "bg-gray-100 text-gray-800"}`}
+                        >
+                            <option value={drop.status || "OPEN"}>{statusConfig?.label || drop.status}</option>
+                            {transitions.map((status) => {
+                                const cfg = FAMILY_PRODUCT_STATUS_CONFIG[status as keyof typeof FAMILY_PRODUCT_STATUS_CONFIG];
+                                return <option key={status} value={status}>{cfg?.label || status}</option>;
+                            })}
+                        </select>
+                    ) : renderStatusBadge(drop)}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                    {drop.startTms && drop.endTms && (
+                        <span className="flex items-center gap-1">
+                            <FontAwesomeIcon icon={faCalendarDays} className="w-3 h-3 text-gray-400" />
+                            {new Date(drop.startTms).toLocaleDateString()} — {new Date(drop.endTms).toLocaleDateString()}
+                        </span>
+                    )}
+                    {projectNames && (
+                        <span className="flex items-center gap-1">
+                            <FontAwesomeIcon icon={faFolderOpen} className="w-3 h-3 text-gray-400" />
+                            {projectNames}
+                        </span>
+                    )}
+                </div>
+                <div className="flex gap-1.5 pt-1">
+                    {canUpdate && (
+                        <button type="button"
+                            onClick={() => openWatchers(drop)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                            title={t("merch.manageWatchers")}
+                            aria-label={t("merch.manageWatchers")}
+                        ><FontAwesomeIcon icon={faBell} className="w-3.5 h-3.5" /></button>
+                    )}
+                    {canUpdate && (
+                        <button type="button"
+                            onClick={() => startEdit(drop)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
+                            title={t("common.edit")}
+                        ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
+                    )}
+                    {canDelete && (
+                        <button type="button"
+                            onClick={() => handleDelete(drop)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors ml-auto"
+                            title={t("common.delete")}
+                        ><FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" /></button>
+                    )}
+                </div>
+            </div>
+        );
+    }, [projects, canUpdate, canDelete, t, renderStatusBadge]);
+
     return (
         <RequirePermission permission={{ obj: "family_product", action: "read" }} redirectTo="/mi-espacio/articulos">
             <ListPageShell<FamilyProduct>
                 title={t("merch.collectionsTitle")}
+                wiki={{ slug: "flujos-de-trabajo", hash: "colecciones" }}
                 actions={
                     <RequirePermission permission={{ obj: "family_product", action: "create" }} redirect={false}>
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
@@ -331,16 +423,12 @@ export default function MerchFamilies() {
                 display={{
                     emptyMessage: t("merch.noCollections"),
                     loadingMessage: t("merch.loadingCollections"),
+                    renderMobileCard,
                 }}
                 features={{
                     enablePagination: false,
                 }}
             >
-                <StatusWorkflow
-                    title={t("merch.workflowTitle")}
-                    config={FAMILY_PRODUCT_STATUS_CONFIG}
-                    transitions={FAMILY_PRODUCT_WORKFLOW_TRANSITIONS}
-                />
                 {loading && (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner size="md" message={t("merch.loadingCollections")} />
@@ -418,6 +506,64 @@ export default function MerchFamilies() {
                                 }}
                             />
                         </div>
+                        {/* Role access configuration */}
+                        {form.projectIds.length > 0 && (
+                            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <label className="block text-sm font-medium text-gray-600 mb-3">
+                                    {t("merch.roleAccessLabel")}
+                                </label>
+                                <div className="space-y-3">
+                                    {form.projectIds.map((pid) => {
+                                        const project = projects.find((p) => p.id === pid);
+                                        const projectName = project?.name || pid;
+                                        const roles = ["MONITOR", "COORDINATOR", "PARENT"] as const;
+                                        const roleLabels: Record<string, string> = {
+                                            MONITOR: t("merch.roleMonitor"),
+                                            COORDINATOR: t("merch.roleCoordinator"),
+                                            PARENT: t("merch.roleParent"),
+                                        };
+                                        return (
+                                            <div key={pid} className="bg-white border border-gray-200 rounded p-3">
+                                                <div className="font-medium text-sm text-gray-700 mb-2">
+                                                    {projectName}
+                                                </div>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {roles.map((role) => {
+                                                        const isChecked = form.roleAccess.some(
+                                                            (ra) => ra.projectId === pid && ra.role === role
+                                                        );
+                                                        return (
+                                                            <label key={role} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={() => {
+                                                                        setForm((prev) => {
+                                                                            const filtered = prev.roleAccess.filter(
+                                                                                (ra) => !(ra.projectId === pid && ra.role === role)
+                                                                            );
+                                                                            if (!isChecked) {
+                                                                                return {
+                                                                                    ...prev,
+                                                                                    roleAccess: [...filtered, { projectId: pid, role }],
+                                                                                };
+                                                                            }
+                                                                            return { ...prev, roleAccess: filtered };
+                                                                        });
+                                                                    }}
+                                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                                />
+                                                                {roleLabels[role] || role}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </Modal>
 
@@ -443,6 +589,18 @@ export default function MerchFamilies() {
                         />
                     )}
                 </Modal>
+
+                {/* Delete Drop Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={!!dropToDelete}
+                    onClose={() => setDropToDelete(null)}
+                    onConfirm={confirmDelete}
+                    title={t("common.delete")}
+                    message={dropToDelete ? `${t("common.delete")} "${dropToDelete.name}"?` : ""}
+                    confirmLabel={t("common.delete")}
+                    cancelLabel={t("common.cancel")}
+                    variant="danger"
+                />
         </RequirePermission>
     );
 }

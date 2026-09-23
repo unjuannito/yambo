@@ -23,6 +23,13 @@ export default [
 
         // Administración
         route("mi-espacio/admin/usuarios", "routes/dashboard/users/index.tsx"),
+        route("mi-espacio/admin/usuarios/:userId", "routes/dashboard/users/$userId/_layout.tsx", [
+            index("routes/dashboard/users/$userId/index.tsx"),
+            route("perfil", "routes/dashboard/users/$userId/perfil.tsx"),
+            route("permisos", "routes/dashboard/users/$userId/permisos.tsx"),
+            route("proyectos", "routes/dashboard/users/$userId/proyectos.tsx"),
+            route("historial", "routes/dashboard/users/$userId/historial.tsx"),
+        ]),
         route("mi-espacio/admin/perfiles", "routes/dashboard/profiles/index.tsx"),
         route(
             "mi-espacio/admin/invitaciones-nominativas",
@@ -38,11 +45,20 @@ export default [
         route("mi-espacio/admin/seo", "routes/dashboard/seo/index.tsx"),
         route("mi-espacio/admin/legal", "routes/dashboard/legal/index.tsx"),
         route("mi-espacio/admin/informes", "routes/dashboard/reports/index.tsx"),
-        route("mi-espacio/admin/guias", "routes/dashboard/guides/index.tsx"),
+        route("mi-espacio/admin/guias", "routes/dashboard/guides/_layout.tsx", [
+            index("routes/dashboard/guides/index.tsx"),
+            route(":slug", "routes/dashboard/guides/$slug.tsx"),
+        ]),
 
         // Proyectos
         route("mi-espacio/admin/equipo", "routes/dashboard/crew/index.tsx"),
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
+        route("mi-espacio/proyectos/:projectId", "routes/dashboard/projects/$projectId/_layout.tsx", [
+            index("routes/dashboard/projects/$projectId/index.tsx"),
+            route("equipos", "routes/dashboard/projects/$projectId/equipos.tsx"),
+            route("personal", "routes/dashboard/projects/$projectId/personal.tsx"),
+            route("padres", "routes/dashboard/projects/$projectId/padres.tsx"),
+        ]),
 
         // Actividades
         route("mi-espacio/actividades", "routes/dashboard/activities/index.tsx"),
@@ -80,6 +96,7 @@ export default [
     route("/design-system", "routes/design-system.tsx"),
     route("/login", "routes/login.tsx"),
     route("/register", "routes/register.tsx"),
+    route("/project-role-invitation/:token", "routes/project-role-invitation.tsx"),
     route("/forgot-password", "routes/forgot-password.tsx"),
     route("/reset-password", "routes/reset-password.tsx"),
 

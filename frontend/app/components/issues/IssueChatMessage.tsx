@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ISSUE_STATUS_CONFIG } from "~/types/issueType";
@@ -38,7 +39,18 @@ export const IssueChatMessage: React.FC<IssueChatMessageProps> = ({
                     </div>
                     <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-extrabold text-yambo-black/70">{message.userName}</span>
+                            <span className="text-[11px] font-extrabold text-yambo-black/70">
+                                {message.userId ? (
+                                    <Link
+                                        to={`/mi-espacio/admin/usuarios/${message.userId}/perfil`}
+                                        className="hover:text-yambo-green-600 transition-colors"
+                                    >
+                                        {message.userName}
+                                    </Link>
+                                ) : (
+                                    message.userName
+                                )}
+                            </span>
                             {message.status && !hideRepeatedStatus && (
                                 <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ring-1 ring-inset ${ISSUE_STATUS_CONFIG[message.status as keyof typeof ISSUE_STATUS_CONFIG].className}`}>
                                     {ISSUE_STATUS_CONFIG[message.status as keyof typeof ISSUE_STATUS_CONFIG].label}
@@ -49,9 +61,9 @@ export const IssueChatMessage: React.FC<IssueChatMessageProps> = ({
                     </div>
                 </div>
             )}
-            <div className={`max-w-[85%] lg:max-w-[75%] px-3 py-2.5 rounded-[10px] text-[13px] shadow-sm relative group transition-all hover:shadow-md ${isRight ? "bg-yambo-green-600 text-white border-2 border-yambo-green-700" : "bg-white text-yambo-black border-2 border-slate-100"} ${isRight ? (isGroupedWithPrevious ? "rounded-tr-md" : "rounded-tr-none") : (isGroupedWithPrevious ? "rounded-tl-md" : "rounded-tl-none")} ${isRight ? (isGroupedWithNext ? "rounded-br-md" : "rounded-br-[10px]") : (isGroupedWithNext ? "rounded-bl-md" : "rounded-bl-[22px]")}`}>
+            <div className={`max-w-[85%] lg:max-w-[75%] px-2.5 py-2 rounded-[10px] text-[13px] shadow-sm relative group transition-all hover:shadow-md ${isRight ? "bg-yambo-green-600 text-white border-2 border-yambo-green-700" : "bg-white text-yambo-black border-2 border-slate-100"} ${isRight ? (isGroupedWithPrevious ? "rounded-tr-md" : "rounded-tr-none") : (isGroupedWithPrevious ? "rounded-tl-md" : "rounded-tl-none")} ${isRight ? (isGroupedWithNext ? "rounded-br-md" : "rounded-br-[10px]") : (isGroupedWithNext ? "rounded-bl-md" : "rounded-bl-[22px]")}`}>
                 <ChatContentRenderer text={message.text || ""} isRightSide={isRight} />
-                <p className={`text-[8px] font-bold mt-1 ${isRight ? "text-yambo-green-100/60" : "text-gray-300"} text-right uppercase tracking-tight`}>
+                <p className={`text-[8px] font-bold mt-0.5 ${isRight ? "text-yambo-green-100/60" : "text-gray-300"} text-right uppercase tracking-tight`}>
                     {new Date(message.createdAt).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}
                 </p>
             </div>

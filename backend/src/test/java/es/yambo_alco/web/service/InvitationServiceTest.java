@@ -43,6 +43,9 @@ class InvitationServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AccessGrantService accessGrantService;
+
     @InjectMocks
     private InvitationService invitationService;
 

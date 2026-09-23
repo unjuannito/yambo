@@ -34,12 +34,14 @@ export type User = {
     system?: boolean;
 }
 
+import type { GroupRole } from './role';
+
 export type UserGroupRole = {
     groupId: string;
     groupName: string | null;
     projectId: string;
     projectName: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 export type Profile = {

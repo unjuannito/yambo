@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="90" author="cabrasky">
+        <comment>Rename parent_invitation to project_role_invitation, target project+role instead of a drop</comment>
+
+        <dropForeignKeyConstraint baseTableName="parent_invitation" constraintName="fk_parent_invitation_family_product"/>
+        <dropIndex tableName="parent_invitation" indexName="idx_parent_invitation_family_product"/>
+        <dropColumn tableName="parent_invitation" columnName="family_product_id"/>
+
+        <addColumn tableName="parent_invitation">
+            <column name="project_id" type="varchar(8)">
+                <constraints nullable="false"
+                    foreignKeyName="fk_project_role_invitation_project"
+                    referencedTableName="project"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="role" type="varchar(20)" defaultValue="PARENT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <renameTable oldTableName="parent_invitation" newTableName="project_role_invitation"/>
+
+        <createIndex tableName="project_role_invitation" indexName="idx_project_role_invitation_project">
+            <column name="project_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

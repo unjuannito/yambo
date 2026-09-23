@@ -1,11 +1,16 @@
 package es.yambo_alco.web.repository.spec;
 
 import es.yambo_alco.web.model.Issue;
+import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.enums.IssueStatus;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public final class IssueSpecifications {
 
@@ -46,6 +51,35 @@ public final class IssueSpecifications {
 
     public static Specification<Issue> createdByEquals(String userId) {
         return (root, query, cb) -> userId == null ? null : cb.equal(root.get("createdBy"), userId);
+    }
+
+    /**
+     * Filtra las incidencias cuyo pedido relacionado pertenece al usuario
+     * indicado (customerId del pedido), en lugar de por el informador.
+     */
+    public static Specification<Issue> orderCustomerEquals(String userId) {
+        return (root, query, cb) -> {
+            if (userId == null) return null;
+            Subquery<UUID> sub = query.subquery(UUID.class);
+            Root<Issue> issueRoot = sub.correlate(root);
+            Join<Issue, OrderProduct> opJoin = issueRoot.join("orderProducts");
+            sub.select(opJoin.get("id"));
+            sub.where(cb.equal(opJoin.get("order").get("customerId"), userId));
+            return cb.exists(sub);
+        };
+    }
+
+    /**
+     * Incidencias sin ningún producto de pedido vinculado.
+     */
+    public static Specification<Issue> hasNoOrderProducts() {
+        return (root, query, cb) -> {
+            Subquery<UUID> sub = query.subquery(UUID.class);
+            Root<Issue> issueRoot = sub.correlate(root);
+            Join<Issue, OrderProduct> opJoin = issueRoot.join("orderProducts");
+            sub.select(opJoin.get("id"));
+            return cb.not(cb.exists(sub));
+        };
     }
 
     public static Specification<Issue> queryContains(String query) {

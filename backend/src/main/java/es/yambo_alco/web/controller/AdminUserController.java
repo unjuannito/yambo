@@ -4,6 +4,7 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
+import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
@@ -44,6 +45,7 @@ public class AdminUserController {
 
     private final UserService userService;
     private final AuthService authService;
+    private final AccessGrantService accessGrantService;
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
@@ -56,6 +58,7 @@ public class AdminUserController {
             @RequestParam(required = false) String permissions,
             @RequestParam(required = false) String profiles,
             @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean canHaveExtraProfileData,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size,
             @RequestParam(required = false) String sortBy,
@@ -76,7 +79,7 @@ public class AdminUserController {
                 : PageRequest.of(page, size, dir, sortBy);
 
         UserFilter userFilter = new UserFilter(query, id, name, email, enabled, perms == null ? null : List.copyOf(perms),
-                profilesList, role);
+                profilesList, role, canHaveExtraProfileData);
         Page<User> users = userService.listUsers(userFilter, pr);
         return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
@@ -85,7 +88,8 @@ public class AdminUserController {
     @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
     public ResponseEntity<AdminUserResponse> updateUserProfiles(@RequestParam @NonNull String userId,
             @Valid @RequestBody UpdateProfilesRequest request) {
-        User updatedUser = userService.updateUserProfiles(userId, request.getProfileIds());
+        User admin = authService.getCurrentUser(true);
+        User updatedUser = userService.updateUserProfiles(userId, request.getProfileIds(), admin.getId());
         AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -114,8 +118,9 @@ public class AdminUserController {
             @Valid @RequestBody UpdateGroupsRequest request) {
         // Legacy endpoint — kept for backward compatibility but now role-based
         // Assigns all provided groups as MONITOR role
+        User admin = authService.getCurrentUser(true);
         for (String groupId : request.getGroupIds()) {
-            userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+            userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR, admin.getId());
         }
         User user = userService.getUserById(userId);
         return ResponseEntity.ok(new AdminUserResponse(user));
@@ -126,7 +131,8 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> assignGroupRole(
             @PathVariable @NonNull String userId,
             @Valid @RequestBody AssignGroupRoleRequest request) {
-        User updatedUser = userService.assignGroupRole(userId, request.getGroupId(), request.getRole());
+        User admin = authService.getCurrentUser(true);
+        User updatedUser = userService.assignGroupRole(userId, request.getGroupId(), request.getRole(), admin.getId());
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
     }
 
@@ -149,6 +155,14 @@ public class AdminUserController {
                 .map(GroupRoleResponse::new)
                 .toList();
         return ResponseEntity.ok(response);
+    }
+
+    /** Historial de cómo obtuvo sus perfiles/roles el usuario (origen de cada concesión). */
+    @GetMapping("/{userId}/grants")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
+    public ResponseEntity<List<AccessGrantService.AccessGrantDto>> getUserGrants(
+            @PathVariable @NonNull String userId) {
+        return ResponseEntity.ok(accessGrantService.getUserHistory(userId));
     }
 
     @DeleteMapping("/{userId}")

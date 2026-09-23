@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="93-1" author="cabrasky">
+        <comment>Access grant audit: how each user obtained their profiles and group roles (manual grant vs invitation type)</comment>
+
+        <createTable tableName="access_grant">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="char(8)">
+                <constraints nullable="false"
+                    foreignKeyName="fk_access_grant_user"
+                    referencedTableName="user"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="grant_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints foreignKeyName="fk_access_grant_profile"
+                    referencedTableName="profile"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="project_group_id" type="char(8)">
+                <constraints foreignKeyName="fk_access_grant_project_group"
+                    referencedTableName="project_group"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="role" type="varchar(20)"/>
+            <column name="source" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invitation_type" type="varchar(20)"/>
+            <column name="invitation_id" type="bigint"/>
+            <column name="granted_by" type="char(8)">
+                <constraints foreignKeyName="fk_access_grant_granted_by"
+                    referencedTableName="user"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="granted_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revoked_at" type="timestamp"/>
+        </createTable>
+
+        <createIndex tableName="access_grant" indexName="idx_access_grant_user">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="access_grant" indexName="idx_access_grant_invitation">
+            <column name="invitation_type"/>
+            <column name="invitation_id"/>
+        </createIndex>
+        <createIndex tableName="access_grant" indexName="idx_access_grant_active">
+            <column name="user_id"/>
+            <column name="revoked_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="93-2" author="cabrasky">
+        <comment>Nominative invitations: track which user used the invitation and when (like project_role_invitation)</comment>
+
+        <addColumn tableName="nominative_invitations">
+            <column name="used_by_user_id" type="char(8)">
+                <constraints foreignKeyName="fk_nominative_used_by"
+                    referencedTableName="user"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="used_at" type="timestamp"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="93-3" author="cabrasky">
+        <comment>Backfill: link used nominative invitations to the user by email (best effort)</comment>
+        <sql>
+            UPDATE nominative_invitations ni
+            SET used_by_user_id = u.id, used_at = u.created_at
+            FROM "user" u
+            WHERE ni.used = true
+              AND ni.used_by_user_id IS NULL
+              AND LOWER(u.email) = LOWER(ni.email);
+        </sql>
+    </changeSet>
+
+    <changeSet id="93-4" author="cabrasky">
+        <comment>Backfill: LINK invitations → access_grant from invitation_registration (profiles granted by the invitation)</comment>
+        <sql>
+            INSERT INTO access_grant (user_id, grant_type, profile_id, source, invitation_type, invitation_id, granted_by, granted_at)
+            SELECT ir.user_id, 'PROFILE', ip.profile_id, 'INVITATION', 'LINK', ir.invitation_id, i.invited_by, ir.registered_at
+            FROM invitation_registration ir
+            JOIN invitations i ON i.id = ir.invitation_id
+            JOIN invitation_profile ip ON ip.invitation_id = ir.invitation_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM access_grant ag
+                WHERE ag.user_id = ir.user_id
+                  AND ag.invitation_type = 'LINK'
+                  AND ag.invitation_id = ir.invitation_id
+                  AND ag.profile_id = ip.profile_id
+                  AND ag.revoked_at IS NULL
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="93-5" author="cabrasky">
+        <comment>Backfill: NOMINATIVE invitations used → access_grant (profiles granted by the invitation)</comment>
+        <sql>
+            INSERT INTO access_grant (user_id, grant_type, profile_id, source, invitation_type, invitation_id, granted_by, granted_at)
+            SELECT ni.used_by_user_id, 'PROFILE', nip.profile_id, 'INVITATION', 'NOMINATIVE', ni.id, ni.invited_by, ni.used_at
+            FROM nominative_invitations ni
+            JOIN nominative_invitation_profile nip ON nip.nominative_invitation_id = ni.id
+            WHERE ni.used_by_user_id IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM access_grant ag
+                WHERE ag.user_id = ni.used_by_user_id
+                  AND ag.invitation_type = 'NOMINATIVE'
+                  AND ag.invitation_id = ni.id
+                  AND ag.profile_id = nip.profile_id
+                  AND ag.revoked_at IS NULL
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="93-6" author="cabrasky">
+        <comment>Backfill: PROJECT_ROLE invitations → access_grant (group role granted by the invitation, from usage history)</comment>
+        <sql>
+            INSERT INTO access_grant (user_id, grant_type, project_group_id, role, source, invitation_type, invitation_id, granted_by, granted_at)
+            SELECT priu.user_id, 'GROUP_ROLE', pg.id, pri.role, 'INVITATION', 'PROJECT_ROLE', priu.invitation_id, pri.created_by, priu.used_at
+            FROM project_role_invitation_usage priu
+            JOIN project_role_invitation pri ON pri.id = priu.invitation_id
+            JOIN project_group pg ON pg.project_id = pri.project_id AND pg.name IS NULL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM access_grant ag
+                WHERE ag.user_id = priu.user_id
+                  AND ag.invitation_type = 'PROJECT_ROLE'
+                  AND ag.invitation_id = priu.invitation_id
+                  AND ag.revoked_at IS NULL
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="93-7" author="cabrasky">
+        <comment>Backfill: existing user_profile rows → access_grant as MANUAL legacy (granted_by unknown, timestamp = user.created_at)</comment>
+        <sql>
+            INSERT INTO access_grant (user_id, grant_type, profile_id, source, granted_at)
+            SELECT up.user_id, 'PROFILE', up.profile_id, 'MANUAL', COALESCE(u.created_at, CURRENT_TIMESTAMP)
+            FROM user_profile up
+            JOIN "user" u ON u.id = up.user_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM access_grant ag
+                WHERE ag.user_id = up.user_id
+                  AND ag.grant_type = 'PROFILE'
+                  AND ag.profile_id = up.profile_id
+                  AND ag.source = 'MANUAL'
+                  AND ag.revoked_at IS NULL
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="93-8" author="cabrasky">
+        <comment>Backfill: existing user_project_group rows → access_grant as MANUAL legacy (granted_by unknown, timestamp = user.created_at)</comment>
+        <sql>
+            INSERT INTO access_grant (user_id, grant_type, project_group_id, role, source, granted_at)
+            SELECT upg.user_id, 'GROUP_ROLE', upg.project_group_id, upg.role::text, 'MANUAL', COALESCE(u.created_at, CURRENT_TIMESTAMP)
+            FROM user_project_group upg
+            JOIN "user" u ON u.id = upg.user_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM access_grant ag
+                WHERE ag.user_id = upg.user_id
+                  AND ag.grant_type = 'GROUP_ROLE'
+                  AND ag.project_group_id = upg.project_group_id
+                  AND ag.role = upg.role::text
+                  AND ag.source = 'MANUAL'
+                  AND ag.revoked_at IS NULL
+            );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

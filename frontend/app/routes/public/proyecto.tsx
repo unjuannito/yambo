@@ -9,7 +9,7 @@ import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
 import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export async function loader({ params }: Route.LoaderArgs) {
   try {
@@ -113,6 +113,7 @@ export default function Proyecto() {
   }
 
   const pc = projectColor(project.id, project.signatureColor);
+  const coordinationEmail = project.coordinationEmail?.trim();
 
   return (
     <section
@@ -157,6 +158,27 @@ export default function Proyecto() {
           </div>
         )}
 
+        {/* Coordination email (project-specific, independent from the staff list) */}
+        {coordinationEmail && (
+          <div className="mb-10 fade-up" style={{ animationDelay: "0.15s" }}>
+            <h2 className="text-2xl font-bold text-yambo-black mb-4 font-display">{t('public.projectCoordinationEmail')}</h2>
+            <div className="inline-flex items-start gap-4 rounded-3xl border bg-white p-5 shadow-sm [border-color:var(--pc-border)]">
+              <div className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center [background-color:var(--pc-bg)]">
+                <FontAwesomeIcon icon={faEnvelope} className="w-6 h-6 [color:var(--pc-text)]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-1">{t('public.projectCoordinationEmailDesc')}</p>
+                <a
+                  href={`mailto:${coordinationEmail}`}
+                  className="text-yambo-black font-semibold break-all text-base transition-colors hover:[color:var(--pc-text-hover)]"
+                >
+                  {coordinationEmail}
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Coordinators */}
         {filteredCoordinators.length > 0 && (
           <div className="mb-10 fade-up" style={{ animationDelay: "0.2s" }}>
@@ -191,7 +213,7 @@ export default function Proyecto() {
 
             {namedGroups.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                <button
+                <button type="button"
                   onClick={() => setSelectedGroupId(null)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                     selectedGroupId === null
@@ -205,7 +227,7 @@ export default function Proyecto() {
                   const colors = projectColor(group.id);
                   const isSelected = selectedGroupId === group.id;
                   return (
-                    <button
+                    <button type="button"
                       key={group.id}
                       onClick={() => setSelectedGroupId(group.id === selectedGroupId ? null : group.id)}
                       className="px-4 py-2 rounded-full text-sm font-semibold transition-all border hover:brightness-90"
@@ -228,7 +250,7 @@ export default function Proyecto() {
               <span>
                 {t('public.projectFilteredResult', { count: filteredMonitors.length })}
               </span>
-              <button
+              <button type="button"
                 onClick={() => { setSelectedGroupId(null); setSearchText(""); }}
                 className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
               >

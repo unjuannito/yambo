@@ -1,4 +1,5 @@
 import type { User } from "~/types/userType";
+import type { GroupRole } from "~/types/role";
 import { ApiService, type PagedParams } from "./apiService";
 import type { PagedInfo } from "~/types/apiType";
 
@@ -9,6 +10,7 @@ export interface PagedUsers {
 
 export interface UserFilters {
     query?: string;
+    id?: string;
     profiles?: string[];
     enabled?: boolean;
     role?: string;
@@ -33,7 +35,7 @@ export interface UpdateUserGroupsRequest {
 
 export interface AssignGroupRoleRequest {
     groupId: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 export interface GroupRoleResponse {
@@ -41,7 +43,7 @@ export interface GroupRoleResponse {
     groupName: string | null;
     projectId: string;
     projectName: string;
-    role: 'MONITOR' | 'COORDINATOR';
+    role: GroupRole;
 }
 
 export class AdminUserService extends ApiService {
@@ -87,7 +89,7 @@ export class AdminUserService extends ApiService {
     public async assignGroupRole(
         userId: string,
         groupId: string,
-        role: 'MONITOR' | 'COORDINATOR'
+        role: GroupRole
     ): Promise<User> {
         return await this.post<User, AssignGroupRoleRequest>(
             `/admin/users/${userId}/group-roles`,
@@ -98,7 +100,7 @@ export class AdminUserService extends ApiService {
     public async removeGroupRole(
         userId: string,
         groupId: string,
-        role: 'MONITOR' | 'COORDINATOR'
+        role: GroupRole
     ): Promise<User> {
         return await this.delete<User>(
             `/admin/users/${userId}/group-roles/${groupId}/${role}`
@@ -110,6 +112,30 @@ export class AdminUserService extends ApiService {
             `/admin/users/${userId}/group-roles`
         );
     }
+
+    public async getUserGrants(userId: string): Promise<AccessGrant[]> {
+        return await this.get<AccessGrant[]>(`/admin/users/${userId}/grants`);
+    }
+}
+
+/** Cómo obtuvo un usuario cada perfil/rol (origen de la concesión). */
+export interface AccessGrant {
+    id: number;
+    userId: string;
+    grantType: 'PROFILE' | 'GROUP_ROLE';
+    profileId: string | null;
+    profileName: string | null;
+    projectGroupId: string | null;
+    groupName: string | null;
+    projectName: string | null;
+    role: 'MONITOR' | 'COORDINATOR' | 'PARENT' | null;
+    source: 'MANUAL' | 'INVITATION';
+    invitationType: 'LINK' | 'NOMINATIVE' | 'PROJECT_ROLE' | null;
+    invitationId: number | null;
+    grantedBy: string | null;
+    grantedByName: string | null;
+    grantedAt: string;
+    revokedAt: string | null;
 }
 
 export const adminUserService = new AdminUserService();

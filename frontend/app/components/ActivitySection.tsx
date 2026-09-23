@@ -27,7 +27,7 @@ export default function ActivitySection({
 
     return (
         <div className="fade-up">
-            <button
+            <button type="button"
                 onClick={() => setCollapsed(!collapsed)}
                 className="flex items-center gap-3 mb-4 group/section w-full text-left"
             >

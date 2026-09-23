@@ -14,7 +14,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
 
     return (
         <div className="flex items-center justify-center gap-2 mt-8 mb-4">
-            <button
+            <button type="button"
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 0}
                 className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all
@@ -40,7 +40,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
                 }
 
                 return (
-                    <button
+                    <button type="button"
                         key={i}
                         onClick={() => onPageChange(i)}
                         className={`min-w-[36px] h-9 rounded-xl text-sm font-semibold transition-all ${
@@ -54,7 +54,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
                 );
             })}
 
-            <button
+            <button type="button"
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages - 1}
                 className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all

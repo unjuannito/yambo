@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBagShopping } from "@fortawesome/free-solid-svg-icons";
 import PaymentInstructions from "~/components/shop/PaymentInstructions";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -29,6 +30,7 @@ export default function CartPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string>("");
+  const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
   const [orderTotal, setOrderTotal] = useState<number>(0);
   const [drops, setDrops] = useState<FamilyProduct[]>([]);
 
@@ -244,14 +246,14 @@ export default function CartPage() {
 
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button
+                        <button type="button"
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity - 1)}
                           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-sm transition-colors"
                         >
                           −
                         </button>
                         <span className="w-8 sm:w-12 text-center font-medium text-sm sm:text-base text-yambo-black">{item.quantity}</span>
-                        <button
+                        <button type="button"
                           onClick={() => updateQuantity(item.product.id, configKey, item.quantity + 1)}
                           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-sm transition-colors"
                         >
@@ -306,11 +308,7 @@ export default function CartPage() {
             <ButtonComponent
               variant="ghost"
               size="sm"
-              onClick={() => {
-                if (confirm(t("merch.clearCartConfirm"))) {
-                  clearCart();
-                }
-              }}
+              onClick={() => setShowClearCartConfirm(true)}
               className="w-full"
             >
               {t("merch.clearCart")}
@@ -327,6 +325,21 @@ export default function CartPage() {
           onClose={handleClosePaymentInstructions}
         />
       )}
+
+      {/* Clear Cart Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showClearCartConfirm}
+        onClose={() => setShowClearCartConfirm(false)}
+        onConfirm={() => {
+          clearCart();
+          setShowClearCartConfirm(false);
+        }}
+        title={t("merch.clearCart")}
+        message={t("merch.clearCartConfirm")}
+        confirmLabel={t("common.confirm")}
+        cancelLabel={t("common.cancel")}
+        variant="warning"
+      />
     </main>
   );
 }

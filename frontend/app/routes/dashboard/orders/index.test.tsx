@@ -57,7 +57,10 @@ vi.mock('~/services/exportService', () => ({
 }));
 
 vi.mock('~/components/common/FilterableTable', () => ({
-    FilterableTable: () => null,
+    FilterableTable: ({ serverSide }: { serverSide: { fetchData: (args: any) => Promise<any> } }) => {
+        void serverSide.fetchData({ page: 0, size: 10, filters: {} });
+        return null;
+    },
 }));
 
 vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
@@ -66,15 +69,6 @@ vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
             <option value="drop-1">Drop 1</option>
         </select>
     ),
-}));
-
-vi.mock('~/components/common/StatusWorkflow', () => ({
-    StatusWorkflow: () => null,
-}));
-
-vi.mock('~/components/common/ViewTabs', () => ({
-    ViewTabs: () => null,
-    useViewTab: () => ({ activeTab: 'actual', setActiveTab: vi.fn() }),
 }));
 
 vi.mock('~/components/common/RequirePermission', () => ({
@@ -154,6 +148,13 @@ function renderWithRouter(initialPath = '/') {
 }
 
 describe('Orders route', () => {
+    beforeEach(() => {
+        vi.mocked(orderService.getAllOrders).mockResolvedValue({
+            content: [],
+            page: { totalElements: 0, totalPages: 0, number: 0, size: 10 },
+        });
+    });
+
     describe('meta', () => {
         it('returns the correct title and name meta tags', () => {
             const result = meta({} as any);
@@ -161,6 +162,43 @@ describe('Orders route', () => {
                 { title: 'Yambo - Pedidos' },
                 { name: 'Yambo - Pedidos', content: 'Yambo - Pedidos' },
             ]);
+        });
+    });
+
+    describe('customerId filter', () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            vi.mocked(orderService.getAllOrders).mockResolvedValue({
+                content: [],
+                page: { totalElements: 0, totalPages: 0, number: 0, size: 10 },
+            });
+        });
+
+        it('passes customerId to getAllOrders when present in URL params', async () => {
+            vi.mocked(useAuth).mockReturnValue(makeRegularUserAuth() as any);
+
+            renderWithRouter('/?customerId=USR001');
+
+            await waitFor(() => {
+                expect(orderService.getAllOrders).toHaveBeenCalled();
+            });
+
+            // getAllOrders signature: (page, size, query, orderId, customerName, customerId, status, startDate, endDate)
+            const callArgs = vi.mocked(orderService.getAllOrders).mock.lastCall!;
+            expect(callArgs[5]).toBe('USR001'); // 6th param = customerId
+        });
+
+        it('does not pass customerId when URL has none', async () => {
+            vi.mocked(useAuth).mockReturnValue(makeRegularUserAuth() as any);
+
+            renderWithRouter('/');
+
+            await waitFor(() => {
+                expect(orderService.getAllOrders).toHaveBeenCalled();
+            });
+
+            const callArgs = vi.mocked(orderService.getAllOrders).mock.lastCall!;
+            expect(callArgs[5]).toBeUndefined();
         });
     });
 
@@ -249,7 +287,7 @@ describe('Orders route', () => {
                 expect(screen.getByText('Test Product')).toBeInTheDocument();
             });
 
-            const closeButton = container.querySelector('button.text-gray-300') as HTMLButtonElement | null;
+            const closeButton = container.querySelector('button[aria-label="Cerrar"]') as HTMLButtonElement | null;
             expect(closeButton).not.toBeNull();
 
             if (closeButton) {

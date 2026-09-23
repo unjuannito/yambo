@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { RequirePermission } from "~/components/common/RequirePermission";
+import { PageHeader } from "~/components/common/PageHeader";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -10,6 +11,7 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash, faHouse } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta() {
     return [
@@ -224,9 +226,9 @@ export default function MainPageEditor() {
     if (loading) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <LoadingSpinner message="Cargando configuración..." size="lg" />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
@@ -234,26 +236,31 @@ export default function MainPageEditor() {
     if (error) {
         return (
             <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-                <main className="flex flex-col p-4 md:p-6 w-full">
+                <PageContainer>
                     <ErrorMessage message={error} onRetry={loadSettings} />
-                </main>
+                </PageContainer>
             </RequirePermission>
         );
     }
 
     return (
         <RequirePermission permission={{ obj: "settings", action: "update" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
-                <h1 className="text-3xl font-extrabold font-display text-yambo-black mb-2 flex items-center gap-2">
-                    <FontAwesomeIcon icon={faHouse} className="text-yambo-green-500" />
-                    Editor de Página Principal
-                </h1>
-                <p className="text-gray-400 mb-6">Personaliza el contenido visible en la página de inicio.</p>
+            <PageContainer>
+                <PageHeader
+                    title={
+                        <span className="flex items-center gap-2">
+                            <FontAwesomeIcon icon={faHouse} className="text-yambo-green-500" />
+                            Editor de Página Principal
+                        </span>
+                    }
+                    description="Personaliza el contenido visible en la página de inicio."
+                    wiki={{ slug: "pagina-principal" }}
+                />
 
                 {/* Tabs */}
                 <div className="flex border-b border-gray-100 mb-6">
                     {tabs.map(tab => (
-                        <button
+                        <button type="button"
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
                             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -613,7 +620,7 @@ export default function MainPageEditor() {
                         </div>
                     </section>
                 )}
-            </main>
+            </PageContainer>
         </RequirePermission>
     );
 }

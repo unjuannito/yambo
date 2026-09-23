@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,11 +76,10 @@ public class ProductService {
         if (isProductAdmin) {
             spec = spec.and(ProductSpecifications.activeEquals(active));
         } else {
-            Set<String> profileIds = user.getProfiles().stream()
-                    .map(p -> p.getId())
-                    .collect(Collectors.toSet());
+            Set<String> projectIds = FamilyProductRoleAccess.projectIds(user);
+            Set<UserProjectGroupRole> roles = FamilyProductRoleAccess.roles(user);
             spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
-            spec = spec.and(ProductSpecifications.userHasAccess(profileIds));
+            spec = spec.and(ProductSpecifications.userHasAccess(projectIds, roles));
             spec = spec.and(ProductSpecifications.familyProductActive());
         }
 
@@ -180,18 +182,14 @@ public class ProductService {
 
     private void checkAccess(Product product) {
         User user = authService.getCurrentUser(true);
-        Set<String> userProfileIds = user.getProfiles().stream()
-                .map(p -> p.getId())
-                .collect(Collectors.toSet());
 
         if (product.getFamilyProduct() == null) {
             return;
         }
 
-        boolean hasAccess = product.getFamilyProduct().getProfile() != null
-                && userProfileIds.contains(product.getFamilyProduct().getProfile().getId());
+        FamilyProduct fp = product.getFamilyProduct();
 
-        if (!hasAccess) {
+        if (!FamilyProductRoleAccess.userHasAccess(user, fp.getRoleAccess())) {
             throw new ResourceNotFoundException("Product not found");
         }
     }
@@ -228,19 +226,37 @@ public class ProductService {
     }
 
     private BigDecimal calculatePriceForOption(ProductOption option, Object selectedValue) {
-        BigDecimal extra = option.getPrice() != null ? option.getPrice() : BigDecimal.ZERO;
-        if (OPTION_TYPE_SELECT.equals(option.getType()) && option.getValues() != null) {
+        if (selectedValue == null) {
+            return BigDecimal.ZERO;
+        }
+
+        String type = option.getType();
+
+        if (OPTION_TYPE_SELECT.equals(type)) {
+            if (option.getValues() == null) {
+                return BigDecimal.ZERO;
+            }
             String selectedValueStr = selectedValue.toString();
             for (OptionValue value : option.getValues()) {
                 if (value.getLabel().equals(selectedValueStr) || value.getId().equals(selectedValueStr)) {
-                    if (value.getPrice() != null) {
-                        extra = extra.add(value.getPrice());
-                    }
-                    break;
+                    return value.getPrice() != null ? value.getPrice() : BigDecimal.ZERO;
                 }
             }
+            return BigDecimal.ZERO;
         }
-        return extra;
+
+        if ("checkbox".equals(type)) {
+            boolean checked = Boolean.TRUE.equals(selectedValue)
+                    || (selectedValue instanceof String s && "true".equalsIgnoreCase(s));
+            return checked && option.getPrice() != null ? option.getPrice() : BigDecimal.ZERO;
+        }
+
+        // text_input (y por defecto): solo añade el precio si hay texto no vacío.
+        String text = selectedValue.toString();
+        if (text.trim().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return option.getPrice() != null ? option.getPrice() : BigDecimal.ZERO;
     }
 
     public String formatConfiguration(String configurationJson, Product product) {
@@ -268,6 +284,40 @@ public class ProductService {
             // If parsing fails, return raw JSON
             return configurationJson;
         }
+    }
+
+    /**
+     * Devuelve un mapa {@code opción → valor formateado} de la configuración
+     * JSON (claves y valores legibles). Se usa para construir el desglose de
+     * cambios por valor en los correos de administración.
+     */
+    public Map<String, String> formatOptionMap(String configurationJson, Product product) {
+        Map<String, String> result = new LinkedHashMap<>();
+        if (configurationJson == null || configurationJson.trim().isEmpty() || configurationJson.equals("{}")) {
+            return result;
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> config = objectMapper.readValue(configurationJson, Map.class);
+            if (product == null || product.getOptions() == null) {
+                return result;
+            }
+            for (Map.Entry<String, Object> entry : config.entrySet()) {
+                Object value = entry.getValue();
+                if (value == null) {
+                    continue;
+                }
+                if (value instanceof String s && s.isBlank()) {
+                    continue;
+                }
+                if (isValidOption(entry.getKey(), value, product.getOptions())) {
+                    result.put(entry.getKey(), formatOptionValueOnly(entry.getKey(), value, product.getOptions()));
+                }
+            }
+        } catch (Exception e) {
+            // Configuración ilegible: sin desglose.
+        }
+        return result;
     }
 
     private boolean isValidOption(String optionName, Object value, List<ProductOption> options) {
@@ -312,5 +362,29 @@ public class ProductService {
         }
 
         return optionName + ": " + value;
+    }
+
+    /**
+     * Como {@link #formatOptionValue} pero devuelve únicamente el valor legible
+     * (sin el prefijo "opción: "), para que la plantilla componga el texto.
+     */
+    private String formatOptionValueOnly(String optionName, Object value, List<ProductOption> options) {
+        ProductOption option = options.stream()
+                .filter(opt -> opt.getName().equals(optionName))
+                .findFirst()
+                .orElse(null);
+
+        if (option != null && OPTION_TYPE_SELECT.equals(option.getType()) && option.getValues() != null) {
+            String valueStr = value.toString();
+            OptionValue optionValue = option.getValues().stream()
+                    .filter(v -> v.getId().equals(valueStr) || v.getLabel().equals(valueStr))
+                    .findFirst()
+                    .orElse(null);
+            if (optionValue != null) {
+                return optionValue.getLabel();
+            }
+        }
+
+        return String.valueOf(value);
     }
 }

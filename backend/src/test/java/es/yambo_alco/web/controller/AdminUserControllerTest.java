@@ -4,6 +4,7 @@ import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
+import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.SettingsService;
 import es.yambo_alco.web.service.UserService;
@@ -56,6 +57,9 @@ public class AdminUserControllerTest {
 
         @MockitoBean
         private SettingsService settingsService;
+
+        @MockitoBean
+        private AccessGrantService accessGrantService;
 
         @BeforeEach
         public void setup() {
@@ -423,7 +427,9 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                                 Profile.builder().id("ROLE_ADMIN").name("Admin").build()))
                                 .build();
 
-                when(userService.updateUserProfiles("U0000002", Set.of("ROLE_USER", "ROLE_ADMIN")))
+                User admin = User.builder().id("U0000001").email("admin@example.com").name("Admin").build();
+                when(authService.getCurrentUser(true)).thenReturn(admin);
+                when(userService.updateUserProfiles("U0000002", Set.of("ROLE_USER", "ROLE_ADMIN"), "U0000001"))
                                 .thenReturn(updatedUser);
 
                 String requestBody = """

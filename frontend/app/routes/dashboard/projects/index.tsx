@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import { FilterableTable } from "~/components/common/FilterableTable";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
@@ -9,9 +10,11 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { Modal } from "~/components/common/Modal";
+import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { projectService, type Project, type ProjectGroup } from "~/services/projectService";
+import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
 import { useAuth } from "~/hooks/useAuth";
-import { getErrorMessage } from "~/types/error";
+import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import FileUploader from "~/components/common/FileUploader";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,7 +22,10 @@ import {
     faCalendarDays,
     faPenToSquare,
     faTrashCan,
+    faUserSlash,
+    faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
+import { PageContainer } from "~/components/common/PageContainer";
 
 export function meta() {
     return [
@@ -36,12 +42,22 @@ type ProjectForm = {
     image: string;
     featured: boolean;
     signatureColor: string;
+    coordinationEmail: string;
 };
 
-const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false, signatureColor: "" };
+const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false, signatureColor: "", coordinationEmail: "" };
+
+// Same rule the backend applies after trimming
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidCoordinationEmail(value: string): boolean {
+    const trimmed = value.trim();
+    return trimmed === "" || (trimmed.length <= 254 && EMAIL_PATTERN.test(trimmed));
+}
 
 export default function Projects() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { hasPermission } = useAuth();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,6 +66,7 @@ export default function Projects() {
     const [form, setForm] = useState<ProjectForm>({ ...EMPTY_FORM });
     const [editing, setEditing] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [coordinationEmailError, setCoordinationEmailError] = useState<string | null>(null);
 
     // Groups state
     const [groups, setGroups] = useState<ProjectGroup[]>([]);
@@ -57,6 +74,9 @@ export default function Projects() {
     const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
     const [editingGroupName, setEditingGroupName] = useState("");
     const [savingGroup, setSavingGroup] = useState(false);
+    const [confirmDeleteProject, setConfirmDeleteProject] = useState<Project | null>(null);
+    const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<{ groupId: string; groupName: string } | null>(null);
+    const [confirmRevokeParents, setConfirmRevokeParents] = useState(false);
 
     const canCreate = hasPermission({ obj: "project", action: "create" });
     const canUpdate = hasPermission({ obj: "project", action: "update" });
@@ -81,6 +101,7 @@ export default function Projects() {
 
     const resetForm = () => {
         setForm({ ...EMPTY_FORM });
+        setCoordinationEmailError(null);
         setEditing(null);
         setIsModalOpen(false);
         setSaving(false);
@@ -92,6 +113,7 @@ export default function Projects() {
 
     const openCreateModal = () => {
         setForm({ ...EMPTY_FORM });
+        setCoordinationEmailError(null);
         setEditing(null);
         setIsModalOpen(true);
     };
@@ -101,6 +123,12 @@ export default function Projects() {
             toast.error(t("projects.nameRequired"));
             return;
         }
+        if (!isValidCoordinationEmail(form.coordinationEmail)) {
+            setCoordinationEmailError(t("projects.coordinationEmailInvalid"));
+            return;
+        }
+        setCoordinationEmailError(null);
+        const coordinationEmail = form.coordinationEmail.trim();
         try {
             setSaving(true);
             if (editing) {
@@ -112,6 +140,7 @@ export default function Projects() {
                     image: form.image || null,
                     featured: form.featured,
                     signatureColor: form.signatureColor || null,
+                    coordinationEmail,
                 });
                 toast.success(t("projects.updated"));
             } else {
@@ -123,12 +152,17 @@ export default function Projects() {
                     image: form.image || null,
                     featured: form.featured,
                     signatureColor: form.signatureColor || null,
+                    coordinationEmail: coordinationEmail || null,
                 });
                 toast.success(t("projects.created"));
             }
             resetForm();
             await loadProjects();
         } catch (err) {
+            if (err instanceof ApiError && err.message === "Invalid coordination email") {
+                setCoordinationEmailError(t("projects.coordinationEmailInvalid"));
+                return;
+            }
             toast.error(getErrorMessage(err, t("projects.saveError")));
         } finally {
             setSaving(false);
@@ -145,7 +179,9 @@ export default function Projects() {
             image: project.image || "",
             featured: project.featured,
             signatureColor: project.signatureColor || "",
+            coordinationEmail: project.coordinationEmail || "",
         });
+        setCoordinationEmailError(null);
         setIsModalOpen(true);
         loadGroups(project.id);
     };
@@ -190,26 +226,55 @@ export default function Projects() {
         }
     };
 
-    const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    const handleDeleteGroup = (groupId: string, groupName: string) => {
         if (!editing) return;
-        if (!confirm(t("projects.confirmDeleteGroup", { name: groupName }))) return;
+        setConfirmDeleteGroup({ groupId, groupName });
+    };
+
+    const executeDeleteGroup = async () => {
+        if (!editing || !confirmDeleteGroup) return;
         try {
-            await projectService.deleteGroup(editing, groupId);
-            setGroups((prev) => prev.filter((g) => g.id !== groupId));
+            await projectService.deleteGroup(editing, confirmDeleteGroup.groupId);
+            setGroups((prev) => prev.filter((g) => g.id !== confirmDeleteGroup.groupId));
             toast.success(t("projects.groupDeleted"));
         } catch (err) {
             toast.error(getErrorMessage(err, t("projects.groupDeleteError")));
+        } finally {
+            setConfirmDeleteGroup(null);
         }
     };
 
-    const handleDelete = async (project: Project) => {
-        if (!confirm(t("projects.confirmDelete", { name: project.name }))) return;
+    const handleRevokeParents = () => {
+        if (!editing) return;
+        setConfirmRevokeParents(true);
+    };
+
+    const executeRevokeParents = async () => {
+        if (!editing) return;
         try {
-            await projectService.deleteProject(project.id);
+            const result = await projectRoleInvitationService.revokeAllParentRolesByProject(editing);
+            toast.success(result);
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al eliminar accesos de padres"));
+        } finally {
+            setConfirmRevokeParents(false);
+        }
+    };
+
+    const handleDelete = (project: Project) => {
+        setConfirmDeleteProject(project);
+    };
+
+    const executeDelete = async () => {
+        if (!confirmDeleteProject) return;
+        try {
+            await projectService.deleteProject(confirmDeleteProject.id);
             toast.success(t("projects.deleted"));
             await loadProjects();
         } catch (err) {
             toast.error(getErrorMessage(err, t("projects.deleteError")));
+        } finally {
+            setConfirmDeleteProject(null);
         }
     };
 
@@ -222,7 +287,14 @@ export default function Projects() {
                 type: "search",
                 placeholder: t("projects.searchByName"),
             },
-            render: (project) => <span className="font-medium text-yambo-black">{project.name}</span>,
+            render: (project) => (
+                <button type="button"
+                    onClick={() => navigate(`/mi-espacio/proyectos/${project.id}/equipos`)}
+                    className="font-medium text-yambo-black hover:text-yambo-green-600 transition-colors text-left"
+                >
+                    {project.name}
+                </button>
+            ),
         },
         {
             key: "season",
@@ -272,17 +344,24 @@ export default function Projects() {
         {
             key: "id",
             header: t("common.actions"),
-            requiredPerms: [{ obj: "project", action: "update" }],
             render: (project) => (
                 <div className="flex gap-2">
+                    <ButtonComponent
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/mi-espacio/proyectos/${project.id}/equipos`)}
+                    >
+                        <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 mr-1" />
+                        <span className="hidden sm:inline">Gestionar</span>
+                    </ButtonComponent>
                     {canUpdate && (
                         <ButtonComponent
-                            variant="primary"
+                            variant="neutral"
                             size="sm"
                             onClick={() => startEdit(project)}
                         >
-                            <span className="sm:hidden"><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></span>
-                            <span className="hidden sm:inline">{t("common.edit")}</span>
+                            <FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline ml-1">{t("common.edit")}</span>
                         </ButtonComponent>
                     )}
                     {canDelete && (
@@ -291,8 +370,8 @@ export default function Projects() {
                             size="sm"
                             onClick={() => handleDelete(project)}
                         >
-                            <span className="sm:hidden"><FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" /></span>
-                            <span className="hidden sm:inline">{t("common.delete")}</span>
+                            <FontAwesomeIcon icon={faTrashCan} className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline ml-1">{t("common.delete")}</span>
                         </ButtonComponent>
                     )}
                 </div>
@@ -302,9 +381,9 @@ export default function Projects() {
 
     return (
         <RequirePermission permission={{ obj: "project", action: "read" }} redirectTo="/mi-espacio">
-            <main className="flex flex-col p-4 md:p-6 w-full">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">{t("projects.title")}</h1>
+            <PageContainer>
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Proyectos</h1>
                     {canCreate && (
                         <ButtonComponent variant="primary" onClick={openCreateModal}>
                             + {t("projects.createNew")}
@@ -347,12 +426,17 @@ export default function Projects() {
                                             </div>
                                         )}
                                         <div className="flex gap-1.5 pt-1">
-                                            <button
+                                            <button type="button"
+                                                onClick={() => navigate(`/mi-espacio/proyectos/${project.id}/equipos`)}
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-yambo-green-500 text-white hover:bg-yambo-green-600 transition-colors"
+                                                title="Gestionar"
+                                            ><FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" /></button>
+                                            <button type="button"
                                                 onClick={() => startEdit(project)}
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                                                 title={t("common.edit")}
                                             ><FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" /></button>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => handleDelete(project)}
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
                                                 title={t("common.delete")}
@@ -420,6 +504,34 @@ export default function Projects() {
                                 />
                             </div>
                         )}
+                        <div>
+                            <InputComponent
+                                id="project-coordination-email"
+                                type="email"
+                                label={t("projects.coordinationEmail")}
+                                placeholder={t("projects.coordinationEmailPlaceholder")}
+                                value={form.coordinationEmail}
+                                maxLength={254}
+                                aria-invalid={coordinationEmailError ? true : undefined}
+                                aria-describedby="project-coordination-email-help"
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setForm((prev) => ({ ...prev, coordinationEmail: value }));
+                                    if (coordinationEmailError && isValidCoordinationEmail(value)) {
+                                        setCoordinationEmailError(null);
+                                    }
+                                }}
+                            />
+                            {coordinationEmailError ? (
+                                <p id="project-coordination-email-help" role="alert" className="text-xs text-red-600 mt-1">
+                                    {coordinationEmailError}
+                                </p>
+                            ) : (
+                                <p id="project-coordination-email-help" className="text-xs text-gray-400 mt-1">
+                                    {t("projects.coordinationEmailHelp")}
+                                </p>
+                            )}
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">{t("common.description")}</label>
                             <textarea
@@ -565,9 +677,52 @@ export default function Projects() {
                                 )}
                             </div>
                         )}
+                        {editing && canUpdate && (
+                            <div className="border-t border-gray-100 pt-4 mt-2">
+                                <h3 className="text-sm font-semibold text-yambo-black mb-3">Acceso de padres</h3>
+                                <p className="text-xs text-gray-400 mb-3">
+                                    Elimina todos los accesos de padres/madres de este proyecto (ej: al cambiar de temporada).
+                                </p>
+                                <ButtonComponent
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleRevokeParents()}
+                                >
+                                    <FontAwesomeIcon icon={faUserSlash} className="mr-2" />
+                                    Eliminar todos los padres
+                                </ButtonComponent>
+                            </div>
+                        )}
                     </div>
                 </Modal>
-            </main>
+            </PageContainer>
+            <ConfirmDialog
+                isOpen={confirmDeleteProject !== null}
+                onClose={() => setConfirmDeleteProject(null)}
+                onConfirm={executeDelete}
+                title={t("projects.confirmDeleteTitle")}
+                message={confirmDeleteProject ? t("projects.confirmDelete", { name: confirmDeleteProject.name }) : ""}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
+            <ConfirmDialog
+                isOpen={confirmDeleteGroup !== null}
+                onClose={() => setConfirmDeleteGroup(null)}
+                onConfirm={executeDeleteGroup}
+                title={t("projects.confirmDeleteGroupTitle")}
+                message={confirmDeleteGroup ? t("projects.confirmDeleteGroup", { name: confirmDeleteGroup.groupName }) : ""}
+                confirmLabel={t("common.delete")}
+                variant="danger"
+            />
+            <ConfirmDialog
+                isOpen={confirmRevokeParents}
+                onClose={() => setConfirmRevokeParents(false)}
+                onConfirm={executeRevokeParents}
+                title="Eliminar accesos de padres"
+                message="¿Eliminar todos los accesos de padres de este proyecto? Los padres perderán el acceso y tendrán que usar un nuevo enlace de invitación."
+                confirmLabel="Eliminar todos"
+                variant="danger"
+            />
         </RequirePermission>
     );
 }

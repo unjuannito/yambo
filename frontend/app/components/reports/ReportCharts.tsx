@@ -345,7 +345,7 @@ export function DateRangePicker({
             </div>
             <div className="flex gap-1.5">
                 {presets.map((preset) => (
-                    <button
+                    <button type="button"
                         key={preset.days}
                         onClick={() => applyPreset(preset.days)}
                         className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full hover:bg-yambo-green-50 hover:text-yambo-green-600 transition-colors"

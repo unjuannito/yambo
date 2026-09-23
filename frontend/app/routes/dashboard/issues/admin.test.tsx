@@ -37,7 +37,7 @@ vi.mock("react-i18next", () => ({
                 'issues.statOpen': 'Abiertas',
                 'issues.statInProgress': 'En progreso',
                 'issues.statClosed': 'Cerradas',
-                'issues.workflow': 'Flujo de trabajo',
+                'component.statusWorkflow.wikiLink': 'Ver en la wiki',
                 'issues.newIssue': 'Nueva incidencia',
                 'issues.orderPrefix': 'Pedido',
                 'issues.createIssue': 'Nueva incidencia',
@@ -71,10 +71,13 @@ vi.mock("react-i18next", () => ({
 }));
 
 const useNavigateMock = vi.fn();
+const useSearchParamsMock = vi.fn(() => [new URLSearchParams(), vi.fn()]);
 const getAllIssuesMock = vi.fn();
 
 vi.mock("react-router", () => ({
     useNavigate: () => useNavigateMock,
+    useSearchParams: () => useSearchParamsMock(),
+    Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("~/components/common/RequirePermission", () => ({
@@ -95,15 +98,6 @@ vi.mock("~/components/common/StatCard", () => ({
 
 vi.mock("~/components/issues", () => ({
     IssueStatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
-}));
-
-vi.mock("~/components/common/StatusWorkflow", () => ({
-    StatusWorkflow: () => <div>workflow</div>,
-}));
-
-vi.mock("~/components/common/ViewTabs", () => ({
-    ViewTabs: () => <div>tabs</div>,
-    useViewTab: () => ({ activeTab: "actual", setActiveTab: vi.fn() }),
 }));
 
 vi.mock("~/components/common/FilterableTable", () => ({
@@ -143,11 +137,38 @@ describe("Admin Issues Route", () => {
         render(<AdminIssuesPage />);
 
         expect(screen.getByText("Administrador de incidencias")).toBeInTheDocument();
-        expect(screen.getByText("workflow")).toBeInTheDocument();
+        expect(screen.getByText("Ver en la wiki")).toBeInTheDocument();
         expect(screen.getByText("admin-issues-table")).toBeInTheDocument();
 
         await waitFor(() => {
             expect(getAllIssuesMock).toHaveBeenCalled();
         });
+    });
+
+    it("passes userId to getAllIssues when present in searchParams", async () => {
+        useSearchParamsMock.mockReturnValueOnce([new URLSearchParams("userId=USR001"), vi.fn()]);
+
+        render(<AdminIssuesPage />);
+
+        await waitFor(() => {
+            expect(getAllIssuesMock).toHaveBeenCalled();
+        });
+
+        // getAllIssues signature: (page, size, startDate, endDate, status, query, userId, issueId, title)
+        const callArgs = getAllIssuesMock.mock.calls[0];
+        expect(callArgs[6]).toBe("USR001"); // 7th param = userId
+    });
+
+    it("does not pass userId when searchParams has none", async () => {
+        useSearchParamsMock.mockReturnValueOnce([new URLSearchParams(""), vi.fn()]);
+
+        render(<AdminIssuesPage />);
+
+        await waitFor(() => {
+            expect(getAllIssuesMock).toHaveBeenCalled();
+        });
+
+        const callArgs = getAllIssuesMock.mock.calls[0];
+        expect(callArgs[6]).toBeUndefined();
     });
 });

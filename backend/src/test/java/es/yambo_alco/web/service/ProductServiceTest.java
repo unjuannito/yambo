@@ -4,13 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.OptionValue;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.util.PermissionCheckService;
@@ -94,11 +99,10 @@ class ProductServiceTest {
     void getProductById_WhenProductExistsAndUserIsAdmin_ShouldReturnProductWithoutAccessCheck() {
         // Given
         String productId = "P001";
-        Profile adminProfile = Profile.builder().id("ADMIN").build();
-        Profile userProfile = Profile.builder().id("USER").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profile(adminProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -106,11 +110,6 @@ class ProductServiceTest {
                 .name("Test Product")
                 .active(true)
                 .familyProduct(familyProduct)
-                .build();
-
-        User user = User.builder()
-                .id("U001")
-                .profiles(Set.of(userProfile)) // User doesn't have access to family
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -145,10 +144,10 @@ class ProductServiceTest {
     void getProductById_WhenProductHasFamilyAndUserHasAccess_ShouldReturnProduct() {
         // Given
         String productId = "P001";
-        Profile adminProfile = Profile.builder().id("ADMIN").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profile(adminProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -158,9 +157,15 @@ class ProductServiceTest {
                 .familyProduct(familyProduct)
                 .build();
 
+        Project project = Project.builder().id("PRJ001").build();
+        ProjectGroup projectGroup = ProjectGroup.builder().id("PG001").project(project).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(projectGroup)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User user = User.builder()
                 .id("U001")
-                .profiles(Set.of(adminProfile))
+                .groupRoles(Set.of(groupRole))
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -181,11 +186,10 @@ class ProductServiceTest {
     void getProductById_WhenProductHasFamilyAndUserDoesNotHaveAccess_ShouldThrowException() {
         // Given
         String productId = "P001";
-        Profile adminProfile = Profile.builder().id("ADMIN").build();
-        Profile userProfile = Profile.builder().id("USER").build();
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
-                .profile(adminProfile)
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
                 .build();
 
         Product product = Product.builder()
@@ -195,9 +199,15 @@ class ProductServiceTest {
                 .familyProduct(familyProduct)
                 .build();
 
+        Project otherProject = Project.builder().id("PRJ002").build();
+        ProjectGroup otherProjectGroup = ProjectGroup.builder().id("PG002").project(otherProject).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(otherProjectGroup)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
         User user = User.builder()
                 .id("U001")
-                .profiles(Set.of(userProfile))
+                .groupRoles(Set.of(groupRole))
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -701,6 +711,54 @@ class ProductServiceTest {
         assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Size\":\"xl\"}"));
     }
 
+    @Test
+    void calculatePrice_WithBlankTextValue_ShouldNotAddOptionPrice() throws Exception {
+        ProductOption notesOption = ProductOption.builder()
+                .name("Notes")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(notesOption))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Notes", "  "));
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Notes\":\"  \"}"));
+    }
+
+    @Test
+    void calculatePrice_WithUncheckedCheckbox_ShouldNotAddOptionPrice() throws Exception {
+        ProductOption checkbox = ProductOption.builder()
+                .name("Extra")
+                .type("checkbox")
+                .price(new BigDecimal("5.00"))
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(checkbox))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Extra", false));
+        assertEquals(new BigDecimal("25.00"), productService.calculatePrice(product, "{\"Extra\":false}"));
+    }
+
+    @Test
+    void calculatePrice_WithCheckedCheckbox_ShouldAddOptionPrice() throws Exception {
+        ProductOption checkbox = ProductOption.builder()
+                .name("Extra")
+                .type("checkbox")
+                .price(new BigDecimal("5.00"))
+                .build();
+        Product product = Product.builder()
+                .basePrice(new BigDecimal("25.00"))
+                .options(List.of(checkbox))
+                .build();
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Extra", true));
+        assertEquals(new BigDecimal("30.00"), productService.calculatePrice(product, "{\"Extra\":true}"));
+    }
+
     // ── formatConfiguration tests ─────────────────────────────────────────────
 
     static Stream<Arguments> nullOrBlankOrEmptyJsonProvider() {
@@ -825,5 +883,42 @@ class ProductServiceTest {
         when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
                 .thenReturn(java.util.Map.of("Custom", "hello"));
         assertEquals("Custom: hello", productService.formatConfiguration("{\"Custom\":\"hello\"}", product));
+    }
+
+    // ── formatOptionMap tests ────────────────────────────────────────────────
+
+    @Test
+    void formatOptionMap_WithSelectAndTextOptions_ShouldReturnValuesOnly() throws Exception {
+        OptionValue xlValue = OptionValue.builder().id("xl").label("Extra Large").build();
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(xlValue))
+                .build();
+        ProductOption notesOption = ProductOption.builder()
+                .name("Notes")
+                .type("text_input")
+                .build();
+        Product product = Product.builder().options(List.of(sizeOption, notesOption)).build();
+
+        java.util.Map<String, Object> config = new java.util.LinkedHashMap<>();
+        config.put("Size", "xl");
+        config.put("Notes", "My Note");
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class))).thenReturn(config);
+
+        java.util.Map<String, String> result =
+                productService.formatOptionMap("{\"Size\":\"xl\",\"Notes\":\"My Note\"}", product);
+
+        assertEquals(2, result.size());
+        assertEquals("Extra Large", result.get("Size"));
+        assertEquals("My Note", result.get("Notes"));
+    }
+
+    @Test
+    void formatOptionMap_WithNullProduct_ShouldReturnEmptyMap() throws Exception {
+        when(objectMapper.readValue(anyString(), eq(java.util.Map.class)))
+                .thenReturn(java.util.Map.of("Size", "xl"));
+
+        assertTrue(productService.formatOptionMap("{\"Size\":\"xl\"}", null).isEmpty());
     }
 }

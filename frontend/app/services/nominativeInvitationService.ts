@@ -1,5 +1,12 @@
 import { ApiService } from "./apiService";
 
+export interface UserInfo {
+    id: string;
+    username: string;
+    name: string;
+    email: string;
+}
+
 export interface NominativeInvitation {
     id: string;
     email: string;
@@ -8,13 +15,10 @@ export interface NominativeInvitation {
     expiresAt: string;
     used: boolean;
     invitedBy: string;
-    invitedByUser: {
-        id: string;
-        username: string;
-        name: string;
-        email: string;
-    } | null;
+    invitedByUser: UserInfo | null;
     profileIds: string[];
+    usedByUser: UserInfo | null;
+    usedAt: string | null;
 }
 
 export interface CreateNominativeInvitationRequest {

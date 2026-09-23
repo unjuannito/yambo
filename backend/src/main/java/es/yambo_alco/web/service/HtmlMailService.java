@@ -92,7 +92,8 @@ public class HtmlMailService implements MailService {
         send(to, subject, "emails/invitation",
                 Map.of(
                         "invitationLink", extractInvitationLink(body),
-                        "expirationHours", expirationHours),
+                        "expirationHours", expirationHours,
+                        "headerIcon", EmailIcons.get("envelope")),
                 body);
     }
 
@@ -286,7 +287,8 @@ public class HtmlMailService implements MailService {
         send(to, subject, "emails/password-reset",
                 Map.of(
                         "resetLink", resetLink,
-                        "expirationHours", expirationHours),
+                        "expirationHours", expirationHours,
+                        "headerIcon", EmailIcons.get("key")),
                 plainText);
     }
 
@@ -309,8 +311,117 @@ public class HtmlMailService implements MailService {
         send(to, subject, "emails/activity-open-registration",
                 Map.of(
                         "activityName", activityName,
-                        "activityUrl", activityUrl),
+                        "activityUrl", activityUrl,
+                        "headerIcon", EmailIcons.get("circle-check")),
                 plainText);
+    }
+
+    // ── Order admin update (create / edit) ──────────────────────────────
+
+    @Async("mailExecutor")
+    @Override
+    public void sendOrderAdminUpdate(String to, String userName, String orderId, LocalDateTime orderDate,
+            String action, List<OrderProductInfo> products, BigDecimal totalPrice, String justification,
+            String issueId, List<OrderProductRow> rows, BigDecimal oldTotalPrice, OrderStatus currentStatus) {
+
+        String headerTitle = "Pedido " + capitalize(action);
+        String subject = "Pedido " + action + " por administración #" + orderId + " - "
+                + settingsService.getOrganizationName();
+        boolean totalChanged = oldTotalPrice != null && totalPrice != null
+                && oldTotalPrice.compareTo(totalPrice) != 0;
+
+        send(to, subject, "emails/order-admin-updated",
+                Map.ofEntries(
+                        Map.entry("userName", userName),
+                        Map.entry("orderId", orderId),
+                        Map.entry("orderDate", orderDate),
+                        Map.entry("actionLabel", action),
+                        Map.entry("headerTitle", headerTitle),
+                        Map.entry("statusLabel", currentStatus.getLabel()),
+                        Map.entry("statusColor", currentStatus.getColor()),
+                        Map.entry("products", products),
+                        Map.entry("totalPrice", totalPrice),
+                        Map.entry("justification", justification != null ? justification : ""),
+                        Map.entry("issueId", issueId != null ? issueId : ""),
+                        Map.entry("issueLink", issueId != null ? buildIssueLink(issueId) : ""),
+                        Map.entry("rows", rows != null ? rows : List.of()),
+                        Map.entry("oldTotalText", oldTotalPrice != null ? formatPrice(oldTotalPrice) : ""),
+                        Map.entry("newTotalText", formatPrice(totalPrice)),
+                        Map.entry("totalChanged", totalChanged),
+                        Map.entry("headerColor", "#8B5CF6"),
+                        Map.entry("headerIcon", EmailIcons.get("gear")),
+                        Map.entry("orderUrl", buildOrderLink(orderId))),
+                buildAdminUpdatePlainText(userName, orderId, orderDate, action, products, totalPrice, justification,
+                        issueId, rows, oldTotalPrice));
+    }
+
+    private String buildAdminUpdatePlainText(String userName, String orderId, LocalDateTime orderDate,
+            String action, List<OrderProductInfo> products, BigDecimal totalPrice, String justification,
+            String issueId, List<OrderProductRow> rows, BigDecimal oldTotalPrice) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Hola ").append(userName).append(",\n\n");
+        sb.append("Un administrador ha ").append(action).append(" tu pedido.\n\n");
+        if (justification != null && !justification.isBlank()) {
+            sb.append("Motivo: ").append(justification).append("\n\n");
+        }
+        sb.append("Detalles del Pedido:\n");
+        sb.append("ID: ").append(orderId).append("\n");
+        sb.append("Fecha: ").append(orderDate).append("\n\n");
+        if (rows != null && !rows.isEmpty()) {
+            sb.append("Productos:\n");
+            for (OrderProductRow r : rows) {
+                String prefix = "removed".equals(r.type()) ? "− " : ("added".equals(r.type()) ? "+ " : "  ");
+                sb.append(prefix).append(r.name());
+                if (r.quantityChanged()) {
+                    sb.append(" — cantidad ").append(r.oldQuantity()).append(" → ").append(r.newQuantity());
+                } else if (r.newQuantity() != null) {
+                    sb.append(" — ").append(r.newQuantity()).append(" uds");
+                }
+                for (OrderProductOptionChange o : r.options()) {
+                    if ("added".equals(o.kind())) {
+                        sb.append(" — +").append(o.label()).append(": ").append(o.newText());
+                    } else if ("removed".equals(o.kind())) {
+                        sb.append(" — ").append(o.label()).append(": ").append(o.oldText()).append(" (eliminado)");
+                    } else if ("changed".equals(o.kind())) {
+                        sb.append(" — ").append(o.label()).append(": ").append(o.oldText()).append(" → ")
+                                .append(o.newText());
+                    } else {
+                        sb.append(" — ").append(o.label()).append(": ").append(o.newText());
+                    }
+                }
+                if (r.priceChanged()) {
+                    sb.append(" — ").append(r.oldPriceText()).append(" → ").append(r.newPriceText());
+                } else if (r.newPriceText() != null && !r.newPriceText().isEmpty()) {
+                    sb.append(" — ").append(r.newPriceText());
+                }
+                sb.append("\n");
+            }
+            if (oldTotalPrice != null && totalPrice != null && oldTotalPrice.compareTo(totalPrice) != 0) {
+                sb.append("\nTotal: ").append(formatPrice(oldTotalPrice)).append(" → ")
+                        .append(formatPrice(totalPrice)).append("\n");
+            } else {
+                sb.append("\nTotal: ").append(formatPrice(totalPrice)).append("\n");
+            }
+        } else {
+            appendProductList(sb, products, totalPrice);
+        }
+        if (issueId != null && !issueId.isBlank()) {
+            sb.append("\nIncidencia: ").append(buildIssueLink(issueId)).append("\n");
+        }
+        sb.append("\nVer tu pedido: ").append(buildOrderLink(orderId)).append("\n");
+        return sb.toString();
+    }
+
+    private String formatPrice(BigDecimal price) {
+        if (price == null) return "0,00 €";
+        return price.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',') + " €";
+    }
+
+    private String capitalize(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        return Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

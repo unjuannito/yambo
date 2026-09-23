@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "~/i18n/config";
 import { useParams, useNavigate } from "react-router";
-import { productService, type Product, type ProductOption } from "~/services/productService";
+import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
 import { productViewService } from "~/services/productViewService";
 import { useCart } from "~/context/CartContext";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
-import SelectComponent from "~/components/common/forms/SelectComponent";
-import InputComponent from "~/components/common/forms/InputComponent";
-import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
+import ProductOptionsFields from "~/components/common/forms/ProductOptionsFields";
+import { calculateProductPrice } from "~/utils/calculatePrice";
 import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
@@ -77,50 +76,9 @@ export default function ProductPage() {
 
     useEffect(() => {
         if (product) {
-            calculatePrice();
+            setTotalPrice(calculateProductPrice(product, configuration));
         }
     }, [configuration, product]);
-
-    const calculatePrice = () => {
-        if (!product) return;
-        let price = product.basePrice;
-
-        product.options.forEach((option) => {
-            const selectedValue = configuration[option.name];
-
-            if (option.type === "select" && selectedValue) {
-                const valueId = typeof selectedValue === 'object' ? selectedValue.id : selectedValue;
-                const value = option.values?.find((v) => v.id === valueId);
-                if (value?.price) price += value.price;
-            } else if (option.type === "text_input" && selectedValue && selectedValue.trim() !== "") {
-                if (option.price) price += option.price;
-            }
-        });
-
-        setTotalPrice(price);
-    };
-
-    const handleSelectChange = (optionName: string, value: string) => {
-        const option = product?.options.find(opt => opt.name === optionName);
-        const selectedOption = option?.values?.find(v => v.id === value);
-
-        setConfiguration({
-            ...configuration,
-            [optionName]: selectedOption ? { id: value, label: selectedOption.label } : value
-        });
-    };
-
-    const handleCheckboxChange = (optionName: string, checked: boolean) => {
-        setConfiguration({ ...configuration, [optionName]: checked });
-    };
-
-    const handleTextChange = (optionName: string, value: string) => {
-        const trimmedValue = value.trim();
-        setConfiguration({
-            ...configuration,
-            [optionName]: trimmedValue === "" ? "" : value,
-        });
-    };
 
     const handleAddToCart = () => {
         if (!product) return;
@@ -155,57 +113,6 @@ export default function ProductPage() {
     const prevImage = () => {
         if (product?.images && selectedImageIndex !== null) {
             setSelectedImageIndex((selectedImageIndex - 1 + product.images.length) % product.images.length);
-        }
-    };
-
-    const renderOption = (option: ProductOption) => {
-        switch (option.type) {
-            case "select":
-                const selectedValue = configuration[option.name];
-                const selectValue = selectedValue
-                    ? (typeof selectedValue === 'object' ? selectedValue.id : selectedValue)
-                    : "";
-
-                return (
-                    <SelectComponent
-                        label={option.name}
-                        required={option.required}
-                        value={selectValue}
-                        onChange={(e) => handleSelectChange(option.name, e.target.value)}
-                        options={[
-                            { value: "", label: t("merch.selectOption", { name: option.name }) },
-                            ...(option.values?.map((value) => ({
-                                value: value.id,
-                                label: `${value.label}${value.price ? ` (+${value.price}€)` : ""}`
-                            })) || [])
-                        ]}
-                    />
-                );
-
-            case "checkbox":
-                return (
-                    <CheckboxComponent
-                        label={option.name}
-                        checked={configuration[option.name] || false}
-                        onChange={(e) => handleCheckboxChange(option.name, e.target.checked)}
-                        required={option.required}
-                    />
-                );
-
-            case "text_input":
-                return (
-                    <InputComponent
-                        label={`${option.name}${option.price && option.price > 0 ? ` (+${option.price}€)` : ''}`}
-                        type="text"
-                        value={configuration[option.name] || ""}
-                        onChange={(e) => handleTextChange(option.name, e.target.value)}
-                        placeholder={t("merch.textInputPlaceholder", { name: option.name })}
-                        required={option.required}
-                    />
-                );
-
-            default:
-                return null;
         }
     };
 
@@ -287,12 +194,12 @@ export default function ProductPage() {
                                     />
                                     {product.images.length > 1 && (
                                         <>
-                                            <button
+                                            <button type="button"
                                                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
                                                 className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black/60 transition-all text-lg"
                                                 aria-label={t("merch.prevImage")}
                                             >‹</button>
-                                            <button
+                                            <button type="button"
                                                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
                                                 className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black/60 transition-all text-lg"
                                                 aria-label={t("merch.nextImage")}
@@ -305,7 +212,7 @@ export default function ProductPage() {
                                 {product.images.length > 1 && (
                                     <div className="flex justify-center gap-2 lg:hidden">
                                         {product.images.map((_, idx) => (
-                                            <button
+                                            <button type="button"
                                                 key={idx}
                                                 onClick={() => setSelectedImageIndex(idx)}
                                                 className={`w-2.5 h-2.5 rounded-full transition-all ${
@@ -322,7 +229,7 @@ export default function ProductPage() {
                                 {product.images.length > 1 && (
                                     <div className="hidden lg:grid lg:grid-cols-4 gap-2">
                                         {product.images.map((image, idx) => (
-                                            <button
+                                            <button type="button"
                                                 key={idx}
                                                 onClick={() => setSelectedImageIndex(idx)}
                                                 className={`relative rounded-lg overflow-hidden border-2 transition-all ${
@@ -354,9 +261,11 @@ export default function ProductPage() {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
                         <h2 className="text-lg font-bold font-display text-yambo-black mb-4">{t("merch.productOptions")}</h2>
                         <div className="space-y-4">
-                            {product.options.map((option, index) => (
-                                <div key={`opt-${index}`}>{renderOption(option)}</div>
-                            ))}
+                            <ProductOptionsFields
+                                product={product}
+                                configuration={configuration}
+                                onChange={setConfiguration}
+                            />
                         </div>
 
                         <hr className="my-4 border-gray-100" />
@@ -386,9 +295,9 @@ export default function ProductPage() {
 
             {/* Image Modal */}
             {selectedImageIndex !== null && product?.images && (
-                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-75" onClick={closeImageModal}>
+                <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-75" onClick={closeImageModal} role="presentation">
                     <div className="relative max-w-4xl max-h-full p-4">
-                        <button
+                        <button type="button"
                             onClick={closeImageModal}
                             className="absolute top-6 right-6 z-10 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
                             aria-label={t("merch.closeImage")}
@@ -403,12 +312,12 @@ export default function ProductPage() {
                         />
                         {product.images.length > 1 && (
                             <>
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); prevImage(); }}
                                     className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-all text-xl"
                                     aria-label={t("merch.prevImage")}
                                 >‹</button>
-                                <button
+                                <button type="button"
                                     onClick={(e) => { e.stopPropagation(); nextImage(); }}
                                     className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-all text-xl"
                                     aria-label={t("merch.nextImage")}

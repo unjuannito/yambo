@@ -171,9 +171,10 @@ function ValueItemRow({ value, optionIndex, valueIndex, dragHandleProps, moveVal
                     className="text-sm"
                 />
             </div>
-            <button
+            <button type="button"
                 onClick={() => removeValue(optionIndex, valueIndex)}
                 className="px-2 py-1 bg-coral text-white rounded-full hover:bg-red-500 text-sm transition-colors"
+                aria-label="Quitar valor"
             >
                 <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
             </button>
