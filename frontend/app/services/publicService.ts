@@ -11,6 +11,7 @@ export interface FeaturedProject {
     description: string;
     image: string;
     signatureColor?: string | null;
+    coordinationEmail?: string | null;
 }
 
 export interface StaffGroup {
@@ -38,6 +39,7 @@ export interface ActiveProject {
     image: string | null;
     featured: boolean;
     signatureColor?: string | null;
+    coordinationEmail?: string | null;
 }
 
 export interface ProjectGroupDetail {
@@ -59,6 +61,7 @@ export interface ProjectDetail {
     description: string | null;
     image: string | null;
     signatureColor?: string | null;
+    coordinationEmail?: string | null;
     groups: ProjectGroupDetail[];
     staff: StaffMember[];
     seo: SeoMetadata | null;

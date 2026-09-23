@@ -36,7 +36,7 @@ public class ProjectController {
         Project project = projectService.createProject(
                 request.getName(), request.getActive(), request.getSeason(),
                 request.getDescription(), request.getImage(), request.getFeatured(),
-                request.getSignatureColor());
+                request.getSignatureColor(), request.getCoordinationEmail());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ProjectResponse(project));
     }
 
@@ -64,7 +64,7 @@ public class ProjectController {
         Project project = projectService.updateProject(
                 id, request.getName(), request.getActive(), request.getSeason(),
                 request.getDescription(), request.getImage(), request.getFeatured(),
-                request.getSignatureColor());
+                request.getSignatureColor(), request.getCoordinationEmail());
         return ResponseEntity.ok(new ProjectResponse(project));
     }
 
@@ -160,6 +160,8 @@ public class ProjectController {
         private Boolean featured;
 
         private String signatureColor;
+
+        private String coordinationEmail;
     }
 
     @Data
@@ -171,6 +173,7 @@ public class ProjectController {
         private String image;
         private Boolean featured;
         private String signatureColor;
+        private String coordinationEmail;
     }
 
     @Data
@@ -183,6 +186,7 @@ public class ProjectController {
         private String image;
         private boolean featured;
         private String signatureColor;
+        private String coordinationEmail;
 
         public ProjectResponse(Project project) {
             this.id = project.getId();
@@ -193,6 +197,7 @@ public class ProjectController {
             this.image = project.getImage();
             this.featured = project.isFeatured();
             this.signatureColor = project.getSignatureColor();
+            this.coordinationEmail = project.getCoordinationEmail();
         }
     }
 

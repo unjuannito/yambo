@@ -143,6 +143,7 @@ public class PublicController {
         private String description;
         private String image;
         private String signatureColor;
+        private String coordinationEmail;
 
         public FeaturedProjectResponse(Project project) {
             this.id = project.getId();
@@ -150,6 +151,7 @@ public class PublicController {
             this.description = project.getDescription();
             this.image = project.getImage();
             this.signatureColor = project.getSignatureColor();
+            this.coordinationEmail = project.getCoordinationEmail();
         }
     }
 
@@ -213,6 +215,7 @@ public class PublicController {
         private String image;
         private boolean featured;
         private String signatureColor;
+        private String coordinationEmail;
 
         public ActiveProjectResponse(Project project) {
             this.id = project.getId();
@@ -222,6 +225,7 @@ public class PublicController {
             this.image = project.getImage();
             this.featured = project.isFeatured();
             this.signatureColor = project.getSignatureColor();
+            this.coordinationEmail = project.getCoordinationEmail();
         }
     }
 
@@ -233,6 +237,7 @@ public class PublicController {
         private String description;
         private String image;
         private String signatureColor;
+        private String coordinationEmail;
         private List<ProjectGroupDetail> groups;
         private List<StaffResponse> staff;
         private SeoMetadataResponse seo;
@@ -244,6 +249,7 @@ public class PublicController {
             this.description = project.getDescription();
             this.image = project.getImage();
             this.signatureColor = project.getSignatureColor();
+            this.coordinationEmail = project.getCoordinationEmail();
             this.groups = groups.stream()
                     .map(ProjectGroupDetail::new)
                     .toList();
