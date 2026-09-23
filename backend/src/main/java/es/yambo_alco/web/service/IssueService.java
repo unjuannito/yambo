@@ -190,6 +190,22 @@ public class IssueService {
         return issueRepository.findAll(spec, pageable);
     }
 
+    /**
+     * Incidencias visibles para un usuario: las que pertenecen al pedido del que
+     * es titular (customer del pedido). Si una incidencia no tiene pedido
+     * vinculado, se muestra al informador.
+     */
+    @Transactional(readOnly = true)
+    public Page<Issue> listMyIssues(String userId, IssueFilter filter, Pageable pageable) {
+        Specification<Issue> spec = Specification.where(IssueSpecifications.titleContains(filter.title()))
+                .and(IssueSpecifications.statusIn(filter.statuses()))
+                .and(IssueSpecifications.createdBetween(filter.startDate(), filter.endDate()))
+                .and(IssueSpecifications.orderCustomerEquals(userId)
+                        .or(IssueSpecifications.createdByEquals(userId)
+                                .and(IssueSpecifications.hasNoOrderProducts())));
+        return issueRepository.findAll(spec, pageable);
+    }
+
     @Transactional
     public IssueComment addComment(String issueId, String text, String userId, IssueStatus status) {
         Issue issue = issueRepository.findById(issueId)
@@ -350,7 +366,10 @@ public class IssueService {
         if (!issueRepository.existsById(issueId)) {
             throw new ResourceNotFoundException("Issue not found: " + issueId);
         }
-        throw new ResourceNotFoundException("No products found for issue: " + issueId);
+        // Una incidencia puede no tener productos vinculados (p. ej. incidencias
+        // de justificación creadas solo con título/descripción). Devolvemos lista
+        // vacía para no romper el listado ni el detalle.
+        return relatedProducts;
     }
 
     private void validateStatusTransition(IssueStatus currentStatus, IssueStatus newStatus) {

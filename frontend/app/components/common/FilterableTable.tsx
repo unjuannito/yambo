@@ -447,6 +447,8 @@ export function FilterableTable<T>({
       (loadMoreInfo?.canLoad ??
         displayPageInfo.number + 1 < displayPageInfo.totalPages);
 
+    const responsivePagination = enablePagination && enableLoadMore;
+
     if (isGridMode && renderGridItem) {
       return (
         <>
@@ -465,19 +467,25 @@ export function FilterableTable<T>({
             ))}
           </div>
           {enablePagination && (
-            <Pagination
-              page={displayPageInfo.number}
-              totalPages={displayPageInfo.totalPages}
-              onPageChange={handlePageChange}
-              totalElements={displayPageInfo.totalElements}
-              pageSize={displayPageInfo.size}
-            />
+            <div className={responsivePagination ? "hidden md:block" : ""}>
+              <Pagination
+                page={displayPageInfo.number}
+                totalPages={displayPageInfo.totalPages}
+                onPageChange={handlePageChange}
+                totalElements={displayPageInfo.totalElements}
+                pageSize={displayPageInfo.size}
+              />
+            </div>
           )}
           {(canLoadMore || isLoadingMore) && (
-            <div className="flex flex-col items-center gap-2 py-2">
+            <div className={twMerge("flex flex-col items-center gap-2 py-2", responsivePagination && "md:hidden")}>
               {loadMoreInfo && (
                 <span className="text-xs text-gray-400">
-                  {t('table.showing') || "Mostrando"} {loadMoreInfo.shown} {t('common.of')} {loadMoreInfo.total}
+                  {t('table.showing', {
+                    from: loadMoreInfo.shown > 0 ? 1 : 0,
+                    to: loadMoreInfo.shown,
+                    total: loadMoreInfo.total,
+                  })}
                 </span>
               )}
               <ButtonComponent
@@ -519,20 +527,26 @@ export function FilterableTable<T>({
             onRowClick={onRowClick}
           />
         </div>
-        {enablePagination && !enableLoadMore && (
-          <Pagination
-            page={displayPageInfo.number}
-            totalPages={displayPageInfo.totalPages}
-            onPageChange={handlePageChange}
-            totalElements={displayPageInfo.totalElements}
-            pageSize={displayPageInfo.size}
-          />
+        {enablePagination && (
+          <div className={responsivePagination ? "hidden md:block" : ""}>
+            <Pagination
+              page={displayPageInfo.number}
+              totalPages={displayPageInfo.totalPages}
+              onPageChange={handlePageChange}
+              totalElements={displayPageInfo.totalElements}
+              pageSize={displayPageInfo.size}
+            />
+          </div>
         )}
         {(canLoadMore || isLoadingMore) && (
-          <div className="flex flex-col items-center gap-2 py-2">
+          <div className={twMerge("flex flex-col items-center gap-2 py-2", responsivePagination && "md:hidden")}>
             {loadMoreInfo && (
               <span className="text-xs text-gray-400">
-                {t('table.showing') || "Mostrando"} {loadMoreInfo.shown} {t('common.of')} {loadMoreInfo.total}
+                {t('table.showing', {
+                  from: loadMoreInfo.shown > 0 ? 1 : 0,
+                  to: loadMoreInfo.shown,
+                  total: loadMoreInfo.total,
+                })}
               </span>
             )}
             <ButtonComponent

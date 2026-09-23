@@ -1,11 +1,12 @@
 import { ApiService } from "./apiService";
+import { randomId } from "~/utils/randomId";
 
 const SESSION_KEY = "yambo_session_id";
 
 function getSessionId(): string {
     let sessionId = localStorage.getItem(SESSION_KEY);
     if (!sessionId) {
-        sessionId = crypto.randomUUID();
+        sessionId = randomId();
         localStorage.setItem(SESSION_KEY, sessionId);
     }
     return sessionId;

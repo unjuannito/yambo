@@ -53,7 +53,7 @@ export default function GuideDetail() {
     const next = idx < GUIDES.length - 1 ? GUIDES[idx + 1] : null;
 
     return (
-        <div className="w-full max-w-4xl mx-auto">
+        <div className="w-full mx-auto">
             {/* Cabecera */}
             <div className="mb-6">
                 <h1 className="text-3xl font-extrabold font-display text-yambo-black flex items-center gap-3">

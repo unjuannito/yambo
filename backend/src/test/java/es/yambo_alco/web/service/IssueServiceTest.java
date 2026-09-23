@@ -801,6 +801,7 @@ class IssueServiceTest {
     @Test
     void getIssueProductsByIssueId_WhenIssueNotExists_ShouldThrowNotFound() {
         when(issueRepository.findOrderProductsByIssueId("MISSING")).thenReturn(List.of());
+        when(issueRepository.existsById("MISSING")).thenReturn(false);
 
         assertThrows(ResourceNotFoundException.class,
                 () -> issueService.getIssueProductsByIssueId("MISSING"));
@@ -819,19 +820,14 @@ class IssueServiceTest {
     }
 
     @Test
-    void getIssueProductsByIssueId_WhenNoRelatedProducts_ShouldThrow() {
+    void getIssueProductsByIssueId_WhenIssueExistsButNoProducts_ShouldReturnEmpty() {
         when(issueRepository.findOrderProductsByIssueId("ISS001")).thenReturn(List.of());
+        when(issueRepository.existsById("ISS001")).thenReturn(true);
 
-        assertThrows(ResourceNotFoundException.class,
-                () -> issueService.getIssueProductsByIssueId("ISS001"));
-    }
+        List<OrderProduct> results = issueService.getIssueProductsByIssueId("ISS001");
 
-    @Test
-    void getIssueProductsByIssueId_WhenNoRelatedAndFallbackMissing_ShouldThrow() {
-        when(issueRepository.findOrderProductsByIssueId("ISS001")).thenReturn(List.of());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> issueService.getIssueProductsByIssueId("ISS001"));
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
     }
 
     @Test

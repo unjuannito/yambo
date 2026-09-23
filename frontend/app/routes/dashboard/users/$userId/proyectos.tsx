@@ -11,7 +11,7 @@ import { Modal } from "~/components/common/Modal";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { getErrorMessage } from "~/types/error";
-import { loadAssignableGroupOptions } from "~/utils/groupOptions";
+import { loadAssignableGroupOptionsGrouped, type GroupOptionGroup } from "~/utils/groupOptions";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCrown, faUserTie, faUserSlash, faPlus, faArrowRight, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
@@ -26,7 +26,7 @@ export default function UserProyectos() {
     const { t } = useTranslation();
     const { user, refreshUser, userId } = useOutletContext<OutletContext>();
     const navigate = useNavigate();
-    const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
+    const [groupOptions, setGroupOptions] = useState<GroupOptionGroup[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Add modal
@@ -44,7 +44,7 @@ export default function UserProyectos() {
             try {
                 setLoading(true);
                 const [opts, currentRoles] = await Promise.all([
-                    loadAssignableGroupOptions(),
+                    loadAssignableGroupOptionsGrouped(),
                     userId ? adminUserService.getUserGroupRoles(userId) : Promise.resolve([]),
                 ]);
                 setGroupOptions(opts);
@@ -252,8 +252,12 @@ export default function UserProyectos() {
                             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                         >
                             <option value="">Seleccionar grupo...</option>
-                            {groupOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            {groupOptions.map(group => (
+                                <optgroup key={group.projectName} label={group.projectName}>
+                                    {group.options.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </optgroup>
                             ))}
                         </select>
                     </div>
@@ -266,6 +270,7 @@ export default function UserProyectos() {
                         >
                             <option value="MONITOR">Monitor</option>
                             <option value="COORDINATOR">Coordinador</option>
+                            <option value="PARENT">Padre</option>
                         </select>
                     </div>
                 </div>

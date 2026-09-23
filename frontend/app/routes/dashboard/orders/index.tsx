@@ -8,8 +8,6 @@ import type {
     FilterableColumn,
     FetchDataParams,
 } from "~/components/common/FilterableTable";
-import { ViewTabs, useViewTab } from "~/components/common/ViewTabs";
-import { getSixMonthsAgoISO } from "~/utils/dateFilters";
 import { orderService } from "~/services/orderService";
 import { productService, type Product } from "~/services/productService";
 import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
@@ -23,10 +21,11 @@ import { exportService, type ExportReportType } from "~/services/exportService";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import type { IssueReportWindowModel } from "~/types/issueType";
 import { CreateIssueModal } from "~/components/issues/CreateIssueModal";
+import { OrderEditorModal } from "~/components/orders/OrderEditorModal";
 import { useAuth } from "~/hooks/useAuth";
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faXmark, faUpload, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faFileExport, faXmark, faUpload, faUser } from "@fortawesome/free-solid-svg-icons";
 import type { FileRecord } from "~/types/fileType";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { PageContainer } from "~/components/common/PageContainer";
@@ -45,7 +44,6 @@ export function meta({}: Route.MetaArgs) {
 export default function Orders() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { activeTab, setActiveTab } = useViewTab("actual");
     const [refreshKey, setRefreshKey] = useState(0);
     const [isExporting, setIsExporting] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -60,6 +58,7 @@ export default function Orders() {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
     const [isCanceling, setIsCanceling] = useState(false);
+    const [editorOrder, setEditorOrder] = useState<Order | null | undefined>(undefined);
     const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
     const [uploadReceiptOrder, setUploadReceiptOrder] = useState<Order | null>(null);
     const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
@@ -67,6 +66,7 @@ export default function Orders() {
     const suppressAutoOpenRef = useRef(false);
     const { hasPermission } = useAuth();
     const isMerchAdmin = hasPermission({ obj: "issue", action: "update" });
+    const canViewUsers = hasPermission({ obj: "user", action: "read" });
     const [issueWindow, setIssueWindow] = useState<IssueReportWindowModel | null>(null);
 
     const openIssueWindow = (order: Order, preselectedProductId?: string) => {
@@ -199,14 +199,13 @@ export default function Orders() {
 
     const fetchOrdersData = useCallback(
         async ({ page, size, filters }: FetchDataParams) => {
-            const startDate = activeTab === "actual" ? getSixMonthsAgoISO() : undefined;
             const statusFilter = Array.isArray(filters.status) && filters.status.length > 0
                 ? filters.status as string[]
                 : undefined;
             const dateRange = filters.dateRange as { startDate?: string; endDate?: string } | undefined;
             const effectiveStartDate = dateRange?.startDate
                 ? new Date(dateRange.startDate).toISOString()
-                : startDate;
+                : undefined;
             const effectiveEndDate = dateRange?.endDate
                 ? new Date(dateRange.endDate + "T23:59:59").toISOString()
                 : undefined;
@@ -226,7 +225,7 @@ export default function Orders() {
             setSelectedOrders([]);
             return result;
         },
-        [refreshKey, activeTab],
+        [refreshKey],
     );
 
     const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -257,6 +256,10 @@ export default function Orders() {
             setIsCanceling(false);
             setOrderToCancel(null);
         }
+    };
+
+    const openEditor = (order: Order | null) => {
+        setEditorOrder(order);
     };
 
     const handleReceiptUploaded = async (file: FileRecord) => {
@@ -402,7 +405,18 @@ export default function Orders() {
             },
             render: (order: Order) => (
                 <div className="text-xs">
-                    <p className="font-medium text-yambo-black">{order.user?.name || "N/A"}</p>
+                    <p className="font-medium text-yambo-black">
+                        {canViewUsers && order.user?.id ? (
+                            <Link
+                                to={`/mi-espacio/admin/usuarios/${order.user.id}/perfil`}
+                                className="hover:text-yambo-green-600 transition-colors"
+                            >
+                                {order.user.name || order.user.email}
+                            </Link>
+                        ) : (
+                            order.user?.name || "N/A"
+                        )}
+                    </p>
                     <p className="text-gray-400 text-xs">
                         {order.user?.email || ""}
                     </p>
@@ -560,18 +574,27 @@ export default function Orders() {
                     description="Gestiona y exporta todos los pedidos de la plataforma."
                     wiki={{ slug: "flujos-de-trabajo", hash: "pedidos" }}
                     actions={
-                        <ButtonComponent
-                            variant="primary"
-                            onClick={() => setIsExportModalOpen(true)}
-                            disabled={isExporting}
-                        >
-                            <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
-                            Exportar a Excel
-                        </ButtonComponent>
+                        <div className="flex items-center gap-3">
+                            {hasPermission({ obj: "order", action: "create" }) && (
+                                <ButtonComponent
+                                    variant="secondary"
+                                    onClick={() => setEditorOrder(null)}
+                                >
+                                    <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
+                                    Nuevo pedido
+                                </ButtonComponent>
+                            )}
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={() => setIsExportModalOpen(true)}
+                                disabled={isExporting}
+                            >
+                                <FontAwesomeIcon icon={faFileExport} className="w-5 h-5" />
+                                Exportar a Excel
+                            </ButtonComponent>
+                        </div>
                     }
                 />
-
-                <ViewTabs activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setRefreshKey((prev) => prev + 1); }} />
 
                 {/* Bulk Actions Toolbar */}
                 <BulkActionsToolbar
@@ -631,11 +654,25 @@ export default function Orders() {
                                     0,
                                 ) || 0;
                             return (
-                                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                                <div
+                                    className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2 cursor-pointer"
+                                    onClick={() => openOrderDetail(order)}
+                                    aria-label={`Pedido #${order.id}, ${productCount} productos, total ${total.toFixed(2)} €, estado ${config?.shortLabel || order.status}`}
+                                >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0">
                                             <p className="font-medium text-yambo-black truncate">
-                                                {order.user?.name || "N/A"}
+                                                {canViewUsers && order.user?.id ? (
+                                                    <Link
+                                                        to={`/mi-espacio/admin/usuarios/${order.user.id}/perfil`}
+                                                        className="hover:text-yambo-green-600 transition-colors"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        {order.user.name || order.user.email}
+                                                    </Link>
+                                                ) : (
+                                                    order.user?.name || "N/A"
+                                                )}
                                             </p>
                                             <p className="text-xs text-gray-400 truncate">
                                                 {order.user?.email || ""}
@@ -645,6 +682,7 @@ export default function Orders() {
                                             type="checkbox"
                                             checked={selectedOrders.includes(order.id)}
                                             onChange={() => toggleOrderSelection(order.id)}
+                                            onClick={(e) => e.stopPropagation()}
                                             className="w-4 h-4 text-yambo-green-600 rounded focus:ring-2 focus:ring-yambo-green-500/50 cursor-pointer shrink-0"
                                         />
                                     </div>
@@ -670,19 +708,11 @@ export default function Orders() {
                                             {total.toFixed(2)} €
                                         </span>
                                     </div>
-                                    <div className="flex gap-2 pt-1">
-                                        <button type="button"
-                                            onClick={() => openOrderDetail(order)}
-                                            className="text-yambo-green-600 hover:text-yambo-green-700 text-xs font-medium transition-colors"
-                                        >
-                                            Ver
-                                        </button>
-                                    </div>
                                 </div>
                             );
                         },
                     }}
-                    features={{ enableLoadMore: true, globalSearch: true }}
+                    features={{ enablePagination: true, enableLoadMore: true, globalSearch: true }}
                     serverSide={{ fetchData: fetchOrdersData }}
                 />
             </PageContainer>
@@ -721,6 +751,8 @@ export default function Orders() {
                         closeOrderDetail();
                         navigate(`/mi-espacio/incidencias/${issueId}`);
                     }}
+                    canEdit={hasPermission({ obj: "order", action: "update" })}
+                    onEdit={(order) => openEditor(order)}
                 />
             )}
             {/* Create Issue Modal (Merch Admin) */}
@@ -757,6 +789,15 @@ export default function Orders() {
                 isUploading={isUploadingReceipt}
                 onUploaded={handleReceiptUploaded}
                 onRequestClose={() => setUploadReceiptOrder(null)}
+            />
+
+            {/* Order Editor Modal (crear/editar) */}
+            <OrderEditorModal
+                order={editorOrder !== undefined ? editorOrder : null}
+                isOpen={editorOrder !== undefined}
+                onClose={() => setEditorOrder(undefined)}
+                onSaved={() => setRefreshKey((prev) => prev + 1)}
+                initialUserId={editorOrder === null ? (searchParams.get("customerId") ?? undefined) : undefined}
             />
         </RequirePermission>
 

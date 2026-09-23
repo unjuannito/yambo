@@ -10,6 +10,7 @@ export interface PagedUsers {
 
 export interface UserFilters {
     query?: string;
+    id?: string;
     profiles?: string[];
     enabled?: boolean;
     role?: string;

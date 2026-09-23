@@ -11,7 +11,7 @@
     <tr>
         <td th:style="'background-color: ' + ${headerColor} + '; padding: 30px; text-align: center;'">
             <h1 style="margin: 0; color: #ffffff; font-size: 24px;">
-                <span th:utext="${headerIcon} + ' ' + ${headerTitle}">Título</span>
+                <span th:utext="${#strings.isEmpty(headerIcon) ? headerTitle : (headerIcon + ' ' + headerTitle)}">Título</span>
             </h1>
             <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">
                 <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}">19/02/2026 12:00</span>

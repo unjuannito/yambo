@@ -17,6 +17,7 @@ export function CreateIssueModal({ issueWindow, onClose, onSuccess }: CreateIssu
             onClose={onClose}
             title={issueWindow ? `${t('issues.createIssue')} · ${t('orders.orderNumber')} #${issueWindow.orderId}` : t('issues.createIssue')}
             size="lg"
+            variant="bottom-sheet"
         >
             {issueWindow && (
                 <>

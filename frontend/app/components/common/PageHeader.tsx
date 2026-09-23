@@ -45,16 +45,14 @@ export function PageHeader({
                 <h1 className="text-3xl font-extrabold font-display text-yambo-black">
                     {title}
                 </h1>
-                {description && (
-                    <p className="text-sm text-gray-500 mt-1.5 max-w-2xl">
-                        {description}
-                    </p>
-                )}
-                {wiki && (
-                    <div className="mt-2">
-                        <WikiGuideLink {...wiki} />
-                    </div>
-                )}
+                <div className="mt-1.5 flex flex-row items-center gap-2">
+                    {description && (
+                        <p className="text-sm text-gray-500 max-w-2xl">
+                            {description}
+                        </p>
+                    )}
+                    {wiki && <WikiGuideLink {...wiki} />}
+                </div>
             </div>
             {actions && (
                 <div className="flex items-center gap-3 shrink-0">

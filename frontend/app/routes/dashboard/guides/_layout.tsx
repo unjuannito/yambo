@@ -38,7 +38,7 @@ export default function GuidesLayout() {
     }, []);
 
     return (
-        <div className="flex flex-col md:flex-row w-full max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row w-full max-w mx-auto">
             {/* ── Sidebar de artículos (desktop) ── */}
             <aside className="hidden md:block w-60 flex-shrink-0 sticky top-0 self-start max-h-[calc(100vh-4rem)] overflow-y-auto p-4">
                 <div className="flex items-center gap-2 px-2 mb-3">
