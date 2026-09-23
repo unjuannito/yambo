@@ -146,6 +146,11 @@ pipeline {
         // Necesario SIEMPRE que haya deploy (aunque solo cambie infra):
         // los stages Test/Sonar se saltan si no hay cambios FE/BE y el
         // deploy necesita /tmp/yambo-ci con el código.
+        // FIX 2026-09-23: los contenedores de Test/Sonar (maven, node) escriben
+        // backend/target y frontend/node_modules vía bind mount con otro owner
+        // → el `rm -rf` del usuario ssh fallaba con "Permission denied". Si el
+        // rm normal falla, se borra desde un contenedor (mismo daemon docker
+        // que creó los ficheros, así que siempre tiene permiso).
         stage('Prepare Build Host') {
             when {
                 expression { env.DEPLOYABLE_CHANGED == 'true' && !params.FORCE_PROD_DEPLOY }
@@ -154,7 +159,12 @@ pipeline {
                 sh """
                     tar czf - --exclude=.git --exclude=node_modules --exclude=frontend/node_modules --exclude=backend/target . | \
                     ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                        'rm -rf /tmp/yambo-ci && mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && ls /tmp/yambo-ci | head -20'
+                        'if [ -e /tmp/yambo-ci ]; then \
+                           rm -rf /tmp/yambo-ci 2>/dev/null || \
+                           docker run --rm -v /tmp:/host-tmp alpine:3 rm -rf /host-tmp/yambo-ci; \
+                         fi && \
+                         [ ! -e /tmp/yambo-ci ] && \
+                         mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && ls /tmp/yambo-ci | head -20'
                 """
             }
         }
