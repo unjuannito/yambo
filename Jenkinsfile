@@ -62,14 +62,6 @@ pipeline {
         PROD_DOMAIN = 'yambo.cabrasky.net'
         DEV_DOMAIN  = 'dev.yambo.cabrasky.net'
 
-        // ── Kubeconfigs (en BUILD_HOST .21, home del usuario ssh) ────────────
-        //   Local   : ~/.kube/config       (k3s .22)
-        //   Hetzner : ~/.kube/hetzner.yaml (k3s CX33 vía NetBird)
-        // El usuario ssh ya no es root → no puede leer /root/.kube. La `~` la
-        // expande el shell remoto (asignación KUBECONFIG=~/...).
-        KUBECONFIG_LOCAL   = '~/.kube/config'
-        KUBECONFIG_HETZNER = '~/.kube/hetzner.yaml'
-
         // ── Namespaces ───────────────────────────────────────────────────────
         NS_PROD = 'yambo'
         NS_DEV  = 'yambo-develop'
@@ -320,12 +312,20 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/hetzner"
+                    // kubeconfig efímero por build: se inyecta desde la credencial
+                    // Jenkins 'yambo-kubeconfig-prod' (Secret file), se copia por scp
+                    // al build host y se borra al terminar (ver finally). Antes se
+                    // dependía de ~/.kube/hetzner.yaml existiendo en el host (frágil).
+                    def kubeconfig = "/tmp/.yambo-kubeconfig-prod-${env.BUILD_NUMBER}"
                     // FIX 2026-08-21 (mismo bug que Deploy Develop): solo se
                     // tag/push la imagen del componente que se construyó en este
                     // build. Antes el docker tag de ambas fallaba si el push solo
                     // tocaba un componente (imagen local inexistente). El
                     // componente no cambiado conserva el tag desplegado.
-                    sh """
+                    withCredentials([file(credentialsId: 'yambo-kubeconfig-prod', variable: 'KUBECFG')]) {
+                        try {
+                            sh "scp -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} \$KUBECFG ${BUILD_HOST}:${kubeconfig}"
+                            sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
                              echo ${REGISTRY_PASS} | docker login ${REGISTRY_HETZNER} -u ${REGISTRY_USER} --password-stdin && \
@@ -341,22 +341,25 @@ pipeline {
                              if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:${env.FRONTEND_TAG}; \
                              else \
-                               FE_CUR=\$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-frontend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               FE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-frontend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE_HETZNER}:\${FE_CUR}; \
                              fi && \
                              if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:${env.BACKEND_TAG}; \
                              else \
-                               BE_CUR=\$(KUBECONFIG=${KUBECONFIG_HETZNER} kubectl get deploy yambo-backend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               BE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-backend -n ${NS_PROD} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:\${BE_CUR}; \
                              fi && \
                              cd /tmp/yambo-ci && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} bash k8s/scripts/heal-apiservices.sh && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
-                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply --validate=false -f - && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s && \
-                             KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s'
-                    """
+                             KUBECONFIG=${kubeconfig} kubectl kustomize ${overlayDir} | \
+                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${kubeconfig} kubectl apply -f - && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s'
+                            """
+                        } finally {
+                            sh "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} 'rm -f ${kubeconfig}' || true"
+                        }
+                    }
                 }
             }
         }
@@ -372,6 +375,13 @@ pipeline {
             steps {
                 script {
                     def overlayDir = "k8s/overlays/develop"
+                    // kubeconfig efímero por build: se inyecta desde la credencial
+                    // Jenkins 'yambo-kubeconfig-dev' (Secret file), se copia por scp
+                    // al build host y se borra al terminar (ver finally). Antes se
+                    // usaba ~/.kube/config en el host, que NO existía para el usuario
+                    // build → kubectl caía a http://localhost:8080 (nginx) y devolvía
+                    // 404 "the server could not find the requested resource".
+                    def kubeconfig = "/tmp/.yambo-kubeconfig-dev-${env.BUILD_NUMBER}"
                     // FIX 2026-08-21: `kustomize edit set image` se aplica SOLO al
                     // componente que se construyó en este build (FE/BE/INFRA_CHANGED).
                     // Antes se seteaban ambos tags SIEMPRE → si el push solo tocaba
@@ -380,26 +390,29 @@ pipeline {
                     // engañoso). El componente no cambiado conserva el tag que ya
                     // tiene desplegado el cluster. Además se espera el rollout del
                     // backend (antes solo frontend).
-                    sh """
+                    withCredentials([file(credentialsId: 'yambo-kubeconfig-dev', variable: 'KUBECFG')]) {
+                        try {
+                            sh "scp -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} \$KUBECFG ${BUILD_HOST}:${kubeconfig}"
+                            sh """
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                             'cd /tmp/yambo-ci && \
                              cd ${overlayDir} && \
                              if [ "${env.FE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:${env.FRONTEND_TAG}; \
                              else \
-                               FE_CUR=\$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-frontend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               FE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-frontend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-frontend=${FRONTEND_IMAGE}:\${FE_CUR}; \
                              fi && \
                              if [ "${env.BE_CHANGED}" = "true" ] || [ "${env.INFRA_CHANGED}" = "true" ]; then \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:${env.BACKEND_TAG}; \
                              else \
-                               BE_CUR=\$(KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get deploy yambo-backend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
+                               BE_CUR=\$(KUBECONFIG=${kubeconfig} kubectl get deploy yambo-backend -n ${NS_DEV} -o jsonpath="{.spec.template.spec.containers[0].image}" | sed "s|.*:||"); \
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:\${BE_CUR}; \
                              fi && \
                              cd /tmp/yambo-ci && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply --validate=false -f - && \
-                             if ! KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
-                               KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create secret generic yambo-secrets -n ${NS_DEV} \
+                             KUBECONFIG=${kubeconfig} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${kubeconfig} kubectl apply -f - && \
+                             if ! KUBECONFIG=${kubeconfig} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
+                               KUBECONFIG=${kubeconfig} kubectl create secret generic yambo-secrets -n ${NS_DEV} \
                                  --from-literal=DB_USER=${REGISTRY_USER} \
                                  --from-literal=DB_PASS=${REGISTRY_PASS} \
                                  --from-literal=JWT_SECRET=\$(openssl rand -hex 32) \
@@ -408,12 +421,15 @@ pipeline {
                                  --from-literal=MAIL_PASSWORD=CHANGE_ME \
                                  --from-literal=MAIL_FROM=noreply@yambo-alco.es; \
                              fi && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} bash k8s/scripts/heal-apiservices.sh && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl kustomize ${overlayDir} | \
-                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply --validate=false -f - && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s'
-                    """
+                             KUBECONFIG=${kubeconfig} kubectl kustomize ${overlayDir} | \
+                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${kubeconfig} kubectl apply -f - && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s && \
+                             KUBECONFIG=${kubeconfig} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s'
+                            """
+                        } finally {
+                            sh "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} 'rm -f ${kubeconfig}' || true"
+                        }
+                    }
                 }
             }
         }

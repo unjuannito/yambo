@@ -13,3 +13,5 @@ api-check/
 k8s/overlays/preview/rendered/
 k8s/overlays/production/rendered/
 frontend/.vite/
+# local Claude settings
+.claude/
