@@ -34,7 +34,7 @@ pipeline {
     environment {
         // ── Credenciales Jenkins (configurar en Manage Jenkins → Credentials) ──
         //   yambo-ssh-key        : SSH private key (id_deploy) para BUILD_HOST
-        //   yambo-build-host     : "root@192.168.1.21"
+        //   yambo-build-host     : "<usuario>@192.168.1.21" (no root; grupo docker)
         //   yambo-registry       : "192.168.1.21:5000"
         //   yambo-registry-user  : usuario registry (Fase 3)
         //   yambo-registry-pass  : password registry (Fase 3)
@@ -62,11 +62,13 @@ pipeline {
         PROD_DOMAIN = 'yambo.cabrasky.net'
         DEV_DOMAIN  = 'dev.yambo.cabrasky.net'
 
-        // ── Kubeconfigs (en BUILD_HOST .21) ──────────────────────────────────
-        //   Local   : /root/.kube/config      (k3s .22)
-        //   Hetzner : /root/.kube/hetzner.yaml (k3s CX33 vía NetBird)
-        KUBECONFIG_LOCAL   = '/root/.kube/config'
-        KUBECONFIG_HETZNER = '/root/.kube/hetzner.yaml'
+        // ── Kubeconfigs (en BUILD_HOST .21, home del usuario ssh) ────────────
+        //   Local   : ~/.kube/config       (k3s .22)
+        //   Hetzner : ~/.kube/hetzner.yaml (k3s CX33 vía NetBird)
+        // El usuario ssh ya no es root → no puede leer /root/.kube. La `~` la
+        // expande el shell remoto (asignación KUBECONFIG=~/...).
+        KUBECONFIG_LOCAL   = '~/.kube/config'
+        KUBECONFIG_HETZNER = '~/.kube/hetzner.yaml'
 
         // ── Namespaces ───────────────────────────────────────────────────────
         NS_PROD = 'yambo'
