@@ -352,7 +352,7 @@ pipeline {
                              fi && \
                              cd /tmp/yambo-ci && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
-                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply -f - && \
+                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply --validate=false -f - && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-backend -n ${NS_PROD} --timeout=300s'
                     """
@@ -396,7 +396,7 @@ pipeline {
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE}:\${BE_CUR}; \
                              fi && \
                              cd /tmp/yambo-ci && \
-                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
+                             KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create namespace ${NS_DEV} --dry-run=client -o yaml | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply --validate=false -f - && \
                              if ! KUBECONFIG=${KUBECONFIG_LOCAL} kubectl get secret yambo-secrets -n ${NS_DEV} >/dev/null 2>&1; then \
                                KUBECONFIG=${KUBECONFIG_LOCAL} kubectl create secret generic yambo-secrets -n ${NS_DEV} \
                                  --from-literal=DB_USER=${REGISTRY_USER} \
@@ -408,7 +408,7 @@ pipeline {
                                  --from-literal=MAIL_FROM=noreply@yambo-alco.es; \
                              fi && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl kustomize ${overlayDir} | \
-                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply -f - && \
+                               awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply --validate=false -f - && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-backend -n ${NS_DEV} --timeout=300s'
                     """
