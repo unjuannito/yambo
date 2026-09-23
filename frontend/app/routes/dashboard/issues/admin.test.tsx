@@ -100,11 +100,6 @@ vi.mock("~/components/issues", () => ({
     IssueStatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
 }));
 
-vi.mock("~/components/common/ViewTabs", () => ({
-    ViewTabs: () => <div>tabs</div>,
-    useViewTab: () => ({ activeTab: "actual", setActiveTab: vi.fn() }),
-}));
-
 vi.mock("~/components/common/FilterableTable", () => ({
     FilterableTable: ({ serverSide }: { serverSide: { fetchData: (args: any) => Promise<any> } }) => {
         void serverSide.fetchData({ page: 0, size: 10, filters: {} });

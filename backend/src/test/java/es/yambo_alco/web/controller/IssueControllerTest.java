@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.OrderProduct;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.IssueService;
 import es.yambo_alco.web.service.IssueWatcherService;
@@ -68,6 +69,9 @@ class IssueControllerTest {
 
     @MockitoBean
     private PermissionCheckService permissionCheckService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     private User currentUser;
     private UUID orderedProductId;
@@ -433,7 +437,7 @@ class IssueControllerTest {
 
         Page<Issue> page = new PageImpl<>(List.of(issue));
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
-        when(issueService.listIssues(any(), any(Pageable.class))).thenReturn(page);
+        when(issueService.listMyIssues(anyString(), any(), any(Pageable.class))).thenReturn(page);
         when(issueService.getIssueProductsByIssueId("ISS00001")).thenReturn(List.of(related));
 
         mockMvc.perform(get("/issues/my"))

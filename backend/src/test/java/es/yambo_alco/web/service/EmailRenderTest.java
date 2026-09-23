@@ -88,6 +88,7 @@ class EmailRenderTest {
         ctx.setVariable("invitationLink",
                 FRONTEND_URL + "/register?invitation=abc123-token-xyz789");
         ctx.setVariable("expirationHours", 72L);
+        ctx.setVariable("headerIcon", EmailIcons.get("envelope"));
 
         String html = engine.process("emails/invitation", ctx);
 
@@ -320,7 +321,7 @@ class EmailRenderTest {
     }
 
     @Test
-    void renderIssueStatusChanged_ReopenedLabelForClosedToOpen() {
+    void renderIssueStatusChanged_ReopenedLabelForClosedToOpen() throws IOException {
         Context ctx = baseContext();
         ctx.setVariable("userName", USER_NAME);
         ctx.setVariable("issueId", ISSUE_ID);
@@ -341,6 +342,118 @@ class EmailRenderTest {
         assertThat(html)
             .contains("Cerrado")
             .contains("Reabierto");
+
+        writePreview("issue-status-reopened", html);
+    }
+
+    // ── Password reset ───────────────────────────────────────────────────
+
+    @Test
+    void renderPasswordReset() throws IOException {
+        Context ctx = baseContext();
+        ctx.setVariable("resetLink",
+                FRONTEND_URL + "/restablecer?token=reset-token-abc123");
+        ctx.setVariable("expirationHours", 24L);
+        ctx.setVariable("headerIcon", EmailIcons.get("key"));
+
+        String html = engine.process("emails/password-reset", ctx);
+
+        assertCommonStructure(html);
+        assertThat(html).contains("Restablecer contraseña");
+        assertThat(html).contains("reset-token-abc123");
+        assertThat(html).contains("24");
+
+        writePreview("password-reset", html);
+    }
+
+    // ── Activity open registration ───────────────────────────────────────
+
+    @Test
+    void renderActivityOpenRegistration() throws IOException {
+        Context ctx = baseContext();
+        ctx.setVariable("activityName", "Campamento de Verano 2026");
+        ctx.setVariable("activityUrl", FRONTEND_URL + "/actividades/campamento-2026");
+        ctx.setVariable("headerIcon", EmailIcons.get("circle-check"));
+
+        String html = engine.process("emails/activity-open-registration", ctx);
+
+        assertCommonStructure(html);
+        assertThat(html).contains("Campamento de Verano 2026");
+        assertThat(html).contains("/actividades/campamento-2026");
+        assertThat(html).contains("Apuntarme ahora");
+
+        writePreview("activity-open-registration", html);
+    }
+
+    // ── Order admin update (create / edit) ──────────────────────────────
+
+    @Test
+    void renderOrderAdminUpdated() throws IOException {
+        renderAdminUpdated("creado");
+        renderAdminUpdated("modificado");
+    }
+
+    private void renderAdminUpdated(String action) throws IOException {
+        Context ctx = baseContext();
+        ctx.setVariable("userName", USER_NAME);
+        ctx.setVariable("orderId", ORDER_ID);
+        ctx.setVariable("orderDate", ORDER_DATE);
+        ctx.setVariable("actionLabel", action);
+        ctx.setVariable("headerTitle", "Pedido " + (action.equals("creado") ? "Creado" : "Modificado"));
+        ctx.setVariable("statusLabel", OrderStatus.PENDING_PAYMENT.getLabel());
+        ctx.setVariable("statusColor", OrderStatus.PENDING_PAYMENT.getColor());
+        ctx.setVariable("products", PRODUCTS);
+        ctx.setVariable("totalPrice", TOTAL_PRICE);
+        ctx.setVariable("justification", "Pedido solicitado por WhatsApp por el socio.");
+        ctx.setVariable("headerColor", "#8B5CF6");
+        ctx.setVariable("headerIcon", EmailIcons.get("gear"));
+        ctx.setVariable("issueLink", FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
+        ctx.setVariable("orderUrl", FRONTEND_URL + "/mi-espacio/mis-pedidos?orderId=" + ORDER_ID);
+        ctx.setVariable("rows", action.equals("modificado")
+                ? List.of(
+                        new MailService.OrderProductRow("modified", "Camiseta Logo 2026", 1, 2, true,
+                                List.of(new MailService.OrderProductOptionChange("changed", "Talla", "M", "L")),
+                                "18,50 €", "20,50 €", true),
+                        new MailService.OrderProductRow("modified", "Sudadera Yambo Negra", 1, 1, false,
+                                List.of(
+                                        new MailService.OrderProductOptionChange("unchanged", "Talla", "L", "L"),
+                                        new MailService.OrderProductOptionChange("added", "Nombre", "", "Paula")),
+                                "35,00 €", "40,00 €", true),
+                        new MailService.OrderProductRow("unchanged", "Gorra Clásica", 3, 3, false,
+                                List.of(), "12,00 €", "12,00 €", false),
+                        new MailService.OrderProductRow("modified", "Bolsa de Tela Yambo", 1, 1, false,
+                                List.of(new MailService.OrderProductOptionChange("removed", "Nombre", "Paula", "")),
+                                "15,00 €", "10,00 €", true))
+                : List.of());
+        ctx.setVariable("oldTotalText", action.equals("modificado") ? "104,50 €" : "");
+        ctx.setVariable("newTotalText", action.equals("modificado") ? "106,50 €" : "108,00 €");
+        ctx.setVariable("totalChanged", action.equals("modificado"));
+
+        String html = engine.process("emails/order-admin-updated", ctx);
+
+        assertCommonStructure(html);
+        assertThat(html).contains(USER_NAME);
+        assertThat(html).contains(action);
+        assertThat(html).contains("Pedido solicitado por WhatsApp");
+        assertThat(html).contains("Ver la incidencia");
+        if (action.equals("modificado")) {
+            assertThat(html).contains("Talla");
+            assertThat(html).contains("Nombre");
+            assertThat(html).contains("Paula");
+            assertThat(html).contains("18,50 €");
+            assertThat(html).contains("20,50 €");
+            assertThat(html).contains("35,00 €");
+            assertThat(html).contains("40,00 €");
+            assertThat(html).contains("Bolsa de Tela Yambo");
+            assertThat(html).contains("15,00 €");
+            assertThat(html).contains("10,00 €");
+            assertThat(html).contains("104,50 €");
+            assertThat(html).contains("106,50 €");
+        } else {
+            assertThat(html).contains("Camiseta Logo 2026");
+        }
+
+        writePreview("order-admin-updated-" + action, html);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

@@ -7,10 +7,20 @@ export interface CreateOrderProduct {
     productId: string;
     quantity: number;
     configuration?: string;
+    /** ID del order_product existente (para modified/unchanged/removed). */
+    orderedProductId?: string;
+    /** "added" | "modified" | "unchanged" | "removed". */
+    action?: "added" | "modified" | "unchanged" | "removed";
 }
 
 export interface CreateOrderRequest {
     products: CreateOrderProduct[];
+    /** Opcional: ID del socio para el que se crea el pedido (solo con permiso 'order','create'). */
+    userId?: string;
+    /** Obligatoria al crear/editar en nombre de un socio: justificación (incidencia o petición). */
+    justification?: string;
+    /** Opcional: ID de una incidencia existente a la que vincular la edición. */
+    issueId?: string;
 }
 
 export interface UpdateOrderStatusRequest {
@@ -23,6 +33,20 @@ export interface OrderResponse {
     status: string;
     createdAt: string;
     products: OrderProduct[];
+}
+
+export interface OrderChange {
+    id: string;
+    orderId: string;
+    orderProductId?: string;
+    action: "ADDED" | "MODIFIED" | "REMOVED" | "UNCHANGED";
+    userId?: string;
+    userName?: string;
+    issueId?: string;
+    changedAt: string;
+    summary?: string;
+    beforeJson?: string;
+    afterJson?: string;
 }
 
 export class OrderService extends ApiService {
@@ -40,6 +64,7 @@ export class OrderService extends ApiService {
         }
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
+        params.append('sort', 'createdAt,desc');
 
         const response = await this.get<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }>(`/orders?${params}`);
         return response;
@@ -49,16 +74,20 @@ export class OrderService extends ApiService {
         return await this.get<Order>(`/orders/${id}`);
     }
 
+    public async getOrderHistory(id: string): Promise<OrderChange[]> {
+        return await this.get<OrderChange[]>(`/orders/${id}/history`);
+    }
+
     public async createOrder(request: CreateOrderRequest): Promise<OrderResponse> {
         return await this.post<OrderResponse, CreateOrderRequest>('/orders', request);
     }
 
-    public async updateOrderStatus(id: string, status: string): Promise<Order> {
-        return await this.put<Order, UpdateOrderStatusRequest>(`/orders/${id}/status`, { status });
+    public async updateOrder(id: string, request: CreateOrderRequest): Promise<OrderResponse> {
+        return await this.put<OrderResponse, CreateOrderRequest>(`/orders/${id}`, request);
     }
 
-    public async deleteOrder(id: string): Promise<void> {
-        return await this.delete<void>(`/orders/${id}`);
+    public async updateOrderStatus(id: string, status: string): Promise<Order> {
+        return await this.put<Order, UpdateOrderStatusRequest>(`/orders/${id}/status`, { status });
     }
 
     public async getMyOrders(page = 0, size = 50, startDate?: string, endDate?: string, status?: string[]): Promise<{ content: Order[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {

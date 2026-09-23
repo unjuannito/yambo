@@ -71,11 +71,6 @@ vi.mock('~/components/common/forms/MultiSelectComponent', () => ({
     ),
 }));
 
-vi.mock('~/components/common/ViewTabs', () => ({
-    ViewTabs: () => null,
-    useViewTab: () => ({ activeTab: 'actual', setActiveTab: vi.fn() }),
-}));
-
 vi.mock('~/components/common/RequirePermission', () => ({
     RequirePermission: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -292,7 +287,7 @@ describe('Orders route', () => {
                 expect(screen.getByText('Test Product')).toBeInTheDocument();
             });
 
-            const closeButton = container.querySelector('button.text-gray-300') as HTMLButtonElement | null;
+            const closeButton = container.querySelector('button[aria-label="Cerrar"]') as HTMLButtonElement | null;
             expect(closeButton).not.toBeNull();
 
             if (closeButton) {

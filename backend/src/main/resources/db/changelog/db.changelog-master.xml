@@ -102,5 +102,6 @@
     <include file="db/changelog/changes/92-project-role-invitation-usage.xml"/>
     <include file="db/changelog/changes/93-access-grant.xml"/>
     <include file="db/changelog/changes/94-project-coordination-email.xml"/>
-
+    <include file="db/changelog/changes/94-merch-order-create-delete.xml"/>
+    <include file="db/changelog/changes/95-order-change.xml"/>
 </databaseChangeLog>

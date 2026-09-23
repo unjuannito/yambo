@@ -327,6 +327,51 @@ class HtmlMailServiceTest {
         assertThat((String) ctx.getVariable("newStatusText")).isEqualTo("Reabierto");
     }
 
+    @Test
+    void sendOrderAdminUpdate_ShouldPassRowsAndTotals() {
+        // Given
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(templateEngine.process(eq("emails/order-admin-updated"), any())).thenReturn("<html>Updated</html>");
+
+        List<MailService.OrderProductRow> rows = List.of(
+                new MailService.OrderProductRow("modified", "Camiseta Logo 2026", 1, 2, true,
+                        List.of(new MailService.OrderProductOptionChange("changed", "Talla", "M", "L")),
+                        "18,50 €", "20,50 €", true),
+                new MailService.OrderProductRow("modified", "Sudadera Yambo Negra", 1, 1, false,
+                        List.of(
+                                new MailService.OrderProductOptionChange("unchanged", "Talla", "L", "L"),
+                                new MailService.OrderProductOptionChange("added", "Nombre", "", "Paula")),
+                        "35,00 €", "40,00 €", true));
+
+        // When
+        htmlMailService.sendOrderAdminUpdate(
+                "buyer@test.com", "Carlos García", "ORD001",
+                LocalDateTime.of(2026, 2, 15, 14, 30),
+                "modificado",
+                List.of(new MailService.OrderProductInfo("Camiseta Logo 2026", 2, BigDecimal.valueOf(20.50), "Talla L")),
+                BigDecimal.valueOf(108.00),
+                "Pedido solicitado por WhatsApp por el socio.",
+                "ISS042",
+                rows,
+                BigDecimal.valueOf(86.00),
+                OrderStatus.PENDING_PAYMENT);
+
+        // Then
+        ArgumentCaptor<Context> contextCaptor = ArgumentCaptor.forClass(Context.class);
+        verify(templateEngine).process(eq("emails/order-admin-updated"), contextCaptor.capture());
+
+        Context ctx = contextCaptor.getValue();
+        assertThat((List<?>) ctx.getVariable("rows")).hasSize(2);
+        assertThat((Boolean) ctx.getVariable("totalChanged")).isTrue();
+        assertThat((String) ctx.getVariable("oldTotalText")).isEqualTo("86,00 €");
+        assertThat((String) ctx.getVariable("newTotalText")).isEqualTo("108,00 €");
+        assertThat((String) ctx.getVariable("headerTitle")).isEqualTo("Pedido Modificado");
+        assertThat((String) ctx.getVariable("issueLink")).isEqualTo("https://yambo-alco.es/mi-espacio/incidencias/ISS042");
+        assertThat((String) ctx.getVariable("headerIcon")).isNotNull().startsWith("<svg");
+
+        verify(mailSender).send(mimeMessage);
+    }
+
     // ── Console mode (mail not configured) ───────────────────────────────
 
     @Test
