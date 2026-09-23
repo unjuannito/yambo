@@ -41,4 +41,7 @@ public class Project {
 
     @Column(name = "signature_color", length = 7)
     private String signatureColor;
+
+    @Column(name = "coordination_email", length = 254)
+    private String coordinationEmail;
 }

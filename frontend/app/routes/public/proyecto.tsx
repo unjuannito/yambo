@@ -9,7 +9,7 @@ import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
 import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export async function loader({ params }: Route.LoaderArgs) {
   try {
@@ -113,6 +113,7 @@ export default function Proyecto() {
   }
 
   const pc = projectColor(project.id, project.signatureColor);
+  const coordinationEmail = project.coordinationEmail?.trim();
 
   return (
     <section
@@ -154,6 +155,27 @@ export default function Proyecto() {
               alt={project.name}
               className="w-full h-full object-cover"
             />
+          </div>
+        )}
+
+        {/* Coordination email (project-specific, independent from the staff list) */}
+        {coordinationEmail && (
+          <div className="mb-10 fade-up" style={{ animationDelay: "0.15s" }}>
+            <h2 className="text-2xl font-bold text-yambo-black mb-4 font-display">{t('public.projectCoordinationEmail')}</h2>
+            <div className="inline-flex items-start gap-4 rounded-3xl border bg-white p-5 shadow-sm [border-color:var(--pc-border)]">
+              <div className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center [background-color:var(--pc-bg)]">
+                <FontAwesomeIcon icon={faEnvelope} className="w-6 h-6 [color:var(--pc-text)]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-400 mb-1">{t('public.projectCoordinationEmailDesc')}</p>
+                <a
+                  href={`mailto:${coordinationEmail}`}
+                  className="text-yambo-black font-semibold break-all text-base transition-colors hover:[color:var(--pc-text-hover)]"
+                >
+                  {coordinationEmail}
+                </a>
+              </div>
+            </div>
           </div>
         )}
 

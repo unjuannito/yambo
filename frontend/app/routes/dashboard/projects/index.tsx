@@ -14,7 +14,7 @@ import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { projectService, type Project, type ProjectGroup } from "~/services/projectService";
 import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
 import { useAuth } from "~/hooks/useAuth";
-import { getErrorMessage } from "~/types/error";
+import { ApiError, getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import FileUploader from "~/components/common/FileUploader";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -42,9 +42,18 @@ type ProjectForm = {
     image: string;
     featured: boolean;
     signatureColor: string;
+    coordinationEmail: string;
 };
 
-const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false, signatureColor: "" };
+const EMPTY_FORM: ProjectForm = { name: "", season: "", active: true, description: "", image: "", featured: false, signatureColor: "", coordinationEmail: "" };
+
+// Same rule the backend applies after trimming
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidCoordinationEmail(value: string): boolean {
+    const trimmed = value.trim();
+    return trimmed === "" || (trimmed.length <= 254 && EMAIL_PATTERN.test(trimmed));
+}
 
 export default function Projects() {
     const { t } = useTranslation();
@@ -57,6 +66,7 @@ export default function Projects() {
     const [form, setForm] = useState<ProjectForm>({ ...EMPTY_FORM });
     const [editing, setEditing] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [coordinationEmailError, setCoordinationEmailError] = useState<string | null>(null);
 
     // Groups state
     const [groups, setGroups] = useState<ProjectGroup[]>([]);
@@ -91,6 +101,7 @@ export default function Projects() {
 
     const resetForm = () => {
         setForm({ ...EMPTY_FORM });
+        setCoordinationEmailError(null);
         setEditing(null);
         setIsModalOpen(false);
         setSaving(false);
@@ -102,6 +113,7 @@ export default function Projects() {
 
     const openCreateModal = () => {
         setForm({ ...EMPTY_FORM });
+        setCoordinationEmailError(null);
         setEditing(null);
         setIsModalOpen(true);
     };
@@ -111,6 +123,12 @@ export default function Projects() {
             toast.error(t("projects.nameRequired"));
             return;
         }
+        if (!isValidCoordinationEmail(form.coordinationEmail)) {
+            setCoordinationEmailError(t("projects.coordinationEmailInvalid"));
+            return;
+        }
+        setCoordinationEmailError(null);
+        const coordinationEmail = form.coordinationEmail.trim();
         try {
             setSaving(true);
             if (editing) {
@@ -122,6 +140,7 @@ export default function Projects() {
                     image: form.image || null,
                     featured: form.featured,
                     signatureColor: form.signatureColor || null,
+                    coordinationEmail,
                 });
                 toast.success(t("projects.updated"));
             } else {
@@ -133,12 +152,17 @@ export default function Projects() {
                     image: form.image || null,
                     featured: form.featured,
                     signatureColor: form.signatureColor || null,
+                    coordinationEmail: coordinationEmail || null,
                 });
                 toast.success(t("projects.created"));
             }
             resetForm();
             await loadProjects();
         } catch (err) {
+            if (err instanceof ApiError && err.message === "Invalid coordination email") {
+                setCoordinationEmailError(t("projects.coordinationEmailInvalid"));
+                return;
+            }
             toast.error(getErrorMessage(err, t("projects.saveError")));
         } finally {
             setSaving(false);
@@ -155,7 +179,9 @@ export default function Projects() {
             image: project.image || "",
             featured: project.featured,
             signatureColor: project.signatureColor || "",
+            coordinationEmail: project.coordinationEmail || "",
         });
+        setCoordinationEmailError(null);
         setIsModalOpen(true);
         loadGroups(project.id);
     };
@@ -478,6 +504,34 @@ export default function Projects() {
                                 />
                             </div>
                         )}
+                        <div>
+                            <InputComponent
+                                id="project-coordination-email"
+                                type="email"
+                                label={t("projects.coordinationEmail")}
+                                placeholder={t("projects.coordinationEmailPlaceholder")}
+                                value={form.coordinationEmail}
+                                maxLength={254}
+                                aria-invalid={coordinationEmailError ? true : undefined}
+                                aria-describedby="project-coordination-email-help"
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setForm((prev) => ({ ...prev, coordinationEmail: value }));
+                                    if (coordinationEmailError && isValidCoordinationEmail(value)) {
+                                        setCoordinationEmailError(null);
+                                    }
+                                }}
+                            />
+                            {coordinationEmailError ? (
+                                <p id="project-coordination-email-help" role="alert" className="text-xs text-red-600 mt-1">
+                                    {coordinationEmailError}
+                                </p>
+                            ) : (
+                                <p id="project-coordination-email-help" className="text-xs text-gray-400 mt-1">
+                                    {t("projects.coordinationEmailHelp")}
+                                </p>
+                            )}
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">{t("common.description")}</label>
                             <textarea

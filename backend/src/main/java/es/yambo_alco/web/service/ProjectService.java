@@ -15,6 +15,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
@@ -22,6 +24,10 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectGroupRepository projectGroupRepository;
     private final SeoMetadataService seoMetadataService;
+
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final int EMAIL_MAX_LENGTH = 254;
 
     public Project getProjectById(@NonNull String projectId) {
         return projectRepository.findById(projectId)
@@ -38,7 +44,7 @@ public class ProjectService {
 
     public Project createProject(@NonNull String name, Boolean active, String season,
                                    String description, String image, Boolean featured,
-                                   String signatureColor) {
+                                   String signatureColor, String coordinationEmail) {
         if (projectRepository.existsByName(name)) {
             throw new BadRequestException("Project name already exists");
         }
@@ -51,6 +57,7 @@ public class ProjectService {
                 .image(image)
                 .featured(featured != null ? featured : false)
                 .signatureColor(signatureColor)
+                .coordinationEmail(normalizeCoordinationEmail(coordinationEmail))
                 .build();
 
         Project saved = projectRepository.save(project);
@@ -68,7 +75,9 @@ public class ProjectService {
 
     public Project updateProject(@NonNull String projectId, String name, Boolean active, String season,
                                   String description, String image, Boolean featured,
-                                  String signatureColor) {
+                                  String signatureColor, String coordinationEmail) {
+        // Validate before touching the entity; null keeps the current value, blank clears it
+        String normalizedEmail = normalizeCoordinationEmail(coordinationEmail);
         Project project = getProjectById(projectId);
 
         boolean seoRelevantChange = false;
@@ -113,6 +122,10 @@ public class ProjectService {
             project.setSignatureColor(signatureColor.isEmpty() ? null : signatureColor);
         }
 
+        if (coordinationEmail != null) {
+            project.setCoordinationEmail(normalizedEmail);
+        }
+
         Project saved = projectRepository.save(project);
 
         if (seoRelevantChange) {
@@ -120,6 +133,24 @@ public class ProjectService {
         }
 
         return saved;
+    }
+
+    /**
+     * Trims the coordination email and returns null when blank.
+     * Throws BadRequestException if a non-blank value is not a valid email.
+     */
+    static String normalizeCoordinationEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        String trimmed = email.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() > EMAIL_MAX_LENGTH || !EMAIL_PATTERN.matcher(trimmed).matches()) {
+            throw new BadRequestException("Invalid coordination email");
+        }
+        return trimmed;
     }
 
     public void deleteProject(@NonNull String projectId) {
