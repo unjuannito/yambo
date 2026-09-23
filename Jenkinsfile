@@ -351,6 +351,7 @@ pipeline {
                                kustomize edit set image yambo-web-backend=${BACKEND_IMAGE_HETZNER}:\${BE_CUR}; \
                              fi && \
                              cd /tmp/yambo-ci && \
+                             KUBECONFIG=${KUBECONFIG_HETZNER} bash k8s/scripts/heal-apiservices.sh && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl kustomize ${overlayDir} | \
                                awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_HETZNER} kubectl apply --validate=false -f - && \
                              KUBECONFIG=${KUBECONFIG_HETZNER} kubectl rollout status deployment/yambo-frontend -n ${NS_PROD} --timeout=300s && \
@@ -407,6 +408,7 @@ pipeline {
                                  --from-literal=MAIL_PASSWORD=CHANGE_ME \
                                  --from-literal=MAIL_FROM=noreply@yambo-alco.es; \
                              fi && \
+                             KUBECONFIG=${KUBECONFIG_LOCAL} bash k8s/scripts/heal-apiservices.sh && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl kustomize ${overlayDir} | \
                                awk -f k8s/scripts/strip-secrets.awk | KUBECONFIG=${KUBECONFIG_LOCAL} kubectl apply --validate=false -f - && \
                              KUBECONFIG=${KUBECONFIG_LOCAL} kubectl rollout status deployment/yambo-frontend -n ${NS_DEV} --timeout=300s && \
