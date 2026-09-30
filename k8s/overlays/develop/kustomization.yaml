@@ -15,11 +15,11 @@ resources:
 #   kustomize edit set image yambo-web-frontend=192.168.1.21:5000/yambo-web-frontend:<tag>
 images:
   - name: yambo-web-frontend
-    newName: 192.168.1.21:5000/yambo-web-frontend
-    newTag: latest
+    newName: registry.cabrasky.net/yambo-web-frontend
+    newTag: branch-develop-c68e0b0
   - name: yambo-web-backend
-    newName: 192.168.1.21:5000/yambo-web-backend
-    newTag: latest
+    newName: registry.cabrasky.net/yambo-web-backend
+    newTag: branch-develop-c68e0b0
 
 patches:
   # Dominio de desarrollo (público vía nginx .21 → k3s .22)

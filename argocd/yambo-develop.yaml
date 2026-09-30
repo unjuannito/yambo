@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: yambo-develop
+  namespace: argocd
+  annotations:
+    # ── Argo CD Image Updater ────────────────────────────────────────────
+    # Sigue los tags branch-develop-* del registro de unraid (registry.cabrasky.net).
+    # Cuando Jenkins publica una imagen nueva de develop, Image Updater
+    # actualiza el tag y hace commit al repo (write-back Git → GitOps puro).
+    argocd-image-updater.argoproj.io/image-list: >-
+      frontend=registry.cabrasky.net/yambo-web-frontend,
+      backend=registry.cabrasky.net/yambo-web-backend
+    argocd-image-updater.argoproj.io/frontend.update-strategy: alphabetical
+    argocd-image-updater.argoproj.io/frontend.allow-tags: "regexp:^branch-develop-.*$"
+    argocd-image-updater.argoproj.io/backend.update-strategy: alphabetical
+    argocd-image-updater.argoproj.io/backend.allow-tags: "regexp:^branch-develop-.*$"
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: develop
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cabrasky/yambo
+    targetRevision: develop
+    path: k8s/overlays/develop
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: yambo-develop
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
