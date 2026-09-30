@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: yambo-prod
+  namespace: argocd
+  annotations:
+    # ── Argo CD Image Updater ────────────────────────────────────────────
+    # Sigue los tags semver (1.x.x) del registro de unraid (registry.cabrasky.net).
+    # Cuando se publica una release nueva, Image Updater actualiza el tag
+    # y hace commit al repo (write-back Git en la rama main).
+    argocd-image-updater.argoproj.io/image-list: >-
+      frontend=registry.cabrasky.net/yambo-web-frontend,
+      backend=registry.cabrasky.net/yambo-web-backend
+    argocd-image-updater.argoproj.io/frontend.update-strategy: semver
+    argocd-image-updater.argoproj.io/frontend.allow-tags: "regexp:^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    argocd-image-updater.argoproj.io/backend.update-strategy: semver
+    argocd-image-updater.argoproj.io/backend.allow-tags: "regexp:^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cabrasky/yambo
+    targetRevision: main
+    path: k8s/overlays/hetzner
+  destination:
+    # Cluster Hetzner prod (añadido a Argo CD vía VPN NetBird, IP overlay)
+    server: https://100.111.166.119:6443
+    namespace: yambo
+  syncPolicy:
+    # PROD arranca en sync MANUAL a propósito: revisa el diff y sincroniza
+    # a mano hasta validar el flujo. Cambiar a automated cuando haya confianza.
+    syncOptions:
+      - CreateNamespace=true

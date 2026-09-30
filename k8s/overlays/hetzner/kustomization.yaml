@@ -15,11 +15,11 @@ resources:
 #   kustomize edit set image yambo-web-frontend=100.111.131.248:5000/yambo-web-frontend:<tag>
 images:
   - name: yambo-web-frontend
-    newName: 100.111.131.248:5000/yambo-web-frontend
-    newTag: latest
+    newName: registry.cabrasky.net/yambo-web-frontend
+    newTag: "1.17.0"
   - name: yambo-web-backend
-    newName: 100.111.131.248:5000/yambo-web-backend
-    newTag: latest
+    newName: registry.cabrasky.net/yambo-web-backend
+    newTag: "1.17.0"
 
 patches:
   # Dominio real de producción
