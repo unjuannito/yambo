@@ -77,7 +77,7 @@ public class ActivityService {
                 .price(price)
                 .date(date)
                 .endDate(endDate)
-                .status(status)
+                .status(status != null ? status : ActivityStatus.PLANNED)
                 .isPublic(isPublic != null ? isPublic : false)
                 .project(project)
                 .manager(manager)
