@@ -533,6 +533,34 @@ class PublicControllerTest {
                 .andExpect(jsonPath("$[0].groups[0].projectName").value("Barrio"));
     }
 
+    @Test
+    @WithAnonymousUser
+    void getStaff_ShouldReturnCoordinationFirstThenByDisplayName() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User zoe = publicStaff("U0001", "Zoe", null, project, UserProjectGroupRole.MONITOR);
+        User alex = publicStaff("U0002", "Álex", null, project, UserProjectGroupRole.MONITOR);
+        User marta = publicStaff("U0003", "Marta", null, project, UserProjectGroupRole.COORDINATOR);
+        User bea = publicStaff("U0004", "Xiomara", "Bea", project, UserProjectGroupRole.MONITOR);
+
+        when(userRepository.findPublicStaff()).thenReturn(List.of(zoe, alex, marta, bea));
+
+        // When / Then — coordinator, then Álex, Bea (nickname), Zoe
+        mockMvc.perform(get("/public/staff"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("U0003"))
+                .andExpect(jsonPath("$[1].id").value("U0002"))
+                .andExpect(jsonPath("$[2].id").value("U0004"))
+                .andExpect(jsonPath("$[3].id").value("U0001"));
+    }
+
+    private static User publicStaff(String id, String name, String nickname, Project project, UserProjectGroupRole role) {
+        User user = User.builder().id(id).name(name).email(id + "@example.com").password("pass")
+                .staff(Staff.builder().publicVisible(true).nickname(nickname).build()).build();
+        user.getGroupRoles().add(groupRole(user, "G-" + id, project, role));
+        return user;
+    }
+
     private static UserProjectGroup groupRole(User user, String groupId, Project project, UserProjectGroupRole role) {
         return UserProjectGroup.builder()
                 .user(user)

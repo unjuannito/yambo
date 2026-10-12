@@ -25,8 +25,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.Collator;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -74,6 +77,7 @@ public class PublicController {
         List<StaffResponse> response = staff.stream()
                 .filter(User::isPubliclyVisibleStaff)
                 .map(StaffResponse::new)
+                .sorted(StaffResponse.PUBLIC_ORDER)
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -167,6 +171,11 @@ public class PublicController {
         private String funFact;
         private String role;
         private StaffGroupResponse[] groups;
+
+        /** Coordination first, then alphabetically by the name shown on the card. */
+        static final Comparator<StaffResponse> PUBLIC_ORDER = Comparator
+                .comparing((StaffResponse s) -> "MONITOR".equals(s.role))
+                .thenComparing(s -> s.nickname != null ? s.nickname : s.name, Collator.getInstance(Locale.of("es")));
 
         public StaffResponse(User user) {
             this.id = user.getId();
@@ -268,6 +277,7 @@ public class PublicController {
             this.staff = staff.stream()
                     .filter(User::isPubliclyVisibleStaff)
                     .map(StaffResponse::new)
+                    .sorted(StaffResponse.PUBLIC_ORDER)
                     .toList();
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }
