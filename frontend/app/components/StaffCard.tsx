@@ -5,22 +5,22 @@ import { projectColor } from "~/utils/projectColor";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 
-interface MonitorCardProps {
-    monitor: StaffMember;
+interface StaffCardProps {
+    member: StaffMember;
     roleLabel?: string;
     projectName?: string;
 }
 
-export default function MonitorCard({ monitor, roleLabel, projectName }: MonitorCardProps) {
+export default function StaffCard({ member, roleLabel, projectName }: StaffCardProps) {
     const { t } = useTranslation();
     const [isFlipped, setIsFlipped] = useState(false);
-    const hasFunFact = !!monitor.funFact;
+    const hasFunFact = !!member.funFact;
 
     const displayGroups = projectName
-        ? monitor.groups
+        ? member.groups
             .filter(g => g.projectName === projectName && g.name)
             .map(g => ({ ...g, label: g.name! }))
-        : monitor.groups.map(g => ({
+        : member.groups.map(g => ({
             ...g,
             label: g.name ? `${g.projectName} - ${g.name}` : g.projectName,
         }));
@@ -34,10 +34,10 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                 {/* Front face */}
                 <div className="ee-card-front rounded-2xl shadow-md overflow-hidden bg-white hover:shadow-xl transition-all duration-300 hover-lift">
                     <div className="w-full h-[220px] overflow-hidden">
-                        {monitor.photo ? (
+                        {member.photo ? (
                             <img
-                                src={monitor.photo}
-                                alt={monitor.name}
+                                src={member.photo}
+                                alt={member.name}
                                 className="w-full h-full object-cover"
                                 style={{ objectPosition: "center top" }}
                             />
@@ -49,7 +49,7 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                     </div>
                     <div className="p-3">
                         <h3 className="text-base font-bold text-yambo-black line-clamp-2">
-                            {monitor.name}
+                            {member.name}
                         </h3>
                         {roleLabel && (
                             <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yambo-purple-100 text-yambo-purple-700">
@@ -72,9 +72,9 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                                 })}
                             </div>
                         )}
-                        {monitor.bio && (
+                        {member.bio && (
                             <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">
-                                {monitor.bio}
+                                {member.bio}
                             </p>
                         )}
                     </div>
@@ -83,9 +83,9 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                 {/* Back face */}
                 <div className="ee-card-back rounded-2xl shadow-md overflow-hidden bg-gradient-to-br from-yambo-green-500 to-yambo-purple-500 text-white flex flex-col items-center justify-center p-6 text-center">
                     <div className="text-4xl mb-4">...</div>
-                    <h3 className="text-lg font-bold mb-2">{monitor.name}</h3>
+                    <h3 className="text-lg font-bold mb-2">{member.name}</h3>
                     <p className="text-base leading-relaxed opacity-90">
-                        {monitor.funFact}
+                        {member.funFact}
                     </p>
                     <p className="text-xs mt-6 opacity-50">
                         {t('common.close')}

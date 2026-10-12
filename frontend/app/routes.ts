@@ -11,7 +11,7 @@ export default [
         route("actividades", "routes/public/actividades.tsx"),
         route("actividades/:id", "routes/public/actividad.$id.tsx"),
         route("contacto", "routes/public/contacto.tsx"),
-        route("monitores", "routes/public/monitores.tsx"),
+        route("monitores", "routes/public/equipo.tsx"),
         route("proyectos", "routes/public/proyectos.tsx"),
         route("proyectos/:projectId", "routes/public/proyecto.tsx"),
         route("legal/:id", "routes/public/legal.$id.tsx"),
@@ -51,7 +51,7 @@ export default [
         ]),
 
         // Proyectos
-        route("mi-espacio/admin/equipo", "routes/dashboard/crew/index.tsx"),
+        route("mi-espacio/admin/equipo", "routes/dashboard/staff/index.tsx"),
         route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
         route("mi-espacio/proyectos/:projectId", "routes/dashboard/projects/$projectId/_layout.tsx", [
             index("routes/dashboard/projects/$projectId/index.tsx"),

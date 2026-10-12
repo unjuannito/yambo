@@ -3,24 +3,24 @@ import { useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getStaff, getActiveProjects } from "~/services/publicService.server";
 import type { StaffMember, ActiveProject } from "~/services/publicService";
-import MonitorCard from "~/components/MonitorCard";
+import StaffCard from "~/components/StaffCard";
 import { projectColor } from "~/utils/projectColor";
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
-import type { Route } from "./+types/monitores";
+import type { Route } from "./+types/equipo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
 export function meta({ data }: Route.MetaArgs) {
   const { t } = useTranslation();
   const siteUrl = data?.siteUrl ?? "";
-  const title = t('public.monitorsPageTitle');
-  const description = t('public.monitorsMetaDescription');
+  const title = t('public.staffPageTitle');
+  const description = t('public.staffMetaDescription');
 
   return [
     { title },
     { name: "description", content: description },
-    { name: "keywords", content: t('public.monitorsKeywords') },
+    { name: "keywords", content: t('public.staffKeywords') },
     { tagName: "link", rel: "canonical", href: `${siteUrl}/monitores` },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
@@ -31,40 +31,40 @@ export function meta({ data }: Route.MetaArgs) {
     { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/monitores` }) },
     { "script:ld+json": breadcrumbJsonLd([
         { name: t('nav.home'), url: siteUrl },
-        { name: t('public.monitorsTitle'), url: `${siteUrl}/monitores` },
+        { name: t('public.staffTitle'), url: `${siteUrl}/monitores` },
     ]) },
   ];
 }
 
 export async function loader() {
-  const [monitors, projects] = await Promise.all([
+  const [staff, projects] = await Promise.all([
     getStaff(),
     getActiveProjects(),
   ]);
-  return { monitors, projects, siteUrl: getSiteUrl() };
+  return { staff, projects, siteUrl: getSiteUrl() };
 }
 
-export default function Monitores() {
+export default function Equipo() {
   const { t } = useTranslation();
-  const { monitors, projects } = useLoaderData<typeof loader>();
+  const { staff, projects } = useLoaderData<typeof loader>();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
 
-  const projectsWithMonitors = projects.filter((p) =>
-    monitors.some((m) => m.groups.some((g) => g.projectName === p.name))
+  const projectsWithStaff = projects.filter((p) =>
+    staff.some((m) => m.groups.some((g) => g.projectName === p.name))
   );
 
-  const filteredMonitors = monitors.filter((monitor) => {
+  const filteredStaff = staff.filter((member) => {
     if (selectedProjectId) {
       const project = projects.find(p => p.id === selectedProjectId);
       if (project) {
-        const hasProject = monitor.groups.some(g => g.projectName === project.name);
+        const hasProject = member.groups.some(g => g.projectName === project.name);
         if (!hasProject) return false;
       }
     }
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
-      if (!monitor.name.toLowerCase().includes(search)) return false;
+      if (!member.name.toLowerCase().includes(search)) return false;
     }
     return true;
   });
@@ -72,13 +72,13 @@ export default function Monitores() {
   return (
     <section className="w-full bg-gradient-to-b from-yambo-green-50/30 to-yambo-white min-h-screen pt-12 pb-16">
       <div className="max-w-8xl mx-auto px-4">
-        <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display fade-up">{t('public.monitorsTitle')}</h1>
+        <h1 className="text-4xl font-extrabold text-yambo-black mb-2 font-display fade-up">{t('public.staffTitle')}</h1>
         <p className="text-gray-500 text-lg mb-10 fade-up" style={{ animationDelay: "0.05s" }}>
-          {t('public.monitorsSubtitle')}
+          {t('public.staffSubtitle')}
         </p>
 
         {/* Filters */}
-        {monitors.length > 0 && (
+        {staff.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-3 mb-6 fade-up" style={{ animationDelay: "0.1s" }}>
             {/* Search */}
             <div className="relative flex-1 max-w-xs">
@@ -86,7 +86,7 @@ export default function Monitores() {
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder={t('public.monitorsSearch')}
+                placeholder={t('public.staffSearch')}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 outline-none bg-white shadow-sm transition-all"
               />
               <FontAwesomeIcon
@@ -96,7 +96,7 @@ export default function Monitores() {
             </div>
 
             {/* Project filter */}
-            {projectsWithMonitors.length > 0 && (
+            {projectsWithStaff.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 <button type="button"
                   onClick={() => setSelectedProjectId(null)}
@@ -108,7 +108,7 @@ export default function Monitores() {
                 >
                   {t('common.all')}
                 </button>
-                {projectsWithMonitors.map((project) => {
+                {projectsWithStaff.map((project) => {
                   const colors = projectColor(project.id, project.signatureColor);
                   const isSelected = selectedProjectId === project.id;
                   return (
@@ -135,31 +135,31 @@ export default function Monitores() {
         {(selectedProjectId || searchText.trim()) && (
           <div className="flex items-center gap-2 mb-4 text-sm text-gray-400">
             <span>
-              {t('public.monitorsFilteredResult', { count: filteredMonitors.length })}
+              {t('public.staffFilteredResult', { count: filteredStaff.length })}
             </span>
             <button type="button"
               onClick={() => { setSelectedProjectId(null); setSearchText(""); }}
                 className="text-yambo-green-600 hover:underline font-medium transition-colors hover:text-yambo-green-700"
             >
-              {t('public.monitorsClearFilters')}
+              {t('public.staffClearFilters')}
             </button>
           </div>
         )}
 
-        {/* Monitor grid */}
-        {filteredMonitors.length > 0 ? (
+        {/* Staff grid */}
+        {filteredStaff.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 stagger">
-            {filteredMonitors.map((monitor) => (
-              <MonitorCard key={monitor.id} monitor={monitor} />
+            {filteredStaff.map((member) => (
+              <StaffCard key={member.id} member={member} />
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
             <p className="text-6xl mb-4">-</p>
             <p className="text-gray-400">
-              {monitors.length === 0
-                ? t('public.monitorsEmpty')
-                : t('public.monitorsEmptyFiltered')}
+              {staff.length === 0
+                ? t('public.staffEmpty')
+                : t('public.staffEmptyFiltered')}
             </p>
           </div>
         )}

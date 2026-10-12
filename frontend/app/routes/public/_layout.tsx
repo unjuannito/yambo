@@ -34,7 +34,7 @@ export default function Layout() {
               {[
                 { label: t('public.footerProjects'), href: "/proyectos" },
                 { label: t('public.footerActivities'), href: "/actividades" },
-                { label: t('public.footerMonitors'), href: "/monitores" },
+                { label: t('public.footerStaff'), href: "/monitores" },
                 { label: t('public.footerContact'), href: "/contacto" },
               ].map(link => (
                 <a
