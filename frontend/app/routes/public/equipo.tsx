@@ -21,17 +21,17 @@ export function meta({ data }: Route.MetaArgs) {
     { title },
     { name: "description", content: description },
     { name: "keywords", content: t('public.staffKeywords') },
-    { tagName: "link", rel: "canonical", href: `${siteUrl}/monitores` },
+    { tagName: "link", rel: "canonical", href: `${siteUrl}/equipo` },
     { property: "og:title", content: title },
     { property: "og:description", content: description },
-    { property: "og:url", content: `${siteUrl}/monitores` },
+    { property: "og:url", content: `${siteUrl}/equipo` },
     { property: "og:image", content: `${siteUrl}/logo.png` },
     { property: "og:type", content: "website" },
     { name: "robots", content: "index, follow" },
-    { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/monitores` }) },
+    { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/equipo` }) },
     { "script:ld+json": breadcrumbJsonLd([
         { name: t('nav.home'), url: siteUrl },
-        { name: t('public.staffTitle'), url: `${siteUrl}/monitores` },
+        { name: t('public.staffTitle'), url: `${siteUrl}/equipo` },
     ]) },
   ];
 }

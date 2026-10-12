@@ -11,11 +11,12 @@ export default [
         route("actividades", "routes/public/actividades.tsx"),
         route("actividades/:id", "routes/public/actividad.$id.tsx"),
         route("contacto", "routes/public/contacto.tsx"),
-        route("monitores", "routes/public/equipo.tsx"),
+        route("equipo", "routes/public/equipo.tsx"),
         route("proyectos", "routes/public/proyectos.tsx"),
         route("proyectos/:projectId", "routes/public/proyecto.tsx"),
         route("legal/:id", "routes/public/legal.$id.tsx"),
     ]),
+    route("monitores", "routes/public/monitores.tsx"),
     layout("routes/dashboard/_layout.tsx", [
         // Inicio
         route("mi-espacio", "routes/dashboard/index.tsx"),

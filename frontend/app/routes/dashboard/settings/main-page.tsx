@@ -42,7 +42,7 @@ const SECTION_LABELS: Record<string, string> = {
     about: "Sobre Nosotros",
     projects: "Proyectos Destacados",
     activities: "Actividades",
-    staff: "Equipo de Monitores",
+    staff: "Equipo",
 };
 
 const DEFAULT_SECTIONS: SectionConfig[] = [
@@ -50,7 +50,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     { id: "about", visible: true, title: "¿Qué es Yambo?" },
     { id: "projects", visible: true, title: "Proyectos Destacados" },
     { id: "activities", visible: true, title: "Actividades" },
-    { id: "staff", visible: true, title: "Equipo de Monitores" },
+    { id: "staff", visible: true, title: "Equipo" },
 ];
 
 export default function MainPageEditor() {
