@@ -24,6 +24,7 @@ export interface StaffGroup {
 export interface StaffMember {
     id: string;
     name: string;
+    nickname?: string | null;
     photo: string;
     bio: string;
     funFact: string;

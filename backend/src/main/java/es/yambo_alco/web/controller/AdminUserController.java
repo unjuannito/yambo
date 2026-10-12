@@ -106,7 +106,8 @@ public class AdminUserController {
         User userToUpdate = userService.getUserById(request.getId());
 
         User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail(),
-                request.getPhoto(), request.getBio(), request.getFunFact());
+                request.getPhoto(), request.getBio(), request.getFunFact(),
+                request.getNickname(), request.getPublicVisible());
         AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -195,9 +196,16 @@ public class AdminUserController {
 
         private String photo;
 
+        @Size(max = 500, message = "Bio must be at most 500 characters")
         private String bio;
 
+        @Size(max = 100, message = "Fun fact must be at most 100 characters")
         private String funFact;
+
+        @Size(max = 50, message = "Nickname must be at most 50 characters")
+        private String nickname;
+
+        private Boolean publicVisible;
     }
 
     @Data
@@ -223,6 +231,8 @@ public class AdminUserController {
         private String photo;
         private String bio;
         private String funFact;
+        private String nickname;
+        private boolean publicVisible;
         private GroupRoleResponse[] groupRoles;
         private AdminUserProfileResponse[] profiles;
         private AdminUserPermissionResponse[] permissions;
@@ -237,6 +247,8 @@ public class AdminUserController {
             this.photo = user.getPhoto();
             this.bio = user.getBio();
             this.funFact = user.getFunFact();
+            this.nickname = user.getNickname();
+            this.publicVisible = user.isPublicVisible();
             this.groupRoles = user.getGroupRoles().stream()
                     .map(GroupRoleResponse::new)
                     .toArray(GroupRoleResponse[]::new);

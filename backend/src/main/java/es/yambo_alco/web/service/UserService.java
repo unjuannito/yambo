@@ -89,7 +89,7 @@ public class UserService {
 	}
 
 	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email,
-			String photo, String bio, String funFact) {
+			String photo, String bio, String funFact, String nickname, Boolean publicVisible) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -104,10 +104,10 @@ public class UserService {
 			user.setEmail(normalizedEmail);
 		}
 
-		if (photo != null || bio != null || funFact != null) {
+		if (photo != null || bio != null || funFact != null || nickname != null || publicVisible != null) {
 			if (!user.canHaveExtraProfileData()) {
 				throw new BadRequestException(
-						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact)");
+						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact, nickname, public visibility)");
 			}
 			if (photo != null) {
 				user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
@@ -117,6 +117,12 @@ public class UserService {
 			}
 			if (funFact != null) {
 				user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
+			}
+			if (nickname != null) {
+				user.setNickname(nickname.trim().isEmpty() ? null : nickname.trim());
+			}
+			if (publicVisible != null) {
+				user.setPublicVisible(publicVisible);
 			}
 		}
 

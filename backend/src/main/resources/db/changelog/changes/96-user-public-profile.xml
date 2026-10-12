@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add nickname and public visibility opt-in to user table -->
+    <changeSet id="96-01-user-public-profile" author="yambo">
+        <addColumn tableName="user">
+            <column name="nickname" type="VARCHAR(50)"/>
+            <column name="public_visible" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Keep visible those who had already filled in their public card -->
+    <changeSet id="96-02-backfill-public-visible" author="yambo">
+        <sql>UPDATE "user" SET public_visible = true WHERE photo IS NOT NULL OR bio IS NOT NULL</sql>
+    </changeSet>
+
+</databaseChangeLog>

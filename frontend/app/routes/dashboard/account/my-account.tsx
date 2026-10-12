@@ -10,6 +10,7 @@ import type { UpdateProfileRequest, ChangePasswordRequest } from "~/services/use
 import type { CurrentUser } from "~/types/userType";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -48,6 +49,8 @@ export default function MyAccount() {
     photo: user?.photo || "",
     bio: user?.bio || "",
     funFact: user?.funFact || "",
+    nickname: user?.nickname || "",
+    publicVisible: user?.publicVisible ?? false,
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -104,6 +107,8 @@ export default function MyAccount() {
         photo: user.photo || "",
         bio: user.bio || "",
         funFact: user.funFact || "",
+        nickname: user.nickname || "",
+        publicVisible: user.publicVisible ?? false,
       });
       if (user.notificationPreferences) {
         setNotifPrefs(user.notificationPreferences);
@@ -151,7 +156,10 @@ export default function MyAccount() {
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate(profileData);
+    const { nickname, publicVisible, ...baseData } = profileData;
+    updateProfileMutation.mutate(
+      canHaveExtraProfileData(user) ? { ...baseData, nickname, publicVisible } : baseData
+    );
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -310,8 +318,19 @@ export default function MyAccount() {
             )}
             {canHaveExtraProfileData(user) && (
               <>
+                <InputComponent
+                  label={t('myAccount.nickname')}
+                  name="nickname"
+                  type="text"
+                  value={profileData.nickname}
+                  onChange={(e) =>
+                    setProfileData((prev) => ({ ...prev, nickname: e.target.value }))
+                  }
+                  maxLength={50}
+                  placeholder={t('myAccount.nicknamePlaceholder')}
+                />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('myAccount.bioLabel')}</label>
                   <textarea
                     name="bio"
                     value={profileData.bio}
@@ -319,11 +338,14 @@ export default function MyAccount() {
                       setProfileData((prev) => ({ ...prev, bio: e.target.value }))
                     }
                     placeholder={t('myAccount.bioPlaceholder')}
-                    rows={3}
+                    rows={6}
                     maxLength={500}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-all"
                   />
-                  <p className="text-xs text-gray-400 mt-1 text-right">{profileData.bio.length}/500</p>
+                  <div className="flex justify-between gap-3 mt-1">
+                    <p className="text-xs text-gray-400">{t('myAccount.bioHint')}</p>
+                    <p className="text-xs text-gray-400 shrink-0">{profileData.bio.length}/500</p>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
@@ -340,6 +362,20 @@ export default function MyAccount() {
                   />
                   <p className="text-xs text-gray-400 mt-1 text-right">{profileData.funFact.length}/100</p>
                 </div>
+                <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
+                  <span>
+                    <span className="block text-sm font-medium text-gray-700">{t('myAccount.publicVisible')}</span>
+                    <span className="block text-xs text-gray-400 mt-0.5">{t('myAccount.publicVisibleDesc')}</span>
+                  </span>
+                  <CheckboxComponent
+                    variantType="toggle"
+                    className="shrink-0 mt-0.5"
+                    checked={profileData.publicVisible}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({ ...prev, publicVisible: e.target.checked }))
+                    }
+                  />
+                </label>
               </>
             )}
             <div className="flex justify-end pt-2">

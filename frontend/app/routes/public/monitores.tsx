@@ -64,7 +64,7 @@ export default function Monitores() {
     }
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
-      if (!monitor.name.toLowerCase().includes(search)) return false;
+      if (!`${monitor.name} ${monitor.nickname ?? ""}`.toLowerCase().includes(search)) return false;
     }
     return true;
   });

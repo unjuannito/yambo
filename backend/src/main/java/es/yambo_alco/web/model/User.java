@@ -69,6 +69,13 @@ public class User implements UserDetails {
     @Column(name = "fun_fact", length = 100)
     private String funFact;
 
+    @Column(length = 50)
+    private String nickname;
+
+    @Builder.Default
+    @Column(name = "public_visible", nullable = false)
+    private boolean publicVisible = false;
+
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 

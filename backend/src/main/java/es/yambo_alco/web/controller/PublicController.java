@@ -71,6 +71,7 @@ public class PublicController {
     public ResponseEntity<List<StaffResponse>> getMonitors() {
         List<User> staff = userRepository.findStaff();
         List<StaffResponse> response = staff.stream()
+                .filter(User::isPublicVisible)
                 .map(StaffResponse::new)
                 .toList();
         return ResponseEntity.ok(response);
@@ -159,6 +160,7 @@ public class PublicController {
     public static class StaffResponse {
         private String id;
         private String name;
+        private String nickname;
         private String photo;
         private String bio;
         private String funFact;
@@ -168,6 +170,7 @@ public class PublicController {
         public StaffResponse(User user) {
             this.id = user.getId();
             this.name = user.getName();
+            this.nickname = user.getNickname();
             this.photo = user.getPhoto();
             this.bio = user.getBio();
             this.funFact = user.getFunFact();
@@ -254,6 +257,7 @@ public class PublicController {
                     .map(ProjectGroupDetail::new)
                     .toList();
             this.staff = staff.stream()
+                    .filter(User::isPublicVisible)
                     .map(StaffResponse::new)
                     .toList();
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;

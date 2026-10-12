@@ -416,4 +416,47 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("ACT005"));
     }
+
+    // ── GET /public/monitors — public visibility opt-in ─────────────────
+
+    @Test
+    @WithAnonymousUser
+    void getMonitors_ShouldOnlyReturnPublicVisibleStaff() throws Exception {
+        // Given
+        User visible = User.builder().id("U0001").name("Visible").nickname("Vis")
+                .email("v@example.com").password("pass").publicVisible(true).build();
+        User hidden = User.builder().id("U0002").name("Hidden")
+                .email("h@example.com").password("pass").build();
+
+        when(userRepository.findStaff()).thenReturn(List.of(visible, hidden));
+
+        // When / Then
+        mockMvc.perform(get("/public/monitors"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value("U0001"))
+                .andExpect(jsonPath("$[0].nickname").value("Vis"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getProjectDetail_ShouldOnlyReturnPublicVisibleStaff() throws Exception {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        User visible = User.builder().id("U0001").name("Visible")
+                .email("v@example.com").password("pass").publicVisible(true).build();
+        User hidden = User.builder().id("U0002").name("Hidden")
+                .email("h@example.com").password("pass").build();
+
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
+        when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(List.of(visible, hidden));
+        when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
+
+        // When / Then
+        mockMvc.perform(get("/public/projects/PRJ001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.staff.length()").value(1))
+                .andExpect(jsonPath("$.staff[0].id").value("U0001"));
+    }
 }

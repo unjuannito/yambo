@@ -146,7 +146,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null);
+        User result = userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null, null, null);
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -166,7 +166,7 @@ public class UserServiceTest {
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com", null, null, null))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com", null, null, null, null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already in use");
 
@@ -179,7 +179,7 @@ public class UserServiceTest {
         when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null, null, null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -626,7 +626,7 @@ public class UserServiceTest {
 
         // When
         User result = userService.updateProfile("U0000001", "New Name", "user@example.com",
-                "new-photo.jpg", "New bio", "New fun fact");
+                "new-photo.jpg", "New bio", "New fun fact", null, null);
 
         // Then
         assertThat(result.getPhoto()).isEqualTo("new-photo.jpg");
@@ -650,28 +650,28 @@ public class UserServiceTest {
         // When & Then — photo
         assertThatThrownBy(() ->
                 userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        "new-photo.jpg", null, null))
+                        "new-photo.jpg", null, null, null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("MONITOR or COORDINATOR");
 
         // When & Then — bio
         assertThatThrownBy(() ->
                 userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        null, "New bio", null))
+                        null, "New bio", null, null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("MONITOR or COORDINATOR");
 
         // When & Then — funFact
         assertThatThrownBy(() ->
                 userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        null, null, "New fun fact"))
+                        null, null, "New fun fact", null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("MONITOR or COORDINATOR");
 
         // When & Then — all three
         assertThatThrownBy(() ->
                 userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        "new-photo.jpg", "New bio", "New fun fact"))
+                        "new-photo.jpg", "New bio", "New fun fact", null, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("MONITOR or COORDINATOR");
 
@@ -705,13 +705,60 @@ public class UserServiceTest {
 
         // When
         User result = userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                "", "", "");
+                "", "", "", null, null);
 
         // Then
         assertThat(result.getPhoto()).isNull();
         assertThat(result.getBio()).isNull();
         assertThat(result.getFunFact()).isNull();
         verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateProfile_WithNicknameAndPublicVisible_ShouldUpdateFields() {
+        // Given
+        UserProjectGroup monitorRole = UserProjectGroup.builder()
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .groupRoles(Set.of(monitorRole))
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                null, null, null, " Nick ", true);
+
+        // Then
+        assertThat(result.getNickname()).isEqualTo("Nick");
+        assertThat(result.isPublicVisible()).isTrue();
+    }
+
+    @Test
+    void updateProfile_WithPublicVisibleForNonMonitorUser_ShouldThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .groupRoles(Set.of())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                userService.updateProfile("U0000001", "Old Name", "user@example.com",
+                        null, null, null, null, true))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -727,7 +774,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateProfile("U0000001", "New Name", "user@example.com", null, null, null);
+        User result = userService.updateProfile("U0000001", "New Name", "user@example.com", null, null, null, null, null);
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");

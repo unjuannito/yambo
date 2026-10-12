@@ -6,6 +6,7 @@ import { RequirePermission } from "~/components/common/RequirePermission";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
+import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import FileUploader from "~/components/common/FileUploader";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
@@ -38,13 +39,15 @@ export default function UserPerfil() {
         photo: user.photo || "",
         bio: user.bio || "",
         funFact: user.funFact || "",
+        nickname: user.nickname || "",
+        publicVisible: user.publicVisible ?? false,
     });
     const [dirty, setDirty] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const canHaveExtra = canHaveExtraProfileData(user);
 
-    const handleChange = (field: string, value: string) => {
-        if (!canHaveExtra && (field === "photo" || field === "bio" || field === "funFact")) return;
+    const handleChange = (field: string, value: string | boolean) => {
+        if (!canHaveExtra && ["photo", "bio", "funFact", "nickname", "publicVisible"].includes(field)) return;
         setForm(prev => ({ ...prev, [field]: value }));
         setDirty(true);
     };
@@ -61,6 +64,8 @@ export default function UserPerfil() {
                     photo: form.photo || undefined,
                     bio: form.bio || undefined,
                     funFact: form.funFact || undefined,
+                    nickname: form.nickname,
+                    publicVisible: form.publicVisible,
                 } : {}),
             });
             toast.success("Perfil actualizado");
@@ -151,17 +156,38 @@ export default function UserPerfil() {
                             />
                         </div>
 
+                        {/* Nickname */}
+                        <div className={!canHaveExtra ? "opacity-50" : ""}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Apodo
+                                {!canHaveExtra && <ExtraProfileNotice />}
+                            </label>
+                            <input
+                                type="text"
+                                value={form.nickname}
+                                onChange={(e) => handleChange("nickname", e.target.value)}
+                                placeholder="Cómo le conocen en Yambo"
+                                maxLength={50}
+                                readOnly={!canHaveExtra}
+                                className={`w-full border border-gray-200 rounded-2xl text-sm px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow ${
+                                    canHaveExtra
+                                        ? "focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 placeholder-gray-400 bg-white"
+                                        : "bg-gray-50 text-gray-500 cursor-not-allowed"
+                                }`}
+                            />
+                        </div>
+
                         {/* Bio */}
                         <div className={!canHaveExtra ? "opacity-50" : ""}>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Biografía
+                                Cómo se nota que eres de Yambo
                                 {!canHaveExtra && <ExtraProfileNotice />}
                             </label>
                             <textarea
                                 value={form.bio}
                                 onChange={(e) => handleChange("bio", e.target.value)}
-                                placeholder="Breve biografía..."
-                                rows={3}
+                                placeholder="Qué estudia o a qué se dedica, cómo llegó a Yambo..."
+                                rows={6}
                                 maxLength={500}
                                 readOnly={!canHaveExtra}
                                 className={`w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none transition-shadow ${
@@ -193,6 +219,26 @@ export default function UserPerfil() {
                                 }`}
                             />
                         </div>
+
+                        {/* Public visibility */}
+                        <label className={`flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 ${canHaveExtra ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}>
+                            <span>
+                                <span className="block text-sm font-medium text-gray-700">
+                                    Aparecer en la web pública
+                                    {!canHaveExtra && <ExtraProfileNotice />}
+                                </span>
+                                <span className="block text-xs text-gray-400 mt-0.5">
+                                    Muestra su foto, apodo y descripción en la página de monitores y en la de sus proyectos.
+                                </span>
+                            </span>
+                            <CheckboxComponent
+                                variantType="toggle"
+                                className="shrink-0 mt-0.5"
+                                checked={form.publicVisible}
+                                disabled={!canHaveExtra}
+                                onChange={(e) => handleChange("publicVisible", e.target.checked)}
+                            />
+                        </label>
                     </div>
 
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>

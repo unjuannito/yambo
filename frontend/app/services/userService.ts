@@ -7,6 +7,8 @@ export interface UpdateProfileRequest {
   photo?: string;
   bio?: string;
   funFact?: string;
+  nickname?: string;
+  publicVisible?: boolean;
 }
 
 export interface ChangePasswordRequest {

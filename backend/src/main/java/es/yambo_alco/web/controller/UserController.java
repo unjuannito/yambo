@@ -47,7 +47,8 @@ public class UserController {
     public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User currentUser = authService.getCurrentUser(true);
         User updatedUser = userService.updateProfile(currentUser.getId(), request.getName(), request.getEmail(),
-                request.getPhoto(), request.getBio(), request.getFunFact());
+                request.getPhoto(), request.getBio(), request.getFunFact(),
+                request.getNickname(), request.getPublicVisible());
         UserResponse response = new UserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -96,9 +97,16 @@ public class UserController {
 
         private String photo;
 
+        @Size(max = 500, message = "Bio must be at most 500 characters")
         private String bio;
 
+        @Size(max = 100, message = "Fun fact must be at most 100 characters")
         private String funFact;
+
+        @Size(max = 50, message = "Nickname must be at most 50 characters")
+        private String nickname;
+
+        private Boolean publicVisible;
     }
 
     @Data
@@ -119,6 +127,8 @@ public class UserController {
         private String photo;
         private String bio;
         private String funFact;
+        private String nickname;
+        private boolean publicVisible;
         private NotificationPreferences notificationPreferences;
         private GroupRoleResponse[] groupRoles;
         private PermissionResponse[] permissions;
@@ -130,6 +140,8 @@ public class UserController {
             this.photo = user.getPhoto();
             this.bio = user.getBio();
             this.funFact = user.getFunFact();
+            this.nickname = user.getNickname();
+            this.publicVisible = user.isPublicVisible();
             this.notificationPreferences = user.getNotificationPreferences() != null
                     ? user.getNotificationPreferences()
                     : NotificationPreferences.defaults();

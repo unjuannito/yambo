@@ -13,6 +13,8 @@ export type CurrentUser = {
     photo?: string;
     bio?: string;
     funFact?: string;
+    nickname?: string;
+    publicVisible?: boolean;
     notificationPreferences?: NotificationPreferences;
     groupRoles?: UserGroupRole[];
     permissions: Permission[]
@@ -25,6 +27,8 @@ export type User = {
     photo?: string;
     bio?: string;
     funFact?: string;
+    nickname?: string;
+    publicVisible?: boolean;
     groupRoles?: UserGroupRole[];
     createdAt: string;
     created_by: string;

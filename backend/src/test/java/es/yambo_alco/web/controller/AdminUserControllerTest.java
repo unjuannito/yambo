@@ -483,7 +483,7 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .build();
 
                 when(userService.getUserById("U0000001")).thenReturn(userToUpdate);
-                when(userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null)).thenReturn(updatedUser);
+                when(userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null, null, null)).thenReturn(updatedUser);
 
                 String requestBody = """
                                 {

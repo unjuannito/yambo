@@ -27,6 +27,8 @@ export interface UpdateUserDetailsRequest {
     photo?: string;
     bio?: string;
     funFact?: string;
+    nickname?: string;
+    publicVisible?: boolean;
 }
 
 export interface UpdateUserGroupsRequest {
