@@ -515,7 +515,9 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .staff(Staff.builder().manual(true).bio("New bio").build())
                                 .build();
 
-                when(userService.updateStaff("U0000001", null, "New bio", null, null, null)).thenReturn(updatedUser);
+                when(authService.getCurrentUser(true)).thenReturn(User.builder().id("A0000001").build());
+                when(userService.updateStaffByAdmin("A0000001", "U0000001", null, "New bio", null, null, null))
+                                .thenReturn(updatedUser);
 
                 mockMvc.perform(put("/admin/users/U0000001/staff")
                                 .header("Authorization", "Bearer test.jwt.token")

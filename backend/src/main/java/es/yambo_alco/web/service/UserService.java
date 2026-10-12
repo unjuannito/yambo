@@ -142,6 +142,23 @@ public class UserService {
 	}
 
 	/**
+	 * Staff update made by an admin. Appearing on the public site is the staff member's own
+	 * decision: an admin can hide someone else's card but not make it public.
+	 */
+	@Transactional
+	public User updateStaffByAdmin(@NonNull String adminId, @NonNull String userId, String photo, String bio,
+			String funFact, String nickname, Boolean publicVisible) {
+		if (Boolean.TRUE.equals(publicVisible) && !adminId.equals(userId)) {
+			User user = userRepository.findById(userId)
+					.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+			if (!user.isPubliclyVisibleStaff()) {
+				throw new BadRequestException("Only the staff member can make their own card public");
+			}
+		}
+		return updateStaff(userId, photo, bio, funFact, nickname, publicVisible);
+	}
+
+	/**
 	 * Marks (or unmarks) a user as staff by hand, regardless of group roles.
 	 * Unmarking keeps the staff data; the user stays staff while holding a MONITOR/COORDINATOR group role.
 	 */
@@ -154,6 +171,7 @@ public class UserService {
 			return user;
 		}
 		ensureStaff(user).setManual(manual);
+		hideIfNoLongerStaff(user);
 
 		return userRepository.save(user);
 	}
@@ -163,6 +181,13 @@ public class UserService {
 			user.setStaff(Staff.builder().user(user).build());
 		}
 		return user.getStaff();
+	}
+
+	/** Leaving the staff withdraws the public opt-in, so coming back does not republish the card. */
+	private void hideIfNoLongerStaff(User user) {
+		if (user.getStaff() != null && !user.isStaff()) {
+			user.getStaff().setPublicVisible(false);
+		}
 	}
 
 	private static String blankToNull(String value) {
@@ -237,6 +262,7 @@ public class UserService {
 		if (!hasRemainingRole) {
 			syncRoleProfile(user, role, false);
 		}
+		hideIfNoLongerStaff(user);
 
 		User saved = userRepository.save(user);
 

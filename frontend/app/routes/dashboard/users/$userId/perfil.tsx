@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFloppyDisk, faTrashCan, faCircleUser, faCircleCheck, faCircleXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { isStaff } from "~/utils/roleHelpers";
+import { useAuth } from "~/hooks/useAuth";
 
 type OutletContext = {
     user: User;
@@ -43,6 +44,9 @@ export default function UserPerfil() {
     const userIsStaff = isStaff(user);
     const isManualStaff = user.staff?.manual ?? false;
     const hasStaffRole = isStaff({ groupRoles: user.groupRoles });
+    // Salir en la web pública lo decide cada persona: un admin puede ocultar la ficha de otro, no publicarla
+    const { user: currentUser } = useAuth();
+    const canPublish = currentUser?.id === user.id || (user.staff?.publicVisible ?? false);
 
     const handleChange = (field: string, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -270,16 +274,19 @@ export default function UserPerfil() {
                                 </div>
 
                                 {/* Public visibility */}
-                                <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
+                                <label className={`flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 ${canPublish ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
                                     <span>
                                         <span className="block text-sm font-medium text-gray-700">Aparecer en la web pública</span>
                                         <span className="block text-xs text-gray-400 mt-0.5">
-                                            Muestra su foto, apodo y descripción en la página del equipo y en la de sus proyectos.
+                                            {canPublish
+                                                ? "Muestra su foto, apodo y descripción en la página del equipo y en la de sus proyectos."
+                                                : "Solo la propia persona puede activarlo, desde \"Mi cuenta\"."}
                                         </span>
                                     </span>
                                     <CheckboxComponent
                                         variantType="toggle"
                                         className="shrink-0 mt-0.5"
+                                        disabled={!canPublish}
                                         checked={staffForm.publicVisible}
                                         onChange={(e) => handleStaffChange("publicVisible", e.target.checked)}
                                     />

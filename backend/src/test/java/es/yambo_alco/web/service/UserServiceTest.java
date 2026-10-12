@@ -708,6 +708,118 @@ public class UserServiceTest {
     }
 
     @Test
+    void updateStaffByAdmin_PublishingSomeoneElse_ShouldThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                userService.updateStaffByAdmin("A0000001", "U0000001", null, null, null, null, true))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("own card public");
+
+        assertThat(existingUser.getStaff().isPublicVisible()).isFalse();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStaffByAdmin_CanHideAndEditSomeoneElse() {
+        // Given — already public: sending true again keeps it, sending false hides it
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).publicVisible(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", null, "Bio", null, null, true);
+        assertThat(kept.getStaff().isPublicVisible()).isTrue();
+        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", null, null, null, null, false);
+
+        // Then
+        assertThat(hidden.getStaff().isPublicVisible()).isFalse();
+        assertThat(hidden.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void updateStaffByAdmin_AdminCanPublishOwnCard() {
+        // Given
+        User admin = User.builder()
+                .id("A0000001")
+                .email("admin@example.com")
+                .name("Admin")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("A0000001")).thenReturn(Optional.of(admin));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaffByAdmin("A0000001", "A0000001", null, null, null, null, true);
+
+        // Then
+        assertThat(result.getStaff().isPublicVisible()).isTrue();
+    }
+
+    @Test
+    void setManualStaff_False_ShouldWithdrawPublicVisibility() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).publicVisible(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.getStaff().isPublicVisible()).isFalse();
+    }
+
+    @Test
+    void removeGroupRole_LastStaffRole_ShouldWithdrawPublicVisibility() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Grupo A").build();
+        UserProjectGroup upg = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>())
+                .staff(Staff.builder().publicVisible(true).bio("Bio").build())
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+
+        // Then — hidden, but the data is kept
+        assertThat(result.isStaff()).isFalse();
+        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
     void setManualStaff_True_ShouldPromoteUserWithoutGroupRoles() {
         // Given
         User existingUser = User.builder()

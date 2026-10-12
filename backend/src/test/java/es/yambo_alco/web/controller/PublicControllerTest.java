@@ -234,7 +234,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).publicVisible(true).build()).profiles(Set.of()).build();
 
         Activity singleDay = Activity.builder()
                 .id("ACT001").name("Taller").description("Un taller")
@@ -291,7 +291,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).publicVisible(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT001").name("Taller de Navidad").description("Un taller navideño")
@@ -349,7 +349,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).publicVisible(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT003").name("Sin SEO").description("Sin metadata")
@@ -374,7 +374,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).publicVisible(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT004").name("Cancelada").description("Actividad cancelada")
@@ -400,7 +400,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).publicVisible(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT005").name("Pública").description("Acceso público")
@@ -459,5 +459,47 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.staff.length()").value(1))
                 .andExpect(jsonPath("$.staff[0].id").value("U0001"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_ShouldHideManagerWhoIsNotPubliclyVisible() throws Exception {
+        // Given — staff member who has not opted in to appear on the public site
+        User manager = User.builder().id("U0001").name("Monitor").email("m@example.com").password("pass")
+                .staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).build();
+        Activity activity = Activity.builder()
+                .id("ACT006").name("Pública").date(LocalDateTime.of(2026, 6, 1, 10, 0))
+                .status(ActivityStatus.OPEN_REGISTRATION).isPublic(true).manager(manager)
+                .build();
+
+        when(activityRepository.findByIdAndIsPublicTrue("ACT006")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT006")).thenReturn(Optional.empty());
+
+        // When / Then
+        mockMvc.perform(get("/public/activities/ACT006"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.manager").doesNotExist());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_ShouldShowVisibleManagerByNickname() throws Exception {
+        // Given
+        User manager = User.builder().id("U0001").name("Nombre Completo").email("m@example.com").password("pass")
+                .staff(Staff.builder().photo("/uploads/m.jpg").nickname("Moni").manual(true).publicVisible(true).build())
+                .build();
+        Activity activity = Activity.builder()
+                .id("ACT007").name("Pública").date(LocalDateTime.of(2026, 6, 1, 10, 0))
+                .status(ActivityStatus.OPEN_REGISTRATION).isPublic(true).manager(manager)
+                .build();
+
+        when(activityRepository.findByIdAndIsPublicTrue("ACT007")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT007")).thenReturn(Optional.empty());
+
+        // When / Then
+        mockMvc.perform(get("/public/activities/ACT007"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.manager.name").value("Moni"))
+                .andExpect(jsonPath("$.manager.photo").value("/uploads/m.jpg"));
     }
 }

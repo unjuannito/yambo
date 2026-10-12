@@ -309,10 +309,7 @@ public class PublicController {
                 this.project = new ActivityProjectSummary(
                         activity.getProject().getId(), activity.getProject().getName());
             }
-            if (activity.getManager() != null) {
-                this.manager = new ActivityManagerSummary(
-                        activity.getManager().getName(), activity.getManager().getStaffPhoto());
-            }
+            this.manager = ActivityManagerSummary.ofPublic(activity.getManager());
         }
     }
 
@@ -358,10 +355,7 @@ public class PublicController {
                 this.project = new ActivityProjectSummary(
                         activity.getProject().getId(), activity.getProject().getName());
             }
-            if (activity.getManager() != null) {
-                this.manager = new ActivityManagerSummary(
-                        activity.getManager().getName(), activity.getManager().getStaffPhoto());
-            }
+            this.manager = ActivityManagerSummary.ofPublic(activity.getManager());
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }
     }
@@ -374,6 +368,16 @@ public class PublicController {
         public ActivityManagerSummary(String name, String photo) {
             this.name = name;
             this.photo = photo;
+        }
+
+        /** The manager is only exposed publicly when they opted in to appear on the public site. */
+        static ActivityManagerSummary ofPublic(User manager) {
+            if (manager == null || !manager.isPubliclyVisibleStaff()) {
+                return null;
+            }
+            Staff staff = manager.getStaff();
+            String displayName = staff.getNickname() != null ? staff.getNickname() : manager.getName();
+            return new ActivityManagerSummary(displayName, staff.getPhoto());
         }
     }
 

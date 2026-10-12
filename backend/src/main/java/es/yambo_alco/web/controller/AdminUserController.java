@@ -117,7 +117,8 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> updateStaff(
             @PathVariable @NonNull String userId,
             @Valid @RequestBody UpdateStaffRequestDto request) {
-        User updatedUser = userService.updateStaff(userId, request.getPhoto(), request.getBio(),
+        User admin = authService.getCurrentUser(true);
+        User updatedUser = userService.updateStaffByAdmin(admin.getId(), userId, request.getPhoto(), request.getBio(),
                 request.getFunFact(), request.getNickname(), request.getPublicVisible());
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
     }
