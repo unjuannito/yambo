@@ -4,6 +4,10 @@ import type { CurrentUser, NotificationPreferences } from '~/types/userType';
 export interface UpdateProfileRequest {
   name: string;
   email: string;
+}
+
+/** Los campos omitidos no se tocan; los vacíos se borran. */
+export interface UpdateStaffRequest {
   photo?: string;
   bio?: string;
   funFact?: string;
@@ -21,6 +25,10 @@ export class UserService extends ApiService {
 
   public async updateProfile(data: UpdateProfileRequest): Promise<CurrentUser> {
     return await this.put<CurrentUser, UpdateProfileRequest>('/user/profile', data);
+  }
+
+  public async updateStaff(data: UpdateStaffRequest): Promise<CurrentUser> {
+    return await this.put<CurrentUser, UpdateStaffRequest>('/user/staff', data);
   }
 
   public async changePassword(data: ChangePasswordRequest): Promise<void> {

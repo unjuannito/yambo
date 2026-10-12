@@ -1039,6 +1039,8 @@
     "fullNamePlaceholder": "Tu nombre completo",
     "email": "Correo electrónico",
     "profilePhoto": "Foto de perfil",
+    "staffInfo": "Mi ficha del equipo",
+    "staffInfoDesc": "Lo que se muestra de ti como parte del equipo",
     "bioPlaceholder": "Cuéntanos algo sobre ti...",
     "funFactPlaceholder": "Un dato curioso sobre ti...",
     "saveChanges": "Guardar cambios",

@@ -10,7 +10,7 @@ import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { getErrorMessage } from "~/types/error";
-import { canHaveExtraProfileData } from "~/utils/roleHelpers";
+import { isStaff } from "~/utils/roleHelpers";
 import toast from "react-hot-toast";
 import { PageContainer } from "~/components/common/PageContainer";
 
@@ -22,7 +22,9 @@ interface GroupRoleEntry {
 interface EditForm {
     userId: string;
     name: string;
+    email: string;
     groupRoles: GroupRoleEntry[];
+    manualStaff: boolean;
     bio: string;
     funFact: string;
 }
@@ -30,7 +32,9 @@ interface EditForm {
 const EMPTY_EDIT_FORM: EditForm = {
     userId: "",
     name: "",
+    email: "",
     groupRoles: [],
+    manualStaff: false,
     bio: "",
     funFact: "",
 };
@@ -143,9 +147,11 @@ export default function Crew() {
         setEditForm({
             userId: user.id,
             name: user.name,
+            email: user.email,
             groupRoles: user.groupRoles?.map(gr => ({ groupId: gr.groupId, role: gr.role })) || [],
-            bio: user.bio || "",
-            funFact: user.funFact || "",
+            manualStaff: user.staff?.manual ?? false,
+            bio: user.staff?.bio || "",
+            funFact: user.staff?.funFact || "",
         });
         setIsEditOpen(true);
     };
@@ -155,6 +161,8 @@ export default function Crew() {
         setIsEditOpen(false);
         setSaving(false);
     };
+
+    const editFormIsStaff = editForm.manualStaff || isStaff({ groupRoles: editForm.groupRoles });
 
     const handleEditSave = async () => {
         if (editForm.groupRoles.length === 0) {
@@ -168,9 +176,7 @@ export default function Crew() {
             await adminUserService.updateUserDetails({
                 id: userId,
                 name: editForm.name,
-                email: "",
-                bio: editForm.bio || undefined,
-                funFact: editForm.funFact || undefined,
+                email: editForm.email,
             });
 
             const currentRoles = await adminUserService.getUserGroupRoles(userId);
@@ -187,6 +193,14 @@ export default function Crew() {
                 if (!currentSet.has(`${gr.groupId}:${gr.role}`)) {
                     await adminUserService.assignGroupRole(userId, gr.groupId, gr.role);
                 }
+            }
+
+            // Staff data goes last: a role added above may be what makes the user staff
+            if (editFormIsStaff) {
+                await adminUserService.updateStaff(userId, {
+                    bio: editForm.bio,
+                    funFact: editForm.funFact,
+                });
             }
 
             toast.success("Miembro actualizado correctamente");
@@ -258,8 +272,8 @@ export default function Crew() {
             filter: { enabled: true, type: "search", placeholder: "Buscar por nombre..." },
             render: (user: User) => (
                 <div className="flex items-center gap-2">
-                    {user.photo && (
-                        <img src={user.photo} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+                    {user.staff?.photo && (
+                        <img src={user.staff?.photo} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
                     )}
                     <div>
                         <span className="font-medium text-yambo-black">{user.name}</span>
@@ -383,8 +397,8 @@ export default function Crew() {
                                                             onClick={() => startEdit(user)}
                                                             className="flex items-center gap-2 px-3 py-2 bg-yambo-purple-50 border border-yambo-purple-200 rounded-full hover:bg-yambo-purple-100 transition-colors text-left"
                                                         >
-                                                            {user.photo && (
-                                                                <img src={user.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
+                                                            {user.staff?.photo && (
+                                                                <img src={user.staff?.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
                                                             )}
                                                             <span className="text-sm font-medium text-yambo-purple-700">{user.name}</span>
                                                         </button>
@@ -407,8 +421,8 @@ export default function Crew() {
                                                                     onClick={() => startEdit(user)}
                                                                     className="flex items-center gap-2 px-3 py-2 bg-yambo-green-50 border border-yambo-green-200 rounded-full hover:bg-yambo-green-100 transition-colors text-left"
                                                                 >
-                                                                    {user.photo && (
-                                                                        <img src={user.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
+                                                                    {user.staff?.photo && (
+                                                                        <img src={user.staff?.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
                                                                     )}
                                                                     <span className="text-sm font-medium text-yambo-green-700">{user.name}</span>
                                                                 </button>
@@ -498,7 +512,7 @@ export default function Crew() {
                                 + Añadir rol en grupo
                             </button>
                         </div>
-                        {canHaveExtraProfileData({ groupRoles: editForm.groupRoles }) && (
+                        {editFormIsStaff && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
                                 <textarea
@@ -511,7 +525,7 @@ export default function Crew() {
                                 />
                             </div>
                         )}
-                        {canHaveExtraProfileData({ groupRoles: editForm.groupRoles }) && (
+                        {editFormIsStaff && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
                                 <input
@@ -577,8 +591,8 @@ export default function Crew() {
                                                 selectedUser?.id === user.id ? "bg-yambo-green-50" : ""
                                             }`}
                                         >
-                                            {user.photo && (
-                                                <img src={user.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
+                                            {user.staff?.photo && (
+                                                <img src={user.staff?.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
                                             )}
                                             <span className="font-medium">{user.name}</span>
                                             <span className="text-gray-400 text-xs ml-auto">{user.email}</span>

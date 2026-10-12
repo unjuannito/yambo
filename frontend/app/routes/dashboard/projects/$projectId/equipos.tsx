@@ -340,8 +340,8 @@ export default function ProjectEquipos() {
                                 <div className="flex flex-wrap gap-2">
                                     {monitors.map(monitor => (
                                         <div key={monitor.id} className="flex items-center gap-2 px-3 py-1.5 bg-yambo-green-50 border border-yambo-green-200 rounded-full text-sm">
-                                            {monitor.photo && (
-                                                <img src={monitor.photo} alt={monitor.name} className="w-5 h-5 rounded-full object-cover" />
+                                            {monitor.staff?.photo && (
+                                                <img src={monitor.staff?.photo} alt={monitor.name} className="w-5 h-5 rounded-full object-cover" />
                                             )}
                                             <Link
                                             to={`/mi-espacio/admin/usuarios/${monitor.id}/perfil`}
@@ -399,8 +399,8 @@ export default function ProjectEquipos() {
                             <div className="flex flex-wrap gap-2">
                                 {defaultGroup.monitors.map(monitor => (
                                     <div key={monitor.id} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-sm">
-                                        {monitor.photo && (
-                                            <img src={monitor.photo} alt={monitor.name} className="w-5 h-5 rounded-full object-cover" />
+                                        {monitor.staff?.photo && (
+                                            <img src={monitor.staff?.photo} alt={monitor.name} className="w-5 h-5 rounded-full object-cover" />
                                         )}
                                         <Link
                                             to={`/mi-espacio/admin/usuarios/${monitor.id}/perfil`}
@@ -540,8 +540,8 @@ export default function ProjectEquipos() {
                                         } ${selectedUser?.id === user.id ? "bg-yambo-green-50" : ""}`}
                                     >
                                         <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
-                                            {user.photo
-                                                ? <img src={user.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                            {user.staff?.photo
+                                                ? <img src={user.staff?.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
                                                 : user.name.charAt(0).toUpperCase()}
                                         </div>
                                         <span className="font-medium truncate">{user.name}</span>

@@ -49,7 +49,7 @@ export async function getFeaturedProjects(): Promise<FeaturedProject[]> {
 }
 
 export async function getStaff(): Promise<StaffMember[]> {
-    return fetchJson("/public/monitors");
+    return fetchJson("/public/staff");
 }
 
 export async function getActiveProjects(): Promise<ActiveProject[]> {
