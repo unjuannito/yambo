@@ -12,4 +12,5 @@ public class StaffUpdate {
     String funFact;
     String nickname;
     Boolean publicVisible;
+    String instagramUrl;
 }

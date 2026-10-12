@@ -169,6 +169,7 @@ public class PublicController {
         private String photo;
         private String bio;
         private String funFact;
+        private String instagramUrl;
         private String role;
         private StaffGroupResponse[] groups;
 
@@ -186,6 +187,7 @@ public class PublicController {
                 this.photo = staff.getPhoto();
                 this.bio = staff.getBio();
                 this.funFact = staff.getFunFact();
+                this.instagramUrl = staff.getInstagramUrl();
             }
 
             // Only the staff roles of active projects are public (no PARENT roles, no past projects)

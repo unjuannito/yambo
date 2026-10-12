@@ -36,6 +36,7 @@ export default function UserPerfil() {
         bio: user.staff?.bio || "",
         funFact: user.staff?.funFact || "",
         nickname: user.staff?.nickname || "",
+        instagramUrl: user.staff?.instagramUrl || "",
         publicVisible: user.staff?.publicVisible ?? false,
     });
     const [staffDirty, setStaffDirty] = useState(false);
@@ -103,6 +104,7 @@ export default function UserPerfil() {
                 bio: updated.staff?.bio || "",
                 funFact: updated.staff?.funFact || "",
                 nickname: updated.staff?.nickname || "",
+                instagramUrl: updated.staff?.instagramUrl || "",
                 publicVisible: updated.staff?.publicVisible ?? false,
             });
             setStaffDirty(false);
@@ -115,11 +117,23 @@ export default function UserPerfil() {
         }
     };
 
+    // Texto del post de #comosenotaqueeresdeyambo a partir de la ficha
+    const copyInstagramCaption = async () => {
+        const displayName = (staffForm.nickname || form.name).toUpperCase();
+        const caption = `Hoy es Lunes de\n#comosenotaqueeresdeyambo\n\nY hoy traemos a.......\n\n💛 ${displayName}\n\n${staffForm.bio}`;
+        try {
+            await navigator.clipboard.writeText(caption);
+            toast.success("Texto copiado");
+        } catch {
+            toast.error("No se pudo copiar el texto");
+        }
+    };
+
     const executeDeleteStaff = async () => {
         if (!userId) return;
         try {
             await adminUserService.deleteStaff(userId);
-            setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", publicVisible: false });
+            setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", instagramUrl: "", publicVisible: false });
             setStaffDirty(false);
             toast.success("Ficha del equipo borrada");
             await refreshUser();
@@ -287,6 +301,25 @@ export default function UserPerfil() {
                                         maxLength={100}
                                         className="w-full border border-gray-200 rounded-2xl text-sm px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 placeholder-gray-400 bg-white"
                                     />
+                                </div>
+
+                                {/* Instagram */}
+                                <div>
+                                    <InputComponent
+                                        label="Enlace al post de Instagram"
+                                        type="url"
+                                        value={staffForm.instagramUrl}
+                                        onChange={(e) => handleStaffChange("instagramUrl", e.target.value)}
+                                        maxLength={300}
+                                        placeholder="https://www.instagram.com/p/..."
+                                    />
+                                    <button type="button"
+                                        onClick={copyInstagramCaption}
+                                        disabled={!staffForm.bio}
+                                        className="mt-1.5 text-xs text-yambo-green-600 hover:underline disabled:text-gray-300 disabled:no-underline"
+                                    >
+                                        Copiar texto para Instagram
+                                    </button>
                                 </div>
 
                                 {/* Public visibility */}

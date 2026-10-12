@@ -16,6 +16,8 @@ export type StaffData = {
     bio?: string | null;
     funFact?: string | null;
     nickname?: string | null;
+    /** Enlace a su post de #comosenotaqueeresdeyambo. */
+    instagramUrl?: string | null;
     /** Opt-in: solo aparece en la web pública si está activado. */
     publicVisible: boolean;
     /** Fecha en la que activó la visibilidad pública (su consentimiento). */

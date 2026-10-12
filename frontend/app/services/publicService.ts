@@ -28,6 +28,7 @@ export interface StaffMember {
     photo: string;
     bio: string;
     funFact: string;
+    instagramUrl?: string | null;
     role: 'MONITOR' | 'COORDINATOR' | 'BOTH';
     groups: StaffGroup[];
 }

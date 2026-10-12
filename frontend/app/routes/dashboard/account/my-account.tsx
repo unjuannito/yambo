@@ -54,6 +54,7 @@ export default function MyAccount() {
     bio: user?.staff?.bio || "",
     funFact: user?.staff?.funFact || "",
     nickname: user?.staff?.nickname || "",
+    instagramUrl: user?.staff?.instagramUrl || "",
     publicVisible: user?.staff?.publicVisible ?? false,
   });
 
@@ -114,6 +115,7 @@ export default function MyAccount() {
         bio: user.staff?.bio || "",
         funFact: user.staff?.funFact || "",
         nickname: user.staff?.nickname || "",
+        instagramUrl: user.staff?.instagramUrl || "",
         publicVisible: user.staff?.publicVisible ?? false,
       });
       if (user.notificationPreferences) {
@@ -413,6 +415,18 @@ export default function MyAccount() {
                 />
                 <p className="text-xs text-gray-400 mt-1 text-right">{staffData.funFact.length}/100</p>
               </div>
+              <InputComponent
+                label={t('myAccount.instagramUrl')}
+                name="instagramUrl"
+                type="url"
+                value={staffData.instagramUrl}
+                onChange={(e) =>
+                  setStaffData((prev) => ({ ...prev, instagramUrl: e.target.value }))
+                }
+                maxLength={300}
+                pattern="https://(www\.)?instagram\.com/.+"
+                placeholder={t('myAccount.instagramUrlPlaceholder')}
+              />
               <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
                 <span>
                   <span className="block text-sm font-medium text-gray-700">{t('myAccount.publicVisible')}</span>

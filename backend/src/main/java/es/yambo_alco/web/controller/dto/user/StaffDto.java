@@ -12,6 +12,7 @@ public class StaffDto {
     private String bio;
     private String funFact;
     private String nickname;
+    private String instagramUrl;
     private boolean publicVisible;
     private LocalDateTime publicVisibleAt;
     private boolean manual;
@@ -28,6 +29,7 @@ public class StaffDto {
             dto.bio = staff.getBio();
             dto.funFact = staff.getFunFact();
             dto.nickname = staff.getNickname();
+            dto.instagramUrl = staff.getInstagramUrl();
             dto.publicVisible = staff.isPublicVisible();
             dto.publicVisibleAt = staff.getPublicVisibleAt();
             dto.manual = staff.isManual();

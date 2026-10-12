@@ -533,6 +533,18 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
 
         @Test
         @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_WithNonInstagramLink_ShouldReturnBadRequest() throws Exception {
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"instagramUrl": "https://example.com/p/abc"}
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
         void updateStaff_WithTooLongBio_ShouldReturnBadRequest() throws Exception {
                 mockMvc.perform(put("/admin/users/U0000001/staff")
                                 .header("Authorization", "Bearer test.jwt.token")

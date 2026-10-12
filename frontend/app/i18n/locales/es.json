@@ -900,6 +900,7 @@
     "staffViewProfile": "Ver ficha de {{name}}",
     "staffAboutTitle": "Cómo se nota que eres de Yambo",
     "staffFunFact": "Dato curioso",
+    "staffInstagram": "Ver en Instagram",
     "staffFilteredResult": "{{count}} persona(s) encontrada(s)",
     "projectFilteredResult": "{{count}} monitor(es) encontrado(s)"
   },
@@ -1052,6 +1053,8 @@
     "deleteStaffConfirmMessage": "Se borrarán tu foto, apodo, descripción y dato curioso, y dejarás de aparecer en la web pública. Sigues formando parte del equipo y puedes volver a rellenarla cuando quieras.",
     "bioPlaceholder": "Qué estudias o a qué te dedicas, cómo llegaste a Yambo, en qué proyecto estás...",
     "bioHint": "Se muestra en tu ficha pública, igual que en el Instagram de Yambo.",
+    "instagramUrl": "Enlace a tu post de Instagram",
+    "instagramUrlPlaceholder": "https://www.instagram.com/p/...",
     "publicVisible": "Aparecer en la web pública",
     "publicVisibleDesc": "Muestra tu foto, apodo y descripción en la página del equipo y en la de tus proyectos. Puedes desactivarlo cuando quieras.",
     "publicVisibleConsent": "Al activarlo aceptas que estos datos se publiquen en la web de Yambo.",

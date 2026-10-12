@@ -693,10 +693,12 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").publicVisible(true).build());
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").publicVisible(true)
+                .instagramUrl("https://www.instagram.com/p/abc/").build());
 
         // Then
         assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
+        assertThat(result.getStaff().getInstagramUrl()).isEqualTo("https://www.instagram.com/p/abc/");
         assertThat(result.getStaff().isPublicVisible()).isTrue();
         assertThat(result.isPubliclyVisibleStaff()).isTrue();
     }
@@ -759,7 +761,7 @@ public class UserServiceTest {
                 .email("user@example.com")
                 .name("Name")
                 .staff(Staff.builder().manual(true).publicVisible(true).photo("/uploads/p.jpg")
-                        .bio("Bio").funFact("Fun").nickname("Nick").build())
+                        .bio("Bio").funFact("Fun").nickname("Nick").instagramUrl("https://www.instagram.com/p/abc/").build())
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
@@ -775,6 +777,7 @@ public class UserServiceTest {
         assertThat(result.getStaff().getBio()).isNull();
         assertThat(result.getStaff().getFunFact()).isNull();
         assertThat(result.getStaff().getNickname()).isNull();
+        assertThat(result.getStaff().getInstagramUrl()).isNull();
         assertThat(result.getStaff().isPublicVisible()).isFalse();
         verify(staffRepository, never()).delete(any());
     }

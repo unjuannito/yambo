@@ -13,6 +13,7 @@ export interface UpdateStaffRequest {
   funFact?: string;
   nickname?: string;
   publicVisible?: boolean;
+  instagramUrl?: string;
 }
 
 export interface ChangePasswordRequest {

@@ -6,6 +6,7 @@ import { projectColor } from "~/utils/projectColor";
 import { Modal } from "~/components/common/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
+import { faInstagram } from "@fortawesome/free-brands-svg-icons";
 
 interface StaffCardProps {
     member: StaffMember;
@@ -129,6 +130,17 @@ export default function StaffCard({ member, roleLabel, projectName }: StaffCardP
                                         {member.bio}
                                     </p>
                                 </div>
+                            )}
+                            {member.instagramUrl && (
+                                <a
+                                    href={member.instagramUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-yambo-purple-700 hover:underline"
+                                >
+                                    <FontAwesomeIcon icon={faInstagram} className="w-4 h-4" />
+                                    {t('public.staffInstagram')}
+                                </a>
                             )}
                             {member.funFact && (
                                 <div className="mt-4 rounded-xl bg-yambo-purple-100/60 px-4 py-3">

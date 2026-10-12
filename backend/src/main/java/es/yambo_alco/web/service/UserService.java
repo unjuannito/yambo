@@ -120,7 +120,7 @@ public class UserService {
 
 		if (!user.isStaff()) {
 			throw new BadRequestException(
-					"Only staff (marked manually or with a MONITOR or COORDINATOR role) can have staff data (photo, bio, fun fact, nickname, public visibility)");
+					"Only staff (marked manually or with a MONITOR or COORDINATOR role) can have staff data (photo, bio, fun fact, nickname, Instagram link, public visibility)");
 		}
 
 		Staff staff = ensureStaff(user);
@@ -142,6 +142,9 @@ public class UserService {
 		}
 		if (update.getPublicVisible() != null) {
 			setPublicVisible(staff, update.getPublicVisible());
+		}
+		if (update.getInstagramUrl() != null) {
+			staff.setInstagramUrl(blankToNull(update.getInstagramUrl()));
 		}
 
 		return userRepository.save(user);
@@ -171,6 +174,7 @@ public class UserService {
 		staff.setBio(null);
 		staff.setFunFact(null);
 		staff.setNickname(null);
+		staff.setInstagramUrl(null);
 		setPublicVisible(staff, false);
 		return userRepository.save(user);
 	}

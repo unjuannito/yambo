@@ -51,6 +51,10 @@ public class Staff {
     @Column(name = "public_visible", nullable = false)
     private boolean publicVisible = false;
 
+    /** Link to their #comosenotaqueeresdeyambo Instagram post. */
+    @Column(name = "instagram_url", length = 300)
+    private String instagramUrl;
+
     /** When the staff member opted in; null while not public. */
     @Column(name = "public_visible_at")
     private LocalDateTime publicVisibleAt;
