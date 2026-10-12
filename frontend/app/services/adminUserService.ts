@@ -31,6 +31,9 @@ export interface UpdateStaffRequest {
     photo?: string;
     bio?: string;
     funFact?: string;
+    nickname?: string;
+    publicVisible?: boolean;
+    instagramUrl?: string;
 }
 
 export interface UpdateUserGroupsRequest {
@@ -84,6 +87,11 @@ export class AdminUserService extends ApiService {
             `/admin/users/${userId}/staff`,
             request
         );
+    }
+
+    /** Borra la ficha del equipo de un usuario (foto, apodo, descripción y dato curioso). */
+    public async deleteStaff(userId: string): Promise<User> {
+        return await this.delete<User>(`/admin/users/${userId}/staff`);
     }
 
     /** Añade (o quita) a un usuario del equipo a mano, sin depender de sus roles en grupos. */

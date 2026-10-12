@@ -25,8 +25,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.Collator;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -70,9 +73,11 @@ public class PublicController {
 
     @GetMapping("/staff")
     public ResponseEntity<List<StaffResponse>> getStaff() {
-        List<User> staff = userRepository.findStaff();
+        List<User> staff = userRepository.findPublicStaff();
         List<StaffResponse> response = staff.stream()
+                .filter(User::isPubliclyVisibleStaff)
                 .map(StaffResponse::new)
+                .sorted(StaffResponse.PUBLIC_ORDER)
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -123,7 +128,7 @@ public class PublicController {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Project not found"));
         List<ProjectGroup> groups = projectGroupRepository.findByProjectId(id);
-        List<User> staff = userRepository.findStaffByProjectId(id);
+        List<User> staff = userRepository.findPublicStaffByProjectId(id);
         SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.PROJECT, id).orElse(null);
         return ResponseEntity.ok(new ProjectDetailResponse(project, groups, staff, seo));
     }
@@ -160,26 +165,40 @@ public class PublicController {
     public static class StaffResponse {
         private String id;
         private String name;
+        private String nickname;
         private String photo;
         private String bio;
         private String funFact;
+        private String instagramUrl;
         private String role;
         private StaffGroupResponse[] groups;
+
+        /** Coordination first, then alphabetically by the name shown on the card. */
+        static final Comparator<StaffResponse> PUBLIC_ORDER = Comparator
+                .comparing((StaffResponse s) -> "MONITOR".equals(s.role))
+                .thenComparing(s -> s.nickname != null ? s.nickname : s.name, Collator.getInstance(Locale.of("es")));
 
         public StaffResponse(User user) {
             this.id = user.getId();
             this.name = user.getName();
             Staff staff = user.getStaff();
             if (staff != null) {
+                this.nickname = staff.getNickname();
                 this.photo = staff.getPhoto();
                 this.bio = staff.getBio();
                 this.funFact = staff.getFunFact();
+                this.instagramUrl = staff.getInstagramUrl();
             }
 
-            // Determine primary role from groupRoles
-            boolean isCoordinator = user.getGroupRoles().stream()
+            // Only the staff roles of active projects are public (no PARENT roles, no past projects)
+            List<UserProjectGroup> publicRoles = user.getGroupRoles().stream()
+                    .filter(User::isActiveStaffRole)
+                    .toList();
+
+            // Determine primary role from the public roles
+            boolean isCoordinator = publicRoles.stream()
                     .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR);
-            boolean isMonitor = user.getGroupRoles().stream()
+            boolean isMonitor = publicRoles.stream()
                     .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.MONITOR);
             if (isCoordinator && isMonitor) {
                 this.role = "BOTH";
@@ -189,7 +208,7 @@ public class PublicController {
                 this.role = "MONITOR";
             }
 
-            this.groups = user.getGroupRoles().stream()
+            this.groups = publicRoles.stream()
                     .map(StaffGroupResponse::new)
                     .toArray(StaffGroupResponse[]::new);
         }
@@ -258,7 +277,9 @@ public class PublicController {
                     .map(ProjectGroupDetail::new)
                     .toList();
             this.staff = staff.stream()
+                    .filter(User::isPubliclyVisibleStaff)
                     .map(StaffResponse::new)
+                    .sorted(StaffResponse.PUBLIC_ORDER)
                     .toList();
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }
@@ -305,10 +326,7 @@ public class PublicController {
                 this.project = new ActivityProjectSummary(
                         activity.getProject().getId(), activity.getProject().getName());
             }
-            if (activity.getManager() != null) {
-                this.manager = new ActivityManagerSummary(
-                        activity.getManager().getName(), activity.getManager().getStaffPhoto());
-            }
+            this.manager = ActivityManagerSummary.ofPublic(activity.getManager());
         }
     }
 
@@ -354,10 +372,7 @@ public class PublicController {
                 this.project = new ActivityProjectSummary(
                         activity.getProject().getId(), activity.getProject().getName());
             }
-            if (activity.getManager() != null) {
-                this.manager = new ActivityManagerSummary(
-                        activity.getManager().getName(), activity.getManager().getStaffPhoto());
-            }
+            this.manager = ActivityManagerSummary.ofPublic(activity.getManager());
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }
     }
@@ -370,6 +385,16 @@ public class PublicController {
         public ActivityManagerSummary(String name, String photo) {
             this.name = name;
             this.photo = photo;
+        }
+
+        /** The manager is only exposed publicly when they opted in to appear on the public site. */
+        static ActivityManagerSummary ofPublic(User manager) {
+            if (manager == null || !manager.isPubliclyVisibleStaff()) {
+                return null;
+            }
+            Staff staff = manager.getStaff();
+            String displayName = staff.getNickname() != null ? staff.getNickname() : manager.getName();
+            return new ActivityManagerSummary(displayName, staff.getPhoto());
         }
     }
 

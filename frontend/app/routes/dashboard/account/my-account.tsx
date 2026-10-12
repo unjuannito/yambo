@@ -10,6 +10,7 @@ import type { UpdateProfileRequest, UpdateStaffRequest, ChangePasswordRequest } 
 import type { CurrentUser } from "~/types/userType";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUsers, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -52,6 +53,9 @@ export default function MyAccount() {
     photo: user?.staff?.photo || "",
     bio: user?.staff?.bio || "",
     funFact: user?.staff?.funFact || "",
+    nickname: user?.staff?.nickname || "",
+    instagramUrl: user?.staff?.instagramUrl || "",
+    publicVisible: user?.staff?.publicVisible ?? false,
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -110,6 +114,9 @@ export default function MyAccount() {
         photo: user.staff?.photo || "",
         bio: user.staff?.bio || "",
         funFact: user.staff?.funFact || "",
+        nickname: user.staff?.nickname || "",
+        instagramUrl: user.staff?.instagramUrl || "",
+        publicVisible: user.staff?.publicVisible ?? false,
       });
       if (user.notificationPreferences) {
         setNotifPrefs(user.notificationPreferences);
@@ -129,6 +136,16 @@ export default function MyAccount() {
     mutationFn: (data) => userService.updateStaff(data),
     successMessage: "Ficha del equipo actualizada correctamente",
     onSuccess: () => {
+      reload();
+    },
+  });
+
+  const [showDeleteStaffDialog, setShowDeleteStaffDialog] = useState(false);
+  const deleteStaffMutation = useApiMutation<CurrentUser, void>({
+    mutationFn: () => userService.deleteStaff(),
+    successMessage: "Ficha del equipo borrada",
+    onSuccess: () => {
+      setShowDeleteStaffDialog(false);
       reload();
     },
   });
@@ -354,8 +371,19 @@ export default function MyAccount() {
                   className="hidden"
                 />
               </div>
+              <InputComponent
+                label={t('myAccount.nickname')}
+                name="nickname"
+                type="text"
+                value={staffData.nickname}
+                onChange={(e) =>
+                  setStaffData((prev) => ({ ...prev, nickname: e.target.value }))
+                }
+                maxLength={50}
+                placeholder={t('myAccount.nicknamePlaceholder')}
+              />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('myAccount.bioLabel')}</label>
                 <textarea
                   name="bio"
                   value={staffData.bio}
@@ -363,11 +391,14 @@ export default function MyAccount() {
                     setStaffData((prev) => ({ ...prev, bio: e.target.value }))
                   }
                   placeholder={t('myAccount.bioPlaceholder')}
-                  rows={3}
+                  rows={6}
                   maxLength={500}
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-all"
                 />
-                <p className="text-xs text-gray-400 mt-1 text-right">{staffData.bio.length}/500</p>
+                <div className="flex justify-between gap-3 mt-1">
+                  <p className="text-xs text-gray-400">{t('myAccount.bioHint')}</p>
+                  <p className="text-xs text-gray-400 shrink-0">{staffData.bio.length}/500</p>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
@@ -384,7 +415,45 @@ export default function MyAccount() {
                 />
                 <p className="text-xs text-gray-400 mt-1 text-right">{staffData.funFact.length}/100</p>
               </div>
-              <div className="flex justify-end pt-2">
+              <InputComponent
+                label={t('myAccount.instagramUrl')}
+                name="instagramUrl"
+                type="url"
+                value={staffData.instagramUrl}
+                onChange={(e) =>
+                  setStaffData((prev) => ({ ...prev, instagramUrl: e.target.value }))
+                }
+                maxLength={300}
+                pattern="https://(www\.)?instagram\.com/.+"
+                placeholder={t('myAccount.instagramUrlPlaceholder')}
+              />
+              <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
+                <span>
+                  <span className="block text-sm font-medium text-gray-700">{t('myAccount.publicVisible')}</span>
+                  <span className="block text-xs text-gray-400 mt-0.5">{t('myAccount.publicVisibleDesc')}</span>
+                  <span className="block text-xs text-gray-400 mt-1">
+                    {t('myAccount.publicVisibleConsent')}{" "}
+                    <a href="/legal/privacidad" target="_blank" rel="noreferrer" className="text-yambo-green-600 hover:underline">
+                      {t('myAccount.publicVisiblePrivacyLink')}
+                    </a>
+                    {user?.staff?.publicVisibleAt && (
+                      <> · {t('myAccount.publicVisibleSince', { date: new Date(user.staff.publicVisibleAt).toLocaleDateString() })}</>
+                    )}
+                  </span>
+                </span>
+                <CheckboxComponent
+                  variantType="toggle"
+                  className="shrink-0 mt-0.5"
+                  checked={staffData.publicVisible}
+                  onChange={(e) =>
+                    setStaffData((prev) => ({ ...prev, publicVisible: e.target.checked }))
+                  }
+                />
+              </label>
+              <div className="flex flex-wrap justify-between gap-3 pt-2">
+                <ButtonComponent type="button" variant="danger-text" onClick={() => setShowDeleteStaffDialog(true)}>
+                  <FontAwesomeIcon icon={faTrash} className="mr-1" /> {t('myAccount.deleteStaff')}
+                </ButtonComponent>
                 <ButtonComponent
                   type="submit"
                   variant="primary"
@@ -563,6 +632,17 @@ export default function MyAccount() {
         </section>
       </div>
 
+      <ConfirmDialog
+        isOpen={showDeleteStaffDialog}
+        onClose={() => setShowDeleteStaffDialog(false)}
+        onConfirm={() => deleteStaffMutation.mutate()}
+        title={t('myAccount.deleteStaffConfirmTitle')}
+        message={t('myAccount.deleteStaffConfirmMessage')}
+        confirmLabel={t('myAccount.deleteStaff')}
+        cancelLabel="Cancelar"
+        variant="danger"
+        isLoading={deleteStaffMutation.isLoading}
+      />
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}

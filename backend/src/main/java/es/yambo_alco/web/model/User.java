@@ -105,6 +105,22 @@ public class User implements UserDetails {
         return groupRoles.stream().anyMatch(gr -> gr.getRole().isStaff());
     }
 
+    /**
+     * Staff who opted in to be shown on the public site and are currently part of the team:
+     * added by hand, or holding a MONITOR/COORDINATOR role in an active project.
+     */
+    public boolean isPubliclyVisibleStaff() {
+        if (staff == null || !staff.isPublicVisible()) {
+            return false;
+        }
+        return staff.isManual() || groupRoles.stream().anyMatch(User::isActiveStaffRole);
+    }
+
+    /** A MONITOR/COORDINATOR role in a project that is still active. */
+    public static boolean isActiveStaffRole(UserProjectGroup groupRole) {
+        return groupRole.getRole().isStaff() && groupRole.getProjectGroup().getProject().isActive();
+    }
+
     /** Staff photo, or null when the user is not currently staff. */
     public String getStaffPhoto() {
         return staff != null && isStaff() ? staff.getPhoto() : null;

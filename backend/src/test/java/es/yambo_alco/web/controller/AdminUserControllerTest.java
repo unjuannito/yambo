@@ -8,6 +8,7 @@ import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.SettingsService;
+import es.yambo_alco.web.service.StaffUpdate;
 import es.yambo_alco.web.service.UserService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -515,7 +516,9 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .staff(Staff.builder().manual(true).bio("New bio").build())
                                 .build();
 
-                when(userService.updateStaff("U0000001", null, "New bio", null)).thenReturn(updatedUser);
+                when(authService.getCurrentUser(true)).thenReturn(User.builder().id("A0000001").build());
+                when(userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("New bio").build()))
+                                .thenReturn(updatedUser);
 
                 mockMvc.perform(put("/admin/users/U0000001/staff")
                                 .header("Authorization", "Bearer test.jwt.token")
@@ -526,6 +529,18 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.staff.bio").value("New bio"))
                                 .andExpect(jsonPath("$.staff.manual").value(true));
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_WithNonInstagramLink_ShouldReturnBadRequest() throws Exception {
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"instagramUrl": "https://example.com/p/abc"}
+                                                """))
+                                .andExpect(status().isBadRequest());
         }
 
         @Test

@@ -24,9 +24,11 @@ export interface StaffGroup {
 export interface StaffMember {
     id: string;
     name: string;
+    nickname?: string | null;
     photo: string;
     bio: string;
     funFact: string;
+    instagramUrl?: string | null;
     role: 'MONITOR' | 'COORDINATOR' | 'BOTH';
     groups: StaffGroup[];
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useCallback, useEffect } from "react";
 import type { Route } from "./+types/index";
 import type { User } from "~/types/userType";
@@ -58,6 +59,7 @@ const EMPTY_FORM: UserForm = {
 };
 
 export default function Users() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [profileOptions, setProfileOptions] = useState<{ value: string; label: string }[]>([]);
     const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
@@ -78,14 +80,14 @@ export default function Users() {
                 }));
                 setProfileOptions(options);
             } catch (err) {
-                toast.error(getErrorMessage(err, "Los perfiles se esconden"));
+                toast.error(getErrorMessage(err, t('users.profilesLoadError')));
             }
         };
         const fetchGroups = async () => {
             try {
                 setGroupOptions(await loadAssignableGroupOptions());
             } catch (err) {
-                toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
+                toast.error(getErrorMessage(err, t('users.groupsLoadError')));
             }
         };
         fetchProfiles();
@@ -129,7 +131,7 @@ export default function Users() {
 
     const handleSave = async () => {
         if (form.profileIds.length === 0) {
-            toast.error("¡Selecciona al menos un perfil, anda!");
+            toast.error(t('users.selectProfileError'));
             return;
         }
 
@@ -171,12 +173,12 @@ export default function Users() {
                     });
                 }
 
-                toast.success("Usuario actualizado correctamente");
+                toast.success(t('users.userUpdated'));
             }
             resetForm();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El usuario no coopera con la actualización!"));
+            toast.error(getErrorMessage(err, t('users.userUpdateError')));
         } finally {
             setSaving(false);
         }
@@ -190,10 +192,10 @@ export default function Users() {
         if (!confirmDelete) return;
         try {
             await adminUserService.deleteUser(confirmDelete.id);
-            toast.success("Usuario eliminado correctamente");
+            toast.success(t('users.userDeletedOk'));
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El usuario se resiste a irse!"));
+            toast.error(getErrorMessage(err, t('users.userDeleteError')));
         } finally {
             setConfirmDelete(null);
         }
@@ -207,7 +209,7 @@ export default function Users() {
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Buscar por ID...",
+                placeholder: t('users.searchById'),
             },
             render: (user: User) => (
                 <span className="font-mono text-xs">{user.id}</span>
@@ -215,11 +217,11 @@ export default function Users() {
         },
         {
             key: "name",
-            header: "Nombre",
+            header: t('common.name'),
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Buscar por nombre...",
+                placeholder: t('users.searchByName'),
             },
             render: (user: User) => (
                 <div>
@@ -231,7 +233,7 @@ export default function Users() {
                     </button>
                     {user.system && (
                         <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
-                            Sistema
+                            {t('users.systemBadge')}
                         </span>
                     )}
                 </div>
@@ -239,21 +241,21 @@ export default function Users() {
         },
         {
             key: "email",
-            header: "Correo Electrónico",
+            header: t('users.emailHeader'),
             className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
                 type: "search",
-                placeholder: "Buscar por email...",
+                placeholder: t('users.searchByEmail'),
             },
         },
         {
             key: "profiles",
-            header: "Perfiles",
+            header: t('users.profiles'),
             filter: {
                 enabled: true,
                 type: "multi-select",
-                placeholder: "Seleccionar perfiles...",
+                placeholder: t('users.selectProfiles'),
                 options: profileOptions,
             },
             render: (user: User) => (
@@ -271,7 +273,7 @@ export default function Users() {
                             ))
                     ) : (
                         <span className="text-gray-400 text-xs italic">
-                            Sin permisos
+                            {t('users.noPermissions')}
                         </span>
                     )}
                     {user.profiles.length > 3 && (
@@ -284,7 +286,7 @@ export default function Users() {
         },
         {
             key: "groupRoles",
-            header: "Roles / Grupos",
+            header: t('users.rolesGroups'),
             className: "hidden lg:table-cell",
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
@@ -305,7 +307,7 @@ export default function Users() {
                             </span>
                         ))
                     ) : (
-                        <span className="text-gray-400 text-xs italic">Sin roles</span>
+                        <span className="text-gray-400 text-xs italic">{t('users.noRoles')}</span>
                     )}
                     {user.groupRoles && user.groupRoles.length > 3 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
@@ -317,7 +319,7 @@ export default function Users() {
         },
         {
             key: "createdAt",
-            header: "Creado El",
+            header: t('users.createdAt'),
             className: "hidden md:table-cell",
             render: (user: User) => (
                 <span>{new Date(user.createdAt).toLocaleDateString()}</span>
@@ -325,7 +327,7 @@ export default function Users() {
         },
         {
             key: "enabled",
-            header: "Habilitado",
+            header: t('users.enabled'),
             className: "hidden sm:table-cell",
             filter: {
                 enabled: true,
@@ -342,7 +344,7 @@ export default function Users() {
         },
         {
             key: "actions",
-            header: "Acciones",
+            header: t('users.actions'),
             requiredPerms: [{ obj: "user", action: "update" }],
             render: (user: User) => (
                 <div className="flex gap-2">
@@ -352,7 +354,7 @@ export default function Users() {
                         onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
                     >
                         <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 mr-1" />
-                        Gestionar
+                        {t('users.manage')}
                     </ButtonComponent>
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                         <ButtonComponent
@@ -385,14 +387,14 @@ export default function Users() {
                 title={
                     <span className="flex items-center gap-2">
                         <FontAwesomeIcon icon={faUsers} className="text-yambo-green-500" />
-                        Usuarios
+                        {t('users.title')}
                     </span>
                 }
                 columns={userTableColumns}
                 keyField="id"
                 display={{
-                    emptyMessage: "No se encontraron usuarios",
-                    loadingMessage: "Cargando usuarios...",
+                    emptyMessage: t('users.empty'),
+                    loadingMessage: t('users.loading'),
                     renderMobileCard: (user: User) => (
                         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
                             <div className="flex items-start justify-between gap-2">
@@ -406,7 +408,7 @@ export default function Users() {
                                 </div>
                                 {user.system && (
                                     <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs shrink-0">
-                                        Sistema
+                                        {t('users.systemBadge')}
                                     </span>
                                 )}
                             </div>
@@ -429,7 +431,7 @@ export default function Users() {
                                     </>
                                 ) : (
                                     <span className="text-gray-400 text-xs italic">
-                                        Sin permisos
+                                        {t('users.noPermissions')}
                                     </span>
                                 )}
                             </div>
@@ -440,7 +442,7 @@ export default function Users() {
                                     onClick={() => navigate(`/mi-espacio/admin/usuarios/${user.id}/perfil`)}
                                 >
                                     <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5 mr-1" />
-                                    Gestionar
+                                    {t('users.manage')}
                                 </ButtonComponent>
                                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                                     <ButtonComponent
@@ -472,7 +474,7 @@ export default function Users() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={resetForm}
-                title="Editar Usuario"
+                title={t('users.editUser')}
                     size="md"
                     footer={
                         <>
@@ -481,21 +483,21 @@ export default function Users() {
                                 variant="neutral"
                                 disabled={saving}
                             >
-                                Cancelar
+                                {t('common.cancel')}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleSave}
                                 variant="primary"
                                 disabled={saving}
                             >
-                                {saving ? "Guardando..." : "Guardar"}
+                                {saving ? t('common.saving') : t('common.save')}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="flex flex-col gap-4">
                         <InputComponent
-                            label="Nombre"
+                            label={t('common.name')}
                             name="name"
                             type="text"
                             value={form.name}
@@ -505,7 +507,7 @@ export default function Users() {
                             maxLength={100}
                         />
                         <InputComponent
-                            label="Email"
+                            label={t('users.email')}
                             name="email"
                             type="email"
                             value={form.email}
@@ -514,12 +516,12 @@ export default function Users() {
                         />
                         <div className="relative">
                             <label htmlFor="user-profiles" className="block text-sm font-medium text-gray-700 mb-1">
-                                Perfiles *
+                                {t('users.profilesField')}
                             </label>
                             <MultiSelectComponent
                                 options={profileOptions}
                                 value={form.profileIds}
-                                placeholder="Seleccionar perfiles..."
+                                placeholder={t('users.selectProfiles')}
                                 required
                                 name="profileIds"
                                 onChange={(e) => {
@@ -533,7 +535,7 @@ export default function Users() {
                         </div>
                         <div className="relative">
                             <label htmlFor="user-group-roles" className="block text-sm font-medium text-gray-700 mb-1">
-                                Roles en Grupos
+                                {t('users.groupRoles')}
                             </label>
                             {form.groupRoles.map((gr, idx) => (
                                 <div key={idx} className="flex gap-2 mb-2 items-center">
@@ -546,7 +548,7 @@ export default function Users() {
                                         }}
                                         className="flex-1 border border-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
-                                        <option value="">Seleccionar grupo...</option>
+                                        <option value="">{t('users.selectGroup')}</option>
                                         {groupOptions.map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
@@ -560,9 +562,9 @@ export default function Users() {
                                         }}
                                         className="w-36 border border-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
-                                        <option value="MONITOR">Monitor</option>
-                                        <option value="COORDINATOR">Coordinador</option>
-                                        <option value="PARENT">Padre/Madre</option>
+                                        <option value="MONITOR">{t('users.roleMonitor')}</option>
+                                        <option value="COORDINATOR">{t('users.roleCoordinator')}</option>
+                                        <option value="PARENT">{t('users.roleParent')}</option>
                                     </select>
                                     <button
                                         type="button"
@@ -590,33 +592,33 @@ export default function Users() {
                         {formIsStaff && (
                             <>
                                 <InputComponent
-                                    label="Foto (URL)"
+                                    label={t('users.photoUrl')}
                                     name="photo"
                                     type="url"
                                     value={form.photo}
                                     onChange={(e) => setForm({ ...form, photo: e.target.value })}
                                 />
                                 <div>
-                                    <label htmlFor="user-bio" className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                                    <label htmlFor="user-bio" className="block text-sm font-medium text-gray-700 mb-1">{t('users.bio')}</label>
                                     <textarea
                                         id="user-bio"
                                         name="bio"
                                         value={form.bio}
                                         onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                                        placeholder="Biografía del usuario..."
+                                        placeholder={t('users.bioUserPlaceholder')}
                                         rows={3}
                                         maxLength={500}
                                         className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50 resize-none"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.funFact')}</label>
                                     <input
                                         name="funFact"
                                         type="text"
                                         value={form.funFact}
                                         onChange={(e) => setForm({ ...form, funFact: e.target.value })}
-                                        placeholder="Un dato curioso sobre el usuario..."
+                                        placeholder={t('users.funFactUserPlaceholder')}
                                         maxLength={100}
                                         className="w-full border border-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     />
@@ -629,9 +631,9 @@ export default function Users() {
                 isOpen={confirmDelete !== null}
                 onClose={() => setConfirmDelete(null)}
                 onConfirm={executeDelete}
-                title="Eliminar usuario"
-                message={confirmDelete ? `¿Estás seguro de que deseas eliminar al usuario "${confirmDelete.name}"?` : ""}
-                confirmLabel="Eliminar"
+                title={t('users.deleteUser')}
+                message={confirmDelete ? t('users.deleteUserConfirm', { name: confirmDelete.name }) : ""}
+                confirmLabel={t('common.delete')}
                 variant="danger"
             />
         </RequirePermission>

@@ -43,6 +43,26 @@ public class Staff {
     @Column(name = "fun_fact", length = 100)
     private String funFact;
 
+    @Column(length = 50)
+    private String nickname;
+
+    /** Opt-in: only staff with this flag are shown on the public site. */
+    @Builder.Default
+    @Column(name = "public_visible", nullable = false)
+    private boolean publicVisible = false;
+
+    /** Link to their #comosenotaqueeresdeyambo Instagram post. */
+    @Column(name = "instagram_url", length = 300)
+    private String instagramUrl;
+
+    /** When the staff member opted in; null while not public. */
+    @Column(name = "public_visible_at")
+    private LocalDateTime publicVisibleAt;
+
+    /** When the user stopped being staff; null while they are. Old inactive rows are purged. */
+    @Column(name = "inactive_since")
+    private LocalDateTime inactiveSince;
+
     /** Added to the staff by hand, regardless of group roles. */
     @Builder.Default
     @Column(nullable = false)

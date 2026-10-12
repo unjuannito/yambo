@@ -85,7 +85,7 @@ export default function Proyecto() {
     }
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
-      if (!monitor.name.toLowerCase().includes(search)) return false;
+      if (!`${monitor.name} ${monitor.nickname ?? ""}`.toLowerCase().includes(search)) return false;
     }
     return true;
   });
@@ -93,7 +93,7 @@ export default function Proyecto() {
   const filteredCoordinators: StaffMember[] = coordinators.filter((c) => {
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
-      if (!c.name.toLowerCase().includes(search)) return false;
+      if (!`${c.name} ${c.nickname ?? ""}`.toLowerCase().includes(search)) return false;
     }
     return true;
   });

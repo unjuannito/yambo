@@ -280,19 +280,6 @@ body {
 }
 .ee-wobble { animation: ee-wobble 0.6s ease-in-out; }
 
-.ee-card-perspective { perspective: 1000px; }
-.ee-card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-}
-.ee-card-inner.ee-flipped { transform: rotateY(180deg); }
-.ee-card-front, .ee-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.ee-card-front { position: relative; }
-.ee-card-back { position: absolute; inset: 0; transform: rotateY(180deg); }
-
 @keyframes ee-float {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }
   25% { transform: translate(10px, -15px) rotate(5deg); }

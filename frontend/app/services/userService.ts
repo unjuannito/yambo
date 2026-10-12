@@ -11,6 +11,9 @@ export interface UpdateStaffRequest {
   photo?: string;
   bio?: string;
   funFact?: string;
+  nickname?: string;
+  publicVisible?: boolean;
+  instagramUrl?: string;
 }
 
 export interface ChangePasswordRequest {
@@ -29,6 +32,10 @@ export class UserService extends ApiService {
 
   public async updateStaff(data: UpdateStaffRequest): Promise<CurrentUser> {
     return await this.put<CurrentUser, UpdateStaffRequest>('/user/staff', data);
+  }
+
+  public async deleteStaff(): Promise<CurrentUser> {
+    return await this.delete<CurrentUser>('/user/staff');
   }
 
   public async changePassword(data: ChangePasswordRequest): Promise<void> {

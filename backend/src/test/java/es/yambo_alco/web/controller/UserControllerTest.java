@@ -11,6 +11,7 @@ import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
+import es.yambo_alco.web.service.StaffUpdate;
 import es.yambo_alco.web.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,7 +104,7 @@ class UserControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
-        when(userService.updateStaff("U0000001", "/uploads/p.jpg", null, "Fun")).thenReturn(updatedUser);
+        when(userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/p.jpg").funFact("Fun").build())).thenReturn(updatedUser);
 
         // When & Then
         mockMvc.perform(put("/user/staff")
