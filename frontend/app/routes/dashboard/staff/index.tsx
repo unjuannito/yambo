@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { User, UserGroupRole } from "~/types/userType";
 import type { GroupRole } from "~/types/role";
@@ -47,6 +48,7 @@ interface ProjectCrewGroup {
 }
 
 export default function Crew() {
+    const { t } = useTranslation();
     const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
     const [refreshKey, setRefreshKey] = useState(0);
 
@@ -72,7 +74,7 @@ export default function Crew() {
             try {
                 setGroupOptions(await loadAssignableGroupOptions());
             } catch (err) {
-                toast.error(getErrorMessage(err, "¡Los grupos no quieren cargar!"));
+                toast.error(getErrorMessage(err, t('users.groupsLoadError')));
             }
         };
         fetchGroups();
@@ -99,7 +101,7 @@ export default function Crew() {
                 });
                 setAllCrew(res.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "¡El equipo se nos esconde!"));
+                toast.error(getErrorMessage(err, t('staff.loadError')));
             } finally {
                 setLoadingGrouped(false);
             }
@@ -166,7 +168,7 @@ export default function Crew() {
 
     const handleEditSave = async () => {
         if (editForm.groupRoles.length === 0) {
-            toast.error("¡Al menos un rol tiene que tener!");
+            toast.error(t('staff.roleRequired'));
             return;
         }
         try {
@@ -203,11 +205,11 @@ export default function Crew() {
                 });
             }
 
-            toast.success("Miembro actualizado correctamente");
+            toast.success(t('staff.memberUpdated'));
             resetEdit();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡El miembro no coopera con la actualización!"));
+            toast.error(getErrorMessage(err, t('staff.memberUpdateError')));
         } finally {
             setSaving(false);
         }
@@ -238,7 +240,7 @@ export default function Crew() {
                 });
                 setSearchResults(res.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, "¡Los usuarios se nos esconden!"));
+                toast.error(getErrorMessage(err, t('staff.usersLoadError')));
             } finally {
                 setSearching(false);
             }
@@ -248,18 +250,18 @@ export default function Crew() {
 
     const handleAddSave = async () => {
         if (!selectedUser || !addGroupId) {
-            toast.error("¡Falta seleccionar un usuario y un grupo!");
+            toast.error(t('staff.selectUserAndGroup'));
             return;
         }
         try {
             setSaving(true);
             await adminUserService.assignGroupRole(selectedUser.id, addGroupId, addRole);
-            const roleLabel = addRole === 'COORDINATOR' ? 'Coordinador' : 'Monitor';
-            toast.success(`${selectedUser.name} añadido al equipo como ${roleLabel}`);
+            const roleLabel = addRole === 'COORDINATOR' ? t('users.roleCoordinator') : t('users.roleMonitor');
+            toast.success(t('staff.addedAs', { name: selectedUser.name, role: roleLabel }));
             resetAdd();
             setRefreshKey(prev => prev + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, "¡No pudimos añadir al equipo!"));
+            toast.error(getErrorMessage(err, t('staff.addError')));
         } finally {
             setSaving(false);
         }
@@ -268,8 +270,8 @@ export default function Crew() {
     const tableColumns: FilterableColumn<User>[] = [
         {
             key: "name",
-            header: "Nombre",
-            filter: { enabled: true, type: "search", placeholder: "Buscar por nombre..." },
+            header: t('common.name'),
+            filter: { enabled: true, type: "search", placeholder: t('users.searchByName') },
             render: (user: User) => (
                 <div className="flex items-center gap-2">
                     {user.staff?.photo && (
@@ -284,13 +286,13 @@ export default function Crew() {
         },
         {
             key: "email",
-            header: "Correo Electrónico",
+            header: t('users.emailHeader'),
             className: "hidden sm:table-cell",
-            filter: { enabled: true, type: "search", placeholder: "Buscar por email..." },
+            filter: { enabled: true, type: "search", placeholder: t('users.searchByEmail') },
         },
         {
             key: "groupRoles",
-            header: "Roles",
+            header: t('staff.roles'),
             className: "hidden md:table-cell",
             render: (user: User) => (
                 <div className="flex flex-wrap gap-1">
@@ -303,13 +305,13 @@ export default function Crew() {
                                         ? 'bg-yambo-purple-100 text-yambo-purple-800'
                                         : 'bg-yambo-green-50 text-yambo-green-700'
                                 }`}
-                                title={`${gr.role === 'COORDINATOR' ? 'Coordinador' : 'Monitor'} - ${gr.projectName}${gr.groupName ? ` / ${gr.groupName}` : ''}`}
+                                title={`${gr.role === 'COORDINATOR' ? t('users.roleCoordinator') : t('users.roleMonitor')} - ${gr.projectName}${gr.groupName ? ` / ${gr.groupName}` : ''}`}
                             >
                                 {gr.role === 'COORDINATOR' ? 'C' : 'M'}: {gr.groupName || gr.projectName}
                             </span>
                         ))
                     ) : (
-                        <span className="text-gray-400 text-xs italic">Sin roles</span>
+                        <span className="text-gray-400 text-xs italic">{t('users.noRoles')}</span>
                     )}
                     {user.groupRoles && user.groupRoles.length > 4 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
@@ -321,12 +323,12 @@ export default function Crew() {
         },
         {
             key: "actions",
-            header: "Acciones",
+            header: t('users.actions'),
             requiredPerms: [{ obj: "user", action: "update" }],
             render: (user: User) => (
                 <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                     <ButtonComponent onClick={() => startEdit(user)} variant="primary" size="sm">
-                        Editar
+                        {t('common.edit')}
                     </ButtonComponent>
                 </RequirePermission>
             ),
@@ -337,7 +339,7 @@ export default function Crew() {
         <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
             <PageContainer>
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">Equipo</h1>
+                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">{t('staff.title')}</h1>
                     <div className="flex gap-2">
                         {/* View toggle */}
                         <div className="flex rounded-full border border-gray-200 overflow-hidden">
@@ -345,13 +347,13 @@ export default function Crew() {
                                 onClick={() => setView("table")}
                                 className={`px-4 py-1.5 text-sm font-medium transition-all ${view === "table" ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white" : "bg-white text-gray-600 hover:bg-yambo-green-50/30"}`}
                             >
-                                Tabla
+                                {t('staff.viewTable')}
                             </button>
                             <button type="button"
                                 onClick={() => setView("grouped")}
                                 className={`px-4 py-1.5 text-sm font-medium transition-all ${view === "grouped" ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white" : "bg-white text-gray-600 hover:bg-yambo-green-50/30"}`}
                             >
-                                Por Proyecto
+                                {t('staff.viewByProject')}
                             </button>
                         </div>
                         <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
@@ -367,8 +369,8 @@ export default function Crew() {
                         columns={tableColumns}
                         keyField="id"
                         display={{
-                            emptyMessage: "No se encontraron miembros del equipo",
-                            loadingMessage: "Cargando equipo...",
+                            emptyMessage: t('staff.empty'),
+                            loadingMessage: t('staff.loading'),
                         }}
                         serverSide={{ fetchData: fetchCrewData }}
                     />
@@ -377,9 +379,9 @@ export default function Crew() {
                 {view === "grouped" && (
                     <div className="space-y-6">
                         {loadingGrouped ? (
-                            <p className="text-gray-400">Cargando equipo...</p>
+                            <p className="text-gray-400">{t('staff.loading')}</p>
                         ) : projectGroups.length === 0 ? (
-                            <p className="text-gray-400">No se encontraron miembros del equipo</p>
+                            <p className="text-gray-400">{t('staff.empty')}</p>
                         ) : (
                             projectGroups.map(pg => (
                                 <div key={pg.projectId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -389,7 +391,7 @@ export default function Crew() {
                                     <div className="p-5 space-y-4">
                                         {pg.coordinators.length > 0 && (
                                             <div>
-                                                <h3 className="text-sm font-medium text-yambo-purple-600 mb-2">Coordinadores</h3>
+                                                <h3 className="text-sm font-medium text-yambo-purple-600 mb-2">{t('staff.coordinators')}</h3>
                                                 <div className="flex flex-wrap gap-2">
                                                     {pg.coordinators.map(user => (
                                                         <button type="button"
@@ -408,7 +410,7 @@ export default function Crew() {
                                         )}
                                         {pg.monitors.length > 0 && (
                                             <div>
-                                                <h3 className="text-sm font-medium text-yambo-green-600 mb-2">Monitores</h3>
+                                                <h3 className="text-sm font-medium text-yambo-green-600 mb-2">{t('staff.monitors')}</h3>
                                                 {pg.monitors.map(mg => (
                                                     <div key={mg.groupId} className="mb-3">
                                                         {mg.groupName && (
@@ -443,15 +445,15 @@ export default function Crew() {
                 <Modal
                     isOpen={isEditOpen}
                     onClose={resetEdit}
-                    title={`Editar - ${editForm.name}`}
+                    title={t('staff.editMember', { name: editForm.name })}
                     size="md"
                     footer={
                         <>
                             <ButtonComponent onClick={resetEdit} variant="neutral" disabled={saving}>
-                                Cancelar
+                                {t('common.cancel')}
                             </ButtonComponent>
                             <ButtonComponent onClick={handleEditSave} variant="primary" disabled={saving}>
-                                {saving ? "Guardando..." : "Guardar"}
+                                {saving ? t('common.saving') : t('common.save')}
                             </ButtonComponent>
                         </>
                     }
@@ -459,7 +461,7 @@ export default function Crew() {
                     <div className="flex flex-col gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Roles en Grupos *
+                                {t('staff.groupRolesField')}
                             </label>
                             {editForm.groupRoles.map((gr, idx) => (
                                 <div key={idx} className="flex gap-2 mb-2 items-center">
@@ -472,7 +474,7 @@ export default function Crew() {
                                         }}
                                         className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                     >
-                                        <option value="">Seleccionar grupo...</option>
+                                        <option value="">{t('users.selectGroup')}</option>
                                         {groupOptions.map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
@@ -486,8 +488,8 @@ export default function Crew() {
                                         }}
                                         className="w-36 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
                                     >
-                                        <option value="MONITOR">Monitor</option>
-                                        <option value="COORDINATOR">Coordinador</option>
+                                        <option value="MONITOR">{t('users.roleMonitor')}</option>
+                                        <option value="COORDINATOR">{t('users.roleCoordinator')}</option>
                                     </select>
                                     <button
                                         type="button"
@@ -514,11 +516,11 @@ export default function Crew() {
                         </div>
                         {editFormIsStaff && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.bio')}</label>
                                 <textarea
                                     value={editForm.bio}
                                     onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                                    placeholder="Biografía del miembro..."
+                                    placeholder={t('staff.bioPlaceholder')}
                                     rows={3}
                                     maxLength={500}
                                     className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none"
@@ -527,12 +529,12 @@ export default function Crew() {
                         )}
                         {editFormIsStaff && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.funFact')}</label>
                                 <input
                                     type="text"
                                     value={editForm.funFact}
                                     onChange={(e) => setEditForm({ ...editForm, funFact: e.target.value })}
-                                    placeholder="Un dato curioso..."
+                                    placeholder={t('users.funFactPlaceholder')}
                                     maxLength={100}
                                     className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                 />
@@ -545,43 +547,43 @@ export default function Crew() {
                 <Modal
                     isOpen={isAddOpen}
                     onClose={resetAdd}
-                    title="Añadir al Equipo"
+                    title={t('staff.addToStaff')}
                     size="md"
                     footer={
                         <>
                             <ButtonComponent onClick={resetAdd} variant="neutral" disabled={saving}>
-                                Cancelar
+                                {t('common.cancel')}
                             </ButtonComponent>
                             <ButtonComponent
                                 onClick={handleAddSave}
                                 variant="primary"
                                 disabled={saving || !selectedUser || !addGroupId}
                             >
-                                {saving ? "Añadiendo..." : "Añadir"}
+                                {saving ? t('staff.adding') : t('staff.add')}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="flex flex-col gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar usuario</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.searchUser')}</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Escriba para buscar por nombre..."
+                                    placeholder={t('staff.searchUserPlaceholder')}
                                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                 />
                                 {searching && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">Buscando...</span>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">{t('staff.searching')}</span>
                                 )}
                             </div>
                         </div>
 
                         {searchResults.length > 0 && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar usuario</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.selectUser')}</label>
                                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl divide-y">
                                     {searchResults.map(user => (
                                         <button type="button"
@@ -609,13 +611,13 @@ export default function Crew() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Grupo *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.groupField')}</label>
                                     <select
                                         value={addGroupId}
                                         onChange={(e) => setAddGroupId(e.target.value)}
                                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                     >
-                                        <option value="">Seleccionar grupo...</option>
+                                        <option value="">{t('users.selectGroup')}</option>
                                         {groupOptions.map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
@@ -623,14 +625,14 @@ export default function Crew() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.roleField')}</label>
                                     <select
                                         value={addRole}
                                         onChange={(e) => setAddRole(e.target.value as GroupRole)}
                                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                     >
-                                        <option value="MONITOR">Monitor</option>
-                                        <option value="COORDINATOR">Coordinador</option>
+                                        <option value="MONITOR">{t('users.roleMonitor')}</option>
+                                        <option value="COORDINATOR">{t('users.roleCoordinator')}</option>
                                     </select>
                                 </div>
                             </>

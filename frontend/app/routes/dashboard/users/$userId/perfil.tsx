@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useParams, useOutletContext } from "react-router";
 import { adminUserService } from "~/services/adminUserService";
@@ -22,6 +23,7 @@ type OutletContext = {
 };
 
 export default function UserPerfil() {
+    const { t } = useTranslation();
     const { userId } = useParams();
     const { user, refreshUser } = useOutletContext<OutletContext>();
     const [saving, setSaving] = useState(false);
@@ -69,11 +71,11 @@ export default function UserPerfil() {
                 name: form.name,
                 email: form.email,
             });
-            toast.success("Perfil actualizado");
+            toast.success(t('users.profileUpdated'));
             setDirty(false);
             await refreshUser();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar"));
+            toast.error(getErrorMessage(err, t('users.saveError')));
         } finally {
             setSaving(false);
         }
@@ -84,11 +86,11 @@ export default function UserPerfil() {
         try {
             setSavingStaff(true);
             await adminUserService.updateStaff(userId, staffForm);
-            toast.success("Ficha del equipo actualizada");
+            toast.success(t('users.staffCardUpdated'));
             setStaffDirty(false);
             await refreshUser();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar"));
+            toast.error(getErrorMessage(err, t('users.saveError')));
         } finally {
             setSavingStaff(false);
         }
@@ -108,10 +110,10 @@ export default function UserPerfil() {
                 publicVisible: updated.staff?.publicVisible ?? false,
             });
             setStaffDirty(false);
-            toast.success(manual ? "Añadido al equipo" : "Quitado del equipo");
+            toast.success(manual ? t('users.addedToStaff') : t('users.removedFromStaff'));
             await refreshUser();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al guardar"));
+            toast.error(getErrorMessage(err, t('users.saveError')));
         } finally {
             setTogglingManual(false);
         }
@@ -123,9 +125,9 @@ export default function UserPerfil() {
         const caption = `Hoy es Lunes de\n#comosenotaqueeresdeyambo\n\nY hoy traemos a.......\n\n💛 ${displayName}\n\n${staffForm.bio}`;
         try {
             await navigator.clipboard.writeText(caption);
-            toast.success("Texto copiado");
+            toast.success(t('users.captionCopied'));
         } catch {
-            toast.error("No se pudo copiar el texto");
+            toast.error(t('users.captionCopyError'));
         }
     };
 
@@ -135,10 +137,10 @@ export default function UserPerfil() {
             await adminUserService.deleteStaff(userId);
             setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", instagramUrl: "", publicVisible: false });
             setStaffDirty(false);
-            toast.success("Ficha del equipo borrada");
+            toast.success(t('users.staffCardDeleted'));
             await refreshUser();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al borrar la ficha"));
+            toast.error(getErrorMessage(err, t('users.staffCardDeleteError')));
         } finally {
             setConfirmDeleteStaff(false);
         }
@@ -153,10 +155,10 @@ export default function UserPerfil() {
         if (!userId) return;
         try {
             await adminUserService.deleteUser(userId);
-            toast.success("Usuario eliminado");
+            toast.success(t('users.userDeleted'));
             window.history.back();
         } catch (err) {
-            toast.error(getErrorMessage(err, "Error al eliminar"));
+            toast.error(getErrorMessage(err, t('users.deleteError')));
         } finally {
             setConfirmDelete(false);
         }
@@ -169,19 +171,19 @@ export default function UserPerfil() {
                 <div className="px-5 py-4 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
                     <h2 className="font-bold text-yambo-black flex items-center gap-2">
                         <FontAwesomeIcon icon={faCircleUser} className="w-4 h-4 text-yambo-green-600" />
-                        Información personal
+                        {t('users.personalInfo')}
                     </h2>
                 </div>
                 <div className="p-5 sm:p-6">
                     {/* Name + Email side by side on desktop */}
                     <div className="grid md:grid-cols-2 gap-4">
                         <InputComponent
-                            label="Nombre"
+                            label={t('common.name')}
                             value={form.name}
                             onChange={(e) => handleChange("name", e.target.value)}
                         />
                         <InputComponent
-                            label="Email"
+                            label={t('users.email')}
                             type="email"
                             value={form.email}
                             onChange={(e) => handleChange("email", e.target.value)}
@@ -192,7 +194,7 @@ export default function UserPerfil() {
                         <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
                             <ButtonComponent variant="primary" onClick={handleSave} disabled={saving || !dirty} className="w-full sm:w-auto">
                                 <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
-                                {saving ? "Guardando..." : "Guardar cambios"}
+                                {saving ? t('common.saving') : t('users.saveChanges')}
                             </ButtonComponent>
                         </div>
                     </RequirePermission>
@@ -204,7 +206,7 @@ export default function UserPerfil() {
                 <div className="px-5 py-4 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
                     <h2 className="font-bold text-yambo-black flex items-center gap-2">
                         <FontAwesomeIcon icon={faUsers} className="w-4 h-4 text-yambo-green-600" />
-                        Equipo
+                        {t('users.staffSection')}
                     </h2>
                 </div>
                 <div className="p-5 sm:p-6">
@@ -212,11 +214,11 @@ export default function UserPerfil() {
                         <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                             <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
                                 <span>
-                                    <span className="block text-sm font-medium text-gray-700">Añadir al equipo manualmente</span>
+                                    <span className="block text-sm font-medium text-gray-700">{t('users.addToStaffManually')}</span>
                                     <span className="block text-xs text-gray-400 mt-0.5">
                                         {hasStaffRole
-                                            ? "Ya forma parte del equipo por sus roles de monitor o coordinador en proyectos."
-                                            : "Lo convierte en miembro del equipo aunque no tenga rol de monitor o coordinador en ningún proyecto."}
+                                            ? t('users.staffByRolesHint')
+                                            : t('users.staffManualHint')}
                                     </span>
                                 </span>
                                 <CheckboxComponent
@@ -231,7 +233,7 @@ export default function UserPerfil() {
 
                         {!userIsStaff && (
                             <p className="text-sm text-gray-500">
-                                Este usuario no forma parte del equipo, así que no tiene ficha (foto, biografía y dato curioso).
+                                {t('users.notStaffHint')}
                             </p>
                         )}
 
@@ -239,7 +241,7 @@ export default function UserPerfil() {
                             <>
                                 {/* Photo */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Foto</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('users.photo')}</label>
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                                         <div className="w-16 h-16 rounded-full bg-yambo-green-100 flex items-center justify-center text-2xl font-bold text-yambo-green-700 shrink-0 overflow-hidden">
                                             {staffForm.photo
@@ -252,7 +254,7 @@ export default function UserPerfil() {
                                                 compact
                                                 multiple={false}
                                                 accept="image/jpeg,image/png,image/gif,image/webp"
-                                                label="Subir foto"
+                                                label={t('users.uploadPhoto')}
                                                 onUpload={(file) => handleStaffChange("photo", file.url)}
                                             />
                                             {staffForm.photo && (
@@ -260,7 +262,7 @@ export default function UserPerfil() {
                                                     onClick={() => handleStaffChange("photo", "")}
                                                     className="text-xs text-gray-400 hover:text-red-500 transition-colors"
                                                 >
-                                                    Quitar
+                                                    {t('users.removePhoto')}
                                                 </button>
                                             )}
                                         </div>
@@ -269,20 +271,20 @@ export default function UserPerfil() {
 
                                 {/* Nickname */}
                                 <InputComponent
-                                    label="Apodo"
+                                    label={t('users.nickname')}
                                     value={staffForm.nickname}
                                     onChange={(e) => handleStaffChange("nickname", e.target.value)}
                                     maxLength={50}
-                                    placeholder="Cómo le conocen en Yambo"
+                                    placeholder={t('users.nicknamePlaceholder')}
                                 />
 
                                 {/* Bio */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Cómo se nota que eres de Yambo</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('users.bioLabel')}</label>
                                     <textarea
                                         value={staffForm.bio}
                                         onChange={(e) => handleStaffChange("bio", e.target.value)}
-                                        placeholder="Qué estudia o a qué se dedica, cómo llegó a Yambo..."
+                                        placeholder={t('users.bioPlaceholder')}
                                         rows={6}
                                         maxLength={500}
                                         className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none transition-shadow focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
@@ -292,12 +294,12 @@ export default function UserPerfil() {
 
                                 {/* Fun fact */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Dato curioso</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('users.funFact')}</label>
                                     <input
                                         type="text"
                                         value={staffForm.funFact}
                                         onChange={(e) => handleStaffChange("funFact", e.target.value)}
-                                        placeholder="Un dato curioso..."
+                                        placeholder={t('users.funFactPlaceholder')}
                                         maxLength={100}
                                         className="w-full border border-gray-200 rounded-2xl text-sm px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 placeholder-gray-400 bg-white"
                                     />
@@ -306,7 +308,7 @@ export default function UserPerfil() {
                                 {/* Instagram */}
                                 <div>
                                     <InputComponent
-                                        label="Enlace al post de Instagram"
+                                        label={t('users.instagramUrl')}
                                         type="url"
                                         value={staffForm.instagramUrl}
                                         onChange={(e) => handleStaffChange("instagramUrl", e.target.value)}
@@ -318,20 +320,20 @@ export default function UserPerfil() {
                                         disabled={!staffForm.bio}
                                         className="mt-1.5 text-xs text-yambo-green-600 hover:underline disabled:text-gray-300 disabled:no-underline"
                                     >
-                                        Copiar texto para Instagram
+                                        {t('users.copyInstagramCaption')}
                                     </button>
                                 </div>
 
                                 {/* Public visibility */}
                                 <label className={`flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 ${canPublish ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
                                     <span>
-                                        <span className="block text-sm font-medium text-gray-700">Aparecer en la web pública</span>
+                                        <span className="block text-sm font-medium text-gray-700">{t('users.publicVisible')}</span>
                                         <span className="block text-xs text-gray-400 mt-0.5">
                                             {canPublish
-                                                ? "Muestra su foto, apodo y descripción en la página del equipo y en la de sus proyectos."
-                                                : "Solo la propia persona puede activarlo, desde \"Mi cuenta\"."}
+                                                ? t('users.publicVisibleHint')
+                                                : t('users.publicVisibleOnlySelf')}
                                             {user.staff?.publicVisibleAt && (
-                                                <> Visible desde el {new Date(user.staff.publicVisibleAt).toLocaleDateString()}.</>
+                                                <> {t('users.publicVisibleSince', { date: new Date(user.staff.publicVisibleAt).toLocaleDateString() })}</>
                                             )}
                                         </span>
                                     </span>
@@ -352,11 +354,11 @@ export default function UserPerfil() {
                             <div className="mt-6 flex flex-col sm:flex-row justify-between gap-3">
                                 <ButtonComponent variant="danger-text" onClick={() => setConfirmDeleteStaff(true)} className="w-full sm:w-auto">
                                     <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-1.5" />
-                                    Borrar ficha
+                                    {t('users.deleteStaffCard')}
                                 </ButtonComponent>
                                 <ButtonComponent variant="primary" onClick={handleStaffSave} disabled={savingStaff || !staffDirty} className="w-full sm:w-auto">
                                     <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
-                                    {savingStaff ? "Guardando..." : "Guardar ficha"}
+                                    {savingStaff ? t('common.saving') : t('users.saveStaffCard')}
                                 </ButtonComponent>
                             </div>
                         </RequirePermission>
@@ -368,9 +370,9 @@ export default function UserPerfil() {
                 isOpen={confirmDeleteStaff}
                 onClose={() => setConfirmDeleteStaff(false)}
                 onConfirm={executeDeleteStaff}
-                title="Borrar ficha del equipo"
-                message={`Se borrarán la foto, el apodo, la descripción y el dato curioso de "${user.name}", y dejará de aparecer en la web pública. Seguirá formando parte del equipo.`}
-                confirmLabel="Borrar ficha"
+                title={t('users.deleteStaffCardTitle')}
+                message={t('users.deleteStaffCardMessage', { name: user.name })}
+                confirmLabel={t('users.deleteStaffCard')}
                 variant="danger"
             />
 
@@ -379,20 +381,20 @@ export default function UserPerfil() {
                 <div className="px-5 py-4 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
                     <h2 className="font-bold text-yambo-black flex items-center gap-2">
                         <FontAwesomeIcon icon={user.enabled ? faCircleCheck : faCircleXmark} className={`w-4 h-4 ${user.enabled ? "text-yambo-green-600" : "text-coral"}`} />
-                        Estado de la cuenta
+                        {t('users.accountStatus')}
                     </h2>
                 </div>
                 <div className="p-5 sm:p-6">
                     <div className="flex items-center gap-3 mb-2">
                         <div className={`w-3 h-3 rounded-full ${user.enabled ? "bg-yambo-green-500" : "bg-coral"}`} />
                         <span className="text-sm font-medium text-gray-700">
-                            {user.enabled ? "Cuenta activa" : "Cuenta desactivada"}
+                            {user.enabled ? t('users.accountActive') : t('users.accountDisabled')}
                         </span>
                     </div>
                     <p className="text-sm text-gray-500 ml-6">
                         {user.enabled
-                            ? "El usuario puede iniciar sesión y usar la plataforma."
-                            : "El usuario no puede iniciar sesión hasta que se reactive."
+                            ? t('users.accountActiveHint')
+                            : t('users.accountDisabledHint')
                         }
                     </p>
                 </div>
@@ -405,16 +407,16 @@ export default function UserPerfil() {
                         <div className="px-5 py-4 bg-gradient-to-r from-red-50/60 to-transparent border-b border-red-100">
                             <h2 className="font-bold text-red-600 flex items-center gap-2">
                                 <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4" />
-                                Zona de peligro
+                                {t('users.dangerZone')}
                             </h2>
                         </div>
                         <div className="p-5 sm:p-6">
                             <p className="text-sm text-gray-500 mb-4">
-                                Eliminar al usuario de forma permanente. No se puede deshacer.
+                                {t('users.deleteUserHint')}
                             </p>
                             <ButtonComponent variant="destructive" size="sm" onClick={handleDelete} className="w-full sm:w-auto">
                                 <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-1.5" />
-                                Eliminar usuario
+                                {t('users.deleteUser')}
                             </ButtonComponent>
                         </div>
                     </section>
@@ -423,9 +425,9 @@ export default function UserPerfil() {
                 isOpen={confirmDelete}
                 onClose={() => setConfirmDelete(false)}
                 onConfirm={executeDelete}
-                title="Eliminar usuario"
-                message={`¿Eliminar permanentemente a "${user.name}"? Esta acción no se puede deshacer.`}
-                confirmLabel="Eliminar"
+                title={t('users.deleteUser')}
+                message={t('users.deleteUserMessage', { name: user.name })}
+                confirmLabel={t('common.delete')}
                 variant="danger"
             />
         </RequirePermission>
