@@ -228,8 +228,8 @@ export default function ProjectPersonal() {
                             <div key={user.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50 transition-colors">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-9 h-9 rounded-full bg-yambo-purple-100 flex items-center justify-center text-sm font-bold text-yambo-purple-700 shrink-0">
-                                        {user.photo
-                                            ? <img src={user.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                        {user.staff?.photo
+                                            ? <img src={user.staff?.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
                                             : user.name.charAt(0).toUpperCase()
                                         }
                                     </div>
@@ -274,8 +274,8 @@ export default function ProjectPersonal() {
                             <div key={user.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50/50 transition-colors">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-9 h-9 rounded-full bg-yambo-green-100 flex items-center justify-center text-sm font-bold text-yambo-green-700 shrink-0">
-                                        {user.photo
-                                            ? <img src={user.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                        {user.staff?.photo
+                                            ? <img src={user.staff?.photo} alt={user.name} className="w-full h-full rounded-full object-cover" />
                                             : user.name.charAt(0).toUpperCase()
                                         }
                                     </div>
@@ -393,7 +393,7 @@ export default function ProjectPersonal() {
                                         className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-yambo-green-50/30 transition-colors ${selectedUser?.id === user.id ? "bg-yambo-green-50" : ""}`}
                                     >
                                         <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0">
-                                            {user.photo ? <img src={user.photo} alt={user.name} className="w-full h-full rounded-full object-cover" /> : user.name.charAt(0).toUpperCase()}
+                                            {user.staff?.photo ? <img src={user.staff?.photo} alt={user.name} className="w-full h-full rounded-full object-cover" /> : user.name.charAt(0).toUpperCase()}
                                         </div>
                                         <span className="font-medium">{user.name}</span>
                                         <span className="text-gray-400 text-xs ml-auto">{user.email}</span>

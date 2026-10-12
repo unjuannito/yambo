@@ -103,7 +103,7 @@ const LINKS_MAP: Link[] = [
 
     // Proyectos
     {
-        name: "crew",
+        name: "staff",
         href: "/mi-espacio/admin/equipo",
         label: "Equipo",
         need: { obj: "user", action: "read" },

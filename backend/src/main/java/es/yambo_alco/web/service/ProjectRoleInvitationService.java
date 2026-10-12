@@ -302,8 +302,7 @@ public class ProjectRoleInvitationService {
         } else {
             // Monitor/Coordinator: only their projects
             accessibleProjectIds = currentUser.getGroupRoles().stream()
-                    .filter(gr -> gr.getRole() == UserProjectGroupRole.MONITOR
-                            || gr.getRole() == UserProjectGroupRole.COORDINATOR)
+                    .filter(gr -> gr.getRole().isStaff())
                     .map(gr -> gr.getProjectGroup().getProject().getId())
                     .collect(Collectors.toSet());
         }

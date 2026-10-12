@@ -17,7 +17,7 @@ export async function loader() {
         { loc: "/",            changefreq: "weekly",  priority: "1.0" },
         { loc: "/proyectos",   changefreq: "weekly",  priority: "0.9" },
         { loc: "/actividades", changefreq: "weekly",  priority: "0.8" },
-        { loc: "/monitores",   changefreq: "monthly", priority: "0.7" },
+        { loc: "/equipo",      changefreq: "monthly", priority: "0.7" },
         { loc: "/contacto",    changefreq: "monthly", priority: "0.5" },
     ];
 

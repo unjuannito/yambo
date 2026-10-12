@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(of = "id")
-@ToString(exclude = {"password", "profiles", "groupRoles"})
+@ToString(exclude = {"password", "profiles", "groupRoles", "staff"})
 @Entity
 @Table(name = "user", schema = "public")
 public class User implements UserDetails {
@@ -60,15 +60,6 @@ public class User implements UserDetails {
     @Column(name = "system", nullable = false)
     private boolean system = false;
 
-    @Column(length = 500)
-    private String photo;
-
-    @Column(columnDefinition = "TEXT")
-    private String bio;
-
-    @Column(name = "fun_fact", length = 100)
-    private String funFact;
-
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
@@ -79,6 +70,10 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<UserProjectGroup> groupRoles = new HashSet<>();
+
+    /** Staff-only data; may exist while the user is not (or no longer) staff. */
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private Staff staff;
 
     public Set<ProjectGroup> getGroups() {
         return groupRoles.stream()
@@ -100,10 +95,19 @@ public class User implements UserDetails {
                 .collect(Collectors.toSet());
     }
 
-    public boolean canHaveExtraProfileData() {
-        return groupRoles.stream()
-                .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.MONITOR
-                        || gr.getRole() == UserProjectGroupRole.COORDINATOR);
+    /**
+     * A user is staff when marked manually or while holding a MONITOR/COORDINATOR group role.
+     */
+    public boolean isStaff() {
+        if (staff != null && staff.isManual()) {
+            return true;
+        }
+        return groupRoles.stream().anyMatch(gr -> gr.getRole().isStaff());
+    }
+
+    /** Staff photo, or null when the user is not currently staff. */
+    public String getStaffPhoto() {
+        return staff != null && isStaff() ? staff.getPhoto() : null;
     }
 
     public boolean hasRoleInProject(UserProjectGroupRole role, String projectId) {

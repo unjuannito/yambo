@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Activity;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.ActivityStatus;
@@ -63,7 +64,7 @@ class ActivityControllerTest {
                 .name("Test Manager")
                 .email("manager@example.com")
                 .password("password")
-                .photo("/uploads/photo.jpg")
+                .staff(Staff.builder().photo("/uploads/photo.jpg").manual(true).build())
                 .profiles(Set.of())
                 .build();
 
@@ -267,7 +268,7 @@ class ActivityControllerTest {
         verify(activityService).deleteActivity("ACT00001");
     }
 
-    // ── GET /activities/projects/{projectId}/monitors ────────────────────
+    // ── GET /activities/projects/{projectId}/staff ────────────────────
 
     @Test
     @WithMockUser
@@ -276,12 +277,12 @@ class ActivityControllerTest {
         User monitor = User.builder()
                 .id("U0000001")
                 .name("Monitor User")
-                .photo("/uploads/photo.jpg")
+                .staff(Staff.builder().photo("/uploads/photo.jpg").manual(true).build())
                 .build();
         when(activityService.getStaffByProject("PRJ00001")).thenReturn(List.of(monitor));
 
         // When & Then
-        mockMvc.perform(get("/activities/projects/PRJ00001/monitors"))
+        mockMvc.perform(get("/activities/projects/PRJ00001/staff"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(1))

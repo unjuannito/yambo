@@ -6,14 +6,14 @@ import { useApiMutation } from "~/hooks/useApiMutation";
 import { userService } from "~/services/userService";
 import { fileService } from "~/services/fileService";
 import { useTranslation } from "react-i18next";
-import type { UpdateProfileRequest, ChangePasswordRequest } from "~/services/userService";
+import type { UpdateProfileRequest, UpdateStaffRequest, ChangePasswordRequest } from "~/services/userService";
 import type { CurrentUser } from "~/types/userType";
 import InputComponent from "~/components/common/forms/InputComponent";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { canHaveExtraProfileData } from "~/utils/roleHelpers";
+import { faUser, faUsers, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { isStaff } from "~/utils/roleHelpers";
 import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
@@ -26,6 +26,7 @@ export function meta({}: Route.MetaArgs) {
 const UserIcon = () => <FontAwesomeIcon icon={faUser} className="w-5 h-5" />;
 const LockIcon = () => <FontAwesomeIcon icon={faLock} className="w-5 h-5" />;
 const TrashIcon = () => <FontAwesomeIcon icon={faTrash} className="w-5 h-5" />;
+const StaffIcon = () => <FontAwesomeIcon icon={faUsers} className="w-5 h-5" />;
 const BellIcon = () => <FontAwesomeIcon icon={faBell} className="w-5 h-5" />;
 
 function getInitials(name: string): string {
@@ -45,9 +46,12 @@ export default function MyAccount() {
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    photo: user?.photo || "",
-    bio: user?.bio || "",
-    funFact: user?.funFact || "",
+  });
+
+  const [staffData, setStaffData] = useState({
+    photo: user?.staff?.photo || "",
+    bio: user?.staff?.bio || "",
+    funFact: user?.staff?.funFact || "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -77,7 +81,7 @@ export default function MyAccount() {
     setPhotoUploading(true);
     try {
       const uploaded = await fileService.upload(file);
-      setProfileData((prev) => ({ ...prev, photo: uploaded.url }));
+      setStaffData((prev) => ({ ...prev, photo: uploaded.url }));
     } catch (err) {
       setPhotoError("Error al subir la imagen. Inténtalo de nuevo.");
     } finally {
@@ -101,9 +105,11 @@ export default function MyAccount() {
       setProfileData({
         name: user.name,
         email: user.email,
-        photo: user.photo || "",
-        bio: user.bio || "",
-        funFact: user.funFact || "",
+      });
+      setStaffData({
+        photo: user.staff?.photo || "",
+        bio: user.staff?.bio || "",
+        funFact: user.staff?.funFact || "",
       });
       if (user.notificationPreferences) {
         setNotifPrefs(user.notificationPreferences);
@@ -114,6 +120,14 @@ export default function MyAccount() {
   const updateProfileMutation = useApiMutation<CurrentUser, UpdateProfileRequest>({
     mutationFn: (data) => userService.updateProfile(data),
     successMessage: "Perfil actualizado correctamente",
+    onSuccess: () => {
+      reload();
+    },
+  });
+
+  const updateStaffMutation = useApiMutation<CurrentUser, UpdateStaffRequest>({
+    mutationFn: (data) => userService.updateStaff(data),
+    successMessage: "Ficha del equipo actualizada correctamente",
     onSuccess: () => {
       reload();
     },
@@ -154,6 +168,11 @@ export default function MyAccount() {
     updateProfileMutation.mutate(profileData);
   };
 
+  const handleStaffSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateStaffMutation.mutate(staffData);
+  };
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
@@ -188,9 +207,9 @@ export default function MyAccount() {
       {/* Header con avatar */}
       <div className="mb-8 w-full max-w-5xl">
         <div className="flex items-center justify-center gap-6">
-          {user?.photo ? (
+          {user?.staff?.photo ? (
             <img
-              src={user.photo}
+              src={user.staff.photo}
               alt={user.name}
               className="w-20 h-20 rounded-full object-cover shadow-lg ring-4 ring-yambo-green-100"
             />
@@ -245,57 +264,6 @@ export default function MyAccount() {
               required
               placeholder="tu@email.com"
             />
-            <div className="space-y-4">
-              <div className="flex items-center gap-5">
-                {profileData.photo ? (
-                  <div className="relative group">
-                    <img
-                      src={profileData.photo}
-                      alt="Foto de perfil"
-                      className="w-24 h-24 rounded-full object-cover shadow-md ring-4 ring-yambo-green-100"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setProfileData((prev) => ({ ...prev, photo: "" }))}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
-                      title="Eliminar foto"
-                    >
-                      <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 flex items-center justify-center text-white text-3xl font-bold shadow-md ring-4 ring-yambo-green-100">
-                    {getInitials(profileData.name || "?")}
-                  </div>
-                )}
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-gray-700">{t('myAccount.profilePhoto')}</label>
-                  <div className="flex gap-2">
-                    <ButtonComponent type="button" variant="primary" size="sm" onClick={openPhotoPicker} disabled={photoUploading}>
-                      {photoUploading ? (
-                        <><FontAwesomeIcon icon={faSpinner} spin className="mr-1" /> Subiendo...</>
-                      ) : (
-                        <><FontAwesomeIcon icon={faCamera} className="mr-1" /> {profileData.photo ? "Cambiar foto" : "Subir foto"}</>
-                      )}
-                    </ButtonComponent>
-                    {profileData.photo && (
-                      <ButtonComponent type="button" variant="danger-text" size="sm" onClick={() => setProfileData((prev) => ({ ...prev, photo: "" }))}>
-                        <FontAwesomeIcon icon={faTrash} className="mr-1" /> Eliminar
-                      </ButtonComponent>
-                    )}
-                  </div>
-                  {photoError && <p className="text-xs text-red-500">{photoError}</p>}
-                  <p className="text-xs text-gray-400">JPEG, PNG, WebP. Máx 2 MB.</p>
-                </div>
-              </div>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handlePhotoChange}
-                className="hidden"
-              />
-            </div>
             {user?.groupRoles && user.groupRoles.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Roles en Grupos</label>
@@ -308,40 +276,6 @@ export default function MyAccount() {
                 </p>
               </div>
             )}
-            {canHaveExtraProfileData(user) && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
-                  <textarea
-                    name="bio"
-                    value={profileData.bio}
-                    onChange={(e) =>
-                      setProfileData((prev) => ({ ...prev, bio: e.target.value }))
-                    }
-                    placeholder={t('myAccount.bioPlaceholder')}
-                    rows={3}
-                    maxLength={500}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-all"
-                  />
-                  <p className="text-xs text-gray-400 mt-1 text-right">{profileData.bio.length}/500</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
-                  <input
-                    name="funFact"
-                    type="text"
-                    value={profileData.funFact}
-                    onChange={(e) =>
-                      setProfileData((prev) => ({ ...prev, funFact: e.target.value }))
-                    }
-                    placeholder={t('myAccount.funFactPlaceholder')}
-                    maxLength={100}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 transition-all"
-                  />
-                  <p className="text-xs text-gray-400 mt-1 text-right">{profileData.funFact.length}/100</p>
-                </div>
-              </>
-            )}
             <div className="flex justify-end pt-2">
               <ButtonComponent
                 type="submit"
@@ -353,6 +287,115 @@ export default function MyAccount() {
             </div>
           </form>
         </section>
+
+        {/* Ficha del equipo (solo staff) */}
+        {isStaff(user) && (
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-yambo-purple-50 to-yambo-purple-100/50 border-b border-yambo-purple-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-yambo-purple-500 to-yambo-purple-600 rounded-xl text-white">
+                  <StaffIcon />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold font-display text-yambo-black">{t('myAccount.staffInfo')}</h2>
+                  <p className="text-sm text-gray-400">{t('myAccount.staffInfoDesc')}</p>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleStaffSubmit} className="p-6 space-y-5">
+              <div className="space-y-4">
+                <div className="flex items-center gap-5">
+                  {staffData.photo ? (
+                    <div className="relative group">
+                      <img
+                        src={staffData.photo}
+                        alt="Foto de perfil"
+                        className="w-24 h-24 rounded-full object-cover shadow-md ring-4 ring-yambo-green-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setStaffData((prev) => ({ ...prev, photo: "" }))}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
+                        title="Eliminar foto"
+                      >
+                        <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 flex items-center justify-center text-white text-3xl font-bold shadow-md ring-4 ring-yambo-green-100">
+                      {getInitials(user?.name || "?")}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold text-gray-700">{t('myAccount.profilePhoto')}</label>
+                    <div className="flex gap-2">
+                      <ButtonComponent type="button" variant="primary" size="sm" onClick={openPhotoPicker} disabled={photoUploading}>
+                        {photoUploading ? (
+                          <><FontAwesomeIcon icon={faSpinner} spin className="mr-1" /> Subiendo...</>
+                        ) : (
+                          <><FontAwesomeIcon icon={faCamera} className="mr-1" /> {staffData.photo ? "Cambiar foto" : "Subir foto"}</>
+                        )}
+                      </ButtonComponent>
+                      {staffData.photo && (
+                        <ButtonComponent type="button" variant="danger-text" size="sm" onClick={() => setStaffData((prev) => ({ ...prev, photo: "" }))}>
+                          <FontAwesomeIcon icon={faTrash} className="mr-1" /> Eliminar
+                        </ButtonComponent>
+                      )}
+                    </div>
+                    {photoError && <p className="text-xs text-red-500">{photoError}</p>}
+                    <p className="text-xs text-gray-400">JPEG, PNG, WebP. Máx 2 MB.</p>
+                  </div>
+                </div>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
+                <textarea
+                  name="bio"
+                  value={staffData.bio}
+                  onChange={(e) =>
+                    setStaffData((prev) => ({ ...prev, bio: e.target.value }))
+                  }
+                  placeholder={t('myAccount.bioPlaceholder')}
+                  rows={3}
+                  maxLength={500}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none transition-all"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-right">{staffData.bio.length}/500</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dato curioso</label>
+                <input
+                  name="funFact"
+                  type="text"
+                  value={staffData.funFact}
+                  onChange={(e) =>
+                    setStaffData((prev) => ({ ...prev, funFact: e.target.value }))
+                  }
+                  placeholder={t('myAccount.funFactPlaceholder')}
+                  maxLength={100}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 transition-all"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-right">{staffData.funFact.length}/100</p>
+              </div>
+              <div className="flex justify-end pt-2">
+                <ButtonComponent
+                  type="submit"
+                  variant="primary"
+                  isLoading={updateStaffMutation.isLoading}
+                >
+                  {t('myAccount.saveChanges')}
+                </ButtonComponent>
+              </div>
+            </form>
+          </section>
+        )}
 
         {/* Seguridad */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

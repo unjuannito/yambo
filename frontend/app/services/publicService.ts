@@ -85,7 +85,7 @@ export class PublicService extends ApiService {
     }
 
     public async getStaff(): Promise<StaffMember[]> {
-        return await this.get('/public/monitors');
+        return await this.get('/public/staff');
     }
 
     public async getActiveProjects(): Promise<ActiveProject[]> {

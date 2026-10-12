@@ -5,7 +5,7 @@ import Hero from "~/components/home/Hero";
 import AboutUs from "~/components/home/AboutUs";
 import FeaturedProjects from "~/components/home/FeaturedProjects";
 import ActivitiesPreview from "~/components/home/ActivitiesPreview";
-import MonitorsGallery from "~/components/home/MonitorsGallery";
+import StaffGallery from "~/components/home/StaffGallery";
 import {
     getHomeSettings,
     getFeaturedProjects,
@@ -54,14 +54,14 @@ interface SectionConfig {
 }
 
 export async function loader() {
-    const [settings, contactSettings, projects, monitors, activities] = await Promise.all([
+    const [settings, contactSettings, projects, staff, activities] = await Promise.all([
         getHomeSettings(),
         getContactSettings(),
         getFeaturedProjects(),
         getStaff(),
         getPublicActivities(),
     ]);
-    return { settings, contactSettings, projects, monitors, activities, siteUrl: getSiteUrl() };
+    return { settings, contactSettings, projects, staff, activities, siteUrl: getSiteUrl() };
 }
 
 const SECTION_COMPONENTS: Record<
@@ -71,7 +71,7 @@ const SECTION_COMPONENTS: Record<
         sectionIndex: number;
         settings: Record<string, string>;
         projects: any;
-        monitors: any;
+        staff: any;
         activities: any;
     }) => React.ReactNode
 > = {
@@ -99,14 +99,14 @@ const SECTION_COMPONENTS: Record<
     activities: ({ title, sectionIndex, activities }) => (
         <ActivitiesPreview key="activities" title={title} sectionIndex={sectionIndex} activities={activities} />
     ),
-    monitors: ({ title, sectionIndex, monitors }) => (
-        <MonitorsGallery key="monitors" title={title} sectionIndex={sectionIndex} monitors={monitors} />
+    staff: ({ title, sectionIndex, staff }) => (
+        <StaffGallery key="staff" title={title} sectionIndex={sectionIndex} staff={staff} />
     ),
 };
 
 export default function Index() {
     const { t } = useTranslation();
-    const { settings, projects, monitors, activities } = useLoaderData<typeof loader>();
+    const { settings, projects, staff, activities } = useLoaderData<typeof loader>();
 
     const sections = useMemo<SectionConfig[]>(() => {
         const defaults: SectionConfig[] = [
@@ -114,7 +114,7 @@ export default function Index() {
             { id: "about", visible: true, title: t("public.aboutSection") },
             { id: "projects", visible: true, title: t("public.featuredProjects") },
             { id: "activities", visible: true, title: t("public.activitiesTitle") },
-            { id: "monitors", visible: true, title: t("public.ourTeam") },
+            { id: "staff", visible: true, title: t("public.ourTeam") },
         ];
 
         const raw = settings["home.sections.config"];
@@ -129,13 +129,14 @@ export default function Index() {
         return defaults;
     }, [settings, t]);
 
-    const sharedProps = { settings, projects, monitors, activities };
+    const sharedProps = { settings, projects, staff, activities };
 
     return (
         <>
             {sections.map((section, index) => {
                 if (!section.visible) return null;
-                const Component = SECTION_COMPONENTS[section.id];
+                // "monitors" is the former id of the staff section (configs saved before the rename)
+                const Component = SECTION_COMPONENTS[section.id === "monitors" ? "staff" : section.id];
                 if (!Component) return null;
                 return Component({ title: section.title, sectionIndex: index, ...sharedProps });
             })}
