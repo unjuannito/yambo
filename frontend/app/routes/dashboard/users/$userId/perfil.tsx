@@ -11,23 +11,14 @@ import FileUploader from "~/components/common/FileUploader";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFloppyDisk, faTrashCan, faCircleUser, faCircleCheck, faCircleXmark, faLock } from "@fortawesome/free-solid-svg-icons";
-import { canHaveExtraProfileData } from "~/utils/roleHelpers";
+import { faFloppyDisk, faTrashCan, faCircleUser, faCircleCheck, faCircleXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { isStaff } from "~/utils/roleHelpers";
 
 type OutletContext = {
     user: User;
     refreshUser: () => Promise<void>;
     userId: string | undefined;
 };
-
-function ExtraProfileNotice() {
-    return (
-        <span className="ml-2 text-xs text-gray-400 font-normal">
-            <FontAwesomeIcon icon={faLock} className="w-3 h-3 mr-0.5" />
-            Solo disponible para monitores y coordinadores
-        </span>
-    );
-}
 
 export default function UserPerfil() {
     const { userId } = useParams();
@@ -36,20 +27,31 @@ export default function UserPerfil() {
     const [form, setForm] = useState({
         name: user.name,
         email: user.email,
-        photo: user.photo || "",
-        bio: user.bio || "",
-        funFact: user.funFact || "",
-        nickname: user.nickname || "",
-        publicVisible: user.publicVisible ?? false,
     });
     const [dirty, setDirty] = useState(false);
+    const [savingStaff, setSavingStaff] = useState(false);
+    const [staffForm, setStaffForm] = useState({
+        photo: user.staff?.photo || "",
+        bio: user.staff?.bio || "",
+        funFact: user.staff?.funFact || "",
+        nickname: user.staff?.nickname || "",
+        publicVisible: user.staff?.publicVisible ?? false,
+    });
+    const [staffDirty, setStaffDirty] = useState(false);
+    const [togglingManual, setTogglingManual] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const canHaveExtra = canHaveExtraProfileData(user);
+    const userIsStaff = isStaff(user);
+    const isManualStaff = user.staff?.manual ?? false;
+    const hasStaffRole = isStaff({ groupRoles: user.groupRoles });
 
-    const handleChange = (field: string, value: string | boolean) => {
-        if (!canHaveExtra && ["photo", "bio", "funFact", "nickname", "publicVisible"].includes(field)) return;
+    const handleChange = (field: string, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }));
         setDirty(true);
+    };
+
+    const handleStaffChange = (field: string, value: string | boolean) => {
+        setStaffForm(prev => ({ ...prev, [field]: value }));
+        setStaffDirty(true);
     };
 
     const handleSave = async () => {
@@ -60,13 +62,6 @@ export default function UserPerfil() {
                 id: userId,
                 name: form.name,
                 email: form.email,
-                ...(canHaveExtra ? {
-                    photo: form.photo || undefined,
-                    bio: form.bio || undefined,
-                    funFact: form.funFact || undefined,
-                    nickname: form.nickname,
-                    publicVisible: form.publicVisible,
-                } : {}),
             });
             toast.success("Perfil actualizado");
             setDirty(false);
@@ -75,6 +70,43 @@ export default function UserPerfil() {
             toast.error(getErrorMessage(err, "Error al guardar"));
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleStaffSave = async () => {
+        if (!userId) return;
+        try {
+            setSavingStaff(true);
+            await adminUserService.updateStaff(userId, staffForm);
+            toast.success("Ficha del equipo actualizada");
+            setStaffDirty(false);
+            await refreshUser();
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar"));
+        } finally {
+            setSavingStaff(false);
+        }
+    };
+
+    const handleManualToggle = async (manual: boolean) => {
+        if (!userId) return;
+        try {
+            setTogglingManual(true);
+            const updated = await adminUserService.setManualStaff(userId, manual);
+            setStaffForm({
+                photo: updated.staff?.photo || "",
+                bio: updated.staff?.bio || "",
+                funFact: updated.staff?.funFact || "",
+                nickname: updated.staff?.nickname || "",
+                publicVisible: updated.staff?.publicVisible ?? false,
+            });
+            setStaffDirty(false);
+            toast.success(manual ? "Añadido al equipo" : "Quitado del equipo");
+            await refreshUser();
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al guardar"));
+        } finally {
+            setTogglingManual(false);
         }
     };
 
@@ -107,138 +139,19 @@ export default function UserPerfil() {
                     </h2>
                 </div>
                 <div className="p-5 sm:p-6">
-                    <div className="grid gap-5">
-                        {/* Photo */}
-                        <div className={!canHaveExtra ? "opacity-50" : ""}>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Foto
-                                {!canHaveExtra && <ExtraProfileNotice />}
-                            </label>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-yambo-green-100 flex items-center justify-center text-2xl font-bold text-yambo-green-700 shrink-0 overflow-hidden">
-                                    {form.photo
-                                        ? <img src={form.photo} alt={form.name} className="w-full h-full object-cover" />
-                                        : form.name.charAt(0).toUpperCase()
-                                    }
-                                </div>
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <FileUploader
-                                        compact
-                                        multiple={false}
-                                        accept="image/jpeg,image/png,image/gif,image/webp"
-                                        label="Subir foto"
-                                        onUpload={(file) => handleChange("photo", file.url)}
-                                    />
-                                    {form.photo && (
-                                        <button type="button"
-                                            onClick={() => handleChange("photo", "")}
-                                            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                                        >
-                                            Quitar
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Name + Email side by side on desktop */}
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <InputComponent
-                                label="Nombre"
-                                value={form.name}
-                                onChange={(e) => handleChange("name", e.target.value)}
-                            />
-                            <InputComponent
-                                label="Email"
-                                type="email"
-                                value={form.email}
-                                onChange={(e) => handleChange("email", e.target.value)}
-                            />
-                        </div>
-
-                        {/* Nickname */}
-                        <div className={!canHaveExtra ? "opacity-50" : ""}>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Apodo
-                                {!canHaveExtra && <ExtraProfileNotice />}
-                            </label>
-                            <input
-                                type="text"
-                                value={form.nickname}
-                                onChange={(e) => handleChange("nickname", e.target.value)}
-                                placeholder="Cómo le conocen en Yambo"
-                                maxLength={50}
-                                readOnly={!canHaveExtra}
-                                className={`w-full border border-gray-200 rounded-2xl text-sm px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow ${
-                                    canHaveExtra
-                                        ? "focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 placeholder-gray-400 bg-white"
-                                        : "bg-gray-50 text-gray-500 cursor-not-allowed"
-                                }`}
-                            />
-                        </div>
-
-                        {/* Bio */}
-                        <div className={!canHaveExtra ? "opacity-50" : ""}>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Cómo se nota que eres de Yambo
-                                {!canHaveExtra && <ExtraProfileNotice />}
-                            </label>
-                            <textarea
-                                value={form.bio}
-                                onChange={(e) => handleChange("bio", e.target.value)}
-                                placeholder="Qué estudia o a qué se dedica, cómo llegó a Yambo..."
-                                rows={6}
-                                maxLength={500}
-                                readOnly={!canHaveExtra}
-                                className={`w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none transition-shadow ${
-                                    canHaveExtra
-                                        ? "focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                                        : "bg-gray-50 text-gray-500 cursor-not-allowed"
-                                }`}
-                            />
-                            <p className="text-xs text-gray-400 mt-1 text-right">{form.bio.length}/500</p>
-                        </div>
-
-                        {/* Fun fact */}
-                        <div className={!canHaveExtra ? "opacity-50" : ""}>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Dato curioso
-                                {!canHaveExtra && <ExtraProfileNotice />}
-                            </label>
-                            <input
-                                type="text"
-                                value={form.funFact}
-                                onChange={(e) => handleChange("funFact", e.target.value)}
-                                placeholder="Un dato curioso..."
-                                maxLength={100}
-                                readOnly={!canHaveExtra}
-                                className={`w-full border border-gray-200 rounded-2xl text-sm px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow ${
-                                    canHaveExtra
-                                        ? "focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 placeholder-gray-400 bg-white"
-                                        : "bg-gray-50 text-gray-500 cursor-not-allowed"
-                                }`}
-                            />
-                        </div>
-
-                        {/* Public visibility */}
-                        <label className={`flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 ${canHaveExtra ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}>
-                            <span>
-                                <span className="block text-sm font-medium text-gray-700">
-                                    Aparecer en la web pública
-                                    {!canHaveExtra && <ExtraProfileNotice />}
-                                </span>
-                                <span className="block text-xs text-gray-400 mt-0.5">
-                                    Muestra su foto, apodo y descripción en la página de monitores y en la de sus proyectos.
-                                </span>
-                            </span>
-                            <CheckboxComponent
-                                variantType="toggle"
-                                className="shrink-0 mt-0.5"
-                                checked={form.publicVisible}
-                                disabled={!canHaveExtra}
-                                onChange={(e) => handleChange("publicVisible", e.target.checked)}
-                            />
-                        </label>
+                    {/* Name + Email side by side on desktop */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <InputComponent
+                            label="Nombre"
+                            value={form.name}
+                            onChange={(e) => handleChange("name", e.target.value)}
+                        />
+                        <InputComponent
+                            label="Email"
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => handleChange("email", e.target.value)}
+                        />
                     </div>
 
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
@@ -249,6 +162,142 @@ export default function UserPerfil() {
                             </ButtonComponent>
                         </div>
                     </RequirePermission>
+                </div>
+            </section>
+
+            {/* Staff */}
+            <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <div className="px-5 py-4 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
+                    <h2 className="font-bold text-yambo-black flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUsers} className="w-4 h-4 text-yambo-green-600" />
+                        Equipo
+                    </h2>
+                </div>
+                <div className="p-5 sm:p-6">
+                    <div className="grid gap-5">
+                        <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
+                            <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
+                                <span>
+                                    <span className="block text-sm font-medium text-gray-700">Añadir al equipo manualmente</span>
+                                    <span className="block text-xs text-gray-400 mt-0.5">
+                                        {hasStaffRole
+                                            ? "Ya forma parte del equipo por sus roles de monitor o coordinador en proyectos."
+                                            : "Lo convierte en miembro del equipo aunque no tenga rol de monitor o coordinador en ningún proyecto."}
+                                    </span>
+                                </span>
+                                <CheckboxComponent
+                                    variantType="toggle"
+                                    className="shrink-0 mt-0.5"
+                                    checked={isManualStaff}
+                                    disabled={togglingManual}
+                                    onChange={(e) => handleManualToggle(e.target.checked)}
+                                />
+                            </label>
+                        </RequirePermission>
+
+                        {!userIsStaff && (
+                            <p className="text-sm text-gray-500">
+                                Este usuario no forma parte del equipo, así que no tiene ficha (foto, biografía y dato curioso).
+                            </p>
+                        )}
+
+                        {userIsStaff && (
+                            <>
+                                {/* Photo */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Foto</label>
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                        <div className="w-16 h-16 rounded-full bg-yambo-green-100 flex items-center justify-center text-2xl font-bold text-yambo-green-700 shrink-0 overflow-hidden">
+                                            {staffForm.photo
+                                                ? <img src={staffForm.photo} alt={form.name} className="w-full h-full object-cover" />
+                                                : form.name.charAt(0).toUpperCase()
+                                            }
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <FileUploader
+                                                compact
+                                                multiple={false}
+                                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                                label="Subir foto"
+                                                onUpload={(file) => handleStaffChange("photo", file.url)}
+                                            />
+                                            {staffForm.photo && (
+                                                <button type="button"
+                                                    onClick={() => handleStaffChange("photo", "")}
+                                                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    Quitar
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Nickname */}
+                                <InputComponent
+                                    label="Apodo"
+                                    value={staffForm.nickname}
+                                    onChange={(e) => handleStaffChange("nickname", e.target.value)}
+                                    maxLength={50}
+                                    placeholder="Cómo le conocen en Yambo"
+                                />
+
+                                {/* Bio */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Cómo se nota que eres de Yambo</label>
+                                    <textarea
+                                        value={staffForm.bio}
+                                        onChange={(e) => handleStaffChange("bio", e.target.value)}
+                                        placeholder="Qué estudia o a qué se dedica, cómo llegó a Yambo..."
+                                        rows={6}
+                                        maxLength={500}
+                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none transition-shadow focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1 text-right">{staffForm.bio.length}/500</p>
+                                </div>
+
+                                {/* Fun fact */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Dato curioso</label>
+                                    <input
+                                        type="text"
+                                        value={staffForm.funFact}
+                                        onChange={(e) => handleStaffChange("funFact", e.target.value)}
+                                        placeholder="Un dato curioso..."
+                                        maxLength={100}
+                                        className="w-full border border-gray-200 rounded-2xl text-sm px-4 py-2.5 transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 placeholder-gray-400 bg-white"
+                                    />
+                                </div>
+
+                                {/* Public visibility */}
+                                <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
+                                    <span>
+                                        <span className="block text-sm font-medium text-gray-700">Aparecer en la web pública</span>
+                                        <span className="block text-xs text-gray-400 mt-0.5">
+                                            Muestra su foto, apodo y descripción en la página del equipo y en la de sus proyectos.
+                                        </span>
+                                    </span>
+                                    <CheckboxComponent
+                                        variantType="toggle"
+                                        className="shrink-0 mt-0.5"
+                                        checked={staffForm.publicVisible}
+                                        onChange={(e) => handleStaffChange("publicVisible", e.target.checked)}
+                                    />
+                                </label>
+                            </>
+                        )}
+                    </div>
+
+                    {userIsStaff && (
+                        <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
+                            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                                <ButtonComponent variant="primary" onClick={handleStaffSave} disabled={savingStaff || !staffDirty} className="w-full sm:w-auto">
+                                    <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
+                                    {savingStaff ? "Guardando..." : "Guardar ficha"}
+                                </ButtonComponent>
+                            </div>
+                        </RequirePermission>
+                    )}
                 </div>
             </section>
 

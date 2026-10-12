@@ -6,15 +6,26 @@ export type NotificationPreferences = {
     issueStatus: boolean;
 };
 
+/**
+ * Datos propios de un miembro del equipo (extensión 1:1 del usuario).
+ * Solo viene informado mientras el usuario es staff: añadido a mano (`manual`)
+ * o con un rol de monitor/coordinador en algún grupo.
+ */
+export type StaffData = {
+    photo?: string | null;
+    bio?: string | null;
+    funFact?: string | null;
+    nickname?: string | null;
+    /** Opt-in: solo aparece en la web pública si está activado. */
+    publicVisible: boolean;
+    manual: boolean;
+};
+
 export type CurrentUser = {
     id: string;
     email: string;
     name: string;
-    photo?: string;
-    bio?: string;
-    funFact?: string;
-    nickname?: string;
-    publicVisible?: boolean;
+    staff?: StaffData | null;
     notificationPreferences?: NotificationPreferences;
     groupRoles?: UserGroupRole[];
     permissions: Permission[]
@@ -24,11 +35,7 @@ export type User = {
     id: string;
     email: string;
     name: string;
-    photo?: string;
-    bio?: string;
-    funFact?: string;
-    nickname?: string;
-    publicVisible?: boolean;
+    staff?: StaffData | null;
     groupRoles?: UserGroupRole[];
     createdAt: string;
     created_by: string;

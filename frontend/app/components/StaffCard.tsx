@@ -7,22 +7,22 @@ import { Modal } from "~/components/common/Modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 
-interface MonitorCardProps {
-    monitor: StaffMember;
+interface StaffCardProps {
+    member: StaffMember;
     roleLabel?: string;
     projectName?: string;
 }
 
-export default function MonitorCard({ monitor, roleLabel, projectName }: MonitorCardProps) {
+export default function StaffCard({ member, roleLabel, projectName }: StaffCardProps) {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
-    const displayName = monitor.nickname || monitor.name;
+    const displayName = member.nickname || member.name;
 
     const displayGroups = projectName
-        ? monitor.groups
+        ? member.groups
             .filter(g => g.projectName === projectName && g.name)
             .map(g => ({ ...g, label: g.name! }))
-        : monitor.groups.map(g => ({
+        : member.groups.map(g => ({
             ...g,
             label: g.name ? `${g.projectName} - ${g.name}` : g.projectName,
         }));
@@ -49,7 +49,7 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
             <div
                 role="button"
                 tabIndex={0}
-                aria-label={t('public.monitorViewProfile', { name: displayName })}
+                aria-label={t('public.staffViewProfile', { name: displayName })}
                 onClick={() => setIsOpen(true)}
                 onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -60,9 +60,9 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                 className="h-full rounded-2xl shadow-md overflow-hidden bg-white hover:shadow-xl transition-all duration-300 hover-lift cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-yambo-green-400"
             >
                 <div className="w-full h-[220px] overflow-hidden">
-                    {monitor.photo ? (
+                    {member.photo ? (
                         <img
-                            src={monitor.photo}
+                            src={member.photo}
                             alt={displayName}
                             className="w-full h-full object-cover"
                             style={{ objectPosition: "center top" }}
@@ -83,9 +83,9 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                         </span>
                     )}
                     {groupBadges}
-                    {monitor.bio && (
+                    {member.bio && (
                         <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">
-                            {monitor.bio}
+                            {member.bio}
                         </p>
                     )}
                 </div>
@@ -102,9 +102,9 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                 >
                     <div className="flex flex-col sm:flex-row gap-5 sm:gap-6">
                         <div className="w-full sm:w-64 shrink-0">
-                            {monitor.photo ? (
+                            {member.photo ? (
                                 <img
-                                    src={monitor.photo}
+                                    src={member.photo}
                                     alt={displayName}
                                     className="w-full max-h-[50vh] sm:max-h-none rounded-2xl object-cover"
                                     style={{ objectPosition: "center top" }}
@@ -116,26 +116,26 @@ export default function MonitorCard({ monitor, roleLabel, projectName }: Monitor
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            {monitor.nickname && (
-                                <p className="text-sm text-gray-500">{monitor.name}</p>
+                            {member.nickname && (
+                                <p className="text-sm text-gray-500">{member.name}</p>
                             )}
                             {groupBadges}
-                            {monitor.bio && (
+                            {member.bio && (
                                 <div className="mt-4">
                                     <h3 className="text-sm font-bold uppercase tracking-wide text-yambo-green-600">
-                                        {t('public.monitorAboutTitle')}
+                                        {t('public.staffAboutTitle')}
                                     </h3>
                                     <p className="mt-1.5 text-sm text-gray-700 leading-relaxed whitespace-pre-line break-words">
-                                        {monitor.bio}
+                                        {member.bio}
                                     </p>
                                 </div>
                             )}
-                            {monitor.funFact && (
+                            {member.funFact && (
                                 <div className="mt-4 rounded-xl bg-yambo-purple-100/60 px-4 py-3">
                                     <h3 className="text-xs font-bold uppercase tracking-wide text-yambo-purple-700">
-                                        {t('public.monitorFunFact')}
+                                        {t('public.staffFunFact')}
                                     </h3>
-                                    <p className="mt-0.5 text-sm text-gray-700 break-words">{monitor.funFact}</p>
+                                    <p className="mt-0.5 text-sm text-gray-700 break-words">{member.funFact}</p>
                                 </div>
                             )}
                         </div>

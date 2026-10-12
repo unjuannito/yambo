@@ -104,5 +104,6 @@
     <include file="db/changelog/changes/94-project-coordination-email.xml"/>
     <include file="db/changelog/changes/94-merch-order-create-delete.xml"/>
     <include file="db/changelog/changes/95-order-change.xml"/>
-    <include file="db/changelog/changes/96-user-public-profile.xml"/>
+    <include file="db/changelog/changes/96-staff-table.xml"/>
+    <include file="db/changelog/changes/97-staff-public-profile.xml"/>
 </databaseChangeLog>

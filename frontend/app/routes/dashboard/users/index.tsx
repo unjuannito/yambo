@@ -15,6 +15,7 @@ import MultiSelectComponent from "~/components/common/forms/MultiSelectComponent
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import { getErrorMessage } from "~/types/error";
+import { isStaff } from "~/utils/roleHelpers";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers, faArrowRight, faPenToSquare, faTrashCan } from "@fortawesome/free-solid-svg-icons";
@@ -38,6 +39,7 @@ interface UserForm {
     email: string;
     profileIds: string[];
     groupRoles: GroupRoleEntry[];
+    manualStaff: boolean;
     photo: string;
     bio: string;
     funFact: string;
@@ -49,6 +51,7 @@ const EMPTY_FORM: UserForm = {
     email: "",
     profileIds: [],
     groupRoles: [],
+    manualStaff: false,
     photo: "",
     bio: "",
     funFact: "",
@@ -107,9 +110,10 @@ export default function Users() {
             email: user.email,
             profileIds: user.profiles.map(p => p.id),
             groupRoles: user.groupRoles?.map(gr => ({ groupId: gr.groupId, role: gr.role })) || [],
-            photo: user.photo || "",
-            bio: user.bio || "",
-            funFact: user.funFact || "",
+            manualStaff: user.staff?.manual ?? false,
+            photo: user.staff?.photo || "",
+            bio: user.staff?.bio || "",
+            funFact: user.staff?.funFact || "",
         });
         setIsModalOpen(true);
     };
@@ -120,6 +124,8 @@ export default function Users() {
         setIsModalOpen(false);
         setSaving(false);
     };
+
+    const formIsStaff = form.manualStaff || isStaff({ groupRoles: form.groupRoles });
 
     const handleSave = async () => {
         if (form.profileIds.length === 0) {
@@ -135,9 +141,6 @@ export default function Users() {
                     id: editing,
                     name: form.name,
                     email: form.email,
-                    photo: form.photo || undefined,
-                    bio: form.bio || undefined,
-                    funFact: form.funFact || undefined,
                 });
 
                 // Sync group roles: get current, compute diff, apply
@@ -157,6 +160,15 @@ export default function Users() {
                     if (!currentSet.has(`${gr.groupId}:${gr.role}`)) {
                         await adminUserService.assignGroupRole(editing, gr.groupId, gr.role);
                     }
+                }
+
+                // Staff data goes last: a role added above may be what makes the user staff
+                if (formIsStaff) {
+                    await adminUserService.updateStaff(editing, {
+                        photo: form.photo,
+                        bio: form.bio,
+                        funFact: form.funFact,
+                    });
                 }
 
                 toast.success("Usuario actualizado correctamente");
@@ -575,15 +587,15 @@ export default function Users() {
                                 + Añadir rol en grupo
                             </button>
                         </div>
-                        <InputComponent
-                            label="Foto (URL)"
-                            name="photo"
-                            type="url"
-                            value={form.photo}
-                            onChange={(e) => setForm({ ...form, photo: e.target.value })}
-                        />
-                        {form.groupRoles.length > 0 && (
+                        {formIsStaff && (
                             <>
+                                <InputComponent
+                                    label="Foto (URL)"
+                                    name="photo"
+                                    type="url"
+                                    value={form.photo}
+                                    onChange={(e) => setForm({ ...form, photo: e.target.value })}
+                                />
                                 <div>
                                     <label htmlFor="user-bio" className="block text-sm font-medium text-gray-700 mb-1">Biografía</label>
                                     <textarea

@@ -38,7 +38,7 @@ La aplicación está escrita en **español** y se despliega mediante Docker Comp
 ### Sitio público
 - Página de inicio configurable desde el panel de administración
 - Listado de **actividades** y **proyectos** con detalle
-- Página del **equipo / monitores**
+- Página del **equipo** (monitores y coordinadores)
 - Formulario de **contacto**
 - Metadatos **SEO** configurables por proyecto (Open Graph, JSON-LD)
 

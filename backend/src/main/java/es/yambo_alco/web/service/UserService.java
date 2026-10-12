@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.DeletionObjectType;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -76,8 +77,8 @@ public class UserService {
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 		if (filter.role() != null && !filter.role().isBlank())
 			spec = spec.and(UserSpecifications.hasGroupRole(filter.role()));
-		if (filter.canHaveExtraProfileData() != null && filter.canHaveExtraProfileData())
-			spec = spec.and(UserSpecifications.hasMonitorOrCoordinatorRole());
+		if (filter.staff() != null && filter.staff())
+			spec = spec.and(UserSpecifications.isStaff());
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -88,8 +89,7 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email,
-			String photo, String bio, String funFact, String nickname, Boolean publicVisible) {
+	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -104,29 +104,70 @@ public class UserService {
 			user.setEmail(normalizedEmail);
 		}
 
-		if (photo != null || bio != null || funFact != null || nickname != null || publicVisible != null) {
-			if (!user.canHaveExtraProfileData()) {
-				throw new BadRequestException(
-						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact, nickname, public visibility)");
-			}
-			if (photo != null) {
-				user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
-			}
-			if (bio != null) {
-				user.setBio(bio.trim().isEmpty() ? null : bio.trim());
-			}
-			if (funFact != null) {
-				user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
-			}
-			if (nickname != null) {
-				user.setNickname(nickname.trim().isEmpty() ? null : nickname.trim());
-			}
-			if (publicVisible != null) {
-				user.setPublicVisible(publicVisible);
-			}
+		return userRepository.save(user);
+	}
+
+	/**
+	 * Updates the staff-only data. Null fields are left untouched; blank fields are cleared.
+	 */
+	@Transactional
+	public User updateStaff(@NonNull String userId, String photo, String bio, String funFact,
+			String nickname, Boolean publicVisible) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (!user.isStaff()) {
+			throw new BadRequestException(
+					"Only staff (marked manually or with a MONITOR or COORDINATOR role) can have staff data (photo, bio, fun fact, nickname, public visibility)");
+		}
+
+		Staff staff = ensureStaff(user);
+		if (photo != null) {
+			staff.setPhoto(blankToNull(photo));
+		}
+		if (bio != null) {
+			staff.setBio(blankToNull(bio));
+		}
+		if (funFact != null) {
+			staff.setFunFact(blankToNull(funFact));
+		}
+		if (nickname != null) {
+			staff.setNickname(blankToNull(nickname));
+		}
+		if (publicVisible != null) {
+			staff.setPublicVisible(publicVisible);
 		}
 
 		return userRepository.save(user);
+	}
+
+	/**
+	 * Marks (or unmarks) a user as staff by hand, regardless of group roles.
+	 * Unmarking keeps the staff data; the user stays staff while holding a MONITOR/COORDINATOR group role.
+	 */
+	@Transactional
+	public User setManualStaff(@NonNull String userId, boolean manual) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (!manual && user.getStaff() == null) {
+			return user;
+		}
+		ensureStaff(user).setManual(manual);
+
+		return userRepository.save(user);
+	}
+
+	private Staff ensureStaff(User user) {
+		if (user.getStaff() == null) {
+			user.setStaff(Staff.builder().user(user).build());
+		}
+		return user.getStaff();
+	}
+
+	private static String blankToNull(String value) {
+		String trimmed = value.trim();
+		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 	@Transactional
@@ -166,6 +207,10 @@ public class UserService {
 		user.getGroupRoles().add(upg);
 
 		syncRoleProfile(user, role, true);
+		// Getting a MONITOR/COORDINATOR role promotes the user to staff
+		if (role.isStaff()) {
+			ensureStaff(user);
+		}
 
 		User saved = userRepository.save(user);
 

@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Activity;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.User;
@@ -233,7 +234,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
 
         Activity singleDay = Activity.builder()
                 .id("ACT001").name("Taller").description("Un taller")
@@ -290,7 +291,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT001").name("Taller de Navidad").description("Un taller navideño")
@@ -348,7 +349,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT003").name("Sin SEO").description("Sin metadata")
@@ -373,7 +374,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT004").name("Cancelada").description("Actividad cancelada")
@@ -399,7 +400,7 @@ class PublicControllerTest {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
         User manager = User.builder().id("U0001").name("Monitor")
-                .email("m@example.com").password("pass").photo("/uploads/m.jpg").profiles(Set.of()).build();
+                .email("m@example.com").password("pass").staff(Staff.builder().photo("/uploads/m.jpg").manual(true).build()).profiles(Set.of()).build();
 
         Activity activity = Activity.builder()
                 .id("ACT005").name("Pública").description("Acceso público")
@@ -417,21 +418,21 @@ class PublicControllerTest {
                 .andExpect(jsonPath("$.id").value("ACT005"));
     }
 
-    // ── GET /public/monitors — public visibility opt-in ─────────────────
+    // ── Public visibility opt-in ────────────────────────────────────────
 
     @Test
     @WithAnonymousUser
-    void getMonitors_ShouldOnlyReturnPublicVisibleStaff() throws Exception {
+    void getStaff_ShouldOnlyReturnPubliclyVisibleStaff() throws Exception {
         // Given
-        User visible = User.builder().id("U0001").name("Visible").nickname("Vis")
-                .email("v@example.com").password("pass").publicVisible(true).build();
-        User hidden = User.builder().id("U0002").name("Hidden")
-                .email("h@example.com").password("pass").build();
+        User visible = User.builder().id("U0001").name("Visible").email("v@example.com").password("pass")
+                .staff(Staff.builder().manual(true).publicVisible(true).nickname("Vis").build()).build();
+        User hidden = User.builder().id("U0002").name("Hidden").email("h@example.com").password("pass")
+                .staff(Staff.builder().manual(true).build()).build();
 
         when(userRepository.findStaff()).thenReturn(List.of(visible, hidden));
 
         // When / Then
-        mockMvc.perform(get("/public/monitors"))
+        mockMvc.perform(get("/public/staff"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value("U0001"))
@@ -440,13 +441,13 @@ class PublicControllerTest {
 
     @Test
     @WithAnonymousUser
-    void getProjectDetail_ShouldOnlyReturnPublicVisibleStaff() throws Exception {
+    void getProjectDetail_ShouldOnlyReturnPubliclyVisibleStaff() throws Exception {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
-        User visible = User.builder().id("U0001").name("Visible")
-                .email("v@example.com").password("pass").publicVisible(true).build();
-        User hidden = User.builder().id("U0002").name("Hidden")
-                .email("h@example.com").password("pass").build();
+        User visible = User.builder().id("U0001").name("Visible").email("v@example.com").password("pass")
+                .staff(Staff.builder().manual(true).publicVisible(true).build()).build();
+        User hidden = User.builder().id("U0002").name("Hidden").email("h@example.com").password("pass")
+                .staff(Staff.builder().manual(true).build()).build();
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());

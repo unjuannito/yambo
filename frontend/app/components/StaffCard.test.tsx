@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import MonitorCard from "./MonitorCard";
+import StaffCard from "./StaffCard";
 import type { StaffMember } from "~/services/publicService";
 
-const monitor: StaffMember = {
+const member: StaffMember = {
     id: "U1",
     name: "Laura García",
     nickname: "Lau",
@@ -14,22 +14,22 @@ const monitor: StaffMember = {
     groups: [{ id: "G1", name: null, projectName: "Barrio", role: "MONITOR" }],
 };
 
-describe("MonitorCard", () => {
+describe("StaffCard", () => {
     it("shows the nickname instead of the full name on the card", () => {
-        render(<MonitorCard monitor={monitor} />);
+        render(<StaffCard member={member} />);
 
         expect(screen.getByRole("heading", { name: "Lau" })).toBeInTheDocument();
         expect(screen.queryByText("Laura García")).not.toBeInTheDocument();
     });
 
     it("falls back to the name when there is no nickname", () => {
-        render(<MonitorCard monitor={{ ...monitor, nickname: null }} />);
+        render(<StaffCard member={{ ...member, nickname: null }} />);
 
         expect(screen.getByRole("heading", { name: "Laura García" })).toBeInTheDocument();
     });
 
     it("opens the profile with the full bio and fun fact on click", () => {
-        render(<MonitorCard monitor={monitor} />);
+        render(<StaffCard member={member} />);
         expect(screen.queryByText("Colecciono chapas")).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button"));

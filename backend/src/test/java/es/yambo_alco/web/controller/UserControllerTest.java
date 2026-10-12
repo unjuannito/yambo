@@ -5,6 +5,7 @@ import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
@@ -92,6 +93,32 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
+    void updateStaff_ShouldUpdateCurrentUserStaffData() throws Exception {
+        // Given
+        User currentUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
+                .profiles(Set.of()).build();
+        User updatedUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
+                .profiles(Set.of())
+                .staff(Staff.builder().manual(true).photo("/uploads/p.jpg").funFact("Fun").build())
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+        when(userService.updateStaff("U0000001", "/uploads/p.jpg", null, "Fun", null, null)).thenReturn(updatedUser);
+
+        // When & Then
+        mockMvc.perform(put("/user/staff")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"photo": "/uploads/p.jpg", "funFact": "Fun"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.staff.photo").value("/uploads/p.jpg"))
+                .andExpect(jsonPath("$.staff.funFact").value("Fun"));
+    }
+
+    @Test
+    @WithMockUser
     void updateProfile_WithValidData_ShouldReturnUpdatedUser() throws Exception {
         // Given
         User currentUser = User.builder()
@@ -110,7 +137,7 @@ class UserControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
-        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com", null, null, null, null, null)).thenReturn(updatedUser);
+        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com")).thenReturn(updatedUser);
 
         String requestBody = """
                 {

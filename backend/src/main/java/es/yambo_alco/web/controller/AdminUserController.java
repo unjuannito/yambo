@@ -1,4 +1,6 @@
 package es.yambo_alco.web.controller;
+import es.yambo_alco.web.controller.dto.user.StaffDto;
+import es.yambo_alco.web.controller.dto.user.UpdateStaffRequestDto;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
@@ -58,7 +60,7 @@ public class AdminUserController {
             @RequestParam(required = false) String permissions,
             @RequestParam(required = false) String profiles,
             @RequestParam(required = false) String role,
-            @RequestParam(required = false) Boolean canHaveExtraProfileData,
+            @RequestParam(required = false) Boolean staff,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size,
             @RequestParam(required = false) String sortBy,
@@ -79,7 +81,7 @@ public class AdminUserController {
                 : PageRequest.of(page, size, dir, sortBy);
 
         UserFilter userFilter = new UserFilter(query, id, name, email, enabled, perms == null ? null : List.copyOf(perms),
-                profilesList, role, canHaveExtraProfileData);
+                profilesList, role, staff);
         Page<User> users = userService.listUsers(userFilter, pr);
         return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
@@ -105,11 +107,28 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User userToUpdate = userService.getUserById(request.getId());
 
-        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail(),
-                request.getPhoto(), request.getBio(), request.getFunFact(),
-                request.getNickname(), request.getPublicVisible());
+        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail());
         AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{userId}/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateStaff(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody UpdateStaffRequestDto request) {
+        User updatedUser = userService.updateStaff(userId, request.getPhoto(), request.getBio(),
+                request.getFunFact(), request.getNickname(), request.getPublicVisible());
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @PutMapping("/{userId}/staff/manual")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> setManualStaff(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody SetManualStaffRequest request) {
+        User updatedUser = userService.setManualStaff(userId, request.getManual());
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
     }
 
     @PutMapping("/{userId}/groups")
@@ -193,19 +212,12 @@ public class AdminUserController {
         @NotBlank(message = "Email cannot be blank")
         @Email(message = "Email should be valid")
         private String email;
+    }
 
-        private String photo;
-
-        @Size(max = 500, message = "Bio must be at most 500 characters")
-        private String bio;
-
-        @Size(max = 100, message = "Fun fact must be at most 100 characters")
-        private String funFact;
-
-        @Size(max = 50, message = "Nickname must be at most 50 characters")
-        private String nickname;
-
-        private Boolean publicVisible;
+    @Data
+    public static class SetManualStaffRequest {
+        @jakarta.validation.constraints.NotNull(message = "Manual is required")
+        private Boolean manual;
     }
 
     @Data
@@ -228,11 +240,7 @@ public class AdminUserController {
         private String id;
         private String email;
         private String name;
-        private String photo;
-        private String bio;
-        private String funFact;
-        private String nickname;
-        private boolean publicVisible;
+        private StaffDto staff;
         private GroupRoleResponse[] groupRoles;
         private AdminUserProfileResponse[] profiles;
         private AdminUserPermissionResponse[] permissions;
@@ -244,11 +252,7 @@ public class AdminUserController {
             this.id = user.getId();
             this.email = user.getEmail();
             this.name = user.getName();
-            this.photo = user.getPhoto();
-            this.bio = user.getBio();
-            this.funFact = user.getFunFact();
-            this.nickname = user.getNickname();
-            this.publicVisible = user.isPublicVisible();
+            this.staff = StaffDto.from(user);
             this.groupRoles = user.getGroupRoles().stream()
                     .map(GroupRoleResponse::new)
                     .toArray(GroupRoleResponse[]::new);
