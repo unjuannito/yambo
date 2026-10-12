@@ -1,5 +1,7 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.controller.dto.user.StaffDto;
+import es.yambo_alco.web.controller.dto.user.UpdateStaffRequestDto;
 import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Permission;
@@ -46,10 +48,18 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User currentUser = authService.getCurrentUser(true);
-        User updatedUser = userService.updateProfile(currentUser.getId(), request.getName(), request.getEmail(),
-                request.getPhoto(), request.getBio(), request.getFunFact());
+        User updatedUser = userService.updateProfile(currentUser.getId(), request.getName(), request.getEmail());
         UserResponse response = new UserResponse(updatedUser);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/staff")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> updateStaff(@Valid @RequestBody UpdateStaffRequestDto request) {
+        User currentUser = authService.getCurrentUser(true);
+        User updatedUser = userService.updateStaff(currentUser.getId(), request.getPhoto(), request.getBio(),
+                request.getFunFact());
+        return ResponseEntity.ok(new UserResponse(updatedUser));
     }
 
     @PutMapping("/change-password")
@@ -93,12 +103,6 @@ public class UserController {
         @NotBlank(message = "Email cannot be blank")
         @Email(message = "Email should be valid")
         private String email;
-
-        private String photo;
-
-        private String bio;
-
-        private String funFact;
     }
 
     @Data
@@ -116,9 +120,7 @@ public class UserController {
         private String id;
         private String email;
         private String name;
-        private String photo;
-        private String bio;
-        private String funFact;
+        private StaffDto staff;
         private NotificationPreferences notificationPreferences;
         private GroupRoleResponse[] groupRoles;
         private PermissionResponse[] permissions;
@@ -127,9 +129,7 @@ public class UserController {
             this.id = user.getId();
             this.email = user.getEmail();
             this.name = user.getName();
-            this.photo = user.getPhoto();
-            this.bio = user.getBio();
-            this.funFact = user.getFunFact();
+            this.staff = StaffDto.from(user);
             this.notificationPreferences = user.getNotificationPreferences() != null
                     ? user.getNotificationPreferences()
                     : NotificationPreferences.defaults();

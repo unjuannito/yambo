@@ -1,5 +1,6 @@
 package es.yambo_alco.web.repository.spec;
 
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
@@ -74,13 +75,16 @@ public final class UserSpecifications {
         };
     }
 
-    public static Specification<User> hasMonitorOrCoordinatorRole() {
+    /** Mirrors {@link User#isStaff()}: marked manually or holding a MONITOR/COORDINATOR role. */
+    public static Specification<User> isStaff() {
         return (root, query, cb) -> {
-            Join<User, UserProjectGroup> grJoin = root.join("groupRoles", JoinType.INNER);
+            Join<User, UserProjectGroup> grJoin = root.join("groupRoles", JoinType.LEFT);
+            Join<User, Staff> staffJoin = root.join("staff", JoinType.LEFT);
             query.distinct(true);
             Predicate monitor = cb.equal(grJoin.get("role"), UserProjectGroupRole.MONITOR);
             Predicate coordinator = cb.equal(grJoin.get("role"), UserProjectGroupRole.COORDINATOR);
-            return cb.or(monitor, coordinator);
+            Predicate manual = cb.isTrue(staffJoin.get("manual"));
+            return cb.or(monitor, coordinator, manual);
         };
     }
 }

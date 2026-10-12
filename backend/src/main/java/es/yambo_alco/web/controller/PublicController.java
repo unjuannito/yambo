@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.Activity;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.SeoMetadata;
@@ -67,8 +68,8 @@ public class PublicController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/monitors")
-    public ResponseEntity<List<StaffResponse>> getMonitors() {
+    @GetMapping("/staff")
+    public ResponseEntity<List<StaffResponse>> getStaff() {
         List<User> staff = userRepository.findStaff();
         List<StaffResponse> response = staff.stream()
                 .map(StaffResponse::new)
@@ -168,9 +169,12 @@ public class PublicController {
         public StaffResponse(User user) {
             this.id = user.getId();
             this.name = user.getName();
-            this.photo = user.getPhoto();
-            this.bio = user.getBio();
-            this.funFact = user.getFunFact();
+            Staff staff = user.getStaff();
+            if (staff != null) {
+                this.photo = staff.getPhoto();
+                this.bio = staff.getBio();
+                this.funFact = staff.getFunFact();
+            }
 
             // Determine primary role from groupRoles
             boolean isCoordinator = user.getGroupRoles().stream()
@@ -303,7 +307,7 @@ public class PublicController {
             }
             if (activity.getManager() != null) {
                 this.manager = new ActivityManagerSummary(
-                        activity.getManager().getName(), activity.getManager().getPhoto());
+                        activity.getManager().getName(), activity.getManager().getStaffPhoto());
             }
         }
     }
@@ -352,7 +356,7 @@ public class PublicController {
             }
             if (activity.getManager() != null) {
                 this.manager = new ActivityManagerSummary(
-                        activity.getManager().getName(), activity.getManager().getPhoto());
+                        activity.getManager().getName(), activity.getManager().getStaffPhoto());
             }
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
         }

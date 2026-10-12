@@ -21,40 +21,48 @@
 --          P0000003=Admin  P0000004=Monitor)
 -- =============================================================================
 
-INSERT INTO "user" (id, password, email, name, created_at, enabled, system, bio, fun_fact)
+INSERT INTO "user" (id, password, email, name, created_at, enabled, system)
 VALUES
     -- Admin (one admin besides the Liquibase-created A0000001)
     ('PREV0001', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'admin2@preview.invalid',    'Admin Preview',       NOW() - INTERVAL '90 days', true,  false, NULL, NULL),
+     'admin2@preview.invalid',    'Admin Preview',       NOW() - INTERVAL '90 days', true,  false),
 
     -- Managers (Gestores)
     ('PREV0002', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'gestor1@preview.invalid',   'Gestor Uno',          NOW() - INTERVAL '80 days', true,  false, 'Gestor del equipo A', NULL),
+     'gestor1@preview.invalid',   'Gestor Uno',          NOW() - INTERVAL '80 days', true,  false),
     ('PREV0003', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'gestor2@preview.invalid',   'Gestor Dos',          NOW() - INTERVAL '75 days', true,  false, NULL, NULL),
+     'gestor2@preview.invalid',   'Gestor Dos',          NOW() - INTERVAL '75 days', true,  false),
 
     -- Monitors
     ('PREV0004', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'monitor1@preview.invalid',  'Monitor Uno',         NOW() - INTERVAL '60 days', true,  false, NULL, 'Me gusta el deporte'),
+     'monitor1@preview.invalid',  'Monitor Uno',         NOW() - INTERVAL '60 days', true,  false),
 
     -- Padres (regular users who place orders)
     ('PREV0005', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'padre1@preview.invalid',    'Padre Uno',           NOW() - INTERVAL '55 days', true,  false, NULL, NULL),
+     'padre1@preview.invalid',    'Padre Uno',           NOW() - INTERVAL '55 days', true,  false),
     ('PREV0006', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'padre2@preview.invalid',    'Padre Dos',           NOW() - INTERVAL '50 days', true,  false, NULL, NULL),
+     'padre2@preview.invalid',    'Padre Dos',           NOW() - INTERVAL '50 days', true,  false),
     ('PREV0007', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'padre3@preview.invalid',    'Padre Tres',          NOW() - INTERVAL '45 days', true,  false, NULL, NULL),
+     'padre3@preview.invalid',    'Padre Tres',          NOW() - INTERVAL '45 days', true,  false),
     ('PREV0008', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'padre4@preview.invalid',    'Padre Cuatro',        NOW() - INTERVAL '40 days', true,  false, NULL, NULL),
+     'padre4@preview.invalid',    'Padre Cuatro',        NOW() - INTERVAL '40 days', true,  false),
     ('PREV0009', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'padre5@preview.invalid',    'Padre Cinco',         NOW() - INTERVAL '30 days', true,  false, NULL, NULL),
+     'padre5@preview.invalid',    'Padre Cinco',         NOW() - INTERVAL '30 days', true,  false),
     ('PREV0010', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'padre6@preview.invalid',    'Padre Seis',          NOW() - INTERVAL '20 days', true,  false, NULL, NULL),
+     'padre6@preview.invalid',    'Padre Seis',          NOW() - INTERVAL '20 days', true,  false),
 
     -- Disabled user (for testing disabled-account flows)
     ('PREV0011', '$2a$12$S0KapdLdqT.R2EVj6mLgBu4LTMlB7Ikxa3ApmIJhrVPO9v9TL/qd2',
-     'desactivado@preview.invalid','Usuario Desactivado', NOW() - INTERVAL '15 days', false, false, NULL, NULL)
+     'desactivado@preview.invalid','Usuario Desactivado', NOW() - INTERVAL '15 days', false, false)
 ON CONFLICT (id) DO NOTHING;
+
+-- Staff data (1:1 extension of user). PREV0004 is added to the staff manually;
+-- PREV0002 only keeps dormant data (not currently staff).
+INSERT INTO staff (user_id, bio, fun_fact, manual)
+VALUES
+    ('PREV0002', 'Gestor del equipo A', NULL, false),
+    ('PREV0004', NULL, 'Me gusta el deporte', true)
+ON CONFLICT (user_id) DO NOTHING;
 
 -- Profile assignments
 INSERT INTO user_profile (user_id, profile_id)
