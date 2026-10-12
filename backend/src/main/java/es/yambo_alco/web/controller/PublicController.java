@@ -70,7 +70,7 @@ public class PublicController {
 
     @GetMapping("/staff")
     public ResponseEntity<List<StaffResponse>> getStaff() {
-        List<User> staff = userRepository.findStaff();
+        List<User> staff = userRepository.findPublicStaff();
         List<StaffResponse> response = staff.stream()
                 .filter(User::isPubliclyVisibleStaff)
                 .map(StaffResponse::new)
@@ -124,7 +124,7 @@ public class PublicController {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Project not found"));
         List<ProjectGroup> groups = projectGroupRepository.findByProjectId(id);
-        List<User> staff = userRepository.findStaffByProjectId(id);
+        List<User> staff = userRepository.findPublicStaffByProjectId(id);
         SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.PROJECT, id).orElse(null);
         return ResponseEntity.ok(new ProjectDetailResponse(project, groups, staff, seo));
     }
@@ -179,10 +179,15 @@ public class PublicController {
                 this.funFact = staff.getFunFact();
             }
 
-            // Determine primary role from groupRoles
-            boolean isCoordinator = user.getGroupRoles().stream()
+            // Only the staff roles of active projects are public (no PARENT roles, no past projects)
+            List<UserProjectGroup> publicRoles = user.getGroupRoles().stream()
+                    .filter(User::isActiveStaffRole)
+                    .toList();
+
+            // Determine primary role from the public roles
+            boolean isCoordinator = publicRoles.stream()
                     .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR);
-            boolean isMonitor = user.getGroupRoles().stream()
+            boolean isMonitor = publicRoles.stream()
                     .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.MONITOR);
             if (isCoordinator && isMonitor) {
                 this.role = "BOTH";
@@ -192,7 +197,7 @@ public class PublicController {
                 this.role = "MONITOR";
             }
 
-            this.groups = user.getGroupRoles().stream()
+            this.groups = publicRoles.stream()
                     .map(StaffGroupResponse::new)
                     .toArray(StaffGroupResponse[]::new);
         }

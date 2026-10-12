@@ -3,11 +3,14 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -130,7 +133,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.of(seo));
 
         // When / Then
@@ -149,7 +152,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
 
         // When / Then
@@ -169,7 +172,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/public/projects/PRJ001"))
@@ -184,7 +187,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/public/projects/PRJ001"))
@@ -429,7 +432,7 @@ class PublicControllerTest {
         User hidden = User.builder().id("U0002").name("Hidden").email("h@example.com").password("pass")
                 .staff(Staff.builder().manual(true).build()).build();
 
-        when(userRepository.findStaff()).thenReturn(List.of(visible, hidden));
+        when(userRepository.findPublicStaff()).thenReturn(List.of(visible, hidden));
 
         // When / Then
         mockMvc.perform(get("/public/staff"))
@@ -451,7 +454,7 @@ class PublicControllerTest {
 
         when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
         when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
-        when(userRepository.findStaffByProjectId("PRJ001")).thenReturn(List.of(visible, hidden));
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(List.of(visible, hidden));
         when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
 
         // When / Then
@@ -501,5 +504,40 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.manager.name").value("Moni"))
                 .andExpect(jsonPath("$.manager.photo").value("/uploads/m.jpg"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getStaff_ShouldOnlyExposeStaffRolesOfActiveProjects() throws Exception {
+        // Given — monitor in an active project, plus a role in a finished project and a PARENT role
+        Project active = Project.builder().id("PRJ001").name("Barrio").build();
+        Project finished = Project.builder().id("PRJ002").name("Antiguo").active(false).build();
+        User current = User.builder().id("U0001").name("Actual").email("a@example.com").password("pass")
+                .staff(Staff.builder().publicVisible(true).build()).build();
+        current.getGroupRoles().add(groupRole(current, "G1", active, UserProjectGroupRole.MONITOR));
+        current.getGroupRoles().add(groupRole(current, "G2", finished, UserProjectGroupRole.COORDINATOR));
+        current.getGroupRoles().add(groupRole(current, "G3", active, UserProjectGroupRole.PARENT));
+        User former = User.builder().id("U0002").name("Antiguo").email("o@example.com").password("pass")
+                .staff(Staff.builder().publicVisible(true).build()).build();
+        former.getGroupRoles().add(groupRole(former, "G2", finished, UserProjectGroupRole.MONITOR));
+
+        when(userRepository.findPublicStaff()).thenReturn(List.of(current, former));
+
+        // When / Then
+        mockMvc.perform(get("/public/staff"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value("U0001"))
+                .andExpect(jsonPath("$[0].role").value("MONITOR"))
+                .andExpect(jsonPath("$[0].groups.length()").value(1))
+                .andExpect(jsonPath("$[0].groups[0].projectName").value("Barrio"));
+    }
+
+    private static UserProjectGroup groupRole(User user, String groupId, Project project, UserProjectGroupRole role) {
+        return UserProjectGroup.builder()
+                .user(user)
+                .projectGroup(ProjectGroup.builder().id(groupId).project(project).build())
+                .role(role)
+                .build();
     }
 }
