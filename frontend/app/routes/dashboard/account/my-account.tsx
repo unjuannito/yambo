@@ -407,6 +407,15 @@ export default function MyAccount() {
                 <span>
                   <span className="block text-sm font-medium text-gray-700">{t('myAccount.publicVisible')}</span>
                   <span className="block text-xs text-gray-400 mt-0.5">{t('myAccount.publicVisibleDesc')}</span>
+                  <span className="block text-xs text-gray-400 mt-1">
+                    {t('myAccount.publicVisibleConsent')}{" "}
+                    <a href="/legal/privacidad" target="_blank" rel="noreferrer" className="text-yambo-green-600 hover:underline">
+                      {t('myAccount.publicVisiblePrivacyLink')}
+                    </a>
+                    {user?.staff?.publicVisibleAt && (
+                      <> · {t('myAccount.publicVisibleSince', { date: new Date(user.staff.publicVisibleAt).toLocaleDateString() })}</>
+                    )}
+                  </span>
                 </span>
                 <CheckboxComponent
                   variantType="toggle"

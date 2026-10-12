@@ -106,4 +106,5 @@
     <include file="db/changelog/changes/95-order-change.xml"/>
     <include file="db/changelog/changes/96-staff-table.xml"/>
     <include file="db/changelog/changes/97-staff-public-profile.xml"/>
+    <include file="db/changelog/changes/98-staff-profile-improvements.xml"/>
 </databaseChangeLog>

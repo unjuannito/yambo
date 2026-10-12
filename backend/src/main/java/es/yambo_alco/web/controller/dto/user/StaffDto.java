@@ -4,6 +4,8 @@ import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.User;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class StaffDto {
     private String photo;
@@ -11,6 +13,7 @@ public class StaffDto {
     private String funFact;
     private String nickname;
     private boolean publicVisible;
+    private LocalDateTime publicVisibleAt;
     private boolean manual;
 
     /** Returns null when the user is not currently staff. */
@@ -26,6 +29,7 @@ public class StaffDto {
             dto.funFact = staff.getFunFact();
             dto.nickname = staff.getNickname();
             dto.publicVisible = staff.isPublicVisible();
+            dto.publicVisibleAt = staff.getPublicVisibleAt();
             dto.manual = staff.isManual();
         }
         return dto;

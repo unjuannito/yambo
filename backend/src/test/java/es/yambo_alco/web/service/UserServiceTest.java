@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -617,7 +618,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaff("U0000001", " new-photo.jpg ", "New bio", "New fun fact", null, null);
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().photo(" new-photo.jpg ").bio("New bio").funFact("New fun fact").build());
 
         // Then — the staff row is created on demand and linked to the user
         assertThat(result.getStaff()).isNotNull();
@@ -642,7 +643,7 @@ public class UserServiceTest {
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateStaff("U0000001", null, "New bio", null, null, null))
+        assertThatThrownBy(() -> userService.updateStaff("U0000001", StaffUpdate.builder().bio("New bio").build()))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("MONITOR or COORDINATOR");
 
@@ -665,7 +666,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaff("U0000001", "", "  ", null, null, null);
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().photo("").bio("  ").build());
 
         // Then
         assertThat(result.getStaff().getPhoto()).isNull();
@@ -687,12 +688,39 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaff("U0000001", null, null, null, " Nick ", true);
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").publicVisible(true).build());
 
         // Then
         assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
         assertThat(result.getStaff().isPublicVisible()).isTrue();
         assertThat(result.isPubliclyVisibleStaff()).isTrue();
+    }
+
+    @Test
+    void updateStaff_PublicVisible_ShouldKeepTheOptInDateInSync() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — opting in records the date
+        userService.updateStaff("U0000001", StaffUpdate.builder().publicVisible(true).build());
+        LocalDateTime optedInAt = existingUser.getStaff().getPublicVisibleAt();
+        assertThat(optedInAt).isNotNull();
+
+        // Saving again while already public keeps the original date
+        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").publicVisible(true).build());
+        assertThat(existingUser.getStaff().getPublicVisibleAt()).isEqualTo(optedInAt);
+
+        // Opting out clears it
+        userService.updateStaff("U0000001", StaffUpdate.builder().publicVisible(false).build());
+        assertThat(existingUser.getStaff().getPublicVisibleAt()).isNull();
     }
 
     @Test
@@ -721,7 +749,7 @@ public class UserServiceTest {
 
         // When & Then
         assertThatThrownBy(() ->
-                userService.updateStaffByAdmin("A0000001", "U0000001", null, null, null, null, true))
+                userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().publicVisible(true).build()))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("own card public");
 
@@ -743,9 +771,9 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", null, "Bio", null, null, true);
+        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").publicVisible(true).build());
         assertThat(kept.getStaff().isPublicVisible()).isTrue();
-        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", null, null, null, null, false);
+        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().publicVisible(false).build());
 
         // Then
         assertThat(hidden.getStaff().isPublicVisible()).isFalse();
@@ -766,7 +794,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaffByAdmin("A0000001", "A0000001", null, null, null, null, true);
+        User result = userService.updateStaffByAdmin("A0000001", "A0000001", StaffUpdate.builder().publicVisible(true).build());
 
         // Then
         assertThat(result.getStaff().isPublicVisible()).isTrue();

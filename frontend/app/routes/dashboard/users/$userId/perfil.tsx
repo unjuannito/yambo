@@ -281,6 +281,9 @@ export default function UserPerfil() {
                                             {canPublish
                                                 ? "Muestra su foto, apodo y descripción en la página del equipo y en la de sus proyectos."
                                                 : "Solo la propia persona puede activarlo, desde \"Mi cuenta\"."}
+                                            {user.staff?.publicVisibleAt && (
+                                                <> Visible desde el {new Date(user.staff.publicVisibleAt).toLocaleDateString()}.</>
+                                            )}
                                         </span>
                                     </span>
                                     <CheckboxComponent

@@ -57,8 +57,7 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> updateStaff(@Valid @RequestBody UpdateStaffRequestDto request) {
         User currentUser = authService.getCurrentUser(true);
-        User updatedUser = userService.updateStaff(currentUser.getId(), request.getPhoto(), request.getBio(),
-                request.getFunFact(), request.getNickname(), request.getPublicVisible());
+        User updatedUser = userService.updateStaff(currentUser.getId(), request.toUpdate());
         return ResponseEntity.ok(new UserResponse(updatedUser));
     }
 

@@ -18,6 +18,8 @@ export type StaffData = {
     nickname?: string | null;
     /** Opt-in: solo aparece en la web pública si está activado. */
     publicVisible: boolean;
+    /** Fecha en la que activó la visibilidad pública (su consentimiento). */
+    publicVisibleAt?: string | null;
     manual: boolean;
 };
 

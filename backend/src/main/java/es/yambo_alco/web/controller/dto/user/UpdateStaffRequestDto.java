@@ -1,5 +1,6 @@
 package es.yambo_alco.web.controller.dto.user;
 
+import es.yambo_alco.web.service.StaffUpdate;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -19,4 +20,14 @@ public class UpdateStaffRequestDto {
     private String nickname;
 
     private Boolean publicVisible;
+
+    public StaffUpdate toUpdate() {
+        return StaffUpdate.builder()
+                .photo(photo)
+                .bio(bio)
+                .funFact(funFact)
+                .nickname(nickname)
+                .publicVisible(publicVisible)
+                .build();
+    }
 }

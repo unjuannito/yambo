@@ -111,8 +111,7 @@ public class UserService {
 	 * Updates the staff-only data. Null fields are left untouched; blank fields are cleared.
 	 */
 	@Transactional
-	public User updateStaff(@NonNull String userId, String photo, String bio, String funFact,
-			String nickname, Boolean publicVisible) {
+	public User updateStaff(@NonNull String userId, @NonNull StaffUpdate update) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -122,20 +121,20 @@ public class UserService {
 		}
 
 		Staff staff = ensureStaff(user);
-		if (photo != null) {
-			staff.setPhoto(blankToNull(photo));
+		if (update.getPhoto() != null) {
+			staff.setPhoto(blankToNull(update.getPhoto()));
 		}
-		if (bio != null) {
-			staff.setBio(blankToNull(bio));
+		if (update.getBio() != null) {
+			staff.setBio(blankToNull(update.getBio()));
 		}
-		if (funFact != null) {
-			staff.setFunFact(blankToNull(funFact));
+		if (update.getFunFact() != null) {
+			staff.setFunFact(blankToNull(update.getFunFact()));
 		}
-		if (nickname != null) {
-			staff.setNickname(blankToNull(nickname));
+		if (update.getNickname() != null) {
+			staff.setNickname(blankToNull(update.getNickname()));
 		}
-		if (publicVisible != null) {
-			staff.setPublicVisible(publicVisible);
+		if (update.getPublicVisible() != null) {
+			setPublicVisible(staff, update.getPublicVisible());
 		}
 
 		return userRepository.save(user);
@@ -146,16 +145,15 @@ public class UserService {
 	 * decision: an admin can hide someone else's card but not make it public.
 	 */
 	@Transactional
-	public User updateStaffByAdmin(@NonNull String adminId, @NonNull String userId, String photo, String bio,
-			String funFact, String nickname, Boolean publicVisible) {
-		if (Boolean.TRUE.equals(publicVisible) && !adminId.equals(userId)) {
+	public User updateStaffByAdmin(@NonNull String adminId, @NonNull String userId, @NonNull StaffUpdate update) {
+		if (Boolean.TRUE.equals(update.getPublicVisible()) && !adminId.equals(userId)) {
 			User user = userRepository.findById(userId)
 					.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 			if (!user.isPubliclyVisibleStaff()) {
 				throw new BadRequestException("Only the staff member can make their own card public");
 			}
 		}
-		return updateStaff(userId, photo, bio, funFact, nickname, publicVisible);
+		return updateStaff(userId, update);
 	}
 
 	/**
@@ -186,8 +184,18 @@ public class UserService {
 	/** Leaving the staff withdraws the public opt-in, so coming back does not republish the card. */
 	private void hideIfNoLongerStaff(User user) {
 		if (user.getStaff() != null && !user.isStaff()) {
-			user.getStaff().setPublicVisible(false);
+			setPublicVisible(user.getStaff(), false);
 		}
+	}
+
+	/** Keeps the opt-in date in sync: set when the card becomes public, cleared when it stops being so. */
+	private static void setPublicVisible(Staff staff, boolean publicVisible) {
+		if (publicVisible && !staff.isPublicVisible()) {
+			staff.setPublicVisibleAt(LocalDateTime.now());
+		} else if (!publicVisible) {
+			staff.setPublicVisibleAt(null);
+		}
+		staff.setPublicVisible(publicVisible);
 	}
 
 	private static String blankToNull(String value) {

@@ -51,6 +51,10 @@ public class Staff {
     @Column(name = "public_visible", nullable = false)
     private boolean publicVisible = false;
 
+    /** When the staff member opted in; null while not public. */
+    @Column(name = "public_visible_at")
+    private LocalDateTime publicVisibleAt;
+
     /** Added to the staff by hand, regardless of group roles. */
     @Builder.Default
     @Column(nullable = false)

@@ -8,6 +8,7 @@ import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.SettingsService;
+import es.yambo_alco.web.service.StaffUpdate;
 import es.yambo_alco.web.service.UserService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -516,7 +517,7 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .build();
 
                 when(authService.getCurrentUser(true)).thenReturn(User.builder().id("A0000001").build());
-                when(userService.updateStaffByAdmin("A0000001", "U0000001", null, "New bio", null, null, null))
+                when(userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("New bio").build()))
                                 .thenReturn(updatedUser);
 
                 mockMvc.perform(put("/admin/users/U0000001/staff")
