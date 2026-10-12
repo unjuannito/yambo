@@ -88,6 +88,11 @@ export class AdminUserService extends ApiService {
         );
     }
 
+    /** Borra la ficha del equipo de un usuario (foto, apodo, descripción y dato curioso). */
+    public async deleteStaff(userId: string): Promise<User> {
+        return await this.delete<User>(`/admin/users/${userId}/staff`);
+    }
+
     /** Añade (o quita) a un usuario del equipo a mano, sin depender de sus roles en grupos. */
     public async setManualStaff(userId: string, manual: boolean): Promise<User> {
         return await this.put<User, { manual: boolean }>(

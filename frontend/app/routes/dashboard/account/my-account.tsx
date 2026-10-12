@@ -138,6 +138,16 @@ export default function MyAccount() {
     },
   });
 
+  const [showDeleteStaffDialog, setShowDeleteStaffDialog] = useState(false);
+  const deleteStaffMutation = useApiMutation<CurrentUser, void>({
+    mutationFn: () => userService.deleteStaff(),
+    successMessage: "Ficha del equipo borrada",
+    onSuccess: () => {
+      setShowDeleteStaffDialog(false);
+      reload();
+    },
+  });
+
   const changePasswordMutation = useApiMutation<void, ChangePasswordRequest>({
     mutationFn: (data) => userService.changePassword(data),
     successMessage: "Contraseña cambiada correctamente",
@@ -426,7 +436,10 @@ export default function MyAccount() {
                   }
                 />
               </label>
-              <div className="flex justify-end pt-2">
+              <div className="flex flex-wrap justify-between gap-3 pt-2">
+                <ButtonComponent type="button" variant="danger-text" onClick={() => setShowDeleteStaffDialog(true)}>
+                  <FontAwesomeIcon icon={faTrash} className="mr-1" /> {t('myAccount.deleteStaff')}
+                </ButtonComponent>
                 <ButtonComponent
                   type="submit"
                   variant="primary"
@@ -605,6 +618,17 @@ export default function MyAccount() {
         </section>
       </div>
 
+      <ConfirmDialog
+        isOpen={showDeleteStaffDialog}
+        onClose={() => setShowDeleteStaffDialog(false)}
+        onConfirm={() => deleteStaffMutation.mutate()}
+        title={t('myAccount.deleteStaffConfirmTitle')}
+        message={t('myAccount.deleteStaffConfirmMessage')}
+        confirmLabel={t('myAccount.deleteStaff')}
+        cancelLabel="Cancelar"
+        variant="danger"
+        isLoading={deleteStaffMutation.isLoading}
+      />
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}

@@ -11,6 +11,7 @@ import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
+import es.yambo_alco.web.repository.StaffRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -44,6 +45,8 @@ public class UserServiceTest {
     private PasswordEncoder passwordEncoder;
         private UserService userService;
         private ProfileRepository profileRepository;
+        private StaffRepository staffRepository;
+        private UploadedFileService uploadedFileService;
     private ProjectGroupRepository projectGroupRepository;
     private UserProjectGroupRepository userProjectGroupRepository;
     private PendingDeletionService pendingDeletionService;
@@ -58,7 +61,9 @@ public class UserServiceTest {
         userProjectGroupRepository = Mockito.mock(UserProjectGroupRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
         accessGrantService = Mockito.mock(AccessGrantService.class);
-        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService);
+        staffRepository = Mockito.mock(StaffRepository.class);
+        uploadedFileService = Mockito.mock(UploadedFileService.class);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService, staffRepository, uploadedFileService);
     }
 
     @Test
@@ -724,6 +729,120 @@ public class UserServiceTest {
     }
 
     @Test
+    void updateStaff_ReplacingPhoto_ShouldDeleteTheOldFile() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photo("/uploads/old.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — same photo again, then a new one
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/old.jpg").build());
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/new.jpg").build());
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/old.jpg", "U0000001");
+        assertThat(existingUser.getStaff().getPhoto()).isEqualTo("/uploads/new.jpg");
+    }
+
+    @Test
+    void deleteStaffData_ForCurrentStaff_ShouldEmptyTheCardAndKeepTheRow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).publicVisible(true).photo("/uploads/p.jpg")
+                        .bio("Bio").funFact("Fun").nickname("Nick").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        assertThat(result.isStaff()).isTrue();
+        assertThat(result.getStaff().getPhoto()).isNull();
+        assertThat(result.getStaff().getBio()).isNull();
+        assertThat(result.getStaff().getFunFact()).isNull();
+        assertThat(result.getStaff().getNickname()).isNull();
+        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        verify(staffRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteStaffData_ForFormerStaff_ShouldRemoveTheRow() {
+        // Given — dormant data of someone who is no longer staff
+        Staff dormant = Staff.builder().photo("/uploads/p.jpg").bio("Bio").build();
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(dormant)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When
+        User result = userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        verify(staffRepository).delete(dormant);
+        assertThat(result.getStaff()).isNull();
+    }
+
+    @Test
+    void purgeStaffInactiveSince_ShouldRemoveExpiredCardsAndTheirPhotos() {
+        // Given
+        User formerUser = User.builder().id("U0000001").build();
+        Staff expired = Staff.builder().userId("U0000001").user(formerUser).photo("/uploads/p.jpg").build();
+        formerUser.setStaff(expired);
+        LocalDateTime cutoff = LocalDateTime.now().minusMonths(12);
+
+        when(staffRepository.findByInactiveSinceBefore(cutoff)).thenReturn(List.of(expired));
+
+        // When
+        int purged = userService.purgeStaffInactiveSince(cutoff);
+
+        // Then
+        assertThat(purged).isEqualTo(1);
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        verify(staffRepository).delete(expired);
+        assertThat(formerUser.getStaff()).isNull();
+    }
+
+    @Test
+    void setManualStaff_True_ShouldEndTheInactivePeriod() {
+        // Given — came back to the team before the data was purged
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().bio("Bio").inactiveSince(LocalDateTime.now().minusMonths(3)).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", true);
+
+        // Then
+        assertThat(result.getStaff().getInactiveSince()).isNull();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
     void isPubliclyVisibleStaff_WhenNoLongerStaff_ShouldBeFalse() {
         // Given — opted in, but neither manual nor holding a staff role any more
         User user = User.builder()
@@ -841,9 +960,10 @@ public class UserServiceTest {
         // When
         User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
 
-        // Then — hidden, but the data is kept
+        // Then — hidden, but the data is kept (and its retention period starts)
         assertThat(result.isStaff()).isFalse();
         assertThat(result.getStaff().isPublicVisible()).isFalse();
+        assertThat(result.getStaff().getInactiveSince()).isNotNull();
         assertThat(result.getStaff().getBio()).isEqualTo("Bio");
     }
 

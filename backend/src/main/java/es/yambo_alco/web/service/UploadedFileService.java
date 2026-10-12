@@ -23,6 +23,8 @@ public class UploadedFileService {
     private final FileStorageService fileStorageService;
     private final AuthService authService;
 
+    private static final String UPLOADS_PREFIX = "/uploads/";
+
     /**
      * Upload a file and track it in the database.
      */
@@ -32,7 +34,7 @@ public class UploadedFileService {
 
         // Store the file on disk
         String storedName = fileStorageService.store(file);
-        String url = "/uploads/" + storedName;
+        String url = UPLOADS_PREFIX + storedName;
 
         // Create and save the file record
         UploadedFile uploadedFile = UploadedFile.builder()
@@ -87,6 +89,25 @@ public class UploadedFileService {
         deleteFile(uploadedFile);
         uploadedFileRepository.delete(uploadedFile);
         log.info("File deleted: id={} by={}", fileId, currentUser.getId());
+    }
+
+    /**
+     * Deletes the file behind an "/uploads/..." url if it was uploaded by the given user.
+     * Used to clean up replaced or removed staff photos; files uploaded by someone else
+     * (which may be in use elsewhere) are left alone.
+     */
+    @Transactional
+    public void deleteOwnedByUrl(String url, @NonNull String ownerId) {
+        if (url == null || !url.startsWith(UPLOADS_PREFIX)) {
+            return;
+        }
+        uploadedFileRepository.findByStoredName(url.substring(UPLOADS_PREFIX.length()))
+                .filter(file -> file.getUploadedBy() != null && ownerId.equals(file.getUploadedBy().getId()))
+                .ifPresent(file -> {
+                    deleteFile(file);
+                    uploadedFileRepository.delete(file);
+                    log.info("File deleted: id={} (no longer used by its owner {})", file.getId(), ownerId);
+                });
     }
 
     private void deleteFile(UploadedFile uploadedFile) {

@@ -41,6 +41,7 @@ export default function UserPerfil() {
     const [staffDirty, setStaffDirty] = useState(false);
     const [togglingManual, setTogglingManual] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [confirmDeleteStaff, setConfirmDeleteStaff] = useState(false);
     const userIsStaff = isStaff(user);
     const isManualStaff = user.staff?.manual ?? false;
     const hasStaffRole = isStaff({ groupRoles: user.groupRoles });
@@ -111,6 +112,21 @@ export default function UserPerfil() {
             toast.error(getErrorMessage(err, "Error al guardar"));
         } finally {
             setTogglingManual(false);
+        }
+    };
+
+    const executeDeleteStaff = async () => {
+        if (!userId) return;
+        try {
+            await adminUserService.deleteStaff(userId);
+            setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", publicVisible: false });
+            setStaffDirty(false);
+            toast.success("Ficha del equipo borrada");
+            await refreshUser();
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Error al borrar la ficha"));
+        } finally {
+            setConfirmDeleteStaff(false);
         }
     };
 
@@ -300,7 +316,11 @@ export default function UserPerfil() {
 
                     {userIsStaff && (
                         <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                            <div className="mt-6 flex flex-col sm:flex-row justify-between gap-3">
+                                <ButtonComponent variant="danger-text" onClick={() => setConfirmDeleteStaff(true)} className="w-full sm:w-auto">
+                                    <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-1.5" />
+                                    Borrar ficha
+                                </ButtonComponent>
                                 <ButtonComponent variant="primary" onClick={handleStaffSave} disabled={savingStaff || !staffDirty} className="w-full sm:w-auto">
                                     <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
                                     {savingStaff ? "Guardando..." : "Guardar ficha"}
@@ -310,6 +330,16 @@ export default function UserPerfil() {
                     )}
                 </div>
             </section>
+
+            <ConfirmDialog
+                isOpen={confirmDeleteStaff}
+                onClose={() => setConfirmDeleteStaff(false)}
+                onConfirm={executeDeleteStaff}
+                title="Borrar ficha del equipo"
+                message={`Se borrarán la foto, el apodo, la descripción y el dato curioso de "${user.name}", y dejará de aparecer en la web pública. Seguirá formando parte del equipo.`}
+                confirmLabel="Borrar ficha"
+                variant="danger"
+            />
 
             {/* Estado */}
             <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden">

@@ -33,6 +33,10 @@ export class UserService extends ApiService {
     return await this.put<CurrentUser, UpdateStaffRequest>('/user/staff', data);
   }
 
+  public async deleteStaff(): Promise<CurrentUser> {
+    return await this.delete<CurrentUser>('/user/staff');
+  }
+
   public async changePassword(data: ChangePasswordRequest): Promise<void> {
     return await this.put<void, ChangePasswordRequest>('/user/change-password', data);
   }

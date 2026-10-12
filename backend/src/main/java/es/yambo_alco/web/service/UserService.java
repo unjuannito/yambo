@@ -13,6 +13,7 @@ import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.StaffRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
@@ -45,6 +46,8 @@ public class UserService {
 	private final UserProjectGroupRepository userProjectGroupRepository;
 	private final PendingDeletionService pendingDeletionService;
 	private final AccessGrantService accessGrantService;
+	private final StaffRepository staffRepository;
+	private final UploadedFileService uploadedFileService;
 
 	private static final String MONITOR_PROFILE_ID = "P0000004";
 	private static final String COORDINATOR_PROFILE_ID = "P0000005";
@@ -122,7 +125,11 @@ public class UserService {
 
 		Staff staff = ensureStaff(user);
 		if (update.getPhoto() != null) {
-			staff.setPhoto(blankToNull(update.getPhoto()));
+			String newPhoto = blankToNull(update.getPhoto());
+			if (staff.getPhoto() != null && !staff.getPhoto().equals(newPhoto)) {
+				uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), userId);
+			}
+			staff.setPhoto(newPhoto);
 		}
 		if (update.getBio() != null) {
 			staff.setBio(blankToNull(update.getBio()));
@@ -138,6 +145,48 @@ public class UserService {
 		}
 
 		return userRepository.save(user);
+	}
+
+	/**
+	 * Deletes the staff card: photo (and its file), nickname, bio and fun fact, and hides it from
+	 * the public site. Someone who is still staff keeps an empty card; otherwise the row is removed.
+	 */
+	@Transactional
+	public User deleteStaffData(@NonNull String userId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+		Staff staff = user.getStaff();
+		if (staff == null) {
+			return user;
+		}
+
+		uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), userId);
+		if (!user.isStaff()) {
+			user.setStaff(null);
+			staffRepository.delete(staff);
+			return user;
+		}
+
+		staff.setPhoto(null);
+		staff.setBio(null);
+		staff.setFunFact(null);
+		staff.setNickname(null);
+		setPublicVisible(staff, false);
+		return userRepository.save(user);
+	}
+
+	/** Removes the staff data of users who stopped being staff before the given moment. */
+	@Transactional
+	public int purgeStaffInactiveSince(@NonNull LocalDateTime cutoff) {
+		List<Staff> expired = staffRepository.findByInactiveSinceBefore(cutoff);
+		for (Staff staff : expired) {
+			uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), staff.getUserId());
+			if (staff.getUser() != null) {
+				staff.getUser().setStaff(null);
+			}
+			staffRepository.delete(staff);
+		}
+		return expired.size();
 	}
 
 	/**
@@ -169,6 +218,9 @@ public class UserService {
 			return user;
 		}
 		ensureStaff(user).setManual(manual);
+		if (manual) {
+			user.getStaff().setInactiveSince(null);
+		}
 		hideIfNoLongerStaff(user);
 
 		return userRepository.save(user);
@@ -181,10 +233,17 @@ public class UserService {
 		return user.getStaff();
 	}
 
-	/** Leaving the staff withdraws the public opt-in, so coming back does not republish the card. */
+	/**
+	 * Leaving the staff withdraws the public opt-in (coming back does not republish the card)
+	 * and starts the retention period of the now inactive data.
+	 */
 	private void hideIfNoLongerStaff(User user) {
-		if (user.getStaff() != null && !user.isStaff()) {
-			setPublicVisible(user.getStaff(), false);
+		Staff staff = user.getStaff();
+		if (staff != null && !user.isStaff()) {
+			setPublicVisible(staff, false);
+			if (staff.getInactiveSince() == null) {
+				staff.setInactiveSince(LocalDateTime.now());
+			}
 		}
 	}
 
@@ -242,7 +301,7 @@ public class UserService {
 		syncRoleProfile(user, role, true);
 		// Getting a MONITOR/COORDINATOR role promotes the user to staff
 		if (role.isStaff()) {
-			ensureStaff(user);
+			ensureStaff(user).setInactiveSince(null);
 		}
 
 		User saved = userRepository.save(user);

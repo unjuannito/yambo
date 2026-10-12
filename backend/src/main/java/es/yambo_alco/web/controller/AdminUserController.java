@@ -122,6 +122,12 @@ public class AdminUserController {
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
     }
 
+    @DeleteMapping("/{userId}/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> deleteStaffData(@PathVariable @NonNull String userId) {
+        return ResponseEntity.ok(new AdminUserResponse(userService.deleteStaffData(userId)));
+    }
+
     @PutMapping("/{userId}/staff/manual")
     @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
     public ResponseEntity<AdminUserResponse> setManualStaff(

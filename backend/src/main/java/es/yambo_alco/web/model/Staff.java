@@ -55,6 +55,10 @@ public class Staff {
     @Column(name = "public_visible_at")
     private LocalDateTime publicVisibleAt;
 
+    /** When the user stopped being staff; null while they are. Old inactive rows are purged. */
+    @Column(name = "inactive_since")
+    private LocalDateTime inactiveSince;
+
     /** Added to the staff by hand, regardless of group roles. */
     @Builder.Default
     @Column(nullable = false)

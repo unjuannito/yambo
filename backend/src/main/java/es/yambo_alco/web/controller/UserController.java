@@ -61,6 +61,13 @@ public class UserController {
         return ResponseEntity.ok(new UserResponse(updatedUser));
     }
 
+    @DeleteMapping("/staff")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> deleteStaffData() {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(new UserResponse(userService.deleteStaffData(currentUser.getId())));
+    }
+
     @PutMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
