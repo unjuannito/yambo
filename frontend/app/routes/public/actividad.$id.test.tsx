@@ -200,15 +200,13 @@ describe("actividad.$id — meta()", () => {
         expect(description.content).toContain("Taller Ven a pintar");
     });
 
-    it("shares the logo with a small card when no image is set", () => {
+    it("shares the brand image when no image is set", () => {
         const noImage = { ...mockActivity, image: null };
         const data = { activity: noImage, siteUrl: MOCK_SITE_URL };
         const result = meta({ data } as any) as any[];
 
         const ogImage = result.filter((r: any) => r.property === "og:image");
-        const card = result.filter((r: any) => r.name === "twitter:card");
-        expect(ogImage[0].content).toBe("https://yambo.cabrasky.net/logo.png");
-        expect(card[0].content).toBe("summary");
+        expect(ogImage[0].content).toBe("https://yambo.cabrasky.net/og-default.png");
     });
 
     it("includes JSON-LD for Event schema", () => {

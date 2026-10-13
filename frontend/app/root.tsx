@@ -23,7 +23,11 @@ import "./app.css";
 import { isSiteIndexable } from "./utils/env.server";
 
 export function loader() {
-    return { indexable: isSiteIndexable() };
+    return {
+        indexable: isSiteIndexable(),
+        // Código de Search Console para verificar la propiedad por «prefijo de URL»
+        googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || null,
+    };
 }
 
 function WebSocketProvider({ children }: { children: React.ReactNode }) {
@@ -44,10 +48,17 @@ export const links: Route.LinksFunction = () => [
         href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap",
     },
     { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
+    // Generados desde logo.svg con scripts/generate-brand-assets.sh
+    { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+    { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+    { rel: "manifest", href: "/manifest.webmanifest" },
 ];
 
 export default function Document() {
-    const indexable = useRouteLoaderData<typeof loader>("root")?.indexable ?? true;
+    const rootData = useRouteLoaderData<typeof loader>("root");
+    const indexable = rootData?.indexable ?? true;
+    const googleSiteVerification = rootData?.googleSiteVerification;
     return (
         <html lang="es">
             <head>
@@ -58,11 +69,10 @@ export default function Document() {
                 />
                 {/* Entornos de pruebas: gana sobre el `robots` de cada página (se aplica el más restrictivo) */}
                 {!indexable && <meta name="robots" content="noindex, nofollow" />}
-                <link
-                    rel="shortcut icon"
-                    href="/logo.png"
-                    type="image/x-icon"
-                />
+                <meta name="theme-color" content="#32a45e" />
+                {googleSiteVerification && (
+                    <meta name="google-site-verification" content={googleSiteVerification} />
+                )}
                 <Meta />
                 <Links />
             </head>

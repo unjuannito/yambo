@@ -67,12 +67,12 @@ describe("buildMeta", () => {
         expect(content(meta, "robots")).toBe("index, follow");
     });
 
-    it("falls back to the logo and a small card without an image", () => {
+    it("falls back to the brand share image", () => {
         const meta = buildMeta({ siteUrl: SITE_URL, path: "", title: "Yambo", description: "Asociación" });
 
         expect(meta).toContainEqual({ tagName: "link", rel: "canonical", href: SITE_URL });
-        expect(content(meta, "og:image")).toBe("https://yambo.cabrasky.net/logo.png");
-        expect(content(meta, "twitter:card")).toBe("summary");
+        expect(content(meta, "og:image")).toBe("https://yambo.cabrasky.net/og-default.png");
+        expect(content(meta, "twitter:card")).toBe("summary_large_image");
     });
 
     it("marks pages that must stay out of search engines", () => {

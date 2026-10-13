@@ -9,6 +9,8 @@ import { stripMarkdown } from "~/utils/activity-helpers";
 
 const SITE_NAME = "Yambo";
 const DESCRIPTION_MAX = 160;
+/** 1200×630, generada desde el logo con scripts/generate-brand-assets.sh. */
+const DEFAULT_IMAGE = "/og-default.png";
 
 /** Los buscadores y las redes necesitan URLs completas; las subidas se guardan como `/uploads/...`. */
 export function absoluteUrl(siteUrl: string, path: string): string {
@@ -40,7 +42,7 @@ export interface PageMeta {
     path: string;
     title: string;
     description: string;
-    /** Imagen para compartir; por defecto el logo. Admite rutas relativas. */
+    /** Imagen para compartir; por defecto la de la marca. Admite rutas relativas. */
     image?: string | null;
     type?: "website" | "article" | "profile";
     index?: boolean;
@@ -48,9 +50,7 @@ export interface PageMeta {
 
 export function buildMeta({ siteUrl, path, title, description, image, type = "website", index = true }: PageMeta): MetaDescriptor[] {
     const url = absoluteUrl(siteUrl, path).replace(/\/$/, "") || siteUrl;
-    const imageUrl = absoluteUrl(siteUrl, image || "/logo.png");
-    // Solo una imagen propia merece la tarjeta grande; el logo se vería recortado
-    const card = image ? "summary_large_image" : "summary";
+    const imageUrl = absoluteUrl(siteUrl, image || DEFAULT_IMAGE);
 
     return [
         { title },
@@ -64,7 +64,7 @@ export function buildMeta({ siteUrl, path, title, description, image, type = "we
         { property: "og:description", content: description },
         { property: "og:url", content: url },
         { property: "og:image", content: imageUrl },
-        { name: "twitter:card", content: card },
+        { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "twitter:image", content: imageUrl },
