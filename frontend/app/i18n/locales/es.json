@@ -1049,6 +1049,8 @@
     "staffAboutTitle": "Cómo se nota que eres de Yambo",
     "staffFunFact": "Dato curioso",
     "staffInstagram": "Ver en Instagram",
+    "staffRoleCoordinator": "Coordinador - {{project}}",
+    "staffRoleMonitor": "Monitor en {{name}}",
     "staffFilteredResult": "{{count}} persona(s) encontrada(s)",
     "projectFilteredResult": "{{count}} monitor(es) encontrado(s)"
   },

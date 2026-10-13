@@ -27,10 +27,7 @@ export default function StaffGallery({ staff, title, sectionIndex }: StaffGaller
                         className="w-[220px] min-w-[220px] flex-shrink-0 fade-up"
                         style={{ animationDelay: `${idx * 80}ms` }}
                     >
-                        <StaffCard
-                            member={member}
-                            roleLabel={member.role !== "MONITOR" ? t("public.projectCoordination") : undefined}
-                        />
+                        <StaffCard member={member} />
                     </div>
                 ))}
             </div>

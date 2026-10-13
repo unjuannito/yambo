@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { StaffMember } from "~/services/publicService";
 import { projectColor } from "~/utils/projectColor";
+import { staffRoleLabels } from "~/utils/staffRoleLabels";
 import { Modal } from "~/components/common/Modal";
 import ElephantAvatar from "~/components/ElephantAvatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,35 +11,37 @@ import { faInstagram } from "@fortawesome/free-brands-svg-icons";
 
 interface StaffCardProps {
     member: StaffMember;
-    roleLabel?: string;
     projectName?: string;
 }
 
-export default function StaffCard({ member, roleLabel, projectName }: StaffCardProps) {
+export default function StaffCard({ member, projectName }: StaffCardProps) {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const displayName = member.nickname || member.name;
 
-    const displayGroups = projectName
-        ? member.groups
-            .filter(g => g.projectName === projectName && g.name)
-            .map(g => ({ ...g, label: g.name! }))
-        : member.groups.map(g => ({
-            ...g,
-            label: g.name ? `${g.projectName} - ${g.name}` : g.projectName,
-        }));
+    const roleLabels = staffRoleLabels(member.groups, t, projectName);
 
-    const groupBadges = displayGroups.length > 0 && (
+    const groupBadges = roleLabels.length > 0 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
-            {displayGroups.map((g) => {
-                const { bg, text } = projectColor(g.projectName + (g.name || ""));
+            {roleLabels.map((r) => {
+                if (r.role === "COORDINATOR") {
+                    return (
+                        <span
+                            key={r.key}
+                            className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-yambo-purple-100 text-yambo-purple-700"
+                        >
+                            {r.label}
+                        </span>
+                    );
+                }
+                const { bg, text } = projectColor(r.colorSeed);
                 return (
                     <span
-                        key={g.id}
+                        key={r.key}
                         className="inline-block text-xs font-medium px-2 py-0.5 rounded-full"
                         style={{ backgroundColor: bg, color: text }}
                     >
-                        {g.label}
+                        {r.label}
                     </span>
                 );
             })}
@@ -76,11 +79,6 @@ export default function StaffCard({ member, roleLabel, projectName }: StaffCardP
                     <h3 className="text-base font-bold text-yambo-black line-clamp-2">
                         {displayName}
                     </h3>
-                    {roleLabel && (
-                        <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yambo-purple-100 text-yambo-purple-700">
-                            {roleLabel}
-                        </span>
-                    )}
                     {groupBadges}
                     {member.bio && (
                         <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">
