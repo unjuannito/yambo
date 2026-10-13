@@ -3,6 +3,7 @@ import { getPublicActivities } from "~/services/publicService.server";
 import { getPublishedLegalPages } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
 import { isIndexableActivity } from "~/utils/seo";
+import { activityPath, projectPath } from "~/utils/publicPaths";
 
 /**
  * Resource route – returns a dynamic XML sitemap.
@@ -45,7 +46,7 @@ export async function loader() {
         projectEntries = projects.map(
             (p) => `
   <url>
-    <loc>${escapeXml(siteUrl)}/proyectos/${escapeXml(p.id)}</loc>
+    <loc>${escapeXml(siteUrl + projectPath(p))}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`,
@@ -62,7 +63,7 @@ export async function loader() {
         activityEntries = activities.filter((a) => isIndexableActivity(a)).map(
             (a) => `
   <url>
-    <loc>${escapeXml(siteUrl)}/actividades/${escapeXml(a.id)}</loc>
+    <loc>${escapeXml(siteUrl + activityPath(a))}</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>`,

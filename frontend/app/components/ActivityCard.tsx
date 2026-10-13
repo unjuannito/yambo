@@ -10,6 +10,7 @@ import {
     faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { formatDateRange, stripMarkdown, getImageSrc } from "~/utils/activity-helpers";
+import { activityPath } from "~/utils/publicPaths";
 
 interface ActivityCardProps {
     activity: Activity;
@@ -32,7 +33,7 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
         stripMarkdown(activity.description).length > (compact ? 80 : 120);
 
     const imageSrc = getImageSrc(activity);
-    const detailUrl = `/actividades/${activity.id}`;
+    const detailUrl = activityPath(activity);
 
     if (compact) {
         return (

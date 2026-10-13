@@ -8,6 +8,7 @@ export interface HomeSettings {
 
 export interface FeaturedProject {
     id: string;
+    slug?: string | null;
     name: string;
     description: string;
     image: string;
@@ -37,6 +38,7 @@ export interface StaffMember {
 
 export interface ActiveProject {
     id: string;
+    slug?: string | null;
     name: string;
     season: string | null;
     description: string | null;
@@ -60,6 +62,7 @@ export interface SeoMetadata {
 
 export interface ProjectDetail {
     id: string;
+    slug?: string | null;
     name: string;
     active: boolean;
     season: string | null;

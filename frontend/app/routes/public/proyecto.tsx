@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getProjectDetail } from "~/services/publicService.server";
 import type { ProjectDetail, StaffMember, ProjectGroupDetail } from "~/services/publicService";
@@ -11,14 +11,20 @@ import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import { buildMeta, metaDescription } from "~/utils/seo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { projectPath } from "~/utils/publicPaths";
 
 export async function loader({ params }: Route.LoaderArgs) {
+  let project: ProjectDetail;
   try {
-    const project = await getProjectDetail(params.projectId!);
-    return { project, siteUrl: getSiteUrl() };
+    project = await getProjectDetail(params.projectId!);
   } catch {
     throw new Response(null, { status: 404, statusText: "Not Found" });
   }
+  // Los enlaces antiguos llevan el id: se envían a la URL con nombre
+  if (project.slug && params.projectId !== project.slug) {
+    throw redirect(projectPath(project), 301);
+  }
+  return { project, siteUrl: getSiteUrl() };
 }
 
 export function meta({ data }: Route.MetaArgs) {
@@ -29,12 +35,12 @@ export function meta({ data }: Route.MetaArgs) {
 
   const title = project ? `${project.name} | Yambo` : t('public.projectNotFound');
   const description = seo?.metaDescription || project?.description || t('public.projectsMetaDescription');
-  const pageUrl = project ? `${siteUrl}/proyectos/${project.id}` : `${siteUrl}/proyectos`;
+  const pageUrl = project ? `${siteUrl}${projectPath(project)}` : `${siteUrl}/proyectos`;
 
   return [
     ...buildMeta({
       siteUrl,
-      path: project ? `/proyectos/${project.id}` : "/proyectos",
+      path: project ? projectPath(project) : "/proyectos",
       title,
       description: metaDescription(description),
       image: project?.image,

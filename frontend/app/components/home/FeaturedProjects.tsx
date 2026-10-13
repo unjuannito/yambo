@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { FeaturedProject } from "~/services/publicService";
 import { projectColor } from "~/utils/projectColor";
 import SectionWrapper from "~/components/home/SectionWrapper";
+import { projectPath } from "~/utils/publicPaths";
 
 interface FeaturedProjectsProps {
     projects: FeaturedProject[];
@@ -62,7 +63,7 @@ export default function FeaturedProjects({ projects, title, sectionIndex }: Feat
                                             {project.description}
                                         </p>
                                         <a
-                                            href={`/proyectos/${project.id}`}
+                                            href={projectPath(project)}
                                             className="inline-flex items-center gap-1 text-sm font-semibold transition-colors [color:var(--pc-text)] hover:[color:var(--pc-text-hover)]"
                                         >
                                             {t("public.projectsView")}

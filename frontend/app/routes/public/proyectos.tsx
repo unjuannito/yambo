@@ -9,6 +9,7 @@ import { buildMeta } from "~/utils/seo";
 import type { Route } from "./+types/proyectos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
+import { projectPath } from "~/utils/publicPaths";
 
 export function meta({ data }: Route.MetaArgs) {
   const { t } = useTranslation();
@@ -23,7 +24,7 @@ export function meta({ data }: Route.MetaArgs) {
         { name: t('nav.home'), url: siteUrl },
         { name: t('public.projectsTitle'), url: `${siteUrl}/proyectos` },
     ]) },
-    { "script:ld+json": itemListJsonLd((data?.projects ?? []).map((p) => ({ name: p.name, url: `${siteUrl}/proyectos/${p.id}` }))) },
+    { "script:ld+json": itemListJsonLd((data?.projects ?? []).map((p) => ({ name: p.name, url: `${siteUrl}${projectPath(p)}` }))) },
   ];
 }
 
@@ -53,7 +54,7 @@ export default function Proyectos() {
               return (
               <a
                 key={project.id}
-                href={`/proyectos/${project.id}`}
+                href={projectPath(project)}
                 className="group fade-up"
                 style={{
                   animationDelay: `${idx * 100}ms`,

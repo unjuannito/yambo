@@ -10,4 +10,7 @@ public interface ProjectRepository extends JpaRepository<Project, String>, JpaSp
     boolean existsByName(String name);
     List<Project> findByActiveTrueAndFeaturedTrue();
     List<Project> findByActiveTrue();
+    boolean existsBySlug(String slug);
+    java.util.Optional<Project> findBySlug(String slug);
+    List<Project> findBySlugIsNull(org.springframework.data.domain.Sort sort);
 }

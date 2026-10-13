@@ -24,6 +24,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectGroupRepository projectGroupRepository;
     private final SeoMetadataService seoMetadataService;
+    private final SlugService slugService;
 
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -58,6 +59,7 @@ public class ProjectService {
                 .featured(featured != null ? featured : false)
                 .signatureColor(signatureColor)
                 .coordinationEmail(normalizeCoordinationEmail(coordinationEmail))
+                .slug(slugService.forProject(name))
                 .build();
 
         Project saved = projectRepository.save(project);
