@@ -83,12 +83,42 @@ public class FileStorageService {
         try {
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
+                deleteVariants(storedName);
                 log.info("Deleted file: {}", storedName);
             } else {
                 log.warn("File not found for deletion: {}", storedName);
             }
         } catch (IOException e) {
             log.error("Failed to delete file: {}", storedName, e);
+        }
+    }
+
+    /** Folder, inside the uploads directory, holding the resized copies of images. */
+    static final String VARIANTS_DIR = ".variants";
+
+    /**
+     * Where the resized WebP copy of an image lives. The file may not exist yet.
+     */
+    public Path variantPath(String storedName, int width) {
+        Path path = uploadPath.resolve(VARIANTS_DIR).resolve(String.valueOf(width)).resolve(storedName + ".webp").normalize();
+        if (!path.startsWith(uploadPath.resolve(VARIANTS_DIR))) {
+            throw new BadRequestException("Invalid file path");
+        }
+        return path;
+    }
+
+    /** Removes every resized copy of a file; they are worthless without the original. */
+    private void deleteVariants(String storedName) {
+        Path variantsRoot = uploadPath.resolve(VARIANTS_DIR);
+        if (!Files.isDirectory(variantsRoot)) {
+            return;
+        }
+        try (var widths = Files.list(variantsRoot)) {
+            for (Path widthDir : widths.toList()) {
+                Files.deleteIfExists(widthDir.resolve(storedName + ".webp"));
+            }
+        } catch (IOException e) {
+            log.warn("Failed to delete image variants of {}", storedName, e);
         }
     }
 
