@@ -1193,7 +1193,6 @@
     "onlyStaff": "Solo el equipo de Yambo tiene elefante.",
     "previewHint": "Así se verá en la página del equipo.",
     "parts": "Partes del elefante",
-    "trunkUp": "Trompa levantada",
     "flip": "Mirar al otro lado",
     "random": "Aleatorio",
     "reset": "Restablecer",
@@ -1203,11 +1202,19 @@
       "background": "Fondo",
       "hair": "Pelo",
       "eyes": "Ojos",
+      "trunk": "Trompa",
       "clothes": "Ropa",
       "top": "Complemento",
       "extra": "Detalles"
     },
     "options": {
+      "trunk": {
+        "down": "Caída",
+        "straight": "Recta",
+        "curl": "Enroscada",
+        "up": "Levantada",
+        "wave": "Ondulada"
+      },
       "hair": {
         "none": "Sin pelo",
         "tuft": "Tupé",

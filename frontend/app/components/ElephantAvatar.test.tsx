@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import ElephantAvatar, { avatarFromSeed, hairHiddenBy, normalizeAvatar } from "./ElephantAvatar";
+import ElephantAvatar, { AVATAR_TRUNKS, avatarFromSeed, hairHiddenBy, normalizeAvatar } from "./ElephantAvatar";
 
 describe("ElephantAvatar", () => {
     it("draws the same elephant for the same seed", () => {
@@ -34,12 +34,18 @@ describe("ElephantAvatar", () => {
         expect(withSaved).toBe(sameFromOtherSeed);
     });
 
-    it("draws a different trunk when it is raised", () => {
+    it("draws a different trunk for each pose", () => {
         const base = avatarFromSeed("U0000001");
-        const lowered = render(<ElephantAvatar seed="U0000001" config={{ ...base, trunkUp: false }} />).container.innerHTML;
-        const raised = render(<ElephantAvatar seed="U0000001" config={{ ...base, trunkUp: true }} />).container.innerHTML;
+        const drawings = new Set(
+            AVATAR_TRUNKS.map((trunk) => render(<ElephantAvatar seed="U0000001" config={{ ...base, trunk }} />).container.innerHTML)
+        );
 
-        expect(lowered).not.toBe(raised);
+        expect(drawings.size).toBe(AVATAR_TRUNKS.length);
+    });
+
+    it("reads the trunk of avatars saved before the poses existed", () => {
+        expect(normalizeAvatar({ trunkUp: true } as never, "U0000001").trunk).toBe("up");
+        expect(normalizeAvatar({ trunkUp: false } as never, "U0000001").trunk).toBe("down");
     });
 
     it("renders complete avatar examples with the cap, clothes, eyes and hair", () => {
@@ -53,7 +59,7 @@ describe("ElephantAvatar", () => {
                     hair: "fringe",
                     top: "cap",
                     extra: "blush",
-                    trunkUp: true,
+                    trunk: "up",
                     flip: false,
                 }}
             />
@@ -73,7 +79,7 @@ describe("ElephantAvatar", () => {
                     hair: "fringe",
                     top: "beanie",
                     extra: "freckles",
-                    trunkUp: false,
+                    trunk: "down",
                     flip: true,
                 }}
             />

@@ -7,6 +7,7 @@ import {
     AVATAR_EYES,
     AVATAR_HAIR,
     AVATAR_TOPS,
+    AVATAR_TRUNKS,
     COVERING_TOPS,
     ElephantAvatar,
     avatarFromSeed,
@@ -19,14 +20,15 @@ import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faDice, faFloppyDisk, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 
-type Section = "background" | "hair" | "eyes" | "clothes" | "top" | "extra";
+type Section = "background" | "hair" | "eyes" | "trunk" | "clothes" | "top" | "extra";
 type OptionSection = Exclude<Section, "background">;
 
-const SECTIONS: Section[] = ["background", "hair", "eyes", "clothes", "top", "extra"];
+const SECTIONS: Section[] = ["background", "hair", "eyes", "trunk", "clothes", "top", "extra"];
 
 const OPTIONS: Record<OptionSection, readonly string[]> = {
     hair: AVATAR_HAIR,
     eyes: AVATAR_EYES,
+    trunk: AVATAR_TRUNKS,
     clothes: AVATAR_CLOTHES,
     top: AVATAR_TOPS,
     extra: AVATAR_EXTRAS,
@@ -101,15 +103,6 @@ export function ElephantAvatarEditor({
                 </div>
 
                 <div className="rounded-xl border border-gray-200 divide-y divide-gray-100">
-                    <label className="flex items-center justify-between gap-3 px-4 py-2.5 cursor-pointer">
-                        <span className="text-sm font-medium text-gray-700">{t("avatar.trunkUp")}</span>
-                        <CheckboxComponent
-                            variantType="toggle"
-                            className="shrink-0"
-                            checked={config.trunkUp}
-                            onChange={(e) => patch({ trunkUp: e.target.checked })}
-                        />
-                    </label>
                     <label className="flex items-center justify-between gap-3 px-4 py-2.5 cursor-pointer">
                         <span className="text-sm font-medium text-gray-700">{t("avatar.flip")}</span>
                         <CheckboxComponent

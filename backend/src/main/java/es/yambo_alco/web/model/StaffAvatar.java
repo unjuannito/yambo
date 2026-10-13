@@ -46,6 +46,11 @@ public class StaffAvatar {
     @Pattern(regexp = "none|blush|freckles|earring")
     private String extra;
 
+    /** Trunk pose. Optional: avatars saved before the poses existed only have {@link #trunkUp}. */
+    @Pattern(regexp = "down|straight|curl|up|wave")
+    private String trunk;
+
+    /** Legacy: replaced by {@link #trunk}; kept so older saved avatars still load. */
     private boolean trunkUp;
 
     private boolean flip;
