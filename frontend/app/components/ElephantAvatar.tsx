@@ -126,8 +126,9 @@ const chalk = { fill: "none", stroke: PAPER, strokeWidth: 3, strokeLinecap: "rou
 
 // Cabeza: elipse centrada en (100, 106), de 50 × 52
 const HEAD = { cx: 100, cy: 106, rx: 50, ry: 52 };
-const TRUNK_DOWN = "M100 120 C100 152 96 170 108 180 C118 188 130 182 128 172";
-const TRUNK_UP = "M100 120 C100 139 104 150 114 154 C130 161 147 152 150 137 C153 123 146 113 148 102 C149 92 156 84 165 80";
+// La trompa cuelga del centro de la cara, por delante de la cabeza y de la ropa
+const TRUNK_DOWN = "M100 110 C100 136 99 156 104 170 C109 182 124 182 128 170";
+const TRUNK_UP = "M100 110 C100 150 112 172 132 170 C150 168 160 150 158 132";
 // Se alarga por debajo del lienzo para que llegue al borde también en el recorte vertical de la ficha
 const BODY = "M24 340 L24 244 C24 204 58 184 100 184 C142 184 176 204 176 244 L176 340 Z";
 // Casquete de pelo liso que tapa la coronilla (moño y coletas)
@@ -390,7 +391,8 @@ function Top({ top }: { top: AvatarTop }) {
             return (
                 <g>
                     <path d="M54 80 C56 36 144 36 146 80 Q100 68 54 80 Z" {...line} />
-                    <path d="M50 77 Q100 65 150 77 C161 80 163 88 157 94 Q100 107 43 94 C37 88 39 80 50 77 Z" {...line} strokeWidth={3.5} />
+                    {/* Visera vista de frente: una media luna que no llega a tapar los ojos */}
+                    <path d="M50 78 Q100 64 150 78 Q158 82 152 88 Q100 76 48 88 Q42 82 50 78 Z" {...line} strokeWidth={3.5} />
                     <path d="M100 45 V72" {...pen} strokeWidth={2} />
                     <circle cx="100" cy="44" r="3" fill={INK} />
                 </g>
@@ -482,24 +484,13 @@ export function ElephantAvatar({ seed, config, className, title }: ElephantAvata
                 {extra === "earring" && <circle cx="36" cy="158" r="6" {...pen} strokeWidth={3} />}
 
                 {/* Cuello: une la cabeza con el cuerpo */}
-                <path d="M80 140 L80 194 L120 194 L120 140 Z" {...line} />
+                <path d="M84 150 L82 194 L118 194 L116 150 Z" {...line} />
                 <Clothes clothes={clothes} />
 
-                {/* Colmillos: asoman por debajo de la cara */}
-                <path d="M76 138 C66 160 70 176 84 182 C84 168 86 154 90 142 Z M124 138 C134 160 130 176 116 182 C116 168 114 154 110 142 Z" {...line} strokeWidth={3} />
+                {/* Cabeza */}
+                <ellipse {...HEAD} {...line} />
 
-                {/* Cabeza y trompa: primero los contornos y luego los rellenos, para que se fundan sin costura */}
-                <ellipse {...HEAD} fill={PAPER} stroke={INK} strokeWidth={8} />
-                <path d={trunk} fill="none" stroke={INK} strokeWidth={30} strokeLinecap="round" />
-                <ellipse {...HEAD} fill={PAPER} />
-                <path d={trunk} fill="none" stroke={PAPER} strokeWidth={22} strokeLinecap="round" />
-                <path
-                    d={trunkUp ? "M157 94 q4 0 6 -4 M160 98 q4 0 6 -4" : "M92 140 q8 4 16 0 M92 154 q8 4 16 0"}
-                    {...pen}
-                    strokeWidth={2.5}
-                />
-
-                {/* Mejillas y sonrisa */}
+                {/* Mejillas */}
                 {extra === "blush" && (
                     <path d="M58 118 l5 -7 M65 120 l5 -7 M72 122 l5 -7 M123 122 l5 -7 M130 120 l5 -7 M137 118 l5 -7" {...pen} strokeWidth={2.5} />
                 )}
@@ -510,7 +501,19 @@ export function ElephantAvatar({ seed, config, className, title }: ElephantAvata
                         ))}
                     </g>
                 )}
-                <path d="M62 128 Q71 139 82 133" {...pen} />
+
+                {/* Sonrisa: asoma a los dos lados de la trompa */}
+                <path d="M70 128 Q76 137 84 136 M116 136 Q124 137 130 128" {...pen} />
+
+                {/* Colmillos: pequeños, a cada lado del arranque de la trompa */}
+                <path d="M84 138 C77 147 75 158 78 167 C86 162 90 151 90 140 Z M116 138 C123 147 125 158 122 167 C114 162 110 151 110 140 Z" {...line} strokeWidth={3} />
+
+                {/* Trompa: contorno negro y relleno blanco encima; el arranque se funde con la cara */}
+                <path d={trunk} fill="none" stroke={INK} strokeWidth={22} strokeLinecap="round" />
+                <path d={trunk} fill="none" stroke={PAPER} strokeWidth={14} strokeLinecap="round" />
+                <ellipse cx="100" cy="106" rx="7" ry="10" fill={PAPER} />
+                <path d="M94 132 q6 3 12 0 M94 146 q6 3 12 0" {...pen} strokeWidth={2.5} />
+                <path d={trunkUp ? "M152 136 q6 -1 11 2" : "M122 174 q5 3 10 0"} {...pen} strokeWidth={2.5} />
 
                 <Hair hair={visibleHair} />
                 <Eyes eyes={eyes} />
