@@ -1269,6 +1269,13 @@
       }
     }
   },
+  "unsavedChanges": {
+    "notice": "Tienes cambios sin guardar",
+    "title": "Cambios sin guardar",
+    "message": "Si sales ahora se perderán los cambios que no has guardado.",
+    "leave": "Salir sin guardar",
+    "stay": "Seguir editando"
+  },
   "photoEditor": {
     "title": "Ajustar la foto",
     "frameLabel": "Encuadre de la foto: arrastra o usa las flechas para moverla, y + o - para el zoom",
@@ -1295,7 +1302,8 @@
     "adjust": "Ajustar foto",
     "remove": "Eliminar",
     "photoAlt": "Foto de perfil",
-    "formats": "JPEG, PNG o WebP. Podrás encuadrarla al subirla."
+    "formats": "JPEG, PNG o WebP. Podrás encuadrarla al subirla.",
+    "pendingSave": "La foto no se publica hasta que guardes la ficha."
   },
   "myAccount": {
     "personalInfo": "Información personal",

@@ -9,6 +9,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import { StaffPhotoField } from "~/components/StaffPhotoField";
+import { UnsavedChangesGuard, UnsavedChangesNotice } from "~/components/common/UnsavedChanges";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -187,6 +188,7 @@ export default function UserPerfil() {
 
     return (
         <div className="max-w-3xl space-y-6">
+            <UnsavedChangesGuard when={dirty || staffDirty} />
             {/* Profile form */}
             <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div className="px-5 py-4 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
@@ -230,7 +232,8 @@ export default function UserPerfil() {
                     )}
 
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                        <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                        <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-end gap-3">
+                            <UnsavedChangesNotice show={dirty} className="self-end sm:self-auto" />
                             <ButtonComponent variant="primary" onClick={handleSave} disabled={saving || !dirty} className="w-full sm:w-auto">
                                 <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
                                 {saving ? t('common.saving') : t('users.saveChanges')}
@@ -284,6 +287,7 @@ export default function UserPerfil() {
                                     <StaffPhotoField
                                         placeholder={form.name.charAt(0).toUpperCase()}
                                         value={staffForm}
+                                        unsaved={staffForm.photo !== (user.staff?.photo || "")}
                                         onChange={(photo) => {
                                             setStaffForm(prev => ({ ...prev, ...photo }));
                                             setStaffDirty(true);
@@ -378,10 +382,13 @@ export default function UserPerfil() {
                                     <FontAwesomeIcon icon={faTrashCan} className="w-4 h-4 mr-1.5" />
                                     {t('users.deleteStaffCard')}
                                 </ButtonComponent>
-                                <ButtonComponent variant="primary" onClick={handleStaffSave} disabled={savingStaff || !staffDirty} className="w-full sm:w-auto">
-                                    <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
-                                    {savingStaff ? t('common.saving') : t('users.saveStaffCard')}
-                                </ButtonComponent>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <UnsavedChangesNotice show={staffDirty} className="self-end sm:self-auto" />
+                                    <ButtonComponent variant="primary" onClick={handleStaffSave} disabled={savingStaff || !staffDirty} className="w-full sm:w-auto">
+                                        <FontAwesomeIcon icon={faFloppyDisk} className="w-4 h-4 mr-1.5" />
+                                        {savingStaff ? t('common.saving') : t('users.saveStaffCard')}
+                                    </ButtonComponent>
+                                </div>
                             </div>
                         </RequirePermission>
                     )}

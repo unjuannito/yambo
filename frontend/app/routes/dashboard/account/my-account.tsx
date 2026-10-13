@@ -16,6 +16,7 @@ import { faUser, faUsers, faLock, faTrash, faCircleExclamation, faBell } from "@
 import { isStaff } from "~/utils/roleHelpers";
 import ElephantAvatar from "~/components/ElephantAvatar";
 import { StaffPhotoField } from "~/components/StaffPhotoField";
+import { UnsavedChangesGuard, UnsavedChangesNotice } from "~/components/common/UnsavedChanges";
 import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
@@ -100,6 +101,19 @@ export default function MyAccount() {
       }
     }
   }, [user]);
+
+  // Cambios pendientes respecto a lo guardado, para avisar antes de perderlos
+  const profileDirty = !!user && (profileData.name !== user.name || profileData.email !== (user.email ?? ""));
+  const photoDirty = !!user && staffData.photo !== (user.staff?.photo || "");
+  const staffDirty =
+    !!user &&
+    isStaff(user) &&
+    (photoDirty ||
+      staffData.bio !== (user.staff?.bio || "") ||
+      staffData.funFact !== (user.staff?.funFact || "") ||
+      staffData.nickname !== (user.staff?.nickname || "") ||
+      staffData.instagramUrl !== (user.staff?.instagramUrl || "") ||
+      staffData.photoConsent !== (user.staff?.photoConsent ?? false));
 
   const updateProfileMutation = useApiMutation<CurrentUser, UpdateProfileRequest>({
     mutationFn: (data) => userService.updateProfile(data),
@@ -198,6 +212,7 @@ export default function MyAccount() {
 
   return (
     <main className="flex flex-col items-center p-4 md:p-8 w-full min-h-screen">
+      <UnsavedChangesGuard when={profileDirty || staffDirty} />
       {/* Header con avatar */}
       <div className="mb-8 w-full max-w-5xl">
         <div className="flex items-center justify-center gap-6">
@@ -270,7 +285,8 @@ export default function MyAccount() {
                 </p>
               </div>
             )}
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+              <UnsavedChangesNotice show={profileDirty} />
               <ButtonComponent
                 type="submit"
                 variant="primary"
@@ -302,6 +318,7 @@ export default function MyAccount() {
                 placeholder={getInitials(user?.name || "?")}
                 value={staffData}
                 onChange={(photo) => setStaffData((prev) => ({ ...prev, ...photo }))}
+                unsaved={photoDirty}
               />
               <div className="flex items-center gap-4 rounded-xl border border-gray-200 px-4 py-3">
                 {user && (
@@ -398,13 +415,16 @@ export default function MyAccount() {
                 <ButtonComponent type="button" variant="danger-text" onClick={() => setShowDeleteStaffDialog(true)}>
                   <FontAwesomeIcon icon={faTrash} className="mr-1" /> {t('myAccount.deleteStaff')}
                 </ButtonComponent>
-                <ButtonComponent
-                  type="submit"
-                  variant="primary"
-                  isLoading={updateStaffMutation.isLoading}
-                >
-                  {t('myAccount.saveChanges')}
-                </ButtonComponent>
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <UnsavedChangesNotice show={staffDirty} />
+                  <ButtonComponent
+                    type="submit"
+                    variant="primary"
+                    isLoading={updateStaffMutation.isLoading}
+                  >
+                    {t('myAccount.saveChanges')}
+                  </ButtonComponent>
+                </div>
               </div>
             </form>
           </section>

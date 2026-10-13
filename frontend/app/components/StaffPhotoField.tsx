@@ -21,13 +21,15 @@ interface StaffPhotoFieldProps {
     /** Lo que se muestra cuando no hay foto (iniciales). */
     placeholder: React.ReactNode;
     label?: string;
+    /** La foto del formulario aún no está guardada. */
+    unsaved?: boolean;
 }
 
 /**
  * Foto de la ficha del equipo: se elige, se encuadra en el editor y se puede volver a ajustar.
  * Sube los ficheros, pero no guarda la ficha: deja los tres campos en el formulario.
  */
-export function StaffPhotoField({ value, onChange, placeholder, label }: StaffPhotoFieldProps) {
+export function StaffPhotoField({ value, onChange, placeholder, label, unsaved = false }: StaffPhotoFieldProps) {
     const { t } = useTranslation();
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
@@ -110,7 +112,11 @@ export function StaffPhotoField({ value, onChange, placeholder, label }: StaffPh
                     )}
                 </div>
                 {error && <p className="text-xs text-red-500">{error}</p>}
-                <p className="text-xs text-gray-400">{t("photoEditor.formats")}</p>
+                {unsaved ? (
+                    <p role="status" className="text-xs font-medium text-amber-700">{t("photoEditor.pendingSave")}</p>
+                ) : (
+                    <p className="text-xs text-gray-400">{t("photoEditor.formats")}</p>
+                )}
             </div>
             <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" data-testid="staff-photo-input" />
             {editing && (
