@@ -215,4 +215,16 @@ class AuthServiceTest {
         assertThrows(UnauthorizedException.class,
                 () -> authService.reload());
     }
+
+    @Test
+    void authenticate_ForSomeoneAddedWithoutAnAccount_ShouldBeRejected() {
+        // Given — even if the password somehow matched, there is no account yet
+        User pending = User.builder().email(TEST_USERNAME).password(ENCODED_PASSWORD).hasAccount(false).build();
+        when(userRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(pending));
+        org.mockito.Mockito.lenient().when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+
+        // Then
+        assertThrows(BadCredentialsException.class,
+                () -> authService.authenticate(TEST_USERNAME, TEST_PASSWORD));
+    }
 }

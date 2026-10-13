@@ -560,4 +560,33 @@ class NominativeInvitationServiceTest {
         assertThat(result).isEmpty();
         verify(nominativeInvitationRepository, never()).save(any(NominativeInvitation.class));
     }
+
+    @Test
+    void completeInvitation_ForSomeoneAddedWithoutAnAccount_ShouldClaimThatUser() {
+        String token = "valid-token";
+        String email = "juan@example.com";
+        Profile role = Profile.builder().id("INTERESADO").build();
+        NominativeInvitation invitation = NominativeInvitation.builder()
+                .email(email).token(token).used(false)
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .profiles(Set.of(role))
+                .build();
+        User pending = User.builder().id("U0000009").email(email).name("Juan").password("unusable")
+                .hasAccount(false).profiles(new java.util.HashSet<>()).build();
+
+        when(nominativeInvitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
+        when(userRepository.findPendingAccountByEmail(email)).thenReturn(Optional.of(pending));
+        when(passwordEncoder.encode("password")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        User result = nominativeInvitationService.completeInvitation(token, "password", "Otro Nombre");
+
+        // Same user: now with an account, the invitation profiles and the name the admin gave
+        assertThat(result).isSameAs(pending);
+        assertThat(result.isHasAccount()).isTrue();
+        assertThat(result.getPassword()).isEqualTo("encoded-password");
+        assertThat(result.getName()).isEqualTo("Juan");
+        assertThat(result.getProfiles()).contains(role);
+        assertThat(invitation.isUsed()).isTrue();
+    }
 }

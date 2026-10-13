@@ -97,7 +97,13 @@ public class GoogleOAuthProvider implements OAuthProvider {
     private User findExistingUser(String email, String name) {
         return userRepository.findByEmail(email)
                 .map(user -> {
-                    if (name != null && !name.isBlank()) user.setName(name);
+                    if (!user.isHasAccount()) {
+                        // Added without an account: signing in with Google is what creates it.
+                        // The name set by the admin is the public one, so it is kept.
+                        user.setHasAccount(true);
+                    } else if (name != null && !name.isBlank()) {
+                        user.setName(name);
+                    }
                     user.setLastLoginAt(LocalDateTime.now());
                     log.info("Linked Google account to existing user: {}", email);
                     return userRepository.save(user);

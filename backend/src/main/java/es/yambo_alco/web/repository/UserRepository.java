@@ -23,6 +23,11 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     @Query("SELECT COUNT(u) > 0 FROM User u WHERE LOWER(u.email) = LOWER(:email)")
     boolean existsByEmail(@Param("email") String email);
 
+    /** A person added without an account whose email is already known: registering with it claims them. */
+    @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email) AND u.hasAccount = false")
+    @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project", "staff"})
+    Optional<User> findPendingAccountByEmail(@Param("email") String email);
+
     @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project", "staff"})
     @Query("SELECT DISTINCT u FROM User u JOIN u.groupRoles gr WHERE gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.MONITOR AND u.enabled = true")
     List<User> findMonitors();

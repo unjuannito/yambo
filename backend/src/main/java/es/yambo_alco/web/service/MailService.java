@@ -36,6 +36,9 @@ public interface MailService {
 
     void sendPasswordResetEmail(String to, String resetLink, long expirationHours);
 
+    /** Link for someone added without an account to set their password and start using it. */
+    void sendAccountAccessEmail(String to, String userName, String accessLink, long expirationDays);
+
     void sendActivityOpenRegistration(String to, String activityName, String activityUrl);
 
     /**

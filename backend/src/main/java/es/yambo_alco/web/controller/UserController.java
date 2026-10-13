@@ -142,6 +142,7 @@ public class UserController {
         private String email;
         private String name;
         private StaffDto staff;
+        private boolean hasAccount;
         private NotificationPreferences notificationPreferences;
         private GroupRoleResponse[] groupRoles;
         private PermissionResponse[] permissions;
@@ -151,6 +152,7 @@ public class UserController {
             this.email = user.getEmail();
             this.name = user.getName();
             this.staff = StaffDto.from(user);
+            this.hasAccount = user.isHasAccount();
             this.notificationPreferences = user.getNotificationPreferences() != null
                     ? user.getNotificationPreferences()
                     : NotificationPreferences.defaults();
