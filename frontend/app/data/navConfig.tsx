@@ -31,7 +31,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Proyectos",
-        items: ["projects", "activities"]
+        items: ["staff", "projects", "activities"]
     },
     {
         title: "Artículos",
