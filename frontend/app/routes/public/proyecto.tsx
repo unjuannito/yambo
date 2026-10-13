@@ -3,7 +3,7 @@ import { useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getProjectDetail } from "~/services/publicService.server";
 import type { ProjectDetail, StaffMember, ProjectGroupDetail } from "~/services/publicService";
-import MonitorCard from "~/components/MonitorCard";
+import StaffCard from "~/components/StaffCard";
 import { projectColor } from "~/utils/projectColor";
 import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
@@ -85,7 +85,7 @@ export default function Proyecto() {
     }
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
-      if (!monitor.name.toLowerCase().includes(search)) return false;
+      if (!`${monitor.name} ${monitor.nickname ?? ""}`.toLowerCase().includes(search)) return false;
     }
     return true;
   });
@@ -93,7 +93,7 @@ export default function Proyecto() {
   const filteredCoordinators: StaffMember[] = coordinators.filter((c) => {
     if (searchText.trim()) {
       const search = searchText.toLowerCase().trim();
-      if (!c.name.toLowerCase().includes(search)) return false;
+      if (!`${c.name} ${c.nickname ?? ""}`.toLowerCase().includes(search)) return false;
     }
     return true;
   });
@@ -185,7 +185,7 @@ export default function Proyecto() {
             <h2 className="text-2xl font-bold text-yambo-black mb-6 font-display">{t('public.projectCoordination')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 stagger">
               {filteredCoordinators.map((coord) => (
-                <MonitorCard key={coord.id} monitor={coord} projectName={project.name} />
+                <StaffCard key={coord.id} member={coord} projectName={project.name} />
               ))}
             </div>
           </div>
@@ -262,7 +262,7 @@ export default function Proyecto() {
           {filteredMonitors.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 stagger">
               {filteredMonitors.map((monitor) => (
-                <MonitorCard key={monitor.id} monitor={monitor} projectName={project.name} />
+                <StaffCard key={monitor.id} member={monitor} projectName={project.name} />
               ))}
             </div>
           ) : (

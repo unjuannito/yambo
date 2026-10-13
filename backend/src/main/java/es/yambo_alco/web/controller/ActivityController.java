@@ -85,12 +85,12 @@ public class ActivityController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/projects/{projectId}/monitors")
+    @GetMapping("/projects/{projectId}/staff")
     @PreAuthorize("@permissionCheck.hasPermission('activity', 'read')")
-    public ResponseEntity<List<ManagerSummary>> getProjectMonitors(@PathVariable String projectId) {
+    public ResponseEntity<List<ManagerSummary>> getProjectStaff(@PathVariable String projectId) {
         List<User> staff = activityService.getStaffByProject(projectId);
         List<ManagerSummary> response = staff.stream()
-                .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getPhoto()))
+                .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getStaffPhoto()))
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -100,7 +100,7 @@ public class ActivityController {
     public ResponseEntity<List<ManagerSummary>> getAllStaff() {
         List<User> staff = activityService.getAllStaff();
         List<ManagerSummary> response = staff.stream()
-                .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getPhoto()))
+                .map(u -> new ManagerSummary(u.getId(), u.getName(), u.getStaffPhoto()))
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -187,7 +187,7 @@ public class ActivityController {
                 this.project = new ProjectSummary(activity.getProject().getId(), activity.getProject().getName());
             }
             if (activity.getManager() != null) {
-                this.manager = new ManagerSummary(activity.getManager().getId(), activity.getManager().getName(), activity.getManager().getPhoto());
+                this.manager = new ManagerSummary(activity.getManager().getId(), activity.getManager().getName(), activity.getManager().getStaffPhoto());
             }
         }
     }

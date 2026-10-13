@@ -68,7 +68,7 @@ export class ActivityService extends ApiService {
     }
 
     public async getProjectStaff(projectId: string): Promise<ActivityManager[]> {
-        return await this.get(`/activities/projects/${projectId}/monitors`);
+        return await this.get(`/activities/projects/${projectId}/staff`);
     }
 
     public async getAllStaff(): Promise<ActivityManager[]> {

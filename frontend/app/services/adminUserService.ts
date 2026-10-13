@@ -24,9 +24,16 @@ export interface UpdateUserDetailsRequest {
     id: string;
     name: string;
     email: string;
+}
+
+/** Los campos omitidos no se tocan; los vacíos se borran. */
+export interface UpdateStaffRequest {
     photo?: string;
     bio?: string;
     funFact?: string;
+    nickname?: string;
+    publicVisible?: boolean;
+    instagramUrl?: string;
 }
 
 export interface UpdateUserGroupsRequest {
@@ -69,6 +76,29 @@ export class AdminUserService extends ApiService {
         return await this.put<User, UpdateUserDetailsRequest>(
             `/admin/users/profile`,
             request
+        );
+    }
+
+    public async updateStaff(
+        userId: string,
+        request: UpdateStaffRequest
+    ): Promise<User> {
+        return await this.put<User, UpdateStaffRequest>(
+            `/admin/users/${userId}/staff`,
+            request
+        );
+    }
+
+    /** Borra la ficha del equipo de un usuario (foto, apodo, descripción y dato curioso). */
+    public async deleteStaff(userId: string): Promise<User> {
+        return await this.delete<User>(`/admin/users/${userId}/staff`);
+    }
+
+    /** Añade (o quita) a un usuario del equipo a mano, sin depender de sus roles en grupos. */
+    public async setManualStaff(userId: string, manual: boolean): Promise<User> {
+        return await this.put<User, { manual: boolean }>(
+            `/admin/users/${userId}/staff/manual`,
+            { manual }
         );
     }
 

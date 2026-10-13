@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Nickname and public visibility opt-in of the staff public card -->
+    <changeSet id="97-01-staff-public-profile" author="yambo">
+        <addColumn tableName="staff">
+            <column name="nickname" type="VARCHAR(50)"/>
+            <column name="public_visible" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- Keep visible those who had already filled in their public card -->
+    <changeSet id="97-02-backfill-public-visible" author="yambo">
+        <sql>UPDATE staff SET public_visible = true WHERE photo IS NOT NULL OR bio IS NOT NULL</sql>
+    </changeSet>
+
+</databaseChangeLog>

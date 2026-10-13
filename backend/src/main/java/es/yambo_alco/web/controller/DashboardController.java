@@ -226,7 +226,7 @@ public class DashboardController {
                 this.project = new ProjectSummary(activity.getProject().getId(), activity.getProject().getName());
             }
             if (activity.getManager() != null) {
-                this.manager = new ManagerSummary(activity.getManager().getId(), activity.getManager().getName(), activity.getManager().getPhoto());
+                this.manager = new ManagerSummary(activity.getManager().getId(), activity.getManager().getName(), activity.getManager().getStaffPhoto());
             }
         }
     }

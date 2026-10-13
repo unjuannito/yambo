@@ -2,11 +2,13 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.SettingsService;
+import es.yambo_alco.web.service.StaffUpdate;
 import es.yambo_alco.web.service.UserService;
 import es.yambo_alco.web.util.PermissionCheckService;
 import org.junit.jupiter.api.BeforeEach;
@@ -483,7 +485,7 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .build();
 
                 when(userService.getUserById("U0000001")).thenReturn(userToUpdate);
-                when(userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null)).thenReturn(updatedUser);
+                when(userService.updateProfile("U0000001", "New Name", "new@example.com")).thenReturn(updatedUser);
 
                 String requestBody = """
                                 {
@@ -501,6 +503,77 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .andExpect(jsonPath("$.id").value("U0000001"))
                                 .andExpect(jsonPath("$.email").value("new@example.com"))
                                 .andExpect(jsonPath("$.name").value("New Name"));
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_ShouldReturnUserWithStaffData() throws Exception {
+                User updatedUser = User.builder()
+                                .id("U0000001")
+                                .email("user@example.com")
+                                .name("Name")
+                                .profiles(Set.of())
+                                .staff(Staff.builder().manual(true).bio("New bio").build())
+                                .build();
+
+                when(authService.getCurrentUser(true)).thenReturn(User.builder().id("A0000001").build());
+                when(userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("New bio").build()))
+                                .thenReturn(updatedUser);
+
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"bio": "New bio"}
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.staff.bio").value("New bio"))
+                                .andExpect(jsonPath("$.staff.manual").value(true));
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_WithNonInstagramLink_ShouldReturnBadRequest() throws Exception {
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"instagramUrl": "https://example.com/p/abc"}
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_WithTooLongBio_ShouldReturnBadRequest() throws Exception {
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"bio\": \"" + "a".repeat(501) + "\"}"))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void setManualStaff_ShouldReturnUserWithoutStaffWhenUnmarked() throws Exception {
+                User updatedUser = User.builder()
+                                .id("U0000001")
+                                .email("user@example.com")
+                                .name("Name")
+                                .profiles(Set.of())
+                                .staff(Staff.builder().bio("Kept bio").build())
+                                .build();
+
+                when(userService.setManualStaff("U0000001", false)).thenReturn(updatedUser);
+
+                mockMvc.perform(put("/admin/users/U0000001/staff/manual")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"manual": false}
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.staff").doesNotExist());
         }
 
         @Test

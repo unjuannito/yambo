@@ -5,11 +5,13 @@ import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
+import es.yambo_alco.web.service.StaffUpdate;
 import es.yambo_alco.web.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,6 +94,32 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
+    void updateStaff_ShouldUpdateCurrentUserStaffData() throws Exception {
+        // Given
+        User currentUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
+                .profiles(Set.of()).build();
+        User updatedUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
+                .profiles(Set.of())
+                .staff(Staff.builder().manual(true).photo("/uploads/p.jpg").funFact("Fun").build())
+                .build();
+
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+        when(userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/p.jpg").funFact("Fun").build())).thenReturn(updatedUser);
+
+        // When & Then
+        mockMvc.perform(put("/user/staff")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"photo": "/uploads/p.jpg", "funFact": "Fun"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.staff.photo").value("/uploads/p.jpg"))
+                .andExpect(jsonPath("$.staff.funFact").value("Fun"));
+    }
+
+    @Test
+    @WithMockUser
     void updateProfile_WithValidData_ShouldReturnUpdatedUser() throws Exception {
         // Given
         User currentUser = User.builder()
@@ -110,7 +138,7 @@ class UserControllerTest {
                 .build();
 
         when(authService.getCurrentUser(true)).thenReturn(currentUser);
-        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com", null, null, null)).thenReturn(updatedUser);
+        when(userService.updateProfile("U0000001", "New Name", "newemail@example.com")).thenReturn(updatedUser);
 
         String requestBody = """
                 {

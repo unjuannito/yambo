@@ -152,12 +152,18 @@ SET
     email    = 'user-' || LOWER(id) || '@preview.invalid',
     name     = 'Preview User ' || LOWER(id),
     password = :'preview_pass',
-    photo    = NULL,
-    bio      = NULL,
-    fun_fact = NULL,
     last_login_at           = NULL,
     notification_preferences = NULL
 WHERE system = false;
+
+-- Staff data (photo, bio, fun fact) lives in its own table
+UPDATE public.staff s
+SET
+    photo    = NULL,
+    bio      = NULL,
+    fun_fact = NULL
+FROM public."user" u
+WHERE u.id = s.user_id AND u.system = false;
 
 -- Keep system users untouched (system=true rows are Liquibase-seeded accounts)
 

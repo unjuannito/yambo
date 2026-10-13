@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.DeletionObjectType;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -12,6 +13,7 @@ import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.StaffRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.repository.spec.UserSpecifications;
@@ -44,6 +46,8 @@ public class UserService {
 	private final UserProjectGroupRepository userProjectGroupRepository;
 	private final PendingDeletionService pendingDeletionService;
 	private final AccessGrantService accessGrantService;
+	private final StaffRepository staffRepository;
+	private final UploadedFileService uploadedFileService;
 
 	private static final String MONITOR_PROFILE_ID = "P0000004";
 	private static final String COORDINATOR_PROFILE_ID = "P0000005";
@@ -76,8 +80,8 @@ public class UserService {
 			spec = spec.and(UserSpecifications.hasProfiles(profileSet));
 		if (filter.role() != null && !filter.role().isBlank())
 			spec = spec.and(UserSpecifications.hasGroupRole(filter.role()));
-		if (filter.canHaveExtraProfileData() != null && filter.canHaveExtraProfileData())
-			spec = spec.and(UserSpecifications.hasMonitorOrCoordinatorRole());
+		if (filter.staff() != null && filter.staff())
+			spec = spec.and(UserSpecifications.isStaff());
 
 		var sanitized = pageable;
 		var sort = pageable.getSort();
@@ -88,8 +92,7 @@ public class UserService {
 		return userRepository.findAll(spec, sanitized);
 	}
 
-	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email,
-			String photo, String bio, String funFact) {
+	public User updateProfile(@NonNull String userId, @NonNull String name, @NonNull String email) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -104,23 +107,163 @@ public class UserService {
 			user.setEmail(normalizedEmail);
 		}
 
-		if (photo != null || bio != null || funFact != null) {
-			if (!user.canHaveExtraProfileData()) {
-				throw new BadRequestException(
-						"Only users with MONITOR or COORDINATOR role can have extended profile data (photo, bio, fun fact)");
+		return userRepository.save(user);
+	}
+
+	/**
+	 * Updates the staff-only data. Null fields are left untouched; blank fields are cleared.
+	 */
+	@Transactional
+	public User updateStaff(@NonNull String userId, @NonNull StaffUpdate update) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (!user.isStaff()) {
+			throw new BadRequestException(
+					"Only staff (marked manually or with a MONITOR or COORDINATOR role) can have staff data (photo, bio, fun fact, nickname, Instagram link, public visibility)");
+		}
+
+		Staff staff = ensureStaff(user);
+		if (update.getPhoto() != null) {
+			String newPhoto = blankToNull(update.getPhoto());
+			if (staff.getPhoto() != null && !staff.getPhoto().equals(newPhoto)) {
+				uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), userId);
 			}
-			if (photo != null) {
-				user.setPhoto(photo.trim().isEmpty() ? null : photo.trim());
-			}
-			if (bio != null) {
-				user.setBio(bio.trim().isEmpty() ? null : bio.trim());
-			}
-			if (funFact != null) {
-				user.setFunFact(funFact.trim().isEmpty() ? null : funFact.trim());
-			}
+			staff.setPhoto(newPhoto);
+		}
+		if (update.getBio() != null) {
+			staff.setBio(blankToNull(update.getBio()));
+		}
+		if (update.getFunFact() != null) {
+			staff.setFunFact(blankToNull(update.getFunFact()));
+		}
+		if (update.getNickname() != null) {
+			staff.setNickname(blankToNull(update.getNickname()));
+		}
+		if (update.getPublicVisible() != null) {
+			setPublicVisible(staff, update.getPublicVisible());
+		}
+		if (update.getInstagramUrl() != null) {
+			staff.setInstagramUrl(blankToNull(update.getInstagramUrl()));
 		}
 
 		return userRepository.save(user);
+	}
+
+	/**
+	 * Deletes the staff card: photo (and its file), nickname, bio and fun fact, and hides it from
+	 * the public site. Someone who is still staff keeps an empty card; otherwise the row is removed.
+	 */
+	@Transactional
+	public User deleteStaffData(@NonNull String userId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+		Staff staff = user.getStaff();
+		if (staff == null) {
+			return user;
+		}
+
+		uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), userId);
+		if (!user.isStaff()) {
+			user.setStaff(null);
+			staffRepository.delete(staff);
+			return user;
+		}
+
+		staff.setPhoto(null);
+		staff.setBio(null);
+		staff.setFunFact(null);
+		staff.setNickname(null);
+		staff.setInstagramUrl(null);
+		setPublicVisible(staff, false);
+		return userRepository.save(user);
+	}
+
+	/** Removes the staff data of users who stopped being staff before the given moment. */
+	@Transactional
+	public int purgeStaffInactiveSince(@NonNull LocalDateTime cutoff) {
+		List<Staff> expired = staffRepository.findByInactiveSinceBefore(cutoff);
+		for (Staff staff : expired) {
+			uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), staff.getUserId());
+			if (staff.getUser() != null) {
+				staff.getUser().setStaff(null);
+			}
+			staffRepository.delete(staff);
+		}
+		return expired.size();
+	}
+
+	/**
+	 * Staff update made by an admin. Appearing on the public site is the staff member's own
+	 * decision: an admin can hide someone else's card but not make it public.
+	 */
+	@Transactional
+	public User updateStaffByAdmin(@NonNull String adminId, @NonNull String userId, @NonNull StaffUpdate update) {
+		if (Boolean.TRUE.equals(update.getPublicVisible()) && !adminId.equals(userId)) {
+			User user = userRepository.findById(userId)
+					.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+			if (!user.isPubliclyVisibleStaff()) {
+				throw new BadRequestException("Only the staff member can make their own card public");
+			}
+		}
+		return updateStaff(userId, update);
+	}
+
+	/**
+	 * Marks (or unmarks) a user as staff by hand, regardless of group roles.
+	 * Unmarking keeps the staff data; the user stays staff while holding a MONITOR/COORDINATOR group role.
+	 */
+	@Transactional
+	public User setManualStaff(@NonNull String userId, boolean manual) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (!manual && user.getStaff() == null) {
+			return user;
+		}
+		ensureStaff(user).setManual(manual);
+		if (manual) {
+			user.getStaff().setInactiveSince(null);
+		}
+		hideIfNoLongerStaff(user);
+
+		return userRepository.save(user);
+	}
+
+	private Staff ensureStaff(User user) {
+		if (user.getStaff() == null) {
+			user.setStaff(Staff.builder().user(user).build());
+		}
+		return user.getStaff();
+	}
+
+	/**
+	 * Leaving the staff withdraws the public opt-in (coming back does not republish the card)
+	 * and starts the retention period of the now inactive data.
+	 */
+	private void hideIfNoLongerStaff(User user) {
+		Staff staff = user.getStaff();
+		if (staff != null && !user.isStaff()) {
+			setPublicVisible(staff, false);
+			if (staff.getInactiveSince() == null) {
+				staff.setInactiveSince(LocalDateTime.now());
+			}
+		}
+	}
+
+	/** Keeps the opt-in date in sync: set when the card becomes public, cleared when it stops being so. */
+	private static void setPublicVisible(Staff staff, boolean publicVisible) {
+		if (publicVisible && !staff.isPublicVisible()) {
+			staff.setPublicVisibleAt(LocalDateTime.now());
+		} else if (!publicVisible) {
+			staff.setPublicVisibleAt(null);
+		}
+		staff.setPublicVisible(publicVisible);
+	}
+
+	private static String blankToNull(String value) {
+		String trimmed = value.trim();
+		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 	@Transactional
@@ -160,6 +303,10 @@ public class UserService {
 		user.getGroupRoles().add(upg);
 
 		syncRoleProfile(user, role, true);
+		// Getting a MONITOR/COORDINATOR role promotes the user to staff
+		if (role.isStaff()) {
+			ensureStaff(user).setInactiveSince(null);
+		}
 
 		User saved = userRepository.save(user);
 
@@ -186,6 +333,7 @@ public class UserService {
 		if (!hasRemainingRole) {
 			syncRoleProfile(user, role, false);
 		}
+		hideIfNoLongerStaff(user);
 
 		User saved = userRepository.save(user);
 

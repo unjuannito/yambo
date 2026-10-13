@@ -16,8 +16,8 @@ vi.mock("~/utils/env.server", () => ({
     getSiteUrl: () => "https://yambo.test",
 }));
 
-vi.mock("~/components/MonitorCard", () => ({
-    default: ({ monitor }: { monitor: { name: string } }) => <div>{monitor.name}</div>,
+vi.mock("~/components/StaffCard", () => ({
+    default: ({ member }: { member: { name: string } }) => <div>{member.name}</div>,
 }));
 
 function renderProject(overrides: Partial<ProjectDetail> = {}) {

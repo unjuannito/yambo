@@ -24,9 +24,11 @@ export interface StaffGroup {
 export interface StaffMember {
     id: string;
     name: string;
+    nickname?: string | null;
     photo: string;
     bio: string;
     funFact: string;
+    instagramUrl?: string | null;
     role: 'MONITOR' | 'COORDINATOR' | 'BOTH';
     groups: StaffGroup[];
 }
@@ -85,7 +87,7 @@ export class PublicService extends ApiService {
     }
 
     public async getStaff(): Promise<StaffMember[]> {
-        return await this.get('/public/monitors');
+        return await this.get('/public/staff');
     }
 
     public async getActiveProjects(): Promise<ActiveProject[]> {

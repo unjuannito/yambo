@@ -2,6 +2,7 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -10,6 +11,7 @@ import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
+import es.yambo_alco.web.repository.StaffRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +45,8 @@ public class UserServiceTest {
     private PasswordEncoder passwordEncoder;
         private UserService userService;
         private ProfileRepository profileRepository;
+        private StaffRepository staffRepository;
+        private UploadedFileService uploadedFileService;
     private ProjectGroupRepository projectGroupRepository;
     private UserProjectGroupRepository userProjectGroupRepository;
     private PendingDeletionService pendingDeletionService;
@@ -56,7 +61,9 @@ public class UserServiceTest {
         userProjectGroupRepository = Mockito.mock(UserProjectGroupRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
         accessGrantService = Mockito.mock(AccessGrantService.class);
-        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService);
+        staffRepository = Mockito.mock(StaffRepository.class);
+        uploadedFileService = Mockito.mock(UploadedFileService.class);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService, staffRepository, uploadedFileService);
     }
 
     @Test
@@ -146,7 +153,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null);
+        User result = userService.updateProfile("U0000001", "New Name", "new@example.com");
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -166,7 +173,7 @@ public class UserServiceTest {
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com", null, null, null))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already in use");
 
@@ -179,7 +186,7 @@ public class UserServiceTest {
         when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com", null, null, null))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -600,7 +607,7 @@ public class UserServiceTest {
     }
 
     @Test
-    void updateProfile_WithPhotoBioFunFact_ShouldUpdateFields() {
+    void updateStaff_WithPhotoBioFunFact_ShouldUpdateStaffData() {
         // Given
         UserProjectGroup monitorRole = UserProjectGroup.builder()
                 .role(UserProjectGroupRole.MONITOR)
@@ -608,110 +615,420 @@ public class UserServiceTest {
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
-                .name("Old Name")
+                .name("Name")
                 .groupRoles(Set.of(monitorRole))
                 .build();
 
-        User updatedUser = User.builder()
-                .id("U0000001")
-                .email("user@example.com")
-                .name("New Name")
-                .photo("new-photo.jpg")
-                .bio("New bio")
-                .funFact("New fun fact")
-                .build();
-
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateProfile("U0000001", "New Name", "user@example.com",
-                "new-photo.jpg", "New bio", "New fun fact");
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().photo(" new-photo.jpg ").bio("New bio").funFact("New fun fact").build());
 
-        // Then
-        assertThat(result.getPhoto()).isEqualTo("new-photo.jpg");
-        assertThat(result.getBio()).isEqualTo("New bio");
-        assertThat(result.getFunFact()).isEqualTo("New fun fact");
+        // Then — the staff row is created on demand and linked to the user
+        assertThat(result.getStaff()).isNotNull();
+        assertThat(result.getStaff().getUser()).isSameAs(existingUser);
+        assertThat(result.getStaff().getPhoto()).isEqualTo("new-photo.jpg");
+        assertThat(result.getStaff().getBio()).isEqualTo("New bio");
+        assertThat(result.getStaff().getFunFact()).isEqualTo("New fun fact");
         verify(userRepository).save(any(User.class));
     }
 
     @Test
-    void updateProfile_WithExtraDataForNonMonitorUser_ShouldThrow() {
-        // Given
+    void updateStaff_ForNonStaffUser_ShouldThrow() {
+        // Given — dormant staff data (not manual, no MONITOR/COORDINATOR role) does not make the user staff
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
-                .name("Old Name")
+                .name("Name")
                 .groupRoles(Set.of())
+                .staff(Staff.builder().bio("Old bio").build())
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
-        // When & Then — photo
-        assertThatThrownBy(() ->
-                userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        "new-photo.jpg", null, null))
+        // When & Then
+        assertThatThrownBy(() -> userService.updateStaff("U0000001", StaffUpdate.builder().bio("New bio").build()))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("MONITOR or COORDINATOR");
 
-        // When & Then — bio
-        assertThatThrownBy(() ->
-                userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        null, "New bio", null))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("MONITOR or COORDINATOR");
-
-        // When & Then — funFact
-        assertThatThrownBy(() ->
-                userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        null, null, "New fun fact"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("MONITOR or COORDINATOR");
-
-        // When & Then — all three
-        assertThatThrownBy(() ->
-                userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                        "new-photo.jpg", "New bio", "New fun fact"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("MONITOR or COORDINATOR");
-
+        assertThat(existingUser.getStaff().getBio()).isEqualTo("Old bio");
         verify(userRepository, never()).save(any());
     }
 
     @Test
-    void updateProfile_WithEmptyPhotoBioFunFact_ShouldSetNull() {
+    void updateStaff_WithBlankAndNullFields_ShouldClearBlankAndKeepNull() {
         // Given
-        UserProjectGroup monitorRole = UserProjectGroup.builder()
-                .role(UserProjectGroupRole.MONITOR)
-                .build();
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
-                .name("Old Name")
-                .photo("old-photo.jpg")
-                .bio("Old bio")
-                .funFact("Old fun fact")
-                .groupRoles(Set.of(monitorRole))
-                .build();
-
-        User updatedUser = User.builder()
-                .id("U0000001")
-                .email("user@example.com")
-                .name("Old Name")
+                .name("Name")
+                .staff(Staff.builder().manual(true)
+                        .photo("old-photo.jpg").bio("Old bio").funFact("Old fun fact").build())
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateProfile("U0000001", "Old Name", "user@example.com",
-                "", "", "");
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().photo("").bio("  ").build());
 
         // Then
-        assertThat(result.getPhoto()).isNull();
-        assertThat(result.getBio()).isNull();
-        assertThat(result.getFunFact()).isNull();
-        verify(userRepository).save(any(User.class));
+        assertThat(result.getStaff().getPhoto()).isNull();
+        assertThat(result.getStaff().getBio()).isNull();
+        assertThat(result.getStaff().getFunFact()).isEqualTo("Old fun fact");
+    }
+
+    @Test
+    void updateStaff_WithNicknameAndPublicVisible_ShouldUpdateFields() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").publicVisible(true)
+                .instagramUrl("https://www.instagram.com/p/abc/").build());
+
+        // Then
+        assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
+        assertThat(result.getStaff().getInstagramUrl()).isEqualTo("https://www.instagram.com/p/abc/");
+        assertThat(result.getStaff().isPublicVisible()).isTrue();
+        assertThat(result.isPubliclyVisibleStaff()).isTrue();
+    }
+
+    @Test
+    void updateStaff_PublicVisible_ShouldKeepTheOptInDateInSync() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — opting in records the date
+        userService.updateStaff("U0000001", StaffUpdate.builder().publicVisible(true).build());
+        LocalDateTime optedInAt = existingUser.getStaff().getPublicVisibleAt();
+        assertThat(optedInAt).isNotNull();
+
+        // Saving again while already public keeps the original date
+        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").publicVisible(true).build());
+        assertThat(existingUser.getStaff().getPublicVisibleAt()).isEqualTo(optedInAt);
+
+        // Opting out clears it
+        userService.updateStaff("U0000001", StaffUpdate.builder().publicVisible(false).build());
+        assertThat(existingUser.getStaff().getPublicVisibleAt()).isNull();
+    }
+
+    @Test
+    void updateStaff_ReplacingPhoto_ShouldDeleteTheOldFile() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photo("/uploads/old.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — same photo again, then a new one
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/old.jpg").build());
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/new.jpg").build());
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/old.jpg", "U0000001");
+        assertThat(existingUser.getStaff().getPhoto()).isEqualTo("/uploads/new.jpg");
+    }
+
+    @Test
+    void deleteStaffData_ForCurrentStaff_ShouldEmptyTheCardAndKeepTheRow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).publicVisible(true).photo("/uploads/p.jpg")
+                        .bio("Bio").funFact("Fun").nickname("Nick").instagramUrl("https://www.instagram.com/p/abc/").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        assertThat(result.isStaff()).isTrue();
+        assertThat(result.getStaff().getPhoto()).isNull();
+        assertThat(result.getStaff().getBio()).isNull();
+        assertThat(result.getStaff().getFunFact()).isNull();
+        assertThat(result.getStaff().getNickname()).isNull();
+        assertThat(result.getStaff().getInstagramUrl()).isNull();
+        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        verify(staffRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteStaffData_ForFormerStaff_ShouldRemoveTheRow() {
+        // Given — dormant data of someone who is no longer staff
+        Staff dormant = Staff.builder().photo("/uploads/p.jpg").bio("Bio").build();
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(dormant)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When
+        User result = userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        verify(staffRepository).delete(dormant);
+        assertThat(result.getStaff()).isNull();
+    }
+
+    @Test
+    void purgeStaffInactiveSince_ShouldRemoveExpiredCardsAndTheirPhotos() {
+        // Given
+        User formerUser = User.builder().id("U0000001").build();
+        Staff expired = Staff.builder().userId("U0000001").user(formerUser).photo("/uploads/p.jpg").build();
+        formerUser.setStaff(expired);
+        LocalDateTime cutoff = LocalDateTime.now().minusMonths(12);
+
+        when(staffRepository.findByInactiveSinceBefore(cutoff)).thenReturn(List.of(expired));
+
+        // When
+        int purged = userService.purgeStaffInactiveSince(cutoff);
+
+        // Then
+        assertThat(purged).isEqualTo(1);
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        verify(staffRepository).delete(expired);
+        assertThat(formerUser.getStaff()).isNull();
+    }
+
+    @Test
+    void setManualStaff_True_ShouldEndTheInactivePeriod() {
+        // Given — came back to the team before the data was purged
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().bio("Bio").inactiveSince(LocalDateTime.now().minusMonths(3)).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", true);
+
+        // Then
+        assertThat(result.getStaff().getInactiveSince()).isNull();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void isPubliclyVisibleStaff_WhenNoLongerStaff_ShouldBeFalse() {
+        // Given — opted in, but neither manual nor holding a staff role any more
+        User user = User.builder()
+                .id("U0000001")
+                .staff(Staff.builder().publicVisible(true).build())
+                .build();
+
+        // Then
+        assertThat(user.isPubliclyVisibleStaff()).isFalse();
+    }
+
+    @Test
+    void updateStaffByAdmin_PublishingSomeoneElse_ShouldThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().publicVisible(true).build()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("own card public");
+
+        assertThat(existingUser.getStaff().isPublicVisible()).isFalse();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStaffByAdmin_CanHideAndEditSomeoneElse() {
+        // Given — already public: sending true again keeps it, sending false hides it
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).publicVisible(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").publicVisible(true).build());
+        assertThat(kept.getStaff().isPublicVisible()).isTrue();
+        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().publicVisible(false).build());
+
+        // Then
+        assertThat(hidden.getStaff().isPublicVisible()).isFalse();
+        assertThat(hidden.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void updateStaffByAdmin_AdminCanPublishOwnCard() {
+        // Given
+        User admin = User.builder()
+                .id("A0000001")
+                .email("admin@example.com")
+                .name("Admin")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("A0000001")).thenReturn(Optional.of(admin));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaffByAdmin("A0000001", "A0000001", StaffUpdate.builder().publicVisible(true).build());
+
+        // Then
+        assertThat(result.getStaff().isPublicVisible()).isTrue();
+    }
+
+    @Test
+    void setManualStaff_False_ShouldWithdrawPublicVisibility() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).publicVisible(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.getStaff().isPublicVisible()).isFalse();
+    }
+
+    @Test
+    void removeGroupRole_LastStaffRole_ShouldWithdrawPublicVisibility() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Grupo A").build();
+        UserProjectGroup upg = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>())
+                .staff(Staff.builder().publicVisible(true).bio("Bio").build())
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+
+        // Then — hidden, but the data is kept (and its retention period starts)
+        assertThat(result.isStaff()).isFalse();
+        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        assertThat(result.getStaff().getInactiveSince()).isNotNull();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void setManualStaff_True_ShouldPromoteUserWithoutGroupRoles() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", true);
+
+        // Then
+        assertThat(result.getStaff().isManual()).isTrue();
+        assertThat(result.isStaff()).isTrue();
+    }
+
+    @Test
+    void setManualStaff_False_ShouldKeepStaffData() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).bio("Bio").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.isStaff()).isFalse();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+        assertThat(result.getStaffPhoto()).isNull();
+    }
+
+    @Test
+    void setManualStaff_FalseWithoutStaffData_ShouldNotCreateIt() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.getStaff()).isNull();
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -727,7 +1044,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateProfile("U0000001", "New Name", "user@example.com", null, null, null);
+        User result = userService.updateProfile("U0000001", "New Name", "user@example.com");
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -769,6 +1086,50 @@ public class UserServiceTest {
     }
 
     // ── assignGroupRole with PARENT ──────────────────────────────────
+
+    @Test
+    void assignGroupRole_WithMonitorRole_ShouldPromoteUserToStaff() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Grupo A").build();
+        Profile monitorProfile = new Profile();
+        monitorProfile.setId("P0000004");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(profileRepository.findById("P0000004")).thenReturn(Optional.of(monitorProfile));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+
+        // Then
+        assertThat(result.getStaff()).isNotNull();
+        assertThat(result.getStaff().isManual()).isFalse();
+        assertThat(result.isStaff()).isTrue();
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_ShouldNotCreateStaff() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getStaff()).isNull();
+        assertThat(result.isStaff()).isFalse();
+    }
 
     @Test
     void assignGroupRole_WithParentRole_OnProjectLevelGroup_ShouldSucceed() {
