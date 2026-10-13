@@ -7,6 +7,7 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.PasswordResetService;
 import es.yambo_alco.web.service.SettingsService;
 import es.yambo_alco.web.service.StaffUpdate;
 import es.yambo_alco.web.service.UserService;
@@ -33,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,6 +55,9 @@ public class AdminUserControllerTest {
 
         @MockitoBean
         private AuthService authService;
+
+        @MockitoBean
+        private PasswordResetService passwordResetService;
 
         @MockitoBean
         private PermissionCheckService permissionCheckService;
@@ -597,5 +602,72 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                 mockMvc.perform(delete("/admin/users/U0000001")
                                 .header("Authorization", "Bearer test.jwt.token"))
                                 .andExpect(status().isBadRequest());
+        }
+
+        // ── Staff without an account ────────────────────────────────────────
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void createStaffWithoutAccount_WithOnlyAName_ShouldReturnUserWithoutAccount() throws Exception {
+                User created = User.builder()
+                                .id("U0000009")
+                                .name("Juan")
+                                .hasAccount(false)
+                                .profiles(Set.of())
+                                .staff(Staff.builder().manual(true).build())
+                                .build();
+
+                when(authService.getCurrentUser(true)).thenReturn(User.builder().id("A0000001").build());
+                when(userService.createStaffWithoutAccount("Juan", null, null, null, null, "A0000001")).thenReturn(created);
+
+                mockMvc.perform(post("/admin/users/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"name": "Juan"}
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.id").value("U0000009"))
+                                .andExpect(jsonPath("$.hasAccount").value(false))
+                                .andExpect(jsonPath("$.email").doesNotExist())
+                                .andExpect(jsonPath("$.staff.manual").value(true));
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void createStaffWithoutAccount_WithoutName_ShouldReturnBadRequest() throws Exception {
+                mockMvc.perform(post("/admin/users/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"email": "juan@example.com"}
+                                                """))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void giveAccountAccess_ShouldSendTheLinkAndReturnTheUser() throws Exception {
+                User pending = User.builder()
+                                .id("U0000009")
+                                .name("Juan")
+                                .email("juan@example.com")
+                                .hasAccount(false)
+                                .profiles(Set.of())
+                                .build();
+
+                when(userService.getUserById("U0000009")).thenReturn(pending);
+
+                mockMvc.perform(post("/admin/users/U0000009/account-access")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"email": "juan@example.com"}
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.email").value("juan@example.com"))
+                                .andExpect(jsonPath("$.hasAccount").value(false));
+
+                verify(passwordResetService).giveAccountAccess("U0000009", "juan@example.com");
         }
 }

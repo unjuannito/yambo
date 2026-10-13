@@ -109,7 +109,7 @@ export default function Users() {
         setForm({
             userId: user.id,
             name: user.name,
-            email: user.email,
+            email: user.email ?? "",
             profileIds: user.profiles.map(p => p.id),
             groupRoles: user.groupRoles?.map(gr => ({ groupId: gr.groupId, role: gr.role })) || [],
             manualStaff: user.staff?.manual ?? false,
@@ -234,6 +234,11 @@ export default function Users() {
                     {user.system && (
                         <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-normal">
                             {t('users.systemBadge')}
+                        </span>
+                    )}
+                    {user.hasAccount === false && (
+                        <span className="ml-2 px-2 py-0.5 bg-yambo-black/80 text-white rounded-full text-xs font-normal">
+                            {t('staff.noAccount')}
                         </span>
                     )}
                 </div>

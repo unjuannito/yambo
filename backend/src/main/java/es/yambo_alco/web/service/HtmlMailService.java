@@ -45,6 +45,11 @@ public class HtmlMailService implements MailService {
      */
     private void send(String to, String subject, String templateName,
             Map<String, Object> variables, String plainText) {
+        // People added without an account may have no email yet
+        if (to == null || to.isBlank()) {
+            log.info("Email [{}] skipped: no recipient address", subject);
+            return;
+        }
         if (!mailConfig.isConfigured()) {
             log.info("[CONSOLE MODE] Email [{}] to {}: {}", subject, to, plainText);
             return;
@@ -288,6 +293,27 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "resetLink", resetLink,
                         "expirationHours", expirationHours,
+                        "headerIcon", EmailIcons.get("key")),
+                plainText);
+    }
+
+    @Async("mailExecutor")
+    @Override
+    public void sendAccountAccessEmail(String to, String userName, String accessLink, long expirationDays) {
+        String orgName = settingsService.getOrganizationName();
+        String subject = "Tu cuenta en " + orgName;
+
+        String plainText = "Hola, " + userName + ":\n\n"
+                + "Ya formas parte del equipo de " + orgName + " en la web. "
+                + "Solo te falta crear tu contraseña para entrar a tu cuenta.\n\n"
+                + "Usa este enlace para crearla: " + accessLink + "\n\n"
+                + "El enlace expirará en " + expirationDays + " días.\n";
+
+        send(to, subject, "emails/account-access",
+                Map.of(
+                        "userName", userName,
+                        "accessLink", accessLink,
+                        "expirationDays", expirationDays,
                         "headerIcon", EmailIcons.get("key")),
                 plainText);
     }

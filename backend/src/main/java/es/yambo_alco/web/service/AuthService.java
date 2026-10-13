@@ -44,7 +44,9 @@ public class AuthService implements UserDetailsService {
     public String authenticate(String email, String password) {
         String normalizedEmail = email.toLowerCase();
         UserDetails user = loadUserByEmail(normalizedEmail);
-        if (passwordEncoder.matches(password, user.getPassword())) {
+        // People added without an account cannot log in until they set their password
+        boolean hasAccount = !(user instanceof User u) || u.isHasAccount();
+        if (hasAccount && passwordEncoder.matches(password, user.getPassword())) {
             return jwtService.generateToken(user);
         }
         throw new BadCredentialsException("Invalid credentials");

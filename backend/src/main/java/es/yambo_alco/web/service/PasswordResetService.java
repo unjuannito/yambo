@@ -1,6 +1,7 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.PasswordResetToken;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.repository.PasswordResetTokenRepository;
@@ -35,6 +36,9 @@ public class PasswordResetService {
 
     @Value("${password-reset.expiration.hours:2}")
     private long expirationHours;
+
+    @Value("${account-access.expiration.days:7}")
+    private long accountAccessExpirationDays;
 
     @Transactional
     public void requestPasswordReset(String email) {
@@ -71,6 +75,53 @@ public class PasswordResetService {
         log.info("Password reset token generated for: {}", normalizedEmail);
     }
 
+    /**
+     * Gives access to a person who was added without an account: stores their email and sends
+     * them a link to set their password. Calling it again sends a fresh link.
+     */
+    @Transactional
+    public User giveAccountAccess(String userId, String email) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.isHasAccount()) {
+            throw new BadRequestException("This user already has an account");
+        }
+
+        String normalizedEmail = email != null && !email.isBlank() ? email.toLowerCase().trim() : user.getEmail();
+        if (normalizedEmail == null || normalizedEmail.isBlank()) {
+            throw new BadRequestException("An email is needed to give access");
+        }
+        if (!normalizedEmail.equals(user.getEmail())) {
+            if (userRepository.existsByEmail(normalizedEmail)) {
+                throw new BadRequestException("Email already in use");
+            }
+            user.setEmail(normalizedEmail);
+            user = userRepository.save(user);
+        }
+
+        List<PasswordResetToken> previousTokens = passwordResetTokenRepository.findByEmailAndUsedFalse(normalizedEmail);
+        for (PasswordResetToken t : previousTokens) {
+            t.setUsed(true);
+        }
+        passwordResetTokenRepository.saveAll(previousTokens);
+
+        String token = generateToken();
+        LocalDateTime now = LocalDateTime.now();
+        passwordResetTokenRepository.save(PasswordResetToken.builder()
+                .email(normalizedEmail)
+                .token(token)
+                .createdAt(now)
+                .expiresAt(now.plusDays(accountAccessExpirationDays))
+                .used(false)
+                .build());
+
+        String accessLink = settingsService.getDomain() + "/reset-password?token=" + token;
+        mailService.sendAccountAccessEmail(normalizedEmail, user.getName(), accessLink, accountAccessExpirationDays);
+
+        log.info("Account access link generated for user {}", userId);
+        return user;
+    }
+
     @Transactional
     public void resetPassword(String token, String newPassword) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
@@ -91,7 +142,8 @@ public class PasswordResetService {
         User user = userRepository.findByEmail(resetToken.getEmail())
                 .orElseThrow(() -> new BadRequestException("Usuario no encontrado"));
 
-        user.setPassword(passwordEncoder.encode(newPassword));
+        // For someone added without an account, setting the password is what creates it
+        user.activateAccount(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
         resetToken.setUsed(true);

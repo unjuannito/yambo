@@ -188,7 +188,7 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved, initialUserI
             try {
                 const filters: UserFilters & { page: number; size: number } = { query: userQuery.trim(), page: 0, size: 8 };
                 const r = await adminUserService.listUsers(filters);
-                setUserResults(r.content.map((u) => ({ id: u.id, name: u.name ?? u.email, email: u.email })));
+                setUserResults(r.content.map((u) => ({ id: u.id, name: u.name ?? u.email ?? "", email: u.email ?? "" })));
             } catch {
                 setUserResults([]);
             }

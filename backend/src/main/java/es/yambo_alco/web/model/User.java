@@ -37,7 +37,8 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, unique = true)
+    /** Null only for people added before they have an account (see {@link #hasAccount}). */
+    @Column(unique = true)
     private String email;
 
     @Column(nullable = false)
@@ -55,6 +56,14 @@ public class User implements UserDetails {
 
     @Builder.Default
     private boolean enabled = true;
+
+    /**
+     * False for staff added by an admin before they have an account: they cannot log in until
+     * they are given access or register with the same email.
+     */
+    @Builder.Default
+    @Column(name = "has_account", nullable = false)
+    private boolean hasAccount = true;
 
     @Builder.Default
     @Column(name = "system", nullable = false)
@@ -74,6 +83,12 @@ public class User implements UserDetails {
     /** Staff-only data; may exist while the user is not (or no longer) staff. */
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Staff staff;
+
+    /** Turns a person added without an account into a real one, with the password they chose. */
+    public void activateAccount(String encodedPassword) {
+        this.password = encodedPassword;
+        this.hasAccount = true;
+    }
 
     public Set<ProjectGroup> getGroups() {
         return groupRoles.stream()

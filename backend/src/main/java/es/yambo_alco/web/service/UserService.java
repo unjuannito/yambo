@@ -50,6 +50,7 @@ public class UserService {
 	private final StaffRepository staffRepository;
 	private final UploadedFileService uploadedFileService;
 
+	private static final String BASE_PROFILE_ID = "USER";
 	private static final String MONITOR_PROFILE_ID = "P0000004";
 	private static final String COORDINATOR_PROFILE_ID = "P0000005";
 	private static final Set<String> ROLE_PROFILE_IDS = Set.of(MONITOR_PROFILE_ID, COORDINATOR_PROFILE_ID);
@@ -149,6 +150,41 @@ public class UserService {
 		}
 
 		return userRepository.save(user);
+	}
+
+	/**
+	 * Adds someone to the staff before they have an account, so their card can already be filled
+	 * in and published. They cannot log in until they are given access or register with the
+	 * same email. With a group and role they join that project; otherwise they are added by hand.
+	 */
+	@Transactional
+	public User createStaffWithoutAccount(@NonNull String name, String email, String nickname,
+			String groupId, UserProjectGroupRole role, String createdBy) {
+		String normalizedEmail = email != null && !email.isBlank() ? email.toLowerCase().trim() : null;
+		if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
+			throw new BadRequestException("Email already in use");
+		}
+		boolean joinsGroup = groupId != null && !groupId.isBlank();
+		if (joinsGroup && (role == null || !role.isStaff())) {
+			throw new BadRequestException("A MONITOR or COORDINATOR role is needed to add staff to a group");
+		}
+
+		User user = User.builder()
+				.name(name.trim())
+				.email(normalizedEmail)
+				// Nobody knows this password: the account is created when they set their own
+				.password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+				.hasAccount(false)
+				.enabled(true)
+				.createdAt(LocalDateTime.now())
+				.profiles(new HashSet<>(profileRepository.findAllById(List.of(BASE_PROFILE_ID))))
+				.build();
+		Staff staff = ensureStaff(user);
+		staff.setManual(!joinsGroup);
+		staff.setNickname(nickname != null ? blankToNull(nickname) : null);
+		user = userRepository.save(user);
+
+		return joinsGroup ? assignGroupRole(user.getId(), groupId, role, createdBy) : user;
 	}
 
 	/**
@@ -477,7 +513,7 @@ public class UserService {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-		if (!user.getEmail().equals(email.toLowerCase())) {
+		if (!email.toLowerCase().equals(user.getEmail())) {
 			Optional<User> existingUser = userRepository.findByEmail(email);
 			if (existingUser.isPresent()) {
 				throw new BadRequestException("Email is already in use");

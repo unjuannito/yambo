@@ -1,62 +1,63 @@
 import { useTranslation } from "react-i18next";
-import { useState, useCallback, useEffect, useMemo } from "react";
-import type { User, UserGroupRole } from "~/types/userType";
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router";
+import type { User } from "~/types/userType";
 import type { GroupRole } from "~/types/role";
 import { RequirePermission } from "~/components/common/RequirePermission";
-import { FilterableTable } from "~/components/common/FilterableTable";
-import type { FilterableColumn, FetchDataParams } from "~/components/common/FilterableTable";
 import { adminUserService } from "~/services/adminUserService";
-import type { GroupRoleResponse } from "~/services/adminUserService";
 import { loadAssignableGroupOptions } from "~/utils/groupOptions";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import InputComponent from "~/components/common/forms/InputComponent";
+import ElephantAvatar from "~/components/ElephantAvatar";
 import { getErrorMessage } from "~/types/error";
-import { isStaff } from "~/utils/roleHelpers";
+import { projectColor } from "~/utils/projectColor";
 import toast from "react-hot-toast";
 import { PageContainer } from "~/components/common/PageContainer";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMagnifyingGlass, faPenToSquare, faPlus, faUserPlus, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 
-interface GroupRoleEntry {
+type StatusFilter = "all" | "noAccount" | "incomplete";
+
+interface NewPersonForm {
+    name: string;
+    nickname: string;
+    email: string;
     groupId: string;
     role: GroupRole;
 }
 
-interface EditForm {
-    userId: string;
-    name: string;
-    email: string;
-    groupRoles: GroupRoleEntry[];
-    manualStaff: boolean;
-    bio: string;
-    funFact: string;
+const EMPTY_NEW_PERSON: NewPersonForm = { name: "", nickname: "", email: "", groupId: "", role: "MONITOR" };
+
+const selectClass =
+    "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500";
+
+/** Roles de staff de una persona (los de padre no cuentan para el equipo). */
+function staffRoles(user: User) {
+    return (user.groupRoles ?? []).filter((gr) => gr.role === "MONITOR" || gr.role === "COORDINATOR");
 }
 
-const EMPTY_EDIT_FORM: EditForm = {
-    userId: "",
-    name: "",
-    email: "",
-    groupRoles: [],
-    manualStaff: false,
-    bio: "",
-    funFact: "",
-};
-
-interface ProjectCrewGroup {
-    projectId: string;
-    projectName: string;
-    coordinators: User[];
-    monitors: { groupId: string; groupName: string | null; members: User[] }[];
+function isIncomplete(user: User): boolean {
+    return !user.staff?.bio;
 }
 
-export default function Crew() {
+export default function StaffDirectory() {
     const { t } = useTranslation();
-    const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
+    const [staff, setStaff] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [groupOptions, setGroupOptions] = useState<{ value: string; label: string }[]>([]);
 
-    const [view, setView] = useState<"table" | "grouped">("table");
+    const [view, setView] = useState<"cards" | "grouped">("cards");
+    const [search, setSearch] = useState("");
+    const [projectFilter, setProjectFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-    const [isEditOpen, setIsEditOpen] = useState(false);
-    const [editForm, setEditForm] = useState<EditForm>({ ...EMPTY_EDIT_FORM });
     const [saving, setSaving] = useState(false);
+    const [isNewOpen, setIsNewOpen] = useState(false);
+    const [newPerson, setNewPerson] = useState<NewPersonForm>({ ...EMPTY_NEW_PERSON });
+    const [accessUser, setAccessUser] = useState<User | null>(null);
+    const [accessEmail, setAccessEmail] = useState("");
 
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -66,155 +67,118 @@ export default function Crew() {
     const [addGroupId, setAddGroupId] = useState("");
     const [addRole, setAddRole] = useState<GroupRole>("MONITOR");
 
-    const [allCrew, setAllCrew] = useState<User[]>([]);
-    const [loadingGrouped, setLoadingGrouped] = useState(false);
-
     useEffect(() => {
-        const fetchGroups = async () => {
-            try {
-                setGroupOptions(await loadAssignableGroupOptions());
-            } catch (err) {
-                toast.error(getErrorMessage(err, t('users.groupsLoadError')));
-            }
-        };
-        fetchGroups();
+        loadAssignableGroupOptions()
+            .then(setGroupOptions)
+            .catch((err) => toast.error(getErrorMessage(err, t("users.groupsLoadError"))));
     }, []);
 
-    const fetchCrewData = useCallback(async ({ page, size, filters }: FetchDataParams) => {
-        return await adminUserService.listUsers({
-            query: filters.name || filters.email,
-            role: "ANY",
-            page,
-            size,
-        });
-    }, [refreshKey]);
-
     useEffect(() => {
-        if (view !== "grouped") return;
-        const fetchAll = async () => {
-            setLoadingGrouped(true);
+        const fetchStaff = async () => {
+            setLoading(true);
             try {
-                const res = await adminUserService.listUsers({
-                    role: "ANY",
-                    page: 0,
-                    size: 500,
-                });
-                setAllCrew(res.content);
+                const res = await adminUserService.listUsers({ staff: true, page: 0, size: 500 });
+                setStaff(res.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, t('staff.loadError')));
+                toast.error(getErrorMessage(err, t("staff.loadError")));
             } finally {
-                setLoadingGrouped(false);
+                setLoading(false);
             }
         };
-        fetchAll();
-    }, [view, refreshKey]);
+        fetchStaff();
+    }, [refreshKey]);
 
-    const projectGroups = useMemo((): ProjectCrewGroup[] => {
-        const projectMap = new Map<string, ProjectCrewGroup>();
+    const projects = useMemo(() => {
+        const names = new Map<string, string>();
+        staff.forEach((u) => staffRoles(u).forEach((gr) => names.set(gr.projectId, gr.projectName)));
+        return [...names.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+    }, [staff]);
 
-        for (const user of allCrew) {
-            if (!user.groupRoles) continue;
-            for (const gr of user.groupRoles) {
-                if (!projectMap.has(gr.projectId)) {
-                    projectMap.set(gr.projectId, {
-                        projectId: gr.projectId,
-                        projectName: gr.projectName,
-                        coordinators: [],
-                        monitors: [],
-                    });
-                }
-                const pg = projectMap.get(gr.projectId)!;
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return staff
+            .filter((u) => {
+                if (q && !`${u.name} ${u.staff?.nickname ?? ""} ${u.email ?? ""}`.toLowerCase().includes(q)) return false;
+                if (projectFilter && !staffRoles(u).some((gr) => gr.projectId === projectFilter)) return false;
+                if (statusFilter === "noAccount" && u.hasAccount !== false) return false;
+                if (statusFilter === "incomplete" && !isIncomplete(u)) return false;
+                return true;
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [staff, search, projectFilter, statusFilter]);
 
-                if (gr.role === "COORDINATOR") {
-                    if (!pg.coordinators.some(u => u.id === user.id)) {
-                        pg.coordinators.push(user);
-                    }
-                } else {
-                    let monitorGroup = pg.monitors.find(mg => mg.groupId === gr.groupId);
-                    if (!monitorGroup) {
-                        monitorGroup = { groupId: gr.groupId, groupName: gr.groupName, members: [] };
-                        pg.monitors.push(monitorGroup);
-                    }
-                    if (!monitorGroup.members.some(u => u.id === user.id)) {
-                        monitorGroup.members.push(user);
-                    }
-                }
+    const counts = useMemo(() => ({
+        total: staff.length,
+        noAccount: staff.filter((u) => u.hasAccount === false).length,
+        incomplete: staff.filter(isIncomplete).length,
+    }), [staff]);
+
+    const byProject = useMemo(() => {
+        const map = new Map<string, { name: string; coordinators: User[]; monitors: User[] }>();
+        const manual: User[] = [];
+        for (const user of filtered) {
+            const roles = staffRoles(user);
+            if (roles.length === 0) {
+                manual.push(user);
+                continue;
+            }
+            for (const gr of roles) {
+                if (!map.has(gr.projectId)) map.set(gr.projectId, { name: gr.projectName, coordinators: [], monitors: [] });
+                const bucket = gr.role === "COORDINATOR" ? map.get(gr.projectId)!.coordinators : map.get(gr.projectId)!.monitors;
+                if (!bucket.includes(user)) bucket.push(user);
             }
         }
+        return { projects: [...map.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name)), manual };
+    }, [filtered]);
 
-        return Array.from(projectMap.values()).sort((a, b) => a.projectName.localeCompare(b.projectName));
-    }, [allCrew]);
-
-    const startEdit = (user: User) => {
-        setEditForm({
-            userId: user.id,
-            name: user.name,
-            email: user.email,
-            groupRoles: user.groupRoles?.map(gr => ({ groupId: gr.groupId, role: gr.role })) || [],
-            manualStaff: user.staff?.manual ?? false,
-            bio: user.staff?.bio || "",
-            funFact: user.staff?.funFact || "",
-        });
-        setIsEditOpen(true);
+    // ── Nueva persona (sin cuenta) ──────────────────────────────────────
+    const closeNew = () => {
+        setIsNewOpen(false);
+        setNewPerson({ ...EMPTY_NEW_PERSON });
     };
 
-    const resetEdit = () => {
-        setEditForm({ ...EMPTY_EDIT_FORM });
-        setIsEditOpen(false);
-        setSaving(false);
-    };
-
-    const editFormIsStaff = editForm.manualStaff || isStaff({ groupRoles: editForm.groupRoles });
-
-    const handleEditSave = async () => {
-        if (editForm.groupRoles.length === 0) {
-            toast.error(t('staff.roleRequired'));
-            return;
-        }
+    const handleCreate = async () => {
         try {
             setSaving(true);
-            const userId = editForm.userId;
-
-            await adminUserService.updateUserDetails({
-                id: userId,
-                name: editForm.name,
-                email: editForm.email,
+            await adminUserService.createStaff({
+                name: newPerson.name.trim(),
+                nickname: newPerson.nickname.trim() || undefined,
+                email: newPerson.email.trim() || undefined,
+                groupId: newPerson.groupId || undefined,
+                role: newPerson.groupId ? newPerson.role : undefined,
             });
-
-            const currentRoles = await adminUserService.getUserGroupRoles(userId);
-            const currentKey = (gr: { groupId: string; role: string }) => `${gr.groupId}:${gr.role}`;
-            const currentSet = new Set(currentRoles.map(currentKey));
-            const desiredSet = new Set(editForm.groupRoles.map(gr => `${gr.groupId}:${gr.role}`));
-
-            for (const cr of currentRoles) {
-                if (!desiredSet.has(currentKey(cr))) {
-                    await adminUserService.removeGroupRole(userId, cr.groupId, cr.role as GroupRole);
-                }
-            }
-            for (const gr of editForm.groupRoles) {
-                if (!currentSet.has(`${gr.groupId}:${gr.role}`)) {
-                    await adminUserService.assignGroupRole(userId, gr.groupId, gr.role);
-                }
-            }
-
-            // Staff data goes last: a role added above may be what makes the user staff
-            if (editFormIsStaff) {
-                await adminUserService.updateStaff(userId, {
-                    bio: editForm.bio,
-                    funFact: editForm.funFact,
-                });
-            }
-
-            toast.success(t('staff.memberUpdated'));
-            resetEdit();
-            setRefreshKey(prev => prev + 1);
+            toast.success(t("staff.personCreated", { name: newPerson.name.trim() }));
+            closeNew();
+            setRefreshKey((k) => k + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, t('staff.memberUpdateError')));
+            toast.error(getErrorMessage(err, t("staff.personCreateError")));
         } finally {
             setSaving(false);
         }
     };
 
+    // ── Dar acceso ──────────────────────────────────────────────────────
+    const openAccess = (user: User) => {
+        setAccessUser(user);
+        setAccessEmail(user.email ?? "");
+    };
+
+    const handleGiveAccess = async () => {
+        if (!accessUser) return;
+        try {
+            setSaving(true);
+            await adminUserService.giveAccountAccess(accessUser.id, accessEmail.trim());
+            toast.success(t("staff.accessSent", { email: accessEmail.trim() }));
+            setAccessUser(null);
+            setRefreshKey((k) => k + 1);
+        } catch (err) {
+            toast.error(getErrorMessage(err, t("staff.accessError")));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ── Añadir a alguien que ya tiene usuario ───────────────────────────
     const resetAdd = () => {
         setIsAddOpen(false);
         setSearchQuery("");
@@ -233,14 +197,10 @@ export default function Crew() {
         setSearching(true);
         const timer = setTimeout(async () => {
             try {
-                const res = await adminUserService.listUsers({
-                    query: trimmed,
-                    page: 0,
-                    size: 10,
-                });
+                const res = await adminUserService.listUsers({ query: trimmed, page: 0, size: 10 });
                 setSearchResults(res.content);
             } catch (err) {
-                toast.error(getErrorMessage(err, t('staff.usersLoadError')));
+                toast.error(getErrorMessage(err, t("staff.usersLoadError")));
             } finally {
                 setSearching(false);
             }
@@ -250,352 +210,371 @@ export default function Crew() {
 
     const handleAddSave = async () => {
         if (!selectedUser || !addGroupId) {
-            toast.error(t('staff.selectUserAndGroup'));
+            toast.error(t("staff.selectUserAndGroup"));
             return;
         }
         try {
             setSaving(true);
             await adminUserService.assignGroupRole(selectedUser.id, addGroupId, addRole);
-            const roleLabel = addRole === 'COORDINATOR' ? t('users.roleCoordinator') : t('users.roleMonitor');
-            toast.success(t('staff.addedAs', { name: selectedUser.name, role: roleLabel }));
+            const roleLabel = addRole === "COORDINATOR" ? t("users.roleCoordinator") : t("users.roleMonitor");
+            toast.success(t("staff.addedAs", { name: selectedUser.name, role: roleLabel }));
             resetAdd();
-            setRefreshKey(prev => prev + 1);
+            setRefreshKey((k) => k + 1);
         } catch (err) {
-            toast.error(getErrorMessage(err, t('staff.addError')));
+            toast.error(getErrorMessage(err, t("staff.addError")));
         } finally {
             setSaving(false);
         }
     };
 
-    const tableColumns: FilterableColumn<User>[] = [
-        {
-            key: "name",
-            header: t('common.name'),
-            filter: { enabled: true, type: "search", placeholder: t('users.searchByName') },
-            render: (user: User) => (
-                <div className="flex items-center gap-2">
-                    {user.staff?.photo && (
-                        <img src={user.staff?.photo} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
-                    )}
-                    <div>
-                        <span className="font-medium text-yambo-black">{user.name}</span>
-                        <p className="text-xs text-gray-400 sm:hidden truncate max-w-[160px]">{user.email}</p>
-                    </div>
-                </div>
-            ),
-        },
-        {
-            key: "email",
-            header: t('users.emailHeader'),
-            className: "hidden sm:table-cell",
-            filter: { enabled: true, type: "search", placeholder: t('users.searchByEmail') },
-        },
-        {
-            key: "groupRoles",
-            header: t('staff.roles'),
-            className: "hidden md:table-cell",
-            render: (user: User) => (
-                <div className="flex flex-wrap gap-1">
-                    {user.groupRoles && user.groupRoles.length > 0 ? (
-                        user.groupRoles.slice(0, 4).map((gr) => (
-                            <span
-                                key={`${gr.groupId}:${gr.role}`}
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    gr.role === 'COORDINATOR'
-                                        ? 'bg-yambo-purple-100 text-yambo-purple-800'
-                                        : 'bg-yambo-green-50 text-yambo-green-700'
-                                }`}
-                                title={`${gr.role === 'COORDINATOR' ? t('users.roleCoordinator') : t('users.roleMonitor')} - ${gr.projectName}${gr.groupName ? ` / ${gr.groupName}` : ''}`}
-                            >
-                                {gr.role === 'COORDINATOR' ? 'C' : 'M'}: {gr.groupName || gr.projectName}
-                            </span>
-                        ))
+    const renderCard = (user: User) => {
+        const roles = staffRoles(user);
+        const displayName = user.staff?.nickname || user.name;
+        return (
+            <div key={user.id} className="flex flex-col rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200">
+                <div className="relative w-full h-40 overflow-hidden">
+                    {user.staff?.photo ? (
+                        <img src={user.staff.photo} alt={displayName} className="w-full h-full object-cover" style={{ objectPosition: "center top" }} />
                     ) : (
-                        <span className="text-gray-400 text-xs italic">{t('users.noRoles')}</span>
+                        <ElephantAvatar seed={user.id} config={user.staff?.avatar} title={displayName} className="block" />
                     )}
-                    {user.groupRoles && user.groupRoles.length > 4 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
-                            +{user.groupRoles.length - 4} más
+                    {user.hasAccount === false && (
+                        <span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yambo-black/80 text-white">
+                            {t("staff.noAccount")}
                         </span>
                     )}
                 </div>
-            ),
-        },
-        {
-            key: "actions",
-            header: t('users.actions'),
-            requiredPerms: [{ obj: "user", action: "update" }],
-            render: (user: User) => (
-                <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                    <ButtonComponent onClick={() => startEdit(user)} variant="primary" size="sm">
-                        {t('common.edit')}
-                    </ButtonComponent>
-                </RequirePermission>
-            ),
-        },
-    ];
+                <div className="flex-1 p-3">
+                    <h3 className="text-base font-bold text-yambo-black truncate">{displayName}</h3>
+                    {user.staff?.nickname && <p className="text-xs text-gray-400 truncate">{user.name}</p>}
+                    <p className="text-xs text-gray-400 truncate">{user.email || t("staff.noEmail")}</p>
+
+                    <div className="mt-2 flex flex-wrap gap-1">
+                        {roles.length === 0 && (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{t("staff.addedByHand")}</span>
+                        )}
+                        {roles.map((gr) => {
+                            const { bg, text } = projectColor(gr.projectName + (gr.groupName || ""));
+                            return (
+                                <span
+                                    key={`${gr.groupId}-${gr.role}`}
+                                    className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                    style={{ backgroundColor: bg, color: text }}
+                                    title={gr.role === "COORDINATOR" ? t("users.roleCoordinator") : t("users.roleMonitor")}
+                                >
+                                    {gr.role === "COORDINATOR" ? "C" : "M"}: {gr.groupName || gr.projectName}
+                                </span>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-1">
+                        {isIncomplete(user) && (
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                                {t("staff.missingBio")}
+                            </span>
+                        )}
+                        {user.staff?.photo && !user.staff.photoConsent && (
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-yambo-purple-50 text-yambo-purple-700 border border-yambo-purple-100">
+                                {t("staff.photoWithoutConsent")}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 px-3 pb-3">
+                    <Link
+                        to={`/mi-espacio/admin/usuarios/${user.id}/perfil`}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap border border-gray-200 text-yambo-green-600 hover:bg-yambo-green-50 hover:border-yambo-green-400 transition-colors"
+                    >
+                        <FontAwesomeIcon icon={faPenToSquare} className="w-3.5 h-3.5" />
+                        {t("staff.editCard")}
+                    </Link>
+                    {user.hasAccount === false && (
+                        <button
+                            type="button"
+                            onClick={() => openAccess(user)}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap bg-yambo-black text-white hover:bg-yambo-black/85 transition-colors"
+                        >
+                            <FontAwesomeIcon icon={faEnvelope} className="w-3.5 h-3.5" />
+                            {t("staff.giveAccess")}
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    const grid = (users: User[]) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">{users.map(renderCard)}</div>
+    );
 
     return (
-        <RequirePermission permission={{ obj: "user", action: "read" }} redirectTo="/mi-espacio">
+        <RequirePermission permission={{ obj: "user", action: "read" }}>
             <PageContainer>
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-extrabold font-display text-yambo-black">{t('staff.title')}</h1>
-                    <div className="flex gap-2">
-                        {/* View toggle */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 className="text-3xl font-extrabold font-display text-yambo-black">{t("staff.title")}</h1>
+                        <p className="text-gray-500 mt-1">
+                            {t("staff.summary", { total: counts.total, noAccount: counts.noAccount, incomplete: counts.incomplete })}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
                         <div className="flex rounded-full border border-gray-200 overflow-hidden">
-                            <button type="button"
-                                onClick={() => setView("table")}
-                                className={`px-4 py-1.5 text-sm font-medium transition-all ${view === "table" ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white" : "bg-white text-gray-600 hover:bg-yambo-green-50/30"}`}
-                            >
-                                {t('staff.viewTable')}
-                            </button>
-                            <button type="button"
-                                onClick={() => setView("grouped")}
-                                className={`px-4 py-1.5 text-sm font-medium transition-all ${view === "grouped" ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white" : "bg-white text-gray-600 hover:bg-yambo-green-50/30"}`}
-                            >
-                                {t('staff.viewByProject')}
-                            </button>
+                            {(["cards", "grouped"] as const).map((v) => (
+                                <button
+                                    key={v}
+                                    type="button"
+                                    onClick={() => setView(v)}
+                                    className={`px-4 py-1.5 text-sm font-medium transition-all ${
+                                        view === v
+                                            ? "bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 text-white"
+                                            : "bg-white text-gray-600 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    {v === "cards" ? t("staff.viewAll") : t("staff.viewByProject")}
+                                </button>
+                            ))}
                         </div>
                         <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
-                            <ButtonComponent variant="primary" onClick={() => setIsAddOpen(true)}>
-                                + Añadir al Equipo
+                            <ButtonComponent variant="neutral" onClick={() => setIsAddOpen(true)}>
+                                <FontAwesomeIcon icon={faUserPlus} className="mr-1.5" />
+                                {t("staff.addExisting")}
+                            </ButtonComponent>
+                        </RequirePermission>
+                        <RequirePermission permission={{ obj: "user", action: "create" }} redirect={false}>
+                            <ButtonComponent variant="primary" onClick={() => setIsNewOpen(true)}>
+                                <FontAwesomeIcon icon={faPlus} className="mr-1.5" />
+                                {t("staff.newPerson")}
                             </ButtonComponent>
                         </RequirePermission>
                     </div>
                 </div>
 
-                {view === "table" && (
-                    <FilterableTable
-                        columns={tableColumns}
-                        keyField="id"
-                        display={{
-                            emptyMessage: t('staff.empty'),
-                            loadingMessage: t('staff.loading'),
-                        }}
-                        serverSide={{ fetchData: fetchCrewData }}
-                    />
-                )}
+                {/* Filtros */}
+                <div className="flex flex-col md:flex-row gap-3 mb-6">
+                    <div className="relative flex-1 max-w-sm">
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder={t("staff.searchPlaceholder")}
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yambo-green-300 focus:border-yambo-green-400 outline-none bg-white shadow-sm transition-all"
+                        />
+                        <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    </div>
+                    <select
+                        value={projectFilter}
+                        onChange={(e) => setProjectFilter(e.target.value)}
+                        aria-label={t("staff.projectFilter")}
+                        className="border border-gray-200 rounded-full px-4 py-2.5 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-300"
+                    >
+                        <option value="">{t("staff.allProjects")}</option>
+                        {projects.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                    <div className="flex flex-wrap gap-2">
+                        {(["all", "noAccount", "incomplete"] as const).map((s) => (
+                            <button
+                                key={s}
+                                type="button"
+                                onClick={() => setStatusFilter(s)}
+                                aria-pressed={statusFilter === s}
+                                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                                    statusFilter === s
+                                        ? "bg-yambo-black text-white shadow-md"
+                                        : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
+                                }`}
+                            >
+                                {t(`staff.status.${s}`)}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                {view === "grouped" && (
-                    <div className="space-y-6">
-                        {loadingGrouped ? (
-                            <p className="text-gray-400">{t('staff.loading')}</p>
-                        ) : projectGroups.length === 0 ? (
-                            <p className="text-gray-400">{t('staff.empty')}</p>
-                        ) : (
-                            projectGroups.map(pg => (
-                                <div key={pg.projectId} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                    <div className="bg-yambo-green-50/30 px-5 py-3 border-b border-gray-100">
-                                        <h2 className="text-lg font-bold font-display text-yambo-black">{pg.projectName}</h2>
+                {loading ? (
+                    <p className="text-gray-400 text-center py-12">{t("staff.loading")}</p>
+                ) : filtered.length === 0 ? (
+                    <p className="text-gray-400 text-center py-12">{t("staff.empty")}</p>
+                ) : view === "cards" ? (
+                    grid(filtered)
+                ) : (
+                    <div className="space-y-8">
+                        {byProject.projects.map(([projectId, project]) => (
+                            <section key={projectId}>
+                                <h2 className="text-xl font-bold font-display text-yambo-black mb-3">{project.name}</h2>
+                                {project.coordinators.length > 0 && (
+                                    <div className="mb-4">
+                                        <h3 className="text-sm font-bold uppercase tracking-wide text-yambo-purple-700 mb-2">{t("staff.coordinators")}</h3>
+                                        {grid(project.coordinators)}
                                     </div>
-                                    <div className="p-5 space-y-4">
-                                        {pg.coordinators.length > 0 && (
-                                            <div>
-                                                <h3 className="text-sm font-medium text-yambo-purple-600 mb-2">{t('staff.coordinators')}</h3>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {pg.coordinators.map(user => (
-                                                        <button type="button"
-                                                            key={user.id}
-                                                            onClick={() => startEdit(user)}
-                                                            className="flex items-center gap-2 px-3 py-2 bg-yambo-purple-50 border border-yambo-purple-200 rounded-full hover:bg-yambo-purple-100 transition-colors text-left"
-                                                        >
-                                                            {user.staff?.photo && (
-                                                                <img src={user.staff?.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
-                                                            )}
-                                                            <span className="text-sm font-medium text-yambo-purple-700">{user.name}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        {pg.monitors.length > 0 && (
-                                            <div>
-                                                <h3 className="text-sm font-medium text-yambo-green-600 mb-2">{t('staff.monitors')}</h3>
-                                                {pg.monitors.map(mg => (
-                                                    <div key={mg.groupId} className="mb-3">
-                                                        {mg.groupName && (
-                                                            <p className="text-xs text-gray-400 mb-1 ml-1">{mg.groupName}</p>
-                                                        )}
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {mg.members.map(user => (
-                                                                <button type="button"
-                                                                    key={user.id}
-                                                                    onClick={() => startEdit(user)}
-                                                                    className="flex items-center gap-2 px-3 py-2 bg-yambo-green-50 border border-yambo-green-200 rounded-full hover:bg-yambo-green-100 transition-colors text-left"
-                                                                >
-                                                                    {user.staff?.photo && (
-                                                                        <img src={user.staff?.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
-                                                                    )}
-                                                                    <span className="text-sm font-medium text-yambo-green-700">{user.name}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                )}
+                                {project.monitors.length > 0 && (
+                                    <div>
+                                        <h3 className="text-sm font-bold uppercase tracking-wide text-yambo-green-600 mb-2">{t("staff.monitors")}</h3>
+                                        {grid(project.monitors)}
                                     </div>
-                                </div>
-                            ))
+                                )}
+                            </section>
+                        ))}
+                        {byProject.manual.length > 0 && (
+                            <section>
+                                <h2 className="text-xl font-bold font-display text-yambo-black mb-3">{t("staff.withoutProject")}</h2>
+                                {grid(byProject.manual)}
+                            </section>
                         )}
                     </div>
                 )}
 
-                {/* Edit Modal */}
+                {/* Nueva persona */}
                 <Modal
-                    isOpen={isEditOpen}
-                    onClose={resetEdit}
-                    title={t('staff.editMember', { name: editForm.name })}
+                    isOpen={isNewOpen}
+                    onClose={closeNew}
+                    title={t("staff.newPerson")}
                     size="md"
                     footer={
                         <>
-                            <ButtonComponent onClick={resetEdit} variant="neutral" disabled={saving}>
-                                {t('common.cancel')}
+                            <ButtonComponent onClick={closeNew} variant="secondary" disabled={saving}>
+                                {t("common.cancel")}
                             </ButtonComponent>
-                            <ButtonComponent onClick={handleEditSave} variant="primary" disabled={saving}>
-                                {saving ? t('common.saving') : t('common.save')}
+                            <ButtonComponent onClick={handleCreate} variant="primary" disabled={saving || newPerson.name.trim().length < 2}>
+                                {saving ? t("common.saving") : t("staff.createPerson")}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="flex flex-col gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                {t('staff.groupRolesField')}
-                            </label>
-                            {editForm.groupRoles.map((gr, idx) => (
-                                <div key={idx} className="flex gap-2 mb-2 items-center">
-                                    <select
-                                        value={gr.groupId}
-                                        onChange={(e) => {
-                                            const updated = [...editForm.groupRoles];
-                                            updated[idx] = { ...updated[idx], groupId: e.target.value };
-                                            setEditForm({ ...editForm, groupRoles: updated });
-                                        }}
-                                        className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                                    >
-                                        <option value="">{t('users.selectGroup')}</option>
-                                        {groupOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={gr.role}
-                                        onChange={(e) => {
-                                            const updated = [...editForm.groupRoles];
-                                            updated[idx] = { ...updated[idx], role: e.target.value as GroupRole };
-                                            setEditForm({ ...editForm, groupRoles: updated });
-                                        }}
-                                        className="w-36 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
-                                    >
-                                        <option value="MONITOR">{t('users.roleMonitor')}</option>
-                                        <option value="COORDINATOR">{t('users.roleCoordinator')}</option>
-                                    </select>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const updated = editForm.groupRoles.filter((_, i) => i !== idx);
-                                            setEditForm({ ...editForm, groupRoles: updated });
-                                        }}
-                                        className="text-coral hover:text-red-700 text-sm px-2"
-                                    >
-                                        x
-                                    </button>
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={() => setEditForm({
-                                    ...editForm,
-                                    groupRoles: [...editForm.groupRoles, { groupId: "", role: "MONITOR" }]
-                                })}
-                                className="text-sm text-yambo-green-600 hover:text-yambo-green-700 font-medium mt-1"
-                            >
-                                + Añadir rol en grupo
-                            </button>
+                        <p className="text-sm text-gray-500 bg-yambo-green-50 border border-yambo-green-100 rounded-xl px-4 py-2.5">
+                            {t("staff.newPersonHint")}
+                        </p>
+                        <InputComponent
+                            label={t("staff.personName")}
+                            value={newPerson.name}
+                            onChange={(e) => setNewPerson({ ...newPerson, name: e.target.value })}
+                            maxLength={100}
+                            required
+                        />
+                        <InputComponent
+                            label={t("users.nickname")}
+                            value={newPerson.nickname}
+                            onChange={(e) => setNewPerson({ ...newPerson, nickname: e.target.value })}
+                            maxLength={50}
+                            placeholder={t("users.nicknamePlaceholder")}
+                        />
+                        <InputComponent
+                            label={t("staff.emailOptional")}
+                            type="email"
+                            value={newPerson.email}
+                            onChange={(e) => setNewPerson({ ...newPerson, email: e.target.value })}
+                            placeholder={t("staff.emailOptionalPlaceholder")}
+                        />
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("staff.groupOptional")}</label>
+                                <select
+                                    value={newPerson.groupId}
+                                    onChange={(e) => setNewPerson({ ...newPerson, groupId: e.target.value })}
+                                    className={selectClass}
+                                >
+                                    <option value="">{t("staff.noGroupYet")}</option>
+                                    {groupOptions.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("staff.roleLabel")}</label>
+                                <select
+                                    value={newPerson.role}
+                                    onChange={(e) => setNewPerson({ ...newPerson, role: e.target.value as GroupRole })}
+                                    disabled={!newPerson.groupId}
+                                    className={`${selectClass} disabled:bg-gray-50 disabled:text-gray-400`}
+                                >
+                                    <option value="MONITOR">{t("users.roleMonitor")}</option>
+                                    <option value="COORDINATOR">{t("users.roleCoordinator")}</option>
+                                </select>
+                            </div>
                         </div>
-                        {editFormIsStaff && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.bio')}</label>
-                                <textarea
-                                    value={editForm.bio}
-                                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                                    placeholder={t('staff.bioPlaceholder')}
-                                    rows={3}
-                                    maxLength={500}
-                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500 resize-none"
-                                />
-                            </div>
-                        )}
-                        {editFormIsStaff && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.funFact')}</label>
-                                <input
-                                    type="text"
-                                    value={editForm.funFact}
-                                    onChange={(e) => setEditForm({ ...editForm, funFact: e.target.value })}
-                                    placeholder={t('users.funFactPlaceholder')}
-                                    maxLength={100}
-                                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                                />
-                            </div>
-                        )}
                     </div>
                 </Modal>
 
-                {/* Add to Crew Modal */}
+                {/* Dar acceso */}
+                <Modal
+                    isOpen={accessUser !== null}
+                    onClose={() => setAccessUser(null)}
+                    title={t("staff.giveAccessTitle", { name: accessUser?.name ?? "" })}
+                    size="sm"
+                    footer={
+                        <>
+                            <ButtonComponent onClick={() => setAccessUser(null)} variant="secondary" disabled={saving}>
+                                {t("common.cancel")}
+                            </ButtonComponent>
+                            <ButtonComponent onClick={handleGiveAccess} variant="primary" disabled={saving || !accessEmail.trim()}>
+                                {saving ? t("staff.sending") : t("staff.sendAccess")}
+                            </ButtonComponent>
+                        </>
+                    }
+                >
+                    <div className="flex flex-col gap-4">
+                        <p className="text-sm text-gray-500">{t("staff.giveAccessHint")}</p>
+                        <InputComponent
+                            label={t("users.email")}
+                            type="email"
+                            value={accessEmail}
+                            onChange={(e) => setAccessEmail(e.target.value)}
+                            placeholder="nombre@correo.com"
+                            required
+                        />
+                    </div>
+                </Modal>
+
+                {/* Añadir a alguien que ya tiene usuario */}
                 <Modal
                     isOpen={isAddOpen}
                     onClose={resetAdd}
-                    title={t('staff.addToStaff')}
+                    title={t("staff.addToStaff")}
                     size="md"
                     footer={
                         <>
-                            <ButtonComponent onClick={resetAdd} variant="neutral" disabled={saving}>
-                                {t('common.cancel')}
+                            <ButtonComponent onClick={resetAdd} variant="secondary" disabled={saving}>
+                                {t("common.cancel")}
                             </ButtonComponent>
-                            <ButtonComponent
-                                onClick={handleAddSave}
-                                variant="primary"
-                                disabled={saving || !selectedUser || !addGroupId}
-                            >
-                                {saving ? t('staff.adding') : t('staff.add')}
+                            <ButtonComponent onClick={handleAddSave} variant="primary" disabled={saving || !selectedUser || !addGroupId}>
+                                {saving ? t("staff.adding") : t("staff.add")}
                             </ButtonComponent>
                         </>
                     }
                 >
                     <div className="flex flex-col gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.searchUser')}</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("staff.searchUser")}</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder={t('staff.searchUserPlaceholder')}
+                                    placeholder={t("staff.searchUserPlaceholder")}
                                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
                                 />
                                 {searching && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">{t('staff.searching')}</span>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">{t("staff.searching")}</span>
                                 )}
                             </div>
                         </div>
 
                         {searchResults.length > 0 && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.selectUser')}</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("staff.selectUser")}</label>
                                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-xl divide-y">
-                                    {searchResults.map(user => (
-                                        <button type="button"
+                                    {searchResults.map((user) => (
+                                        <button
+                                            type="button"
                                             key={user.id}
                                             onClick={() => setSelectedUser(user)}
                                             className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-yambo-green-50/30 transition-colors ${
                                                 selectedUser?.id === user.id ? "bg-yambo-green-50" : ""
                                             }`}
                                         >
-                                            {user.staff?.photo && (
-                                                <img src={user.staff?.photo} alt={user.name} className="w-6 h-6 rounded-full object-cover" />
-                                            )}
                                             <span className="font-medium">{user.name}</span>
                                             <span className="text-gray-400 text-xs ml-auto">{user.email}</span>
                                         </button>
@@ -607,32 +586,23 @@ export default function Crew() {
                         {selectedUser && (
                             <>
                                 <div className="bg-yambo-green-50 border border-yambo-green-200 rounded-xl px-3 py-2 text-sm">
-                                    Seleccionado: <strong>{selectedUser.name}</strong> ({selectedUser.email})
+                                    {t("staff.selected")}: <strong>{selectedUser.name}</strong>
+                                    {selectedUser.email && <> ({selectedUser.email})</>}
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.groupField')}</label>
-                                    <select
-                                        value={addGroupId}
-                                        onChange={(e) => setAddGroupId(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                                    >
-                                        <option value="">{t('users.selectGroup')}</option>
-                                        {groupOptions.map(opt => (
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("staff.groupField")}</label>
+                                    <select value={addGroupId} onChange={(e) => setAddGroupId(e.target.value)} className={selectClass}>
+                                        <option value="">{t("users.selectGroup")}</option>
+                                        {groupOptions.map((opt) => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('staff.roleField')}</label>
-                                    <select
-                                        value={addRole}
-                                        onChange={(e) => setAddRole(e.target.value as GroupRole)}
-                                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 focus:border-yambo-green-500"
-                                    >
-                                        <option value="MONITOR">{t('users.roleMonitor')}</option>
-                                        <option value="COORDINATOR">{t('users.roleCoordinator')}</option>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("staff.roleField")}</label>
+                                    <select value={addRole} onChange={(e) => setAddRole(e.target.value as GroupRole)} className={selectClass}>
+                                        <option value="MONITOR">{t("users.roleMonitor")}</option>
+                                        <option value="COORDINATOR">{t("users.roleCoordinator")}</option>
                                     </select>
                                 </div>
                             </>

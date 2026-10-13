@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu cuenta</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header('#33a35e', ${headerIcon}, 'Tu cuenta')}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola, <span th:text="${userName}">nombre</span>!</h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    Ya formas parte del equipo de <span th:text="${organizationName}">Yambo</span> en la web. Solo te falta crear tu contraseña para entrar a tu cuenta, revisar tu ficha y personalizarla.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${accessLink}, 'Crear mi contraseña', '#33a35e')}"/>
+
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                    O copia y pega el siguiente enlace en tu navegador:
+                </p>
+                <p style="margin: 0 0 20px 0; color: #3498db; font-size: 14px; word-break: break-all;">
+                    <a th:href="${accessLink}" th:text="${accessLink}" style="color: #3498db;"></a>
+                </p>
+                <p style="margin: 0 0 20px 0; color: #e74c3c; font-size: 14px;">
+                    <strong>Importante:</strong> Este enlace expirará en <span th:text="${expirationDays}"></span> días.
+                </p>
+                <p style="margin: 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                    Si no esperabas este correo, puedes ignorarlo.
+                </p>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

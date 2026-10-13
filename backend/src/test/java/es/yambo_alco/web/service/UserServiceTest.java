@@ -1306,4 +1306,75 @@ public class UserServiceTest {
         assertThat(result.getGroupRoles()).isEmpty();
         verify(userRepository).save(user);
     }
+
+    // ── Staff without an account ────────────────────────────────────────
+
+    @Test
+    void createStaffWithoutAccount_WithOnlyAName_ShouldAddThemToTheStaffByHand() {
+        // Given
+        when(passwordEncoder.encode(anyString())).thenReturn("unusable-hash");
+        when(profileRepository.findAllById(List.of("USER"))).thenReturn(List.of(Profile.builder().id("USER").build()));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.createStaffWithoutAccount(" Juan ", null, " Juanito ", null, null, "A0000001");
+
+        // Then — public as staff, but cannot log in and has no email yet
+        assertThat(result.getName()).isEqualTo("Juan");
+        assertThat(result.getEmail()).isNull();
+        assertThat(result.isHasAccount()).isFalse();
+        assertThat(result.getStaff().isManual()).isTrue();
+        assertThat(result.getStaff().getNickname()).isEqualTo("Juanito");
+        assertThat(result.isStaff()).isTrue();
+        assertThat(result.isPublicStaff()).isTrue();
+        assertThat(result.getProfiles()).extracting(Profile::getId).containsExactly("USER");
+    }
+
+    @Test
+    void createStaffWithoutAccount_WithAnEmailInUse_ShouldThrow() {
+        // Given
+        when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
+
+        // When & Then
+        assertThatThrownBy(() -> userService.createStaffWithoutAccount("Juan", "Taken@example.com", null, null, null, "A0000001"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("already in use");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createStaffWithoutAccount_WithGroupAndRole_ShouldJoinThatGroup() {
+        // Given
+        ProjectGroup group = ProjectGroup.builder().id("PG000001").name("Grupo A").build();
+        Profile monitorProfile = Profile.builder().id("P0000004").build();
+        when(passwordEncoder.encode(anyString())).thenReturn("unusable-hash");
+        when(profileRepository.findAllById(List.of("USER"))).thenReturn(List.of());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User saved = inv.getArgument(0);
+            if (saved.getId() == null) saved.setId("U0000009");
+            when(userRepository.findById("U0000009")).thenReturn(Optional.of(saved));
+            return saved;
+        });
+        when(projectGroupRepository.findById("PG000001")).thenReturn(Optional.of(group));
+        when(profileRepository.findById("P0000004")).thenReturn(Optional.of(monitorProfile));
+
+        // When
+        User result = userService.createStaffWithoutAccount("Juan", "juan@example.com", null,
+                "PG000001", UserProjectGroupRole.MONITOR, "A0000001");
+
+        // Then — staff through the role, not by hand
+        assertThat(result.isHasAccount()).isFalse();
+        assertThat(result.getEmail()).isEqualTo("juan@example.com");
+        assertThat(result.getStaff().isManual()).isFalse();
+        assertThat(result.getGroupRoles()).hasSize(1);
+        assertThat(result.isStaff()).isTrue();
+    }
+
+    @Test
+    void createStaffWithoutAccount_WithAGroupButAParentRole_ShouldThrow() {
+        assertThatThrownBy(() -> userService.createStaffWithoutAccount("Juan", null, null,
+                "PG000001", UserProjectGroupRole.PARENT, "A0000001"))
+                .isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).save(any());
+    }
 }

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -100,20 +101,32 @@ public class ProjectRoleInvitationService {
         validateUsable(invitation);
 
         String normalizedEmail = email.toLowerCase().trim();
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        // Someone added without an account who registers with the same email keeps that user
+        Optional<User> pending = userRepository.findPendingAccountByEmail(normalizedEmail);
+        if (pending.isEmpty() && userRepository.existsByEmail(normalizedEmail)) {
             throw new BadRequestException("Email already registered");
         }
 
         Set<Profile> baseProfiles = new HashSet<>(profileRepository.findAllById(List.of("USER")));
 
-        User user = User.builder()
-                .email(normalizedEmail)
-                .password(passwordEncoder.encode(password))
-                .name(name)
-                .createdAt(LocalDateTime.now())
-                .enabled(true)
-                .profiles(new HashSet<>(baseProfiles))
-                .build();
+        User user;
+        if (pending.isPresent()) {
+            user = pending.get();
+            user.activateAccount(passwordEncoder.encode(password));
+            if (user.getProfiles() == null) {
+                user.setProfiles(new HashSet<>());
+            }
+            user.getProfiles().addAll(baseProfiles);
+        } else {
+            user = User.builder()
+                    .email(normalizedEmail)
+                    .password(passwordEncoder.encode(password))
+                    .name(name)
+                    .createdAt(LocalDateTime.now())
+                    .enabled(true)
+                    .profiles(new HashSet<>(baseProfiles))
+                    .build();
+        }
         user = userRepository.save(user);
 
         ProjectGroup projectGroup = getOrCreateProjectLevelGroup(invitation.getProjectId());
