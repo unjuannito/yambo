@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller.dto.user;
 
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.User;
 import lombok.Data;
 
@@ -13,8 +14,9 @@ public class StaffDto {
     private String funFact;
     private String nickname;
     private String instagramUrl;
-    private boolean publicVisible;
-    private LocalDateTime publicVisibleAt;
+    private StaffAvatar avatar;
+    private boolean photoConsent;
+    private LocalDateTime photoConsentAt;
     private boolean manual;
 
     /** Returns null when the user is not currently staff. */
@@ -30,8 +32,9 @@ public class StaffDto {
             dto.funFact = staff.getFunFact();
             dto.nickname = staff.getNickname();
             dto.instagramUrl = staff.getInstagramUrl();
-            dto.publicVisible = staff.isPublicVisible();
-            dto.publicVisibleAt = staff.getPublicVisibleAt();
+            dto.avatar = staff.getAvatar();
+            dto.photoConsent = staff.isPhotoConsent();
+            dto.photoConsentAt = staff.getPhotoConsentAt();
             dto.manual = staff.isManual();
         }
         return dto;

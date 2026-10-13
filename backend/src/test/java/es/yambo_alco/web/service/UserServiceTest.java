@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -680,7 +681,7 @@ public class UserServiceTest {
     }
 
     @Test
-    void updateStaff_WithNicknameAndPublicVisible_ShouldUpdateFields() {
+    void updateStaff_WithNicknameAndPhotoConsent_ShouldUpdateFields() {
         // Given
         User existingUser = User.builder()
                 .id("U0000001")
@@ -693,18 +694,18 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").publicVisible(true)
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").photoConsent(true)
                 .instagramUrl("https://www.instagram.com/p/abc/").build());
 
         // Then
         assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
         assertThat(result.getStaff().getInstagramUrl()).isEqualTo("https://www.instagram.com/p/abc/");
-        assertThat(result.getStaff().isPublicVisible()).isTrue();
-        assertThat(result.isPubliclyVisibleStaff()).isTrue();
+        assertThat(result.getStaff().isPhotoConsent()).isTrue();
+        assertThat(result.isPublicStaff()).isTrue();
     }
 
     @Test
-    void updateStaff_PublicVisible_ShouldKeepTheOptInDateInSync() {
+    void updateStaff_PhotoConsent_ShouldKeepTheConsentDateInSync() {
         // Given
         User existingUser = User.builder()
                 .id("U0000001")
@@ -717,17 +718,17 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When — opting in records the date
-        userService.updateStaff("U0000001", StaffUpdate.builder().publicVisible(true).build());
-        LocalDateTime optedInAt = existingUser.getStaff().getPublicVisibleAt();
+        userService.updateStaff("U0000001", StaffUpdate.builder().photoConsent(true).build());
+        LocalDateTime optedInAt = existingUser.getStaff().getPhotoConsentAt();
         assertThat(optedInAt).isNotNull();
 
         // Saving again while already public keeps the original date
-        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").publicVisible(true).build());
-        assertThat(existingUser.getStaff().getPublicVisibleAt()).isEqualTo(optedInAt);
+        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").photoConsent(true).build());
+        assertThat(existingUser.getStaff().getPhotoConsentAt()).isEqualTo(optedInAt);
 
         // Opting out clears it
-        userService.updateStaff("U0000001", StaffUpdate.builder().publicVisible(false).build());
-        assertThat(existingUser.getStaff().getPublicVisibleAt()).isNull();
+        userService.updateStaff("U0000001", StaffUpdate.builder().photoConsent(false).build());
+        assertThat(existingUser.getStaff().getPhotoConsentAt()).isNull();
     }
 
     @Test
@@ -760,7 +761,7 @@ public class UserServiceTest {
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Name")
-                .staff(Staff.builder().manual(true).publicVisible(true).photo("/uploads/p.jpg")
+                .staff(Staff.builder().manual(true).photoConsent(true).photo("/uploads/p.jpg")
                         .bio("Bio").funFact("Fun").nickname("Nick").instagramUrl("https://www.instagram.com/p/abc/").build())
                 .build();
 
@@ -778,7 +779,7 @@ public class UserServiceTest {
         assertThat(result.getStaff().getFunFact()).isNull();
         assertThat(result.getStaff().getNickname()).isNull();
         assertThat(result.getStaff().getInstagramUrl()).isNull();
-        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
         verify(staffRepository, never()).delete(any());
     }
 
@@ -846,20 +847,75 @@ public class UserServiceTest {
     }
 
     @Test
-    void isPubliclyVisibleStaff_WhenNoLongerStaff_ShouldBeFalse() {
-        // Given — opted in, but neither manual nor holding a staff role any more
-        User user = User.builder()
+    void updateStaffAvatar_ShouldSaveAndResetTheCustomElephant() {
+        // Given
+        User existingUser = User.builder()
                 .id("U0000001")
-                .staff(Staff.builder().publicVisible(true).build())
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
                 .build();
+        StaffAvatar avatar = StaffAvatar.builder().background(3).clothes("jacket").eyes("glasses").hair("curls").top("beanie").extra("none").trunkUp(true).build();
 
-        // Then
-        assertThat(user.isPubliclyVisibleStaff()).isFalse();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When / Then
+        assertThat(userService.updateStaffAvatar("U0000001", avatar).getStaff().getAvatar()).isEqualTo(avatar);
+        assertThat(userService.updateStaffAvatar("U0000001", null).getStaff().getAvatar()).isNull();
     }
 
     @Test
-    void updateStaffByAdmin_PublishingSomeoneElse_ShouldThrow() {
+    void updateStaffAvatar_ForNonStaffUser_ShouldThrow() {
         // Given
+        User existingUser = User.builder().id("U0000001").email("user@example.com").name("Name").build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateStaffAvatar("U0000001",
+                StaffAvatar.builder().background(0).clothes("dots").eyes("dots").hair("curls").top("none").extra("none").build()))
+                .isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void isPublicStaff_WhenNoLongerStaff_ShouldBeFalse() {
+        // Given — opted in, but neither manual nor holding a staff role any more
+        User user = User.builder()
+                .id("U0000001")
+                .staff(Staff.builder().photoConsent(true).build())
+                .build();
+
+        // Then
+        assertThat(user.isPublicStaff()).isFalse();
+    }
+
+    @Test
+    void updateStaffByAdmin_ConsentingForSomeoneElse_ShouldThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photo("/uploads/p.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().photoConsent(true).build()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("consent to showing their own photo");
+
+        assertThat(existingUser.getStaff().isPhotoConsent()).isFalse();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStaffByAdmin_CanFillInTheWholeCardOfSomeoneElse() {
+        // Given — the team's cards are filled in centrally
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
@@ -868,42 +924,73 @@ public class UserServiceTest {
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // When & Then
-        assertThatThrownBy(() ->
-                userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().publicVisible(true).build()))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("own card public");
+        // When
+        User result = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                .photo("/uploads/new.jpg").bio("Bio").nickname("Nick").funFact("Fun").build());
 
-        assertThat(existingUser.getStaff().isPublicVisible()).isFalse();
-        verify(userRepository, never()).save(any());
+        // Then — everything is saved; the photo stays hidden until its owner consents
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+        assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
+        assertThat(result.getStaff().getPhoto()).isEqualTo("/uploads/new.jpg");
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+        assertThat(result.isPublicStaff()).isTrue();
+        assertThat(result.getPublicStaffPhoto()).isNull();
     }
 
     @Test
-    void updateStaffByAdmin_CanHideAndEditSomeoneElse() {
+    void updateStaffByAdmin_ChangingSomeoneElsesPhoto_ShouldWithdrawTheirConsent() {
+        // Given — the consent was given for the previous photo
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photoConsent(true).photoConsentAt(LocalDateTime.now())
+                        .photo("/uploads/old.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — editing the text keeps the consent...
+        userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").build());
+        assertThat(existingUser.getStaff().isPhotoConsent()).isTrue();
+        // ...changing the photo withdraws it
+        User result = userService.updateStaffByAdmin("A0000001", "U0000001",
+                StaffUpdate.builder().photo("/uploads/new.jpg").build());
+
+        // Then
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+        assertThat(result.getStaff().getPhotoConsentAt()).isNull();
+        assertThat(result.getPublicStaffPhoto()).isNull();
+    }
+
+    @Test
+    void updateStaffByAdmin_CanWithdrawSomeoneElsesConsent() {
         // Given — already public: sending true again keeps it, sending false hides it
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Name")
-                .staff(Staff.builder().manual(true).publicVisible(true).build())
+                .staff(Staff.builder().manual(true).photoConsent(true).build())
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").publicVisible(true).build());
-        assertThat(kept.getStaff().isPublicVisible()).isTrue();
-        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().publicVisible(false).build());
+        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").photoConsent(true).build());
+        assertThat(kept.getStaff().isPhotoConsent()).isTrue();
+        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().photoConsent(false).build());
 
         // Then
-        assertThat(hidden.getStaff().isPublicVisible()).isFalse();
+        assertThat(hidden.getStaff().isPhotoConsent()).isFalse();
         assertThat(hidden.getStaff().getBio()).isEqualTo("Bio");
     }
 
     @Test
-    void updateStaffByAdmin_AdminCanPublishOwnCard() {
+    void updateStaffByAdmin_AdminCanConsentForTheirOwnPhoto() {
         // Given
         User admin = User.builder()
                 .id("A0000001")
@@ -916,20 +1003,20 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.updateStaffByAdmin("A0000001", "A0000001", StaffUpdate.builder().publicVisible(true).build());
+        User result = userService.updateStaffByAdmin("A0000001", "A0000001", StaffUpdate.builder().photoConsent(true).build());
 
         // Then
-        assertThat(result.getStaff().isPublicVisible()).isTrue();
+        assertThat(result.getStaff().isPhotoConsent()).isTrue();
     }
 
     @Test
-    void setManualStaff_False_ShouldWithdrawPublicVisibility() {
+    void setManualStaff_False_ShouldWithdrawPhotoConsent() {
         // Given
         User existingUser = User.builder()
                 .id("U0000001")
                 .email("user@example.com")
                 .name("Name")
-                .staff(Staff.builder().manual(true).publicVisible(true).build())
+                .staff(Staff.builder().manual(true).photoConsent(true).build())
                 .build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
@@ -939,11 +1026,11 @@ public class UserServiceTest {
         User result = userService.setManualStaff("U0000001", false);
 
         // Then
-        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
     }
 
     @Test
-    void removeGroupRole_LastStaffRole_ShouldWithdrawPublicVisibility() {
+    void removeGroupRole_LastStaffRole_ShouldWithdrawPhotoConsent() {
         // Given
         String userId = "U0000001";
         String groupId = "PG000001";
@@ -954,7 +1041,7 @@ public class UserServiceTest {
                 .role(UserProjectGroupRole.MONITOR)
                 .build();
         User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>())
-                .staff(Staff.builder().publicVisible(true).bio("Bio").build())
+                .staff(Staff.builder().photoConsent(true).bio("Bio").build())
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -965,7 +1052,7 @@ public class UserServiceTest {
 
         // Then — hidden, but the data is kept (and its retention period starts)
         assertThat(result.isStaff()).isFalse();
-        assertThat(result.getStaff().isPublicVisible()).isFalse();
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
         assertThat(result.getStaff().getInactiveSince()).isNotNull();
         assertThat(result.getStaff().getBio()).isEqualTo("Bio");
     }

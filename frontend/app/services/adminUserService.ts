@@ -32,7 +32,7 @@ export interface UpdateStaffRequest {
     bio?: string;
     funFact?: string;
     nickname?: string;
-    publicVisible?: boolean;
+    photoConsent?: boolean;
     instagramUrl?: string;
 }
 

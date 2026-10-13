@@ -106,14 +106,16 @@ public class User implements UserDetails {
     }
 
     /**
-     * Staff who opted in to be shown on the public site and are currently part of the team:
-     * added by hand, or holding a MONITOR/COORDINATOR role in an active project.
+     * Staff shown on the public site, i.e. currently part of the team: added by hand, or
+     * holding a MONITOR/COORDINATOR role in an active project. The card is public for all of them.
      */
-    public boolean isPubliclyVisibleStaff() {
-        if (staff == null || !staff.isPublicVisible()) {
-            return false;
-        }
-        return staff.isManual() || groupRoles.stream().anyMatch(User::isActiveStaffRole);
+    public boolean isPublicStaff() {
+        return (staff != null && staff.isManual()) || groupRoles.stream().anyMatch(User::isActiveStaffRole);
+    }
+
+    /** The staff photo, only when its owner consented to showing it publicly. */
+    public String getPublicStaffPhoto() {
+        return staff != null && staff.isPhotoConsent() && isPublicStaff() ? staff.getPhoto() : null;
     }
 
     /** A MONITOR/COORDINATOR role in a project that is still active. */

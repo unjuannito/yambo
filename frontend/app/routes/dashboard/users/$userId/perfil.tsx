@@ -39,7 +39,7 @@ export default function UserPerfil() {
         funFact: user.staff?.funFact || "",
         nickname: user.staff?.nickname || "",
         instagramUrl: user.staff?.instagramUrl || "",
-        publicVisible: user.staff?.publicVisible ?? false,
+        photoConsent: user.staff?.photoConsent ?? false,
     });
     const [staffDirty, setStaffDirty] = useState(false);
     const [togglingManual, setTogglingManual] = useState(false);
@@ -48,9 +48,9 @@ export default function UserPerfil() {
     const userIsStaff = isStaff(user);
     const isManualStaff = user.staff?.manual ?? false;
     const hasStaffRole = isStaff({ groupRoles: user.groupRoles });
-    // Salir en la web pública lo decide cada persona: un admin puede ocultar la ficha de otro, no publicarla
+    // Mostrar la foto lo decide cada persona: un admin puede retirar el permiso de otro, pero no darlo
     const { user: currentUser } = useAuth();
-    const canPublish = currentUser?.id === user.id || (user.staff?.publicVisible ?? false);
+    const canConsent = currentUser?.id === user.id || (user.staff?.photoConsent ?? false);
 
     const handleChange = (field: string, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -107,7 +107,7 @@ export default function UserPerfil() {
                 funFact: updated.staff?.funFact || "",
                 nickname: updated.staff?.nickname || "",
                 instagramUrl: updated.staff?.instagramUrl || "",
-                publicVisible: updated.staff?.publicVisible ?? false,
+                photoConsent: updated.staff?.photoConsent ?? false,
             });
             setStaffDirty(false);
             toast.success(manual ? t('users.addedToStaff') : t('users.removedFromStaff'));
@@ -135,7 +135,7 @@ export default function UserPerfil() {
         if (!userId) return;
         try {
             await adminUserService.deleteStaff(userId);
-            setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", instagramUrl: "", publicVisible: false });
+            setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", instagramUrl: "", photoConsent: false });
             setStaffDirty(false);
             toast.success(t('users.staffCardDeleted'));
             await refreshUser();
@@ -325,24 +325,24 @@ export default function UserPerfil() {
                                 </div>
 
                                 {/* Public visibility */}
-                                <label className={`flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 ${canPublish ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
+                                <label className={`flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 ${canConsent ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
                                     <span>
-                                        <span className="block text-sm font-medium text-gray-700">{t('users.publicVisible')}</span>
+                                        <span className="block text-sm font-medium text-gray-700">{t('users.photoConsent')}</span>
                                         <span className="block text-xs text-gray-400 mt-0.5">
-                                            {canPublish
-                                                ? t('users.publicVisibleHint')
-                                                : t('users.publicVisibleOnlySelf')}
-                                            {user.staff?.publicVisibleAt && (
-                                                <> {t('users.publicVisibleSince', { date: new Date(user.staff.publicVisibleAt).toLocaleDateString() })}</>
+                                            {canConsent
+                                                ? t('users.photoConsentHint')
+                                                : t('users.photoConsentOnlySelf')}
+                                            {user.staff?.photoConsentAt && (
+                                                <> {t('users.photoConsentSince', { date: new Date(user.staff.photoConsentAt).toLocaleDateString() })}</>
                                             )}
                                         </span>
                                     </span>
                                     <CheckboxComponent
                                         variantType="toggle"
                                         className="shrink-0 mt-0.5"
-                                        disabled={!canPublish}
-                                        checked={staffForm.publicVisible}
-                                        onChange={(e) => handleStaffChange("publicVisible", e.target.checked)}
+                                        disabled={!canConsent}
+                                        checked={staffForm.photoConsent}
+                                        onChange={(e) => handleStaffChange("photoConsent", e.target.checked)}
                                     />
                                 </label>
                             </>

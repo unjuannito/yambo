@@ -4,6 +4,7 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -120,7 +121,7 @@ public class UserService {
 
 		if (!user.isStaff()) {
 			throw new BadRequestException(
-					"Only staff (marked manually or with a MONITOR or COORDINATOR role) can have staff data (photo, bio, fun fact, nickname, Instagram link, public visibility)");
+					"Only staff (marked manually or with a MONITOR or COORDINATOR role) can have staff data (photo, bio, fun fact, nickname, Instagram link, photo consent)");
 		}
 
 		Staff staff = ensureStaff(user);
@@ -140,13 +141,29 @@ public class UserService {
 		if (update.getNickname() != null) {
 			staff.setNickname(blankToNull(update.getNickname()));
 		}
-		if (update.getPublicVisible() != null) {
-			setPublicVisible(staff, update.getPublicVisible());
+		if (update.getPhotoConsent() != null) {
+			setPhotoConsent(staff, update.getPhotoConsent());
 		}
 		if (update.getInstagramUrl() != null) {
 			staff.setInstagramUrl(blankToNull(update.getInstagramUrl()));
 		}
 
+		return userRepository.save(user);
+	}
+
+	/**
+	 * Saves the elephant a staff member customised for their card; null goes back to the default one.
+	 */
+	@Transactional
+	public User updateStaffAvatar(@NonNull String userId, StaffAvatar avatar) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (!user.isStaff()) {
+			throw new BadRequestException("Only staff (marked manually or with a MONITOR or COORDINATOR role) have an avatar");
+		}
+
+		ensureStaff(user).setAvatar(avatar);
 		return userRepository.save(user);
 	}
 
@@ -175,7 +192,8 @@ public class UserService {
 		staff.setFunFact(null);
 		staff.setNickname(null);
 		staff.setInstagramUrl(null);
-		setPublicVisible(staff, false);
+		staff.setAvatar(null);
+		setPhotoConsent(staff, false);
 		return userRepository.save(user);
 	}
 
@@ -194,19 +212,33 @@ public class UserService {
 	}
 
 	/**
-	 * Staff update made by an admin. Appearing on the public site is the staff member's own
-	 * decision: an admin can hide someone else's card but not make it public.
+	 * Staff update made by an admin, who can fill in the whole card of anyone in the team.
+	 * Showing the photo is the staff member's own decision: an admin can withdraw someone
+	 * else's consent but not give it, and changing their photo withdraws it (the consent was
+	 * for the previous photo).
 	 */
 	@Transactional
 	public User updateStaffByAdmin(@NonNull String adminId, @NonNull String userId, @NonNull StaffUpdate update) {
-		if (Boolean.TRUE.equals(update.getPublicVisible()) && !adminId.equals(userId)) {
-			User user = userRepository.findById(userId)
-					.orElseThrow(() -> new ResourceNotFoundException("User not found"));
-			if (!user.isPubliclyVisibleStaff()) {
-				throw new BadRequestException("Only the staff member can make their own card public");
-			}
+		if (adminId.equals(userId)) {
+			return updateStaff(userId, update);
 		}
-		return updateStaff(userId, update);
+
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+		Staff current = user.getStaff();
+		boolean hadConsent = current != null && current.isPhotoConsent();
+		String previousPhoto = current != null ? current.getPhoto() : null;
+		if (Boolean.TRUE.equals(update.getPhotoConsent()) && !hadConsent) {
+			throw new BadRequestException("Only the staff member can consent to showing their own photo");
+		}
+
+		User updated = updateStaff(userId, update);
+		Staff staff = updated.getStaff();
+		if (staff != null && staff.isPhotoConsent() && !java.util.Objects.equals(previousPhoto, staff.getPhoto())) {
+			setPhotoConsent(staff, false);
+			updated = userRepository.save(updated);
+		}
+		return updated;
 	}
 
 	/**
@@ -238,27 +270,27 @@ public class UserService {
 	}
 
 	/**
-	 * Leaving the staff withdraws the public opt-in (coming back does not republish the card)
-	 * and starts the retention period of the now inactive data.
+	 * Leaving the staff withdraws the photo consent (coming back does not show the photo again
+	 * without asking) and starts the retention period of the now inactive data.
 	 */
 	private void hideIfNoLongerStaff(User user) {
 		Staff staff = user.getStaff();
 		if (staff != null && !user.isStaff()) {
-			setPublicVisible(staff, false);
+			setPhotoConsent(staff, false);
 			if (staff.getInactiveSince() == null) {
 				staff.setInactiveSince(LocalDateTime.now());
 			}
 		}
 	}
 
-	/** Keeps the opt-in date in sync: set when the card becomes public, cleared when it stops being so. */
-	private static void setPublicVisible(Staff staff, boolean publicVisible) {
-		if (publicVisible && !staff.isPublicVisible()) {
-			staff.setPublicVisibleAt(LocalDateTime.now());
-		} else if (!publicVisible) {
-			staff.setPublicVisibleAt(null);
+	/** Keeps the consent date in sync: set when the consent is given, cleared when it is withdrawn. */
+	private static void setPhotoConsent(Staff staff, boolean photoConsent) {
+		if (photoConsent && !staff.isPhotoConsent()) {
+			staff.setPhotoConsentAt(LocalDateTime.now());
+		} else if (!photoConsent) {
+			staff.setPhotoConsentAt(null);
 		}
-		staff.setPublicVisible(publicVisible);
+		staff.setPhotoConsent(photoConsent);
 	}
 
 	private static String blankToNull(String value) {
