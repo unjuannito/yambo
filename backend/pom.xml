@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>es.yambo-alco</groupId>
 	<artifactId>web</artifactId>
-	<version>1.18.8</version>
+	<version>1.18.9</version>
 	<name>web</name>
 	<description>Web backend for Yambo&apos;s web page</description>
 
