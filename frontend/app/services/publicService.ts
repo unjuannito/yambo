@@ -1,4 +1,5 @@
 import { ApiService } from './apiService';
+import type { ElephantAvatarConfig } from '~/components/ElephantAvatar';
 import type { Activity } from '~/types/activity';
 
 export interface HomeSettings {
@@ -29,6 +30,7 @@ export interface StaffMember {
     bio: string;
     funFact: string;
     instagramUrl?: string | null;
+    avatar?: ElephantAvatarConfig | null;
     role: 'MONITOR' | 'COORDINATOR' | 'BOTH';
     groups: StaffGroup[];
 }

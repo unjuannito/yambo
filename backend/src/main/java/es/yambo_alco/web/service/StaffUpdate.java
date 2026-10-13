@@ -11,6 +11,6 @@ public class StaffUpdate {
     String bio;
     String funFact;
     String nickname;
-    Boolean publicVisible;
+    Boolean photoConsent;
     String instagramUrl;
 }

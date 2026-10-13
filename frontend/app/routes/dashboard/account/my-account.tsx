@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { Route } from "./+types/my-account";
 import { useAuth } from "~/hooks/useAuth";
 import { useApiMutation } from "~/hooks/useApiMutation";
@@ -15,6 +15,7 @@ import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUsers, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { isStaff } from "~/utils/roleHelpers";
+import ElephantAvatar from "~/components/ElephantAvatar";
 import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
@@ -55,7 +56,7 @@ export default function MyAccount() {
     funFact: user?.staff?.funFact || "",
     nickname: user?.staff?.nickname || "",
     instagramUrl: user?.staff?.instagramUrl || "",
-    publicVisible: user?.staff?.publicVisible ?? false,
+    photoConsent: user?.staff?.photoConsent ?? false,
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -116,7 +117,7 @@ export default function MyAccount() {
         funFact: user.staff?.funFact || "",
         nickname: user.staff?.nickname || "",
         instagramUrl: user.staff?.instagramUrl || "",
-        publicVisible: user.staff?.publicVisible ?? false,
+        photoConsent: user.staff?.photoConsent ?? false,
       });
       if (user.notificationPreferences) {
         setNotifPrefs(user.notificationPreferences);
@@ -371,6 +372,18 @@ export default function MyAccount() {
                   className="hidden"
                 />
               </div>
+              <div className="flex items-center gap-4 rounded-xl border border-gray-200 px-4 py-3">
+                {user && (
+                  <ElephantAvatar seed={user.id} config={user.staff?.avatar} className="w-16 h-[76px] rounded-xl shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-700">{t('myAccount.avatarTitle')}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('myAccount.avatarDesc')}</p>
+                  <Link to="/mi-espacio/cuenta/elefante" className="inline-block mt-1.5 text-sm font-semibold text-yambo-green-600 hover:underline">
+                    {t('myAccount.avatarCustomize')} →
+                  </Link>
+                </div>
+              </div>
               <InputComponent
                 label={t('myAccount.nickname')}
                 name="nickname"
@@ -429,24 +442,24 @@ export default function MyAccount() {
               />
               <label className="flex items-start justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer">
                 <span>
-                  <span className="block text-sm font-medium text-gray-700">{t('myAccount.publicVisible')}</span>
-                  <span className="block text-xs text-gray-400 mt-0.5">{t('myAccount.publicVisibleDesc')}</span>
+                  <span className="block text-sm font-medium text-gray-700">{t('myAccount.photoConsent')}</span>
+                  <span className="block text-xs text-gray-400 mt-0.5">{t('myAccount.photoConsentDesc')}</span>
                   <span className="block text-xs text-gray-400 mt-1">
-                    {t('myAccount.publicVisibleConsent')}{" "}
+                    {t('myAccount.photoConsentConsent')}{" "}
                     <a href="/legal/privacidad" target="_blank" rel="noreferrer" className="text-yambo-green-600 hover:underline">
-                      {t('myAccount.publicVisiblePrivacyLink')}
+                      {t('myAccount.photoConsentPrivacyLink')}
                     </a>
-                    {user?.staff?.publicVisibleAt && (
-                      <> · {t('myAccount.publicVisibleSince', { date: new Date(user.staff.publicVisibleAt).toLocaleDateString() })}</>
+                    {user?.staff?.photoConsentAt && (
+                      <> · {t('myAccount.photoConsentSince', { date: new Date(user.staff.photoConsentAt).toLocaleDateString() })}</>
                     )}
                   </span>
                 </span>
                 <CheckboxComponent
                   variantType="toggle"
                   className="shrink-0 mt-0.5"
-                  checked={staffData.publicVisible}
+                  checked={staffData.photoConsent}
                   onChange={(e) =>
-                    setStaffData((prev) => ({ ...prev, publicVisible: e.target.checked }))
+                    setStaffData((prev) => ({ ...prev, photoConsent: e.target.checked }))
                   }
                 />
               </label>

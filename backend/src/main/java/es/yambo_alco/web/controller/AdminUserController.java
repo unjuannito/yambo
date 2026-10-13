@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.controller.dto.user.StaffDto;
 import es.yambo_alco.web.controller.dto.user.UpdateStaffRequestDto;
 import es.yambo_alco.web.model.ProjectGroup;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
@@ -120,6 +121,20 @@ public class AdminUserController {
         User admin = authService.getCurrentUser(true);
         User updatedUser = userService.updateStaffByAdmin(admin.getId(), userId, request.toUpdate());
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @PutMapping("/{userId}/staff/avatar")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateStaffAvatar(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody StaffAvatar avatar) {
+        return ResponseEntity.ok(new AdminUserResponse(userService.updateStaffAvatar(userId, avatar)));
+    }
+
+    @DeleteMapping("/{userId}/staff/avatar")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> resetStaffAvatar(@PathVariable @NonNull String userId) {
+        return ResponseEntity.ok(new AdminUserResponse(userService.updateStaffAvatar(userId, null)));
     }
 
     @DeleteMapping("/{userId}/staff")

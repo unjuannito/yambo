@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -46,18 +48,26 @@ public class Staff {
     @Column(length = 50)
     private String nickname;
 
-    /** Opt-in: only staff with this flag are shown on the public site. */
+    /**
+     * The card itself is public for the whole team; this is the staff member's own consent
+     * to show their photo on it. Without it a generic avatar is shown instead.
+     */
     @Builder.Default
-    @Column(name = "public_visible", nullable = false)
-    private boolean publicVisible = false;
+    @Column(name = "photo_consent", nullable = false)
+    private boolean photoConsent = false;
+
+    /** Their customised elephant, shown when the photo is not; null means the default one. */
+    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private StaffAvatar avatar;
 
     /** Link to their #comosenotaqueeresdeyambo Instagram post. */
     @Column(name = "instagram_url", length = 300)
     private String instagramUrl;
 
-    /** When the staff member opted in; null while not public. */
-    @Column(name = "public_visible_at")
-    private LocalDateTime publicVisibleAt;
+    /** When the staff member consented to showing their photo; null while they have not. */
+    @Column(name = "photo_consent_at")
+    private LocalDateTime photoConsentAt;
 
     /** When the user stopped being staff; null while they are. Old inactive rows are purged. */
     @Column(name = "inactive_since")

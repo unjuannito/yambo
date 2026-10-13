@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        The staff card (name, nickname, description, projects) is public for the whole team.
+        The only thing each person consents to is showing their photo, so the former
+        "public visible" opt-in becomes the photo consent.
+    -->
+    <changeSet id="99-01-staff-photo-consent" author="yambo">
+        <renameColumn tableName="staff" oldColumnName="public_visible" newColumnName="photo_consent" columnDataType="BOOLEAN"/>
+        <renameColumn tableName="staff" oldColumnName="public_visible_at" newColumnName="photo_consent_at" columnDataType="TIMESTAMP"/>
+    </changeSet>
+
+    <!-- Consent only makes sense for those who actually have a photo -->
+    <changeSet id="99-02-photo-consent-requires-photo" author="yambo">
+        <sql>UPDATE staff SET photo_consent = false, photo_consent_at = NULL WHERE photo IS NULL</sql>
+    </changeSet>
+
+    <!-- The elephant shown instead of the photo, customised by each person (null = default one) -->
+    <changeSet id="99-03-staff-avatar" author="yambo">
+        <addColumn tableName="staff">
+            <column name="avatar" type="jsonb"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -21,6 +21,7 @@ export default [
         // Inicio
         route("mi-espacio", "routes/dashboard/index.tsx"),
         route("mi-espacio/cuenta", "routes/dashboard/account/my-account.tsx"),
+        route("mi-espacio/cuenta/elefante", "routes/dashboard/account/avatar.tsx"),
 
         // Administración
         route("mi-espacio/admin/usuarios", "routes/dashboard/users/index.tsx"),

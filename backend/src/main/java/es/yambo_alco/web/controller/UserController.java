@@ -4,6 +4,7 @@ import es.yambo_alco.web.controller.dto.user.StaffDto;
 import es.yambo_alco.web.controller.dto.user.UpdateStaffRequestDto;
 import es.yambo_alco.web.model.DeletionObjectType;
 import es.yambo_alco.web.model.NotificationPreferences;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
@@ -59,6 +60,20 @@ public class UserController {
         User currentUser = authService.getCurrentUser(true);
         User updatedUser = userService.updateStaff(currentUser.getId(), request.toUpdate());
         return ResponseEntity.ok(new UserResponse(updatedUser));
+    }
+
+    @PutMapping("/staff/avatar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> updateStaffAvatar(@Valid @RequestBody StaffAvatar avatar) {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(new UserResponse(userService.updateStaffAvatar(currentUser.getId(), avatar)));
+    }
+
+    @DeleteMapping("/staff/avatar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> resetStaffAvatar() {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(new UserResponse(userService.updateStaffAvatar(currentUser.getId(), null)));
     }
 
     @DeleteMapping("/staff")
