@@ -11,7 +11,7 @@ const NavItem = React.memo(function NavItem({ link }: { link: Link }) {
     <li>
       <NavLink
         to={link.href}
-        end
+        end={!link.nested}
         className={({ isActive }) =>
           `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition-all duration-200 ${
             isActive

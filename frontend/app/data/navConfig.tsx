@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faHouse, faUser, faGear, faPenToSquare, faUsers,
     faShieldHalved, faEnvelope, faGift, faClipboard,
-    faCommentDots, faFolder, faCalendarDays, faBagShopping, faCubes,
+    faCommentDots, faCalendarDays, faBagShopping, faCubes,
     faClipboardList, faComments, faCartShopping,
     faRightFromBracket,
     faEnvelopesBulk,
@@ -31,7 +31,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         title: "Proyectos",
-        items: ["staff", "projects", "activities"]
+        items: ["projects", "activities"]
     },
     {
         title: "Artículos",
@@ -58,8 +58,7 @@ export const NAV_ICONS: Record<string, JSX.Element> = {
     seo: <FontAwesomeIcon icon={faMagnifyingGlass} className="w-5 h-5" />,
     legal: <FontAwesomeIcon icon={faGavel} className="w-5 h-5" />,
     reports: <FontAwesomeIcon icon={faChartLine} className="w-5 h-5" />,
-    projects: <FontAwesomeIcon icon={faFolder} className="w-5 h-5" />,
-    staff: <FontAwesomeIcon icon={faPeopleGroup} className="w-5 h-5" />,
+    projects: <FontAwesomeIcon icon={faPeopleGroup} className="w-5 h-5" />,
     activities: <FontAwesomeIcon icon={faCalendarDays} className="w-5 h-5" />,
     merch: <FontAwesomeIcon icon={faBagShopping} className="w-5 h-5" />,
     merchFamilies: <FontAwesomeIcon icon={faCubes} className="w-5 h-5" />,

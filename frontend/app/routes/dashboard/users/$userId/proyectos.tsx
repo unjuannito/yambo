@@ -121,7 +121,7 @@ export default function UserProyectos() {
                         <section key={projectId} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-yambo-green-50/40 to-transparent border-b border-gray-100">
                                 <button type="button"
-                                    onClick={() => navigate(`/mi-espacio/proyectos/${projectId}/personal`)}
+                                    onClick={() => navigate(`/mi-espacio/proyectos/${projectId}/equipo`)}
                                     className="font-bold text-yambo-black hover:text-yambo-green-600 transition-colors text-left flex items-center gap-2"
                                 >
                                     {projectName}

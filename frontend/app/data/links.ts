@@ -10,6 +10,8 @@ export interface Link {
     href: string;
     label: string;
     need: Permission | null;
+    /** La entrada sigue activa en sus subpáginas (p. ej. dentro de un proyecto). */
+    nested?: boolean;
 }
 
 const LINKS_MAP: Link[] = [
@@ -103,15 +105,10 @@ const LINKS_MAP: Link[] = [
 
     // Proyectos
     {
-        name: "staff",
-        href: "/mi-espacio/admin/equipo",
-        label: "Equipo",
-        need: { obj: "user", action: "read" },
-    },
-    {
         name: "projects",
         href: "/mi-espacio/proyectos",
-        label: "Proyectos",
+        label: "Proyectos y equipo",
+        nested: true,
         need: { obj: "project", action: "read" },
     },
     {
