@@ -5,6 +5,7 @@ import {
     Outlet,
     Scripts,
     ScrollRestoration,
+    useRouteLoaderData,
 } from "react-router";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
@@ -19,6 +20,11 @@ import { useTranslation } from "react-i18next";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { isSiteIndexable } from "./utils/env.server";
+
+export function loader() {
+    return { indexable: isSiteIndexable() };
+}
 
 function WebSocketProvider({ children }: { children: React.ReactNode }) {
     useWebSocket();
@@ -41,6 +47,7 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export default function Document() {
+    const indexable = useRouteLoaderData<typeof loader>("root")?.indexable ?? true;
     return (
         <html lang="es">
             <head>
@@ -49,6 +56,8 @@ export default function Document() {
                     name="viewport"
                     content="width=device-width, initial-scale=1"
                 />
+                {/* Entornos de pruebas: gana sobre el `robots` de cada página (se aplica el más restrictivo) */}
+                {!indexable && <meta name="robots" content="noindex, nofollow" />}
                 <link
                     rel="shortcut icon"
                     href="/logo.png"

@@ -47,6 +47,16 @@ patches:
     target:
       kind: Deployment
       name: yambo-frontend
+  # Develop no debe salir en buscadores (contenido duplicado de producción)
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SEO_INDEXABLE
+          value: "false"
+    target:
+      kind: Deployment
+      name: yambo-frontend
   # Replicas mínimas en desarrollo
   - patch: |-
       - op: replace
