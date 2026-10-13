@@ -126,13 +126,7 @@ public class UserService {
 		}
 
 		Staff staff = ensureStaff(user);
-		if (update.getPhoto() != null) {
-			String newPhoto = blankToNull(update.getPhoto());
-			if (staff.getPhoto() != null && !staff.getPhoto().equals(newPhoto)) {
-				uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), userId);
-			}
-			staff.setPhoto(newPhoto);
-		}
+		updatePhoto(staff, userId, update);
 		if (update.getBio() != null) {
 			staff.setBio(blankToNull(update.getBio()));
 		}
@@ -217,6 +211,7 @@ public class UserService {
 		}
 
 		uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), userId);
+		uploadedFileService.deleteOwnedByUrl(staff.getPhotoOriginal(), userId);
 		if (!user.isStaff()) {
 			user.setStaff(null);
 			staffRepository.delete(staff);
@@ -224,6 +219,8 @@ public class UserService {
 		}
 
 		staff.setPhoto(null);
+		staff.setPhotoOriginal(null);
+		staff.setPhotoEdit(null);
 		staff.setBio(null);
 		staff.setFunFact(null);
 		staff.setNickname(null);
@@ -239,6 +236,7 @@ public class UserService {
 		List<Staff> expired = staffRepository.findByInactiveSinceBefore(cutoff);
 		for (Staff staff : expired) {
 			uploadedFileService.deleteOwnedByUrl(staff.getPhoto(), staff.getUserId());
+			uploadedFileService.deleteOwnedByUrl(staff.getPhotoOriginal(), staff.getUserId());
 			if (staff.getUser() != null) {
 				staff.getUser().setStaff(null);
 			}
@@ -263,14 +261,15 @@ public class UserService {
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 		Staff current = user.getStaff();
 		boolean hadConsent = current != null && current.isPhotoConsent();
-		String previousPhoto = current != null ? current.getPhoto() : null;
+		String previousSource = photoSource(current);
 		if (Boolean.TRUE.equals(update.getPhotoConsent()) && !hadConsent) {
 			throw new BadRequestException("Only the staff member can consent to showing their own photo");
 		}
 
 		User updated = updateStaff(userId, update);
 		Staff staff = updated.getStaff();
-		if (staff != null && staff.isPhotoConsent() && !java.util.Objects.equals(previousPhoto, staff.getPhoto())) {
+		// Re-framing the same picture keeps the consent; a different picture needs it again
+		if (staff != null && staff.isPhotoConsent() && !java.util.Objects.equals(previousSource, photoSource(staff))) {
 			setPhotoConsent(staff, false);
 			updated = userRepository.save(updated);
 		}
@@ -296,6 +295,45 @@ public class UserService {
 		hideIfNoLongerStaff(user);
 
 		return userRepository.save(user);
+	}
+
+	/**
+	 * The staff photo is the original framed with the stored edit. Files that stop being used
+	 * are deleted; removing the photo removes the original and the framing with it.
+	 */
+	private void updatePhoto(Staff staff, String userId, StaffUpdate update) {
+		String previousPhoto = staff.getPhoto();
+		String previousOriginal = staff.getPhotoOriginal();
+
+		if (update.getPhoto() != null) {
+			staff.setPhoto(blankToNull(update.getPhoto()));
+		}
+		if (staff.getPhoto() == null) {
+			staff.setPhotoOriginal(null);
+			staff.setPhotoEdit(null);
+		} else {
+			if (update.getPhotoOriginal() != null) {
+				staff.setPhotoOriginal(blankToNull(update.getPhotoOriginal()));
+			}
+			if (update.getPhotoEdit() != null) {
+				staff.setPhotoEdit(update.getPhotoEdit());
+			}
+		}
+
+		// A photo uploaded before framing existed becomes the original once it is adjusted
+		for (String previous : new String[] { previousPhoto, previousOriginal }) {
+			if (previous != null && !previous.equals(staff.getPhoto()) && !previous.equals(staff.getPhotoOriginal())) {
+				uploadedFileService.deleteOwnedByUrl(previous, userId);
+			}
+		}
+	}
+
+	/** The picture itself, whatever its framing: the original if there is one, else the photo. */
+	private static String photoSource(Staff staff) {
+		if (staff == null) {
+			return null;
+		}
+		return staff.getPhotoOriginal() != null ? staff.getPhotoOriginal() : staff.getPhoto();
 	}
 
 	private Staff ensureStaff(User user) {

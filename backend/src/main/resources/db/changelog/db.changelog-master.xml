@@ -109,4 +109,5 @@
     <include file="db/changelog/changes/98-staff-profile-improvements.xml"/>
     <include file="db/changelog/changes/99-staff-photo-consent.xml"/>
     <include file="db/changelog/changes/100-user-without-account.xml"/>
+    <include file="db/changelog/changes/101-staff-photo-edit.xml"/>
 </databaseChangeLog>

@@ -3,6 +3,7 @@ package es.yambo_alco.web.controller;
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffPhotoEdit;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.service.AccessGrantService;
@@ -669,5 +670,44 @@ Mockito.when(userService.listUsers(any(UserFilter.class), Mockito.any(PageReques
                                 .andExpect(jsonPath("$.hasAccount").value(false));
 
                 verify(passwordResetService).giveAccountAccess("U0000009", "juan@example.com");
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_WithPhotoFraming_ShouldPassItOnAndReturnIt() throws Exception {
+                StaffPhotoEdit edit = StaffPhotoEdit.builder().x(0.25).y(-0.5).zoom(2.0).rotation(90.0).build();
+                User updatedUser = User.builder()
+                                .id("U0000001").email("user@example.com").name("Name").profiles(Set.of())
+                                .staff(Staff.builder().manual(true).photo("/uploads/framed.jpg")
+                                                .photoOriginal("/uploads/original.jpg").photoEdit(edit).build())
+                                .build();
+
+                when(authService.getCurrentUser(true)).thenReturn(User.builder().id("A0000001").build());
+                when(userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(edit).build()))
+                                .thenReturn(updatedUser);
+
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"photo": "/uploads/framed.jpg", "photoOriginal": "/uploads/original.jpg",
+                                                 "photoEdit": {"x": 0.25, "y": -0.5, "zoom": 2.0, "rotation": 90.0}}
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.staff.photoOriginal").value("/uploads/original.jpg"))
+                                .andExpect(jsonPath("$.staff.photoEdit.zoom").value(2.0));
+        }
+
+        @Test
+        @WithMockUser(authorities = "MANAGE_USERS")
+        void updateStaff_WithFramingOutOfRange_ShouldReturnBadRequest() throws Exception {
+                mockMvc.perform(put("/admin/users/U0000001/staff")
+                                .header("Authorization", "Bearer test.jwt.token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"photoEdit": {"x": 0, "y": 0, "zoom": 9, "rotation": 0}}
+                                                """))
+                                .andExpect(status().isBadRequest());
         }
 }

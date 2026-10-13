@@ -8,6 +8,9 @@ import lombok.Value;
 @Builder
 public class StaffUpdate {
     String photo;
+    /** The photo as uploaded, when {@link #photo} is a framed version of it. */
+    String photoOriginal;
+    es.yambo_alco.web.model.StaffPhotoEdit photoEdit;
     String bio;
     String funFact;
     String nickname;
