@@ -112,7 +112,7 @@ class NominativeInvitationServiceTest {
         String email = "existing@example.com";
         String invitedBy = "U0000001";
 
-        when(userRepository.existsByEmail(email)).thenReturn(true);
+        when(userRepository.existsAccountByEmail(email)).thenReturn(true);
 
         assertThatThrownBy(() -> nominativeInvitationService.createInvitation(email, invitedBy, null))
                 .isInstanceOf(BadRequestException.class)
@@ -131,7 +131,7 @@ class NominativeInvitationServiceTest {
         Profile socio = Profile.builder().id("SOCIO").build();
         Profile monitor = Profile.builder().id("MONITOR").build();
 
-        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(userRepository.existsAccountByEmail(email)).thenReturn(false);
         when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socio, monitor));
         when(nominativeInvitationRepository.save(any(NominativeInvitation.class))).thenReturn(NominativeInvitation.builder().email(email).build());
 
@@ -149,7 +149,7 @@ class NominativeInvitationServiceTest {
 
         Profile socio = Profile.builder().id("SOCIO").build();
 
-        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(userRepository.existsAccountByEmail(email)).thenReturn(false);
         when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socio)); // Only one profile found
 
         assertThatThrownBy(() -> nominativeInvitationService.createInvitation(email, invitedBy, profileIds))
@@ -492,7 +492,7 @@ class NominativeInvitationServiceTest {
     @Test
     void createBatchInvitations_ShouldCreateInvitationsForAllEmails() {
         List<String> emails = List.of("a@test.com", "b@test.com");
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsAccountByEmail(anyString())).thenReturn(false);
         when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -508,8 +508,8 @@ class NominativeInvitationServiceTest {
     @Test
     void createBatchInvitations_ShouldSkipExistingUsers() {
         List<String> emails = List.of("existing@test.com", "new@test.com");
-        when(userRepository.existsByEmail("existing@test.com")).thenReturn(true);
-        when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
+        when(userRepository.existsAccountByEmail("existing@test.com")).thenReturn(true);
+        when(userRepository.existsAccountByEmail("new@test.com")).thenReturn(false);
         when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -523,7 +523,7 @@ class NominativeInvitationServiceTest {
     @Test
     void createBatchInvitations_ShouldNotSendEmails() {
         List<String> emails = List.of("a@test.com");
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsAccountByEmail(anyString())).thenReturn(false);
         when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -538,7 +538,7 @@ class NominativeInvitationServiceTest {
         Set<String> profileIds = Set.of("SOCIO");
         Profile socio = Profile.builder().id("SOCIO").build();
 
-        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.existsAccountByEmail(anyString())).thenReturn(false);
         when(roleRepository.findAllById(profileIds)).thenReturn(List.of(socio));
         when(nominativeInvitationRepository.save(any(NominativeInvitation.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -552,12 +552,41 @@ class NominativeInvitationServiceTest {
     @Test
     void createBatchInvitations_AllExistingUsers_ShouldReturnEmptyList() {
         List<String> emails = List.of("a@test.com", "b@test.com");
-        when(userRepository.existsByEmail(anyString())).thenReturn(true);
+        when(userRepository.existsAccountByEmail(anyString())).thenReturn(true);
 
         List<NominativeInvitation> result = nominativeInvitationService
                 .createBatchInvitations(emails, "U0000001", null);
 
         assertThat(result).isEmpty();
         verify(nominativeInvitationRepository, never()).save(any(NominativeInvitation.class));
+    }
+
+    @Test
+    void completeInvitation_ForSomeoneAddedWithoutAnAccount_ShouldClaimThatUser() {
+        String token = "valid-token";
+        String email = "juan@example.com";
+        Profile role = Profile.builder().id("INTERESADO").build();
+        NominativeInvitation invitation = NominativeInvitation.builder()
+                .email(email).token(token).used(false)
+                .expiresAt(LocalDateTime.now().plusHours(1))
+                .profiles(Set.of(role))
+                .build();
+        User pending = User.builder().id("U0000009").email(email).name("Juan").password("unusable")
+                .hasAccount(false).profiles(new java.util.HashSet<>()).build();
+
+        when(nominativeInvitationRepository.findByToken(token)).thenReturn(Optional.of(invitation));
+        when(userRepository.findPendingAccountByEmail(email)).thenReturn(Optional.of(pending));
+        when(passwordEncoder.encode("password")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        User result = nominativeInvitationService.completeInvitation(token, "password", "Otro Nombre");
+
+        // Same user: now with an account, the invitation profiles and the name the admin gave
+        assertThat(result).isSameAs(pending);
+        assertThat(result.isHasAccount()).isTrue();
+        assertThat(result.getPassword()).isEqualTo("encoded-password");
+        assertThat(result.getName()).isEqualTo("Juan");
+        assertThat(result.getProfiles()).contains(role);
+        assertThat(invitation.isUsed()).isTrue();
     }
 }

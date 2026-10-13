@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
@@ -42,7 +43,8 @@ public class NominativeInvitationService {
 
     public NominativeInvitation createInvitation(String email, String invitedBy, Set<String> profileIds) {
         String normalizedEmail = email.toLowerCase().trim();
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        // Someone added without an account can be invited: registering claims that user
+        if (userRepository.existsAccountByEmail(normalizedEmail)) {
             throw new BadRequestException("Email already registered");
         }
 
@@ -83,7 +85,7 @@ public class NominativeInvitationService {
 
         for (String email : emails) {
             String normalizedEmail = email.toLowerCase().trim();
-            if (userRepository.existsByEmail(normalizedEmail)) {
+            if (userRepository.existsAccountByEmail(normalizedEmail)) {
                 skipped.add(email);
                 continue;
             }
@@ -130,20 +132,32 @@ public class NominativeInvitationService {
             throw new BadRequestException("Invitation expired");
         }
 
-        if (userRepository.existsByEmail(invitation.getEmail())) {
+        // Someone added without an account who registers with the same email keeps that user
+        Optional<User> pending = userRepository.findPendingAccountByEmail(invitation.getEmail());
+        if (pending.isEmpty() && userRepository.existsByEmail(invitation.getEmail())) {
             throw new BadRequestException("Email already registered");
         }
 
         invitation.setUsed(true);
 
-        User user = User.builder()
-                .email(invitation.getEmail())
-                .password(passwordEncoder.encode(password))
-                .name(name)
-                .createdAt(LocalDateTime.now())
-                .enabled(true)
-                .profiles(new HashSet<>(invitation.getProfiles()))
-                .build();
+        User user;
+        if (pending.isPresent()) {
+            user = pending.get();
+            user.activateAccount(passwordEncoder.encode(password));
+            if (user.getProfiles() == null) {
+                user.setProfiles(new HashSet<>());
+            }
+            user.getProfiles().addAll(invitation.getProfiles());
+        } else {
+            user = User.builder()
+                    .email(invitation.getEmail())
+                    .password(passwordEncoder.encode(password))
+                    .name(name)
+                    .createdAt(LocalDateTime.now())
+                    .enabled(true)
+                    .profiles(new HashSet<>(invitation.getProfiles()))
+                    .build();
+        }
 
         User saved = userRepository.save(user);
 

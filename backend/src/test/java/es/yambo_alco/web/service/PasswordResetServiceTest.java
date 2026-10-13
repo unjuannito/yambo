@@ -22,7 +22,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -268,5 +270,89 @@ class PasswordResetServiceTest {
         assertThatThrownBy(() -> passwordResetService.resetPassword(token, "password123"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Usuario no encontrado");
+    }
+
+    // ── Account access for people added without an account ──────────────
+
+    @Test
+    void giveAccountAccess_ShouldStoreTheEmailAndSendALongLivedLink() {
+        // Given
+        ReflectionTestUtils.setField(passwordResetService, "accountAccessExpirationDays", 7L);
+        User pending = User.builder().id("U0000009").name("Juan").password("unusable").hasAccount(false).build();
+
+        when(userRepository.findById("U0000009")).thenReturn(Optional.of(pending));
+        when(userRepository.existsByEmail("juan@example.com")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(passwordResetTokenRepository.findByEmailAndUsedFalse("juan@example.com")).thenReturn(List.of());
+
+        // When
+        User result = passwordResetService.giveAccountAccess("U0000009", " Juan@Example.com ");
+
+        // Then
+        assertThat(result.getEmail()).isEqualTo("juan@example.com");
+        assertThat(result.isHasAccount()).isFalse();
+        ArgumentCaptor<PasswordResetToken> token = ArgumentCaptor.forClass(PasswordResetToken.class);
+        verify(passwordResetTokenRepository).save(token.capture());
+        assertThat(token.getValue().getEmail()).isEqualTo("juan@example.com");
+        assertThat(token.getValue().getExpiresAt()).isAfter(LocalDateTime.now().plusDays(6));
+        verify(mailService).sendAccountAccessEmail(eq("juan@example.com"), eq("Juan"),
+                contains("/reset-password?token="), eq(7L));
+    }
+
+    @Test
+    void giveAccountAccess_ForSomeoneWhoAlreadyHasAnAccount_ShouldThrow() {
+        // Given
+        User user = User.builder().id("U0000001").email("user@example.com").password("x").build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+
+        // When & Then
+        assertThatThrownBy(() -> passwordResetService.giveAccountAccess("U0000001", "other@example.com"))
+                .isInstanceOf(BadRequestException.class);
+        verify(mailService, never()).sendAccountAccessEmail(any(), any(), any(), anyLong());
+    }
+
+    @Test
+    void giveAccountAccess_WithAnEmailInUse_ShouldThrow() {
+        // Given
+        User pending = User.builder().id("U0000009").name("Juan").password("unusable").hasAccount(false).build();
+        when(userRepository.findById("U0000009")).thenReturn(Optional.of(pending));
+        when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
+
+        // When & Then
+        assertThatThrownBy(() -> passwordResetService.giveAccountAccess("U0000009", "taken@example.com"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("already in use");
+        assertThat(pending.getEmail()).isNull();
+    }
+
+    @Test
+    void giveAccountAccess_WithoutAnyEmail_ShouldThrow() {
+        // Given
+        User pending = User.builder().id("U0000009").name("Juan").password("unusable").hasAccount(false).build();
+        when(userRepository.findById("U0000009")).thenReturn(Optional.of(pending));
+
+        // When & Then
+        assertThatThrownBy(() -> passwordResetService.giveAccountAccess("U0000009", null))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void resetPassword_ForSomeoneAddedWithoutAnAccount_ShouldCreateIt() {
+        // Given
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .email("juan@example.com").token("access-token").used(false)
+                .expiresAt(LocalDateTime.now().plusDays(3)).build();
+        User pending = User.builder().email("juan@example.com").password("unusable").hasAccount(false).build();
+
+        when(passwordResetTokenRepository.findByToken("access-token")).thenReturn(Optional.of(resetToken));
+        when(userRepository.findByEmail("juan@example.com")).thenReturn(Optional.of(pending));
+        when(passwordEncoder.encode("myPassword1")).thenReturn("encoded");
+
+        // When
+        passwordResetService.resetPassword("access-token", "myPassword1");
+
+        // Then
+        assertThat(pending.isHasAccount()).isTrue();
+        assertThat(pending.getPassword()).isEqualTo("encoded");
     }
 }

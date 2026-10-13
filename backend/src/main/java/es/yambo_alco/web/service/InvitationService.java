@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
@@ -85,17 +86,24 @@ public class InvitationService {
             if (email == null || email.isBlank() || password == null || password.isBlank() || name == null || name.isBlank()) {
                 throw new BadRequestException("Email, password and name are required");
             }
-            if (userRepository.existsByEmail(email)) {
+            // Someone added without an account who registers with the same email keeps that user
+            Optional<User> pending = userRepository.findPendingAccountByEmail(email);
+            if (pending.isEmpty() && userRepository.existsByEmail(email)) {
                 throw new BadRequestException("Email already registered");
             }
-            user = User.builder()
-                    .email(email)
-                    .password(passwordEncoder.encode(password))
-                    .name(name)
-                    .createdAt(LocalDateTime.now())
-                    .enabled(true)
-                    .profiles(new HashSet<>())
-                    .build();
+            if (pending.isPresent()) {
+                user = pending.get();
+                user.activateAccount(passwordEncoder.encode(password));
+            } else {
+                user = User.builder()
+                        .email(email)
+                        .password(passwordEncoder.encode(password))
+                        .name(name)
+                        .createdAt(LocalDateTime.now())
+                        .enabled(true)
+                        .profiles(new HashSet<>())
+                        .build();
+            }
             user = userRepository.save(user);
         }
 

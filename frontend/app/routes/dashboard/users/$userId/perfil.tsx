@@ -12,7 +12,7 @@ import FileUploader from "~/components/common/FileUploader";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFloppyDisk, faTrashCan, faCircleUser, faCircleCheck, faCircleXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faFloppyDisk, faEnvelope, faTrashCan, faCircleUser, faCircleCheck, faCircleXmark, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { isStaff } from "~/utils/roleHelpers";
 import { useAuth } from "~/hooks/useAuth";
 
@@ -29,9 +29,10 @@ export default function UserPerfil() {
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
         name: user.name,
-        email: user.email,
+        email: user.email ?? "",
     });
     const [dirty, setDirty] = useState(false);
+    const [givingAccess, setGivingAccess] = useState(false);
     const [savingStaff, setSavingStaff] = useState(false);
     const [staffForm, setStaffForm] = useState({
         photo: user.staff?.photo || "",
@@ -78,6 +79,22 @@ export default function UserPerfil() {
             toast.error(getErrorMessage(err, t('users.saveError')));
         } finally {
             setSaving(false);
+        }
+    };
+
+    // Persona dada de alta sin cuenta: guarda el correo y le envía el enlace para crear su contraseña
+    const handleGiveAccess = async () => {
+        if (!userId) return;
+        try {
+            setGivingAccess(true);
+            await adminUserService.giveAccountAccess(userId, form.email.trim());
+            toast.success(t('staff.accessSent', { email: form.email.trim() }));
+            setDirty(false);
+            await refreshUser();
+        } catch (err) {
+            toast.error(getErrorMessage(err, t('staff.accessError')));
+        } finally {
+            setGivingAccess(false);
         }
     };
 
@@ -189,6 +206,24 @@ export default function UserPerfil() {
                             onChange={(e) => handleChange("email", e.target.value)}
                         />
                     </div>
+
+                    {user.hasAccount === false && (
+                        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                            <p className="text-sm text-amber-800">{t('users.noAccountHint')}</p>
+                            <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
+                                <ButtonComponent
+                                    variant="neutral"
+                                    size="sm"
+                                    onClick={handleGiveAccess}
+                                    disabled={givingAccess || !form.email.trim()}
+                                    className="shrink-0"
+                                >
+                                    <FontAwesomeIcon icon={faEnvelope} className="w-4 h-4 mr-1.5" />
+                                    {givingAccess ? t('staff.sending') : t('staff.giveAccess')}
+                                </ButtonComponent>
+                            </RequirePermission>
+                        </div>
+                    )}
 
                     <RequirePermission permission={{ obj: "user", action: "update" }} redirect={false}>
                         <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">

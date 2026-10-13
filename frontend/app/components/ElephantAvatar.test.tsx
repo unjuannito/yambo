@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import ElephantAvatar, { avatarFromSeed, hairHiddenBy, normalizeAvatar } from "./ElephantAvatar";
+import ElephantAvatar, { AVATAR_TRUNKS, avatarFromSeed, hairHiddenBy, normalizeAvatar } from "./ElephantAvatar";
 
 describe("ElephantAvatar", () => {
     it("draws the same elephant for the same seed", () => {
@@ -32,6 +32,63 @@ describe("ElephantAvatar", () => {
         const sameFromOtherSeed = render(<ElephantAvatar seed="U0000099" config={saved} />).container.innerHTML;
 
         expect(withSaved).toBe(sameFromOtherSeed);
+    });
+
+    it("draws a different trunk for each pose", () => {
+        const base = avatarFromSeed("U0000001");
+        const drawings = new Set(
+            AVATAR_TRUNKS.map((trunk) => render(<ElephantAvatar seed="U0000001" config={{ ...base, trunk }} />).container.innerHTML)
+        );
+
+        expect(drawings.size).toBe(AVATAR_TRUNKS.length);
+    });
+
+    it("reads the trunk of avatars saved before the poses existed", () => {
+        expect(normalizeAvatar({ trunkUp: true } as never, "U0000001").trunk).toBe("up");
+        expect(normalizeAvatar({ trunkUp: false } as never, "U0000001").trunk).toBe("down");
+    });
+
+    it("renders complete avatar examples with the cap, clothes, eyes and hair", () => {
+        const cappedElephant = render(
+            <ElephantAvatar
+                seed="cap-example"
+                config={{
+                    background: 3,
+                    clothes: "hoodie",
+                    eyes: "glasses",
+                    hair: "fringe",
+                    top: "cap",
+                    extra: "blush",
+                    trunk: "up",
+                    flip: false,
+                }}
+            />
+        );
+        expect(cappedElephant.getByRole("img")).toBeInTheDocument();
+        expect(cappedElephant.container.querySelector('path[d="M70 188 C76 178 124 178 130 188 C130 206 70 206 70 188 Z"]')).toBeInTheDocument();
+        expect(cappedElephant.container.querySelector('circle[cx="80"][cy="100"][r="14"]')).toBeInTheDocument();
+        expect(cappedElephant.container.querySelector('path[d="M48 84 C26 86 22 120 38 136 M152 84 C174 86 178 120 162 136"]')).toBeInTheDocument();
+
+        const beanieElephant = render(
+            <ElephantAvatar
+                seed="beanie-example"
+                config={{
+                    background: 7,
+                    clothes: "tee-heart",
+                    eyes: "happy",
+                    hair: "fringe",
+                    top: "beanie",
+                    extra: "freckles",
+                    trunk: "down",
+                    flip: true,
+                }}
+            />
+        );
+
+        expect(beanieElephant.container.querySelector('path[d="M54 84 C52 34 148 34 146 84 Z"]')).toBeInTheDocument();
+        expect(beanieElephant.container.querySelector('path[d="M100 240 c-24 -16 -20 -34 -9 -34 c5 0 9 4 9 9 c0 -5 4 -9 9 -9 c11 0 15 18 -9 34 Z"]')).toBeInTheDocument();
+        expect(beanieElephant.container.querySelector('path[d="M52 94 C48 36 152 36 148 94 L138 78 L128 90 L116 76 L104 90 L92 76 L80 90 L70 78 L60 92 Z"]')).toBeInTheDocument();
+        expect(beanieElephant.container.querySelector('path[d="M71 102 q9 -11 18 0 M111 102 q9 -11 18 0"]')).toBeInTheDocument();
     });
 });
 

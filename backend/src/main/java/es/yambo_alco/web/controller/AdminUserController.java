@@ -9,6 +9,7 @@ import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.PasswordResetService;
 import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -49,6 +50,7 @@ public class AdminUserController {
     private final UserService userService;
     private final AuthService authService;
     private final AccessGrantService accessGrantService;
+    private final PasswordResetService passwordResetService;
 
     @GetMapping
     @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
@@ -108,7 +110,8 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User userToUpdate = userService.getUserById(request.getId());
 
-        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail());
+        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(),
+                request.getEmail() != null ? request.getEmail() : "");
         AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
@@ -121,6 +124,26 @@ public class AdminUserController {
         User admin = authService.getCurrentUser(true);
         User updatedUser = userService.updateStaffByAdmin(admin.getId(), userId, request.toUpdate());
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    /** Adds someone to the staff before they have an account. */
+    @PostMapping("/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'create')")
+    public ResponseEntity<AdminUserResponse> createStaffWithoutAccount(@Valid @RequestBody CreateStaffRequest request) {
+        User admin = authService.getCurrentUser(true);
+        User created = userService.createStaffWithoutAccount(request.getName(), request.getEmail(),
+                request.getNickname(), request.getGroupId(), request.getRole(), admin.getId());
+        return ResponseEntity.ok(new AdminUserResponse(created));
+    }
+
+    /** Sends someone added without an account the link to set their password. */
+    @PostMapping("/{userId}/account-access")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> giveAccountAccess(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody AccountAccessRequest request) {
+        passwordResetService.giveAccountAccess(userId, request.getEmail());
+        return ResponseEntity.ok(new AdminUserResponse(userService.getUserById(userId)));
     }
 
     @PutMapping("/{userId}/staff/avatar")
@@ -229,8 +252,30 @@ public class AdminUserController {
         @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
         private String name;
 
-        @NonNull
-        @NotBlank(message = "Email cannot be blank")
+        /** May be blank for people added without an account, who may not have one yet. */
+        @Email(message = "Email should be valid")
+        private String email;
+    }
+
+    @Data
+    public static class CreateStaffRequest {
+        @NotBlank(message = "Name cannot be blank")
+        @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
+        private String name;
+
+        @Email(message = "Email should be valid")
+        private String email;
+
+        @Size(max = 50, message = "Nickname must be at most 50 characters")
+        private String nickname;
+
+        private String groupId;
+
+        private UserProjectGroupRole role;
+    }
+
+    @Data
+    public static class AccountAccessRequest {
         @Email(message = "Email should be valid")
         private String email;
     }
@@ -268,8 +313,10 @@ public class AdminUserController {
         private String createdAt;
         private boolean enabled;
         private boolean system;
+        private boolean hasAccount;
 
         public AdminUserResponse(User user) {
+            this.hasAccount = user.isHasAccount();
             this.id = user.getId();
             this.email = user.getEmail();
             this.name = user.getName();

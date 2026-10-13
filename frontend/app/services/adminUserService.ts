@@ -14,6 +14,16 @@ export interface UserFilters {
     profiles?: string[];
     enabled?: boolean;
     role?: string;
+    /** Solo el staff: con rol de monitor/coordinador o añadidos a mano. */
+    staff?: boolean;
+}
+
+export interface CreateStaffRequest {
+    name: string;
+    nickname?: string;
+    email?: string;
+    groupId?: string;
+    role?: GroupRole;
 }
 
 export interface UpdateProfilesRequest {
@@ -92,6 +102,16 @@ export class AdminUserService extends ApiService {
     /** Borra la ficha del equipo de un usuario (foto, apodo, descripción y dato curioso). */
     public async deleteStaff(userId: string): Promise<User> {
         return await this.delete<User>(`/admin/users/${userId}/staff`);
+    }
+
+    /** Da de alta a alguien del equipo que todavía no tiene cuenta. */
+    public async createStaff(request: CreateStaffRequest): Promise<User> {
+        return await this.post<User, CreateStaffRequest>(`/admin/users/staff`, request);
+    }
+
+    /** Guarda su correo y le envía el enlace para crear su contraseña. */
+    public async giveAccountAccess(userId: string, email: string): Promise<User> {
+        return await this.post<User, { email: string }>(`/admin/users/${userId}/account-access`, { email });
     }
 
     /** Añade (o quita) a un usuario del equipo a mano, sin depender de sus roles en grupos. */

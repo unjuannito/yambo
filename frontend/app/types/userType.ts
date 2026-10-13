@@ -41,7 +41,10 @@ export type CurrentUser = {
 
 export type User = {
     id: string;
-    email: string;
+    /** Vacío solo en personas dadas de alta sin cuenta de las que aún no se sabe el correo. */
+    email: string | null;
+    /** false = persona del equipo dada de alta por un admin que todavía no puede iniciar sesión. */
+    hasAccount?: boolean;
     name: string;
     staff?: StaffData | null;
     groupRoles?: UserGroupRole[];
