@@ -12,6 +12,7 @@ import { buildMeta, metaDescription } from "~/utils/seo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { projectPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export async function loader({ params }: Route.LoaderArgs) {
   let project: ProjectDetail;
@@ -156,10 +157,12 @@ export default function Proyecto() {
         {/* Project image */}
         {project.image && (
           <div className="w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-10 shadow-lg fade-up" style={{ animationDelay: "0.1s" }}>
-            <img
+            <ResponsiveImage
               src={project.image}
               alt={project.name}
               className="w-full h-full object-cover"
+              sizes="(min-width: 1024px) 1024px, 100vw"
+              priority
             />
           </div>
         )}

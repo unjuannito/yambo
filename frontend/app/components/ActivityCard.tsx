@@ -11,6 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { formatDateRange, stripMarkdown, getImageSrc } from "~/utils/activity-helpers";
 import { activityPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 interface ActivityCardProps {
     activity: Activity;
@@ -45,12 +46,12 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                         className="w-24 sm:w-28 shrink-0 self-stretch"
                     >
                         <div className="h-full overflow-hidden bg-yambo-black">
-                            <img
-                                loading="lazy"
-                                decoding="async"
+                            <ResponsiveImage
                                 src={imageSrc}
                                 alt={activity.name}
                                 className="h-full w-full object-cover"
+                                sizes="160px"
+                                maxWidth={320}
                             />
                         </div>
                     </a>
@@ -145,12 +146,12 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
             {imageSrc ? (
                 <a href={detailUrl} className="shrink-0">
                     <div className="w-36 sm:w-40 md:w-48 lg:w-48 aspect-[9/16] overflow-hidden bg-yambo-black">
-                        <img
-                            loading="lazy"
-                            decoding="async"
+                        <ResponsiveImage
                             src={imageSrc}
                             alt={activity.name}
                             className="w-full h-full object-contain"
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            maxWidth={1200}
                         />
                     </div>
                 </a>
@@ -257,12 +258,12 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                     {activity.manager ? (
                         <div className="flex items-center gap-2 min-w-0">
                             {activity.manager.photo ? (
-                                <img
-                                    loading="lazy"
-                                    decoding="async"
+                                <ResponsiveImage
                                     src={activity.manager.photo}
                                     alt={activity.manager.name}
                                     className="h-7 w-7 rounded-full object-cover ring-2 ring-yambo-green-100 shadow-sm shrink-0"
+                                    sizes="28px"
+                                    maxWidth={160}
                                 />
                             ) : (
                                 <div className="h-7 w-7 rounded-full bg-gradient-to-br from-yambo-green-200 to-yambo-purple-200 flex items-center justify-center text-[10px] font-bold text-yambo-black ring-2 ring-white shadow-sm shrink-0">

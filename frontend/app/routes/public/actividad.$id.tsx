@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { useState } from "react";
 import { publicService } from "~/services/publicService";
 import { activityPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const backendUrl =
@@ -160,10 +161,11 @@ export default function ActivityDetail() {
                 {/* Left: Image panel — fixed */}
                 {imageUrl ? (
                     <div className={`w-2/5 fixed top-[calc(4rem+53px)] left-0 h-[calc(100vh-4rem-53px)] overflow-hidden ${cancelled ? "opacity-55" : ""}`}>
-                        <img
+                        <ResponsiveImage
                             src={imageUrl}
                             alt={activity.name}
                             className="w-full h-full object-contain bg-yambo-black"
+                            sizes="40vw"
                         />
                     </div>
                 ) : (
@@ -353,10 +355,11 @@ export default function ActivityDetail() {
                     {/* Cover image */}
                     {imageUrl ? (
                         <div className={`relative w-full aspect-[9/16] max-h-[60vh] rounded-2xl overflow-hidden mb-5 shadow-lg bg-yambo-black ${cancelled ? "opacity-55" : ""}`}>
-                            <img
+                            <ResponsiveImage
                                 src={imageUrl}
                                 alt={activity.name}
                                 className="w-full h-full object-contain"
+                                sizes="100vw"
                             />
                         </div>
                     ) : (
