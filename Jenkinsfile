@@ -114,10 +114,19 @@ pipeline {
                         returnStdout: true
                     ).trim().split('\n').findAll { it?.trim() }
 
+                    // El commit de tag que hace este pipeline (stage 'Update Image Tag')
+                    // toca k8s/ → sin este corte dispararía otro build → bucle infinito.
+                    def lastMsg = sh(script: "git log -1 --pretty=%s", returnStdout: true).trim()
+
                     if (params.FORCE_REBUILD) {
                         env.FE_CHANGED  = 'true'
                         env.BE_CHANGED  = 'true'
                         env.INFRA_CHANGED = 'true'
+                    } else if (lastMsg.contains('[skip ci]')) {
+                        echo "Commit de CI (${lastMsg}) → nada que construir."
+                        env.FE_CHANGED  = 'false'
+                        env.BE_CHANGED  = 'false'
+                        env.INFRA_CHANGED = 'false'
                     } else if (changedFiles.isEmpty()) {
                         env.FE_CHANGED  = 'true'
                         env.BE_CHANGED  = 'true'
@@ -298,17 +307,76 @@ pipeline {
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Phase 6 — Deploy (GitOps con Argo CD)
+        // Phase 6 — Update Image Tag (GitOps → Argo CD)
+        // ═══════════════════════════════════════════════════════════════════
+        // Jenkins escribe el tag RECIÉN CONSTRUIDO en el overlay que vigila
+        // Argo CD y hace commit + push a la rama. Así Argo CD despliega
+        // exactamente la imagen de este build (no depende de que Image Updater
+        // adivine el tag: `alphabetical` sobre short-SHAs no elige el último).
+        //   develop → k8s/overlays/develop  (Application yambo-develop, auto-sync)
+        //   main    → k8s/overlays/hetzner  (Application yambo-prod, sync manual)
+        // Solo se toca el tag de la imagen que se ha construido en este build.
+        // El commit lleva [skip ci] (ver 'Detect Changes') para no re-disparar.
+        // Requiere que la credencial 'github' (usuario + token) tenga permiso
+        // de push sobre la rama.
+        stage('Update Image Tag (GitOps)') {
+            when {
+                allOf {
+                    expression { env.IS_PR == 'false' }
+                    expression { env.IS_MAIN == 'true' || env.IS_DEV == 'true' }
+                    expression { env.DEPLOYABLE_CHANGED == 'true' && !params.FORCE_PROD_DEPLOY }
+                }
+            }
+            steps {
+                script {
+                    def overlay = (env.IS_MAIN == 'true') ? 'k8s/overlays/hetzner' : 'k8s/overlays/develop'
+                    def bumpFe = (env.FE_CHANGED == 'true' || env.INFRA_CHANGED == 'true')
+                    def bumpBe = (env.BE_CHANGED == 'true' || env.INFRA_CHANGED == 'true')
+                    withEnv([
+                        "KUSTOMIZATION=${overlay}/kustomization.yaml",
+                        "BUMP_FE=${bumpFe}",
+                        "BUMP_BE=${bumpBe}"
+                    ]) {
+                        withCredentials([gitUsernamePassword(credentialsId: 'github', gitToolName: 'Default')]) {
+                            sh '''
+                                set -e
+                                # Partir de la punta actual de la rama (puede haber avanzado durante el build)
+                                git fetch origin "$BRANCH_NAME"
+                                git checkout -q -f --detach FETCH_HEAD
+
+                                if [ "$BUMP_FE" = "true" ]; then
+                                    sed -i "/- name: yambo-web-frontend$/,/newTag:/ s|newTag:.*|newTag: \\"$FRONTEND_TAG\\"|" "$KUSTOMIZATION"
+                                fi
+                                if [ "$BUMP_BE" = "true" ]; then
+                                    sed -i "/- name: yambo-web-backend$/,/newTag:/ s|newTag:.*|newTag: \\"$BACKEND_TAG\\"|" "$KUSTOMIZATION"
+                                fi
+
+                                if git diff --quiet -- "$KUSTOMIZATION"; then
+                                    echo "El overlay ya apunta a estos tags; nada que commitear."
+                                    exit 0
+                                fi
+                                git diff -- "$KUSTOMIZATION"
+                                git -c user.name="Jenkins CI" -c user.email="jenkins@cabrasky.net" \\
+                                    commit -q -m "chore(cd): desplegar imágenes del build #$BUILD_NUMBER en $BRANCH_NAME [skip ci]" -- "$KUSTOMIZATION"
+                                git push origin "HEAD:refs/heads/$BRANCH_NAME"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Phase 7 — Deploy (GitOps con Argo CD)
         // ═══════════════════════════════════════════════════════════════════
         // MIGRACIÓN 2026-09-30: el despliegue ya NO lo hace Jenkins.
         //
         //   ANTES:  Jenkins hacía `kubectl apply` (kustomize) directo al cluster.
-        //   AHORA:  Jenkins solo construye y publica imágenes al registry.
+        //   AHORA:  Jenkins construye y publica imágenes al registry y escribe
+        //           el tag en el overlay (Phase 6).
         //           Argo CD (homelab .22) vigila el repo Git y despliega:
         //             - develop → cluster homelab   (Application yambo-develop, auto-sync)
         //             - main    → cluster hetzner   (Application yambo-prod, sync manual)
-        //           Argo CD Image Updater detecta el tag nuevo en el registry
-        //           y hace commit del tag al repo → Argo CD sincroniza.
         //
         // Definiciones declarativas de las Applications en: argocd/*.yaml
         // Ya no se necesitan las credenciales kubeconfig (yambo-kubeconfig-dev/-prod)
@@ -327,9 +395,8 @@ pipeline {
                 script {
                     def app = (env.IS_MAIN == 'true') ? 'yambo-prod' : 'yambo-develop'
                     def syncMode = (env.IS_MAIN == 'true') ? 'MANUAL (revisar diff en la UI)' : 'AUTOMÁTICO'
-                    echo "🚀 Imágenes publicadas en el registry (tag: ${env.BACKEND_TAG})."
-                    echo "   El despliegue lo gestiona Argo CD → Application '${app}' (sync: ${syncMode})."
-                    echo "   Argo CD Image Updater detectará el tag nuevo y actualizará el repo."
+                    echo "🚀 Imágenes publicadas en el registry (frontend: ${env.FRONTEND_TAG}, backend: ${env.BACKEND_TAG})."
+                    echo "   Tag escrito en el overlay; lo despliega Argo CD → Application '${app}' (sync: ${syncMode})."
                     echo "   UI: https://argocd.cabrasky.net/applications/${app}"
                 }
             }

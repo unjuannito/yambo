@@ -11,15 +11,16 @@ namespace: yambo-develop
 resources:
   - ../../base
 
-# Imágenes → registry local por LAN. El pipeline inyecta el tag:
-#   kustomize edit set image yambo-web-frontend=192.168.1.21:5000/yambo-web-frontend:<tag>
+# Imágenes → registry.cabrasky.net. Los newTag los reescribe Jenkins
+# (stage 'Update Image Tag (GitOps)') con el tag recién construido; Argo CD
+# sincroniza ese commit. No reordenar name → newName → newTag.
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: branch-develop-c68e0b0
+    newTag: "branch-develop-dc8b7e4"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: branch-develop-c68e0b0
+    newTag: "branch-develop-dc8b7e4"
 
 patches:
   # Dominio de desarrollo (público vía nginx .21 → k3s .22)

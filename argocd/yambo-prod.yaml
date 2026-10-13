@@ -3,22 +3,10 @@ kind: Application
 metadata:
   name: yambo-prod
   namespace: argocd
-  annotations:
-    # ── Argo CD Image Updater ────────────────────────────────────────────
-    # Sigue los tags semver (1.x.x) del registro de unraid (registry.cabrasky.net).
-    # Cuando se publica una release nueva, Image Updater actualiza el tag
-    # y hace commit al repo (write-back Git en la rama main).
-    argocd-image-updater.argoproj.io/image-list: >-
-      frontend=registry.cabrasky.net/yambo-web-frontend,
-      backend=registry.cabrasky.net/yambo-web-backend
-    argocd-image-updater.argoproj.io/frontend.update-strategy: semver
-    argocd-image-updater.argoproj.io/frontend.allow-tags: "regexp:^[0-9]+\\.[0-9]+\\.[0-9]+$"
-    argocd-image-updater.argoproj.io/backend.update-strategy: semver
-    argocd-image-updater.argoproj.io/backend.allow-tags: "regexp:^[0-9]+\\.[0-9]+\\.[0-9]+$"
-    argocd-image-updater.argoproj.io/write-back-method: git
-    argocd-image-updater.argoproj.io/git-branch: main
 spec:
   project: default
+  # El tag de imagen lo fija Jenkins en el kustomization.yaml del overlay
+  # (commit a la rama main tras cada build) → Argo CD despliega ese tag exacto.
   source:
     repoURL: https://github.com/cabrasky/yambo
     targetRevision: main
