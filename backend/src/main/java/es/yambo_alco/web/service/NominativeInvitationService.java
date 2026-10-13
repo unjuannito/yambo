@@ -43,7 +43,8 @@ public class NominativeInvitationService {
 
     public NominativeInvitation createInvitation(String email, String invitedBy, Set<String> profileIds) {
         String normalizedEmail = email.toLowerCase().trim();
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        // Someone added without an account can be invited: registering claims that user
+        if (userRepository.existsAccountByEmail(normalizedEmail)) {
             throw new BadRequestException("Email already registered");
         }
 
@@ -84,7 +85,7 @@ public class NominativeInvitationService {
 
         for (String email : emails) {
             String normalizedEmail = email.toLowerCase().trim();
-            if (userRepository.existsByEmail(normalizedEmail)) {
+            if (userRepository.existsAccountByEmail(normalizedEmail)) {
                 skipped.add(email);
                 continue;
             }
