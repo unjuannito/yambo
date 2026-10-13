@@ -8,7 +8,7 @@ import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
-import FileUploader from "~/components/common/FileUploader";
+import { StaffPhotoField } from "~/components/StaffPhotoField";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -36,6 +36,8 @@ export default function UserPerfil() {
     const [savingStaff, setSavingStaff] = useState(false);
     const [staffForm, setStaffForm] = useState({
         photo: user.staff?.photo || "",
+        photoOriginal: user.staff?.photoOriginal ?? null,
+        photoEdit: user.staff?.photoEdit ?? null,
         bio: user.staff?.bio || "",
         funFact: user.staff?.funFact || "",
         nickname: user.staff?.nickname || "",
@@ -120,6 +122,8 @@ export default function UserPerfil() {
             const updated = await adminUserService.setManualStaff(userId, manual);
             setStaffForm({
                 photo: updated.staff?.photo || "",
+                photoOriginal: updated.staff?.photoOriginal ?? null,
+                photoEdit: updated.staff?.photoEdit ?? null,
                 bio: updated.staff?.bio || "",
                 funFact: updated.staff?.funFact || "",
                 nickname: updated.staff?.nickname || "",
@@ -152,7 +156,7 @@ export default function UserPerfil() {
         if (!userId) return;
         try {
             await adminUserService.deleteStaff(userId);
-            setStaffForm({ photo: "", bio: "", funFact: "", nickname: "", instagramUrl: "", photoConsent: false });
+            setStaffForm({ photo: "", photoOriginal: null, photoEdit: null, bio: "", funFact: "", nickname: "", instagramUrl: "", photoConsent: false });
             setStaffDirty(false);
             toast.success(t('users.staffCardDeleted'));
             await refreshUser();
@@ -277,31 +281,14 @@ export default function UserPerfil() {
                                 {/* Photo */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">{t('users.photo')}</label>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                        <div className="w-16 h-16 rounded-full bg-yambo-green-100 flex items-center justify-center text-2xl font-bold text-yambo-green-700 shrink-0 overflow-hidden">
-                                            {staffForm.photo
-                                                ? <img src={staffForm.photo} alt={form.name} className="w-full h-full object-cover" />
-                                                : form.name.charAt(0).toUpperCase()
-                                            }
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <FileUploader
-                                                compact
-                                                multiple={false}
-                                                accept="image/jpeg,image/png,image/gif,image/webp"
-                                                label={t('users.uploadPhoto')}
-                                                onUpload={(file) => handleStaffChange("photo", file.url)}
-                                            />
-                                            {staffForm.photo && (
-                                                <button type="button"
-                                                    onClick={() => handleStaffChange("photo", "")}
-                                                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                                                >
-                                                    {t('users.removePhoto')}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <StaffPhotoField
+                                        placeholder={form.name.charAt(0).toUpperCase()}
+                                        value={staffForm}
+                                        onChange={(photo) => {
+                                            setStaffForm(prev => ({ ...prev, ...photo }));
+                                            setStaffDirty(true);
+                                        }}
+                                    />
                                 </div>
 
                                 {/* Nickname */}

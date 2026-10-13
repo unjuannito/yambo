@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import type { Route } from "./+types/my-account";
 import { useAuth } from "~/hooks/useAuth";
 import { useApiMutation } from "~/hooks/useApiMutation";
 import { userService } from "~/services/userService";
-import { fileService } from "~/services/fileService";
 import { useTranslation } from "react-i18next";
 import type { UpdateProfileRequest, UpdateStaffRequest, ChangePasswordRequest } from "~/services/userService";
 import type { CurrentUser } from "~/types/userType";
@@ -13,9 +12,10 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faUsers, faLock, faTrash, faCircleExclamation, faBell, faCamera, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faUsers, faLock, faTrash, faCircleExclamation, faBell } from "@fortawesome/free-solid-svg-icons";
 import { isStaff } from "~/utils/roleHelpers";
 import ElephantAvatar from "~/components/ElephantAvatar";
+import { StaffPhotoField } from "~/components/StaffPhotoField";
 import type { NotificationPreferences } from "~/types/userType";
 
 export function meta({}: Route.MetaArgs) {
@@ -52,6 +52,8 @@ export default function MyAccount() {
 
   const [staffData, setStaffData] = useState({
     photo: user?.staff?.photo || "",
+    photoOriginal: user?.staff?.photoOriginal ?? null,
+    photoEdit: user?.staff?.photoEdit ?? null,
     bio: user?.staff?.bio || "",
     funFact: user?.staff?.funFact || "",
     nickname: user?.staff?.nickname || "",
@@ -66,34 +68,6 @@ export default function MyAccount() {
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-
-  const openPhotoPicker = () => photoInputRef.current?.click();
-
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      setPhotoError("La imagen no puede superar los 2 MB");
-      return;
-    }
-
-    setPhotoError(null);
-    setPhotoUploading(true);
-    try {
-      const uploaded = await fileService.upload(file);
-      setStaffData((prev) => ({ ...prev, photo: uploaded.url }));
-    } catch (err) {
-      setPhotoError("Error al subir la imagen. Inténtalo de nuevo.");
-    } finally {
-      setPhotoUploading(false);
-      if (photoInputRef.current) photoInputRef.current.value = "";
-    }
-  };
 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>({
     orderStatus: true,
@@ -113,6 +87,8 @@ export default function MyAccount() {
       });
       setStaffData({
         photo: user.staff?.photo || "",
+        photoOriginal: user.staff?.photoOriginal ?? null,
+        photoEdit: user.staff?.photoEdit ?? null,
         bio: user.staff?.bio || "",
         funFact: user.staff?.funFact || "",
         nickname: user.staff?.nickname || "",
@@ -321,57 +297,12 @@ export default function MyAccount() {
               </div>
             </div>
             <form onSubmit={handleStaffSubmit} className="p-6 space-y-5">
-              <div className="space-y-4">
-                <div className="flex items-center gap-5">
-                  {staffData.photo ? (
-                    <div className="relative group">
-                      <img
-                        src={staffData.photo}
-                        alt="Foto de perfil"
-                        className="w-24 h-24 rounded-full object-cover shadow-md ring-4 ring-yambo-green-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setStaffData((prev) => ({ ...prev, photo: "" }))}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
-                        title="Eliminar foto"
-                      >
-                        <FontAwesomeIcon icon={faXmark} className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 flex items-center justify-center text-white text-3xl font-bold shadow-md ring-4 ring-yambo-green-100">
-                      {getInitials(user?.name || "?")}
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-gray-700">{t('myAccount.profilePhoto')}</label>
-                    <div className="flex gap-2">
-                      <ButtonComponent type="button" variant="primary" size="sm" onClick={openPhotoPicker} disabled={photoUploading}>
-                        {photoUploading ? (
-                          <><FontAwesomeIcon icon={faSpinner} spin className="mr-1" /> Subiendo...</>
-                        ) : (
-                          <><FontAwesomeIcon icon={faCamera} className="mr-1" /> {staffData.photo ? "Cambiar foto" : "Subir foto"}</>
-                        )}
-                      </ButtonComponent>
-                      {staffData.photo && (
-                        <ButtonComponent type="button" variant="danger-text" size="sm" onClick={() => setStaffData((prev) => ({ ...prev, photo: "" }))}>
-                          <FontAwesomeIcon icon={faTrash} className="mr-1" /> Eliminar
-                        </ButtonComponent>
-                      )}
-                    </div>
-                    {photoError && <p className="text-xs text-red-500">{photoError}</p>}
-                    <p className="text-xs text-gray-400">JPEG, PNG, WebP. Máx 2 MB.</p>
-                  </div>
-                </div>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
-              </div>
+              <StaffPhotoField
+                label={t('myAccount.profilePhoto')}
+                placeholder={getInitials(user?.name || "?")}
+                value={staffData}
+                onChange={(photo) => setStaffData((prev) => ({ ...prev, ...photo }))}
+              />
               <div className="flex items-center gap-4 rounded-xl border border-gray-200 px-4 py-3">
                 {user && (
                   <ElephantAvatar seed={user.id} config={user.staff?.avatar} className="w-16 h-[76px] rounded-xl shrink-0" />
