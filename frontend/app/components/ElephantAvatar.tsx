@@ -15,12 +15,14 @@ export const AVATAR_HAIR = [
 ] as const;
 export const AVATAR_TOPS = ["none", "beanie", "cap", "crown", "bow", "party", "headphones", "flower"] as const;
 export const AVATAR_EXTRAS = ["none", "blush", "freckles", "earring"] as const;
+export const AVATAR_TRUNKS = ["down", "straight", "curl", "up", "wave"] as const;
 
 export type AvatarClothes = (typeof AVATAR_CLOTHES)[number];
 export type AvatarEyes = (typeof AVATAR_EYES)[number];
 export type AvatarHair = (typeof AVATAR_HAIR)[number];
 export type AvatarTop = (typeof AVATAR_TOPS)[number];
 export type AvatarExtra = (typeof AVATAR_EXTRAS)[number];
+export type AvatarTrunk = (typeof AVATAR_TRUNKS)[number];
 
 /** El elefante de una persona. Coincide con lo que guarda el backend (StaffAvatar). */
 export interface ElephantAvatarConfig {
@@ -31,7 +33,7 @@ export interface ElephantAvatarConfig {
     hair: AvatarHair;
     top: AvatarTop;
     extra: AvatarExtra;
-    trunkUp: boolean;
+    trunk: AvatarTrunk;
     flip: boolean;
 }
 
@@ -66,7 +68,7 @@ export function avatarFromSeed(seed: string): ElephantAvatarConfig {
         hair,
         top,
         extra: AVATAR_EXTRAS[(h >>> 14) % AVATAR_EXTRAS.length],
-        trunkUp: ((h >>> 12) & 1) === 1,
+        trunk: AVATAR_TRUNKS[(h >>> 20) % AVATAR_TRUNKS.length],
         flip: ((h >>> 13) & 1) === 1,
     };
 }
@@ -86,6 +88,7 @@ export function normalizeAvatar(
 ): ElephantAvatarConfig {
     const base = avatarFromSeed(seed);
     if (!raw) return base;
+    const legacy = raw as { trunkUp?: unknown };
 
     const legacyHair = raw.top !== "none" ? pick(AVATAR_HAIR, raw.top) : undefined;
     const background =
@@ -104,12 +107,13 @@ export function normalizeAvatar(
         hair: pick(AVATAR_HAIR, raw.hair) ?? legacyHair ?? "none",
         top: legacyHair ? "none" : (pick(AVATAR_TOPS, raw.top) ?? "none"),
         extra: pick(AVATAR_EXTRAS, raw.extra) ?? base.extra,
-        trunkUp: typeof raw.trunkUp === "boolean" ? raw.trunkUp : base.trunkUp,
+        // Los avatares antiguos solo guardaban si la trompa iba levantada
+        trunk: pick(AVATAR_TRUNKS, raw.trunk) ?? (typeof legacy.trunkUp === "boolean" ? (legacy.trunkUp ? "up" : "down") : base.trunk),
         flip: typeof raw.flip === "boolean" ? raw.flip : base.flip,
     };
 }
 
-const CONFIG_KEYS: (keyof ElephantAvatarConfig)[] = ["background", "clothes", "eyes", "hair", "top", "extra", "trunkUp", "flip"];
+const CONFIG_KEYS: (keyof ElephantAvatarConfig)[] = ["background", "clothes", "eyes", "hair", "top", "extra", "trunk", "flip"];
 
 export function sameAvatar(a: ElephantAvatarConfig, b: ElephantAvatarConfig): boolean {
     return CONFIG_KEYS.every((k) => a[k] === b[k]);
@@ -126,8 +130,15 @@ const chalk = { fill: "none", stroke: PAPER, strokeWidth: 3, strokeLinecap: "rou
 
 // Cabeza: elipse centrada en (100, 106), de 50 × 52
 const HEAD = { cx: 100, cy: 106, rx: 50, ry: 52 };
-const TRUNK_DOWN = "M100 120 C100 152 96 170 108 180 C118 188 130 182 128 172";
-const TRUNK_UP = "M100 120 C100 139 104 150 114 154 C130 161 147 152 150 137 C153 123 146 113 148 102 C149 92 156 84 165 80";
+// La trompa cuelga del centro de la cara, por delante de la cabeza y de la ropa.
+// Cada postura: el trazo y la marca de la punta.
+const TRUNKS: Record<AvatarTrunk, { path: string; tip: string }> = {
+    down: { path: "M100 110 C100 132 99 148 103 158 C107 168 118 168 122 160", tip: "M117 163 q4 2 8 -1" },
+    straight: { path: "M100 110 C100 130 100 148 100 166", tip: "M95 167 q5 3 10 0" },
+    curl: { path: "M100 110 C100 134 100 152 108 160 C116 168 127 162 124 153 C122 147 114 148 114 154", tip: "M110 152 q3 -3 7 -1" },
+    up: { path: "M100 110 C100 138 106 156 119 156 C131 156 138 147 136 136", tip: "M131 138 q5 -3 10 0" },
+    wave: { path: "M100 110 C95 126 105 138 100 152 C97 160 102 168 110 167", tip: "M107 163 q4 3 7 0" },
+};
 // Se alarga por debajo del lienzo para que llegue al borde también en el recorte vertical de la ficha
 const BODY = "M24 340 L24 244 C24 204 58 184 100 184 C142 184 176 204 176 244 L176 340 Z";
 // Casquete de pelo liso que tapa la coronilla (moño y coletas)
@@ -390,7 +401,8 @@ function Top({ top }: { top: AvatarTop }) {
             return (
                 <g>
                     <path d="M54 80 C56 36 144 36 146 80 Q100 68 54 80 Z" {...line} />
-                    <path d="M50 77 Q100 65 150 77 C161 80 163 88 157 94 Q100 107 43 94 C37 88 39 80 50 77 Z" {...line} strokeWidth={3.5} />
+                    {/* Visera vista de frente: una media luna que no llega a tapar los ojos */}
+                    <path d="M50 78 Q100 64 150 78 Q158 82 152 88 Q100 76 48 88 Q42 82 50 78 Z" {...line} strokeWidth={3.5} />
                     <path d="M100 45 V72" {...pen} strokeWidth={2} />
                     <circle cx="100" cy="44" r="3" fill={INK} />
                 </g>
@@ -457,8 +469,8 @@ interface ElephantAvatarProps {
  * ha hecho, todo sale de la semilla, así que no cambia entre visitas (ni entre servidor y navegador).
  */
 export function ElephantAvatar({ seed, config, className, title }: ElephantAvatarProps) {
-    const { background, clothes, eyes, hair, top, extra, trunkUp, flip } = normalizeAvatar(config, seed);
-    const trunk = trunkUp ? TRUNK_UP : TRUNK_DOWN;
+    const { background, clothes, eyes, hair, top, extra, trunk: trunkStyle, flip } = normalizeAvatar(config, seed);
+    const { path: trunk, tip: trunkTip } = TRUNKS[trunkStyle];
     const visibleHair: AvatarHair = hairHiddenBy(top, hair) ? "none" : hair;
 
     return (
@@ -482,24 +494,13 @@ export function ElephantAvatar({ seed, config, className, title }: ElephantAvata
                 {extra === "earring" && <circle cx="36" cy="158" r="6" {...pen} strokeWidth={3} />}
 
                 {/* Cuello: une la cabeza con el cuerpo */}
-                <path d="M80 140 L80 194 L120 194 L120 140 Z" {...line} />
+                <path d="M84 150 L82 194 L118 194 L116 150 Z" {...line} />
                 <Clothes clothes={clothes} />
 
-                {/* Colmillos: asoman por debajo de la cara */}
-                <path d="M76 138 C66 160 70 176 84 182 C84 168 86 154 90 142 Z M124 138 C134 160 130 176 116 182 C116 168 114 154 110 142 Z" {...line} strokeWidth={3} />
+                {/* Cabeza */}
+                <ellipse {...HEAD} {...line} />
 
-                {/* Cabeza y trompa: primero los contornos y luego los rellenos, para que se fundan sin costura */}
-                <ellipse {...HEAD} fill={PAPER} stroke={INK} strokeWidth={8} />
-                <path d={trunk} fill="none" stroke={INK} strokeWidth={30} strokeLinecap="round" />
-                <ellipse {...HEAD} fill={PAPER} />
-                <path d={trunk} fill="none" stroke={PAPER} strokeWidth={22} strokeLinecap="round" />
-                <path
-                    d={trunkUp ? "M157 94 q4 0 6 -4 M160 98 q4 0 6 -4" : "M92 140 q8 4 16 0 M92 154 q8 4 16 0"}
-                    {...pen}
-                    strokeWidth={2.5}
-                />
-
-                {/* Mejillas y sonrisa */}
+                {/* Mejillas */}
                 {extra === "blush" && (
                     <path d="M58 118 l5 -7 M65 120 l5 -7 M72 122 l5 -7 M123 122 l5 -7 M130 120 l5 -7 M137 118 l5 -7" {...pen} strokeWidth={2.5} />
                 )}
@@ -510,7 +511,20 @@ export function ElephantAvatar({ seed, config, className, title }: ElephantAvata
                         ))}
                     </g>
                 )}
-                <path d="M62 128 Q71 139 82 133" {...pen} />
+
+                {/* Colmillos: dos medias lunas que se curvan hacia fuera. La boca queda tras la trompa: no se dibuja */}
+                <path
+                    d="M80 136 C80 150 74 162 60 170 C76 174 92 162 92 140 Z M120 136 C120 150 126 162 140 170 C124 174 108 162 108 140 Z"
+                    {...line}
+                    strokeWidth={3.5}
+                />
+
+                {/* Trompa: contorno negro y relleno blanco encima; el arranque se funde con la cara */}
+                <path d={trunk} fill="none" stroke={INK} strokeWidth={22} strokeLinecap="round" />
+                <path d={trunk} fill="none" stroke={PAPER} strokeWidth={14} strokeLinecap="round" />
+                <ellipse cx="100" cy="106" rx="7" ry="10" fill={PAPER} />
+                <path d="M94 132 q6 3 12 0 M94 146 q6 3 12 0" {...pen} strokeWidth={2.5} />
+                <path d={trunkTip} {...pen} strokeWidth={2.5} />
 
                 <Hair hair={visibleHair} />
                 <Eyes eyes={eyes} />
