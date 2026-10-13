@@ -16,10 +16,10 @@ resources:
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: "1.17.0"
+    newTag: "1.17.1"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: "1.17.0"
+    newTag: "1.17.1"
 
 patches:
   # Dominio real de producción

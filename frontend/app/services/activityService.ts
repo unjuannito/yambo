@@ -44,7 +44,7 @@ export class ActivityService extends ApiService {
         date?: string;
         endDate?: string;
         status?: string;
-        isPublic?: boolean;
+        public?: boolean;
         projectId: string;
         managerId?: string;
     }): Promise<Activity> {
@@ -60,7 +60,7 @@ export class ActivityService extends ApiService {
         date?: string;
         endDate?: string;
         status?: string;
-        isPublic?: boolean;
+        public?: boolean;
         projectId?: string;
         managerId?: string;
     }): Promise<Activity> {

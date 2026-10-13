@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
@@ -126,6 +127,7 @@ public class ActivityController {
         private LocalDateTime endDate;
         private ActivityStatus status;
         @JsonProperty("public")
+        @JsonAlias("isPublic")
         private Boolean isPublic;
 
         @NotBlank(message = "Project ID is required")
@@ -145,6 +147,7 @@ public class ActivityController {
         private LocalDateTime endDate;
         private ActivityStatus status;
         @JsonProperty("public")
+        @JsonAlias("isPublic")
         private Boolean isPublic;
         private String projectId;
         private String managerId;

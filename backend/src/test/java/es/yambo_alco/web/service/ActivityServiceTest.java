@@ -188,7 +188,7 @@ public class ActivityServiceTest {
                 null, null, "PRJ00001", null);
 
         // Then
-        assertThat(result.getStatus()).isNull();
+        assertThat(result.getStatus()).isEqualTo(ActivityStatus.PLANNED); // default
         assertThat(result.isPublic()).isFalse(); // default
     }
 

@@ -253,6 +253,30 @@ class ActivityControllerTest {
                 .andExpect(jsonPath("$.status.label").value("Cerrada"));
     }
 
+    @Test
+    @WithMockUser
+    void updateActivity_WithIsPublicKey_ShouldPassPublicFlag() throws Exception {
+        // Given
+        when(activityService.updateActivity(
+                eq("ACT00001"), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(createTestActivity());
+
+        String json = """
+                {
+                    "isPublic": true
+                }
+                """;
+
+        // When & Then
+        mockMvc.perform(put("/activities/ACT00001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json))
+                .andExpect(status().isOk());
+
+        verify(activityService).updateActivity(
+                eq("ACT00001"), any(), any(), any(), any(), any(), any(), any(), any(), eq(true), any(), any());
+    }
+
     // ── DELETE /activities/{id} ─────────────────────────────────────────
 
     @Test
