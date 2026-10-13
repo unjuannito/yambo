@@ -38,8 +38,9 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
 
     const mergeUsers = (users: User[][]) => {
         const seen = new Set<string>();
-        return users.flat().filter((user) => {
-            const normalizedEmail = user.email.trim().toLowerCase();
+        // Sin correo no se puede avisar a nadie: quien no tiene cuenta ni correo no es candidato
+        return users.flat().filter((user) => !!user.email).filter((user) => {
+            const normalizedEmail = (user.email ?? "").trim().toLowerCase();
             if (seen.has(normalizedEmail)) {
                 return false;
             }
@@ -97,7 +98,7 @@ export function WatcherManager({ watchers, onAdd, onRemove, loading = false }: W
 
     const handleAdd = async () => {
         setError(null);
-        const selectedEmail = selectedUser ? selectedUser.email : query;
+        const selectedEmail = selectedUser ? (selectedUser.email ?? "") : query;
         const trimmed = selectedEmail.trim().toLowerCase();
         if (!isValidEmail(trimmed)) {
             setError(t("component.watcher.invalidEmail"));

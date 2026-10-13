@@ -127,7 +127,7 @@ const chalk = { fill: "none", stroke: PAPER, strokeWidth: 3, strokeLinecap: "rou
 // Cabeza: elipse centrada en (100, 106), de 50 × 52
 const HEAD = { cx: 100, cy: 106, rx: 50, ry: 52 };
 const TRUNK_DOWN = "M100 120 C100 152 96 170 108 180 C118 188 130 182 128 172";
-const TRUNK_UP = "M100 120 C100 158 118 176 138 166 C152 158 150 140 140 138";
+const TRUNK_UP = "M100 120 C100 139 104 150 114 154 C130 161 147 152 150 137 C153 123 146 113 148 102 C149 92 156 84 165 80";
 // Se alarga por debajo del lienzo para que llegue al borde también en el recorte vertical de la ficha
 const BODY = "M24 340 L24 244 C24 204 58 184 100 184 C142 184 176 204 176 244 L176 340 Z";
 // Casquete de pelo liso que tapa la coronilla (moño y coletas)
@@ -389,10 +389,10 @@ function Top({ top }: { top: AvatarTop }) {
         case "cap":
             return (
                 <g>
-                    <path d="M54 84 C54 38 146 38 146 84 Z" fill={INK} stroke={INK} strokeWidth="4" strokeLinejoin="round" />
-                    <path d="M140 80 q34 -4 42 12 q-24 6 -46 -2 Z" fill={INK} stroke={INK} strokeWidth="4" strokeLinejoin="round" />
-                    <path d="M100 44 V82" {...chalk} strokeWidth={2} />
-                    <circle cx="100" cy="44" r="3" fill={PAPER} />
+                    <path d="M54 80 C56 36 144 36 146 80 Q100 68 54 80 Z" {...line} />
+                    <path d="M50 77 Q100 65 150 77 C161 80 163 88 157 94 Q100 107 43 94 C37 88 39 80 50 77 Z" {...line} strokeWidth={3.5} />
+                    <path d="M100 45 V72" {...pen} strokeWidth={2} />
+                    <circle cx="100" cy="44" r="3" fill={INK} />
                 </g>
             );
         case "crown":
@@ -494,7 +494,7 @@ export function ElephantAvatar({ seed, config, className, title }: ElephantAvata
                 <ellipse {...HEAD} fill={PAPER} />
                 <path d={trunk} fill="none" stroke={PAPER} strokeWidth={22} strokeLinecap="round" />
                 <path
-                    d={trunkUp ? "M94 142 q6 4 12 0 M98 156 q6 5 13 2" : "M92 140 q8 4 16 0 M92 154 q8 4 16 0"}
+                    d={trunkUp ? "M157 94 q4 0 6 -4 M160 98 q4 0 6 -4" : "M92 140 q8 4 16 0 M92 154 q8 4 16 0"}
                     {...pen}
                     strokeWidth={2.5}
                 />

@@ -100,7 +100,14 @@ export default function UserLayout() {
                                 </span>
                             )}
                         </div>
-                        <p className="text-sm text-gray-400">{user.email}</p>
+                        <p className="text-sm text-gray-400">
+                            {user.email || t('staff.noEmail')}
+                            {user.hasAccount === false && (
+                                <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yambo-black/80 text-white align-middle">
+                                    {t('staff.noAccount')}
+                                </span>
+                            )}
+                        </p>
                     </div>
                 </div>
 
