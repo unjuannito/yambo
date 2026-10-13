@@ -61,6 +61,7 @@ export interface SeoMetadata {
 export interface ProjectDetail {
     id: string;
     name: string;
+    active: boolean;
     season: string | null;
     description: string | null;
     image: string | null;

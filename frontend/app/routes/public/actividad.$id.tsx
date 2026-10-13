@@ -2,6 +2,7 @@ import { useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getSiteUrl } from "~/utils/env.server";
 import { activityJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { buildMeta, isIndexableActivity, metaDescription } from "~/utils/seo";
 import type { Route } from "./+types/actividad.$id";
 import type { Activity } from "~/types/activity";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -44,15 +45,11 @@ export function meta({ data }: Route.MetaArgs) {
     const { t } = useTranslation();
     const { activity, siteUrl } = data;
     const pageUrl = `${siteUrl}/actividades/${activity.id}`;
-    const now = new Date();
-    const activityDate = activity.date ? new Date(activity.date) : null;
-    const isPast = activityDate ? activityDate < now : false;
-
     const cancelled = activity.status?.value === "CANCELLED";
     const statusPrefix = cancelled ? `[${t('public.activityCancelledTitle')}] ` : "";
 
     const descParts = [
-        activity.description?.slice(0, 160),
+        activity.description && metaDescription(activity.description, 120),
         activity.location && `${activity.location}`,
         activity.price != null && `${activity.price} €`,
         activity.date &&
@@ -64,21 +61,16 @@ export function meta({ data }: Route.MetaArgs) {
             })}`,
     ].filter(Boolean) as string[];
     const description = descParts.join(" | ") || activity.name;
-    const robots = cancelled || isPast ? "noindex, follow" : "index, follow";
 
     return [
-        { title: `${statusPrefix}${activity.name} — Yambo ${t('public.activitiesTitle')}` },
-        { name: "description", content: description },
-        ...(activity.location
-            ? [{ name: "keywords", content: `Yambo, ${activity.name}, Alcobendas, ${activity.location}` }]
-            : []),
-        { tagName: "link", rel: "canonical", href: pageUrl },
-        { property: "og:title", content: `${statusPrefix}${activity.name}` },
-        { property: "og:description", content: description },
-        { property: "og:url", content: pageUrl },
-        { property: "og:type", content: "event" },
-        ...(activity.image ? [{ property: "og:image", content: activity.image }] : []),
-        { name: "robots", content: robots },
+        ...buildMeta({
+            siteUrl,
+            path: `/actividades/${activity.id}`,
+            title: `${statusPrefix}${activity.name} | Yambo`,
+            description,
+            image: activity.image,
+            index: isIndexableActivity(activity),
+        }),
         { "script:ld+json": activityJsonLd(activity, siteUrl) },
         {
             "script:ld+json": breadcrumbJsonLd([

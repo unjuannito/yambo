@@ -141,6 +141,7 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("PRJ001"))
                 .andExpect(jsonPath("$.name").value("Barrio"))
+                .andExpect(jsonPath("$.active").value(true))
                 .andExpect(jsonPath("$.seo.slug").value("proyecto-barrio"));
     }
 

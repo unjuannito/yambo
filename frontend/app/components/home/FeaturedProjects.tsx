@@ -46,6 +46,8 @@ export default function FeaturedProjects({ projects, title, sectionIndex }: Feat
                                 <div className="bg-white rounded-[calc(1rem-2px)] overflow-hidden">
                                     <div className="relative overflow-hidden">
                                         <img
+                                            loading="lazy"
+                                            decoding="async"
                                             src={project.image}
                                             alt={project.name}
                                             className="w-full h-56 object-contain group-hover:scale-105 transition-transform duration-500"

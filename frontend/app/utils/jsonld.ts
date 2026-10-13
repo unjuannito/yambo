@@ -6,8 +6,25 @@
  * `meta()` convention:  `{ "script:ld+json": organizationJsonLd(...) }`
  */
 
-import type { ActiveProject, ProjectDetail } from "~/services/publicService";
+import type { ProjectDetail, StaffMember } from "~/services/publicService";
 import type { Activity } from "~/types/activity";
+import { stripMarkdown } from "~/utils/activity-helpers";
+import { absoluteUrl } from "~/utils/seo";
+
+/**
+ * Las fechas llegan como hora local de Madrid sin zona («2026-12-20T10:00:00»);
+ * los buscadores necesitan el desfase para no moverlas de hora.
+ */
+export function withMadridOffset(localDateTime: string): string {
+    if (/(Z|[+-]\d{2}:?\d{2})$/.test(localDateTime)) return localDateTime;
+    const asUtc = new Date(`${localDateTime}Z`);
+    if (Number.isNaN(asUtc.getTime())) return localDateTime;
+    const zone = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Madrid", timeZoneName: "longOffset" })
+        .formatToParts(asUtc)
+        .find((part) => part.type === "timeZoneName")?.value;
+    const offset = zone?.replace("GMT", "") || "+00:00";
+    return `${localDateTime}${offset}`;
+}
 
 /* ── Organisation ─────────────────────────────────────────────────── */
 
@@ -93,6 +110,50 @@ export function collectionPageJsonLd(opts: {
     };
 }
 
+/* ── ItemList (listados) ─────────────────────────────────────────── */
+
+export function itemListJsonLd(items: { name: string; url: string }[]) {
+    return {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        numberOfItems: items.length,
+        itemListElement: items.map((item, i) => ({
+            "@type": "ListItem",
+            position: i + 1,
+            name: item.name,
+            url: item.url,
+        })),
+    };
+}
+
+/* ── Equipo (miembros de la asociación) ──────────────────────────── */
+
+/**
+ * El equipo como miembros de la asociación. Las personas no llevan URL propia:
+ * no tienen página individual y no se busca posicionarlas por su nombre.
+ */
+export function teamJsonLd(staff: StaffMember[], siteUrl: string) {
+    return {
+        "@context": "https://schema.org",
+        "@type": "NGO",
+        name: "Yambo",
+        url: siteUrl,
+        member: staff.map((person) => {
+            const coordinates = person.groups.some((g) => g.role === "COORDINATOR");
+            const projects = [...new Set(person.groups.map((g) => g.projectName))];
+            return {
+                "@type": "Person",
+                name: person.nickname || person.name,
+                jobTitle: coordinates ? "Coordinador" : "Monitor",
+                ...(person.bio ? { description: person.bio } : {}),
+                // El backend solo envía la foto de quien dio su consentimiento
+                ...(person.photo ? { image: absoluteUrl(siteUrl, person.photo) } : {}),
+                ...(projects.length > 0 ? { knowsAbout: projects } : {}),
+            };
+        }),
+    };
+}
+
 /* ── BreadcrumbList ──────────────────────────────────────────────── */
 
 export function breadcrumbJsonLd(
@@ -119,7 +180,7 @@ export function projectJsonLd(project: ProjectDetail, siteUrl: string) {
         name: project.name,
         description: project.seo?.metaDescription ?? project.description ?? "",
         url: `${siteUrl}/proyectos/${project.id}`,
-        ...(project.image ? { image: project.image } : {}),
+        ...(project.image ? { image: absoluteUrl(siteUrl, project.image) } : {}),
         provider: {
             "@type": "NGO",
             name: "Yambo",
@@ -192,10 +253,10 @@ export function activityJsonLd(
         "@context": "https://schema.org",
         "@type": "Event",
         name: activity.name,
-        description: activity.description ?? "",
+        description: activity.description ? stripMarkdown(activity.description) : "",
         url: `${siteUrl}/actividades/${activity.id}`,
-        ...(activity.date ? { startDate: activity.date } : {}),
-        ...(activity.endDate ? { endDate: activity.endDate } : {}),
+        ...(activity.date ? { startDate: withMadridOffset(activity.date) } : {}),
+        ...(activity.endDate ? { endDate: withMadridOffset(activity.endDate) } : {}),
         eventStatus: `https://schema.org/${eventStatus}`,
         eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
         ...(activity.location
@@ -218,13 +279,14 @@ export function activityJsonLd(
                       "@type": "Offer",
                       price: activity.price,
                       priceCurrency: "EUR",
+                      url: `${siteUrl}/actividades/${activity.id}`,
                       availability: isPast
                           ? "https://schema.org/SoldOut"
                           : "https://schema.org/InStock",
                   },
               }
             : {}),
-        ...(activity.image ? { image: activity.image } : {}),
+        ...(activity.image ? { image: absoluteUrl(siteUrl, activity.image) } : {}),
         organizer: {
             "@type": "NGO",
             name: "Yambo",

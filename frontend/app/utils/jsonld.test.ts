@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { activityJsonLd } from "./jsonld";
+import { activityJsonLd, itemListJsonLd, teamJsonLd, withMadridOffset } from "./jsonld";
+import type { StaffMember } from "~/services/publicService";
 import type { Activity } from "~/types/activity";
 
 const SITE_URL = "https://yambo.cabrasky.net";
@@ -30,8 +31,8 @@ describe("activityJsonLd", () => {
             name: "Taller de Navidad",
             description: "Un taller navideño para toda la familia",
             url: "https://yambo.cabrasky.net/actividades/ACT001",
-            startDate: "2026-12-20T10:00:00",
-            endDate: "2026-12-20T18:00:00",
+            startDate: "2026-12-20T10:00:00+01:00",
+            endDate: "2026-12-20T18:00:00+01:00",
             eventStatus: "https://schema.org/EventScheduled",
             eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
         });
@@ -56,7 +57,7 @@ describe("activityJsonLd", () => {
             url: SITE_URL,
         });
 
-        expect(result.image).toBe("/uploads/navidad.jpg");
+        expect(result.image).toBe("https://yambo.cabrasky.net/uploads/navidad.jpg");
         expect(result.inLanguage).toBe("es");
     });
 
@@ -148,5 +149,78 @@ describe("activityJsonLd", () => {
         };
         const result = activityJsonLd(activity, SITE_URL);
         expect(result.eventStatus).toBe("https://schema.org/EventScheduled");
+    });
+});
+
+describe("withMadridOffset", () => {
+    it("adds the winter and summer offsets of Madrid", () => {
+        expect(withMadridOffset("2026-12-20T10:00:00")).toBe("2026-12-20T10:00:00+01:00");
+        expect(withMadridOffset("2026-07-05T10:00:00")).toBe("2026-07-05T10:00:00+02:00");
+    });
+
+    it("leaves dates that already carry a zone untouched", () => {
+        expect(withMadridOffset("2026-07-05T10:00:00Z")).toBe("2026-07-05T10:00:00Z");
+        expect(withMadridOffset("2026-07-05T10:00:00+02:00")).toBe("2026-07-05T10:00:00+02:00");
+    });
+});
+
+describe("activityJsonLd offers", () => {
+    it("links the offer to the activity page", () => {
+        expect(activityJsonLd(baseActivity, SITE_URL).offers).toMatchObject({
+            url: "https://yambo.cabrasky.net/actividades/ACT001",
+        });
+    });
+});
+
+describe("itemListJsonLd", () => {
+    it("numbers the items in order", () => {
+        const result = itemListJsonLd([
+            { name: "Barrio", url: `${SITE_URL}/proyectos/P1` },
+            { name: "Jambo", url: `${SITE_URL}/proyectos/P2` },
+        ]);
+
+        expect(result.numberOfItems).toBe(2);
+        expect(result.itemListElement[1]).toEqual({
+            "@type": "ListItem",
+            position: 2,
+            name: "Jambo",
+            url: `${SITE_URL}/proyectos/P2`,
+        });
+    });
+});
+
+describe("teamJsonLd", () => {
+    const person: StaffMember = {
+        id: "U1",
+        name: "Laura García",
+        nickname: "Lau",
+        photo: "/uploads/lau.jpg",
+        bio: "Estudio Magisterio.",
+        funFact: "",
+        role: "BOTH",
+        groups: [
+            { id: "G1", name: null, projectName: "Jambo", role: "COORDINATOR" },
+            { id: "G1", name: null, projectName: "Jambo", role: "MONITOR" },
+        ],
+    };
+
+    it("lists people as members without an individual URL", () => {
+        const [member] = teamJsonLd([person], SITE_URL).member;
+
+        expect(member).toEqual({
+            "@type": "Person",
+            name: "Lau",
+            jobTitle: "Coordinador",
+            description: "Estudio Magisterio.",
+            image: "https://yambo.cabrasky.net/uploads/lau.jpg",
+            knowsAbout: ["Jambo"],
+        });
+    });
+
+    it("omits the photo of people who did not consent to it", () => {
+        const [member] = teamJsonLd([{ ...person, photo: "", groups: [] }], SITE_URL).member;
+
+        expect(member).not.toHaveProperty("image");
+        expect(member.jobTitle).toBe("Monitor");
     });
 });

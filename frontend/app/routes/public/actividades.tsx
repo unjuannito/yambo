@@ -17,7 +17,8 @@ import {
     faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { getSiteUrl } from "~/utils/env.server";
-import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { collectionPageJsonLd, breadcrumbJsonLd, itemListJsonLd } from "~/utils/jsonld";
+import { buildMeta, isIndexableActivity } from "~/utils/seo";
 import type { Route } from "./+types/actividades";
 import toast from "react-hot-toast";
 import { fireEmojiRain } from "~/utils/confetti";
@@ -38,21 +39,17 @@ export function meta({ data }: Route.MetaArgs) {
     const description = t('public.activitiesMetaDescription');
 
     return [
-        { title },
-        { name: "description", content: description },
-        { name: "keywords", content: t('public.activitiesKeywords') },
-        { tagName: "link", rel: "canonical", href: `${siteUrl}/actividades` },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:url", content: `${siteUrl}/actividades` },
-        { property: "og:image", content: `${siteUrl}/logo.png` },
-        { property: "og:type", content: "website" },
-        { name: "robots", content: "index, follow" },
+        ...buildMeta({ siteUrl, path: "/actividades", title, description }),
         { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/actividades` }) },
         { "script:ld+json": breadcrumbJsonLd([
             { name: t('nav.home'), url: siteUrl },
             { name: t('public.activitiesTitle'), url: `${siteUrl}/actividades` },
         ]) },
+        { "script:ld+json": itemListJsonLd(
+            (data?.activities ?? [])
+                .filter((a) => isIndexableActivity(a))
+                .map((a) => ({ name: a.name, url: `${siteUrl}/actividades/${a.id}` })),
+        ) },
     ];
 }
 

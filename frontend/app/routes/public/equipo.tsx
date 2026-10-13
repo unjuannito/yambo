@@ -6,7 +6,8 @@ import type { StaffMember, ActiveProject } from "~/services/publicService";
 import StaffCard from "~/components/StaffCard";
 import { projectColor } from "~/utils/projectColor";
 import { getSiteUrl } from "~/utils/env.server";
-import { collectionPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { collectionPageJsonLd, breadcrumbJsonLd, teamJsonLd } from "~/utils/jsonld";
+import { buildMeta } from "~/utils/seo";
 import type { Route } from "./+types/equipo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
@@ -18,21 +19,13 @@ export function meta({ data }: Route.MetaArgs) {
   const description = t('public.staffMetaDescription');
 
   return [
-    { title },
-    { name: "description", content: description },
-    { name: "keywords", content: t('public.staffKeywords') },
-    { tagName: "link", rel: "canonical", href: `${siteUrl}/equipo` },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-    { property: "og:url", content: `${siteUrl}/equipo` },
-    { property: "og:image", content: `${siteUrl}/logo.png` },
-    { property: "og:type", content: "website" },
-    { name: "robots", content: "index, follow" },
+    ...buildMeta({ siteUrl, path: "/equipo", title, description }),
     { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/equipo` }) },
     { "script:ld+json": breadcrumbJsonLd([
         { name: t('nav.home'), url: siteUrl },
         { name: t('public.staffTitle'), url: `${siteUrl}/equipo` },
     ]) },
+    { "script:ld+json": teamJsonLd(data?.staff ?? [], siteUrl) },
   ];
 }
 

@@ -68,6 +68,8 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                         <img
                             src={member.photo}
                             alt={displayName}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                             style={{ objectPosition: "center top" }}
                         />

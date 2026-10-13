@@ -8,6 +8,7 @@ import { projectColor } from "~/utils/projectColor";
 import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
 import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { buildMeta, metaDescription } from "~/utils/seo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 
@@ -26,21 +27,20 @@ export function meta({ data }: Route.MetaArgs) {
   const seo = project?.seo;
   const siteUrl = data?.siteUrl ?? "";
 
-  const title = project ? `Yambo - ${project.name}` : t('public.projectNotFound');
-  const description = seo?.metaDescription ?? project?.description ?? t('common.description');
+  const title = project ? `${project.name} | Yambo` : t('public.projectNotFound');
+  const description = seo?.metaDescription || project?.description || t('public.projectsMetaDescription');
   const pageUrl = project ? `${siteUrl}/proyectos/${project.id}` : `${siteUrl}/proyectos`;
 
   return [
-    { title },
-    { name: "description", content: description },
-    ...(seo?.keywords?.length ? [{ name: "keywords", content: seo.keywords.join(", ") }] : []),
-    { tagName: "link", rel: "canonical", href: pageUrl },
-    { property: "og:title", content: title },
-    { property: "og:description", content: seo?.ogDescription ?? description },
-    { property: "og:url", content: pageUrl },
-    { property: "og:type", content: "website" },
-    { name: "robots", content: "index, follow" },
-    ...(project?.image ? [{ property: "og:image", content: project.image }] : []),
+    ...buildMeta({
+      siteUrl,
+      path: project ? `/proyectos/${project.id}` : "/proyectos",
+      title,
+      description: metaDescription(description),
+      image: project?.image,
+      // Un proyecto archivado sigue siendo visitable, pero no debe salir en buscadores
+      index: project?.active !== false,
+    }),
     ...(project ? [
       { "script:ld+json": projectJsonLd(project, siteUrl) },
       { "script:ld+json": breadcrumbJsonLd([

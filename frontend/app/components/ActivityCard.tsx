@@ -45,6 +45,8 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                     >
                         <div className="h-full overflow-hidden bg-yambo-black">
                             <img
+                                loading="lazy"
+                                decoding="async"
                                 src={imageSrc}
                                 alt={activity.name}
                                 className="h-full w-full object-cover"
@@ -143,6 +145,8 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                 <a href={detailUrl} className="shrink-0">
                     <div className="w-36 sm:w-40 md:w-48 lg:w-48 aspect-[9/16] overflow-hidden bg-yambo-black">
                         <img
+                            loading="lazy"
+                            decoding="async"
                             src={imageSrc}
                             alt={activity.name}
                             className="w-full h-full object-contain"
@@ -253,6 +257,8 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                         <div className="flex items-center gap-2 min-w-0">
                             {activity.manager.photo ? (
                                 <img
+                                    loading="lazy"
+                                    decoding="async"
                                     src={activity.manager.photo}
                                     alt={activity.manager.name}
                                     className="h-7 w-7 rounded-full object-cover ring-2 ring-yambo-green-100 shadow-sm shrink-0"

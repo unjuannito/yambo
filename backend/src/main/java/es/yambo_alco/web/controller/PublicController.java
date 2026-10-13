@@ -260,6 +260,7 @@ public class PublicController {
     public static class ProjectDetailResponse {
         private String id;
         private String name;
+        private boolean active;
         private String season;
         private String description;
         private String image;
@@ -272,6 +273,7 @@ public class PublicController {
         public ProjectDetailResponse(Project project, List<ProjectGroup> groups, List<User> staff, SeoMetadata seo) {
             this.id = project.getId();
             this.name = project.getName();
+            this.active = project.isActive();
             this.season = project.getSeason();
             this.description = project.getDescription();
             this.image = project.getImage();
