@@ -48,18 +48,18 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     List<User> findStaffByProjectId(@Param("projectId") String projectId);
 
     /**
-     * Staff shown on the public site: opted in, and either added by hand or holding a
-     * MONITOR/COORDINATOR role in an active project. Mirrors {@link User#isPubliclyVisibleStaff()}.
+     * Staff shown on the public site: either added by hand or holding a
+     * MONITOR/COORDINATOR role in an active project. Mirrors {@link User#isPublicStaff()}.
      */
     @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project", "staff"})
-    @Query("SELECT DISTINCT u FROM User u JOIN u.staff s LEFT JOIN u.groupRoles gr LEFT JOIN gr.projectGroup pg LEFT JOIN pg.project p "
-            + "WHERE u.enabled = true AND s.publicVisible = true AND (s.manual = true OR "
+    @Query("SELECT DISTINCT u FROM User u LEFT JOIN u.staff s LEFT JOIN u.groupRoles gr LEFT JOIN gr.projectGroup pg LEFT JOIN pg.project p "
+            + "WHERE u.enabled = true AND (s.manual = true OR "
             + "((gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.MONITOR OR gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.COORDINATOR) AND p.active = true))")
     List<User> findPublicStaff();
 
     @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project", "staff"})
-    @Query("SELECT DISTINCT u FROM User u JOIN u.staff s JOIN u.groupRoles gr JOIN gr.projectGroup pg JOIN pg.project p "
-            + "WHERE u.enabled = true AND s.publicVisible = true AND p.id = :projectId AND p.active = true "
+    @Query("SELECT DISTINCT u FROM User u JOIN u.groupRoles gr JOIN gr.projectGroup pg JOIN pg.project p "
+            + "WHERE u.enabled = true AND p.id = :projectId AND p.active = true "
             + "AND (gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.MONITOR OR gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.COORDINATOR)")
     List<User> findPublicStaffByProjectId(@Param("projectId") String projectId);
 

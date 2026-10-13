@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
@@ -90,6 +91,43 @@ class UserControllerTest {
         mockMvc.perform(get("/user/me")
                 .header("Authorization", "Bearer invalid.token"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser
+    void updateStaffAvatar_ShouldSaveTheCustomElephant() throws Exception {
+        // Given
+        StaffAvatar avatar = StaffAvatar.builder().background(2).clothes("stripes").eyes("happy").top("flower").extra("none").flip(true).build();
+        User currentUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
+                .profiles(Set.of()).build();
+        User updatedUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
+                .profiles(Set.of()).staff(Staff.builder().manual(true).avatar(avatar).build()).build();
+
+        when(authService.getCurrentUser(true)).thenReturn(currentUser);
+        when(userService.updateStaffAvatar("U0000001", avatar)).thenReturn(updatedUser);
+
+        // When & Then
+        mockMvc.perform(put("/user/staff/avatar")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"background": 2, "clothes": "stripes", "eyes": "happy", "top": "flower", "extra": "none", "trunkUp": false, "flip": true}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.staff.avatar.clothes").value("stripes"))
+                .andExpect(jsonPath("$.staff.avatar.flip").value(true));
+    }
+
+    @Test
+    @WithMockUser
+    void updateStaffAvatar_WithUnknownOption_ShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(put("/user/staff/avatar")
+                .header("Authorization", "Bearer test.jwt.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"background": 99, "clothes": "cape", "eyes": "happy", "top": "flower"}
+                        """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

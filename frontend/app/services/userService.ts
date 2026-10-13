@@ -1,4 +1,5 @@
 import { ApiService } from './apiService';
+import type { ElephantAvatarConfig } from '~/components/ElephantAvatar';
 import type { CurrentUser, NotificationPreferences } from '~/types/userType';
 
 export interface UpdateProfileRequest {
@@ -12,7 +13,7 @@ export interface UpdateStaffRequest {
   bio?: string;
   funFact?: string;
   nickname?: string;
-  publicVisible?: boolean;
+  photoConsent?: boolean;
   instagramUrl?: string;
 }
 
@@ -32,6 +33,15 @@ export class UserService extends ApiService {
 
   public async updateStaff(data: UpdateStaffRequest): Promise<CurrentUser> {
     return await this.put<CurrentUser, UpdateStaffRequest>('/user/staff', data);
+  }
+
+  public async updateStaffAvatar(avatar: ElephantAvatarConfig): Promise<CurrentUser> {
+    return await this.put<CurrentUser, ElephantAvatarConfig>('/user/staff/avatar', avatar);
+  }
+
+  /** Vuelve al elefante por defecto. */
+  public async resetStaffAvatar(): Promise<CurrentUser> {
+    return await this.delete<CurrentUser>('/user/staff/avatar');
   }
 
   public async deleteStaff(): Promise<CurrentUser> {

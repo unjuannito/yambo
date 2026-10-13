@@ -1,3 +1,5 @@
+import type { ElephantAvatarConfig } from "~/components/ElephantAvatar";
+
 export type NotificationPreferences = {
     orderStatus: boolean;
     orderCancelled: boolean;
@@ -18,10 +20,12 @@ export type StaffData = {
     nickname?: string | null;
     /** Enlace a su post de #comosenotaqueeresdeyambo. */
     instagramUrl?: string | null;
+    /** Su elefante personalizado; sin él se dibuja el que le toca por defecto. */
+    avatar?: ElephantAvatarConfig | null;
     /** Opt-in: solo aparece en la web pública si está activado. */
-    publicVisible: boolean;
+    photoConsent: boolean;
     /** Fecha en la que activó la visibilidad pública (su consentimiento). */
-    publicVisibleAt?: string | null;
+    photoConsentAt?: string | null;
     manual: boolean;
 };
 

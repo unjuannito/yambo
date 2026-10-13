@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.SeoMetadata;
@@ -75,7 +76,7 @@ public class PublicController {
     public ResponseEntity<List<StaffResponse>> getStaff() {
         List<User> staff = userRepository.findPublicStaff();
         List<StaffResponse> response = staff.stream()
-                .filter(User::isPubliclyVisibleStaff)
+                .filter(User::isPublicStaff)
                 .map(StaffResponse::new)
                 .sorted(StaffResponse.PUBLIC_ORDER)
                 .toList();
@@ -170,6 +171,7 @@ public class PublicController {
         private String bio;
         private String funFact;
         private String instagramUrl;
+        private StaffAvatar avatar;
         private String role;
         private StaffGroupResponse[] groups;
 
@@ -184,10 +186,12 @@ public class PublicController {
             Staff staff = user.getStaff();
             if (staff != null) {
                 this.nickname = staff.getNickname();
-                this.photo = staff.getPhoto();
+                // Only with the member's consent; otherwise the site shows a generic avatar
+                this.photo = user.getPublicStaffPhoto();
                 this.bio = staff.getBio();
                 this.funFact = staff.getFunFact();
                 this.instagramUrl = staff.getInstagramUrl();
+                this.avatar = staff.getAvatar();
             }
 
             // Only the staff roles of active projects are public (no PARENT roles, no past projects)
@@ -277,7 +281,7 @@ public class PublicController {
                     .map(ProjectGroupDetail::new)
                     .toList();
             this.staff = staff.stream()
-                    .filter(User::isPubliclyVisibleStaff)
+                    .filter(User::isPublicStaff)
                     .map(StaffResponse::new)
                     .sorted(StaffResponse.PUBLIC_ORDER)
                     .toList();
@@ -387,14 +391,17 @@ public class PublicController {
             this.photo = photo;
         }
 
-        /** The manager is only exposed publicly when they opted in to appear on the public site. */
+        /**
+         * The manager is exposed publicly while part of the team, by nickname if they have one;
+         * their photo only if they consented to showing it.
+         */
         static ActivityManagerSummary ofPublic(User manager) {
-            if (manager == null || !manager.isPubliclyVisibleStaff()) {
+            if (manager == null || !manager.isPublicStaff()) {
                 return null;
             }
             Staff staff = manager.getStaff();
-            String displayName = staff.getNickname() != null ? staff.getNickname() : manager.getName();
-            return new ActivityManagerSummary(displayName, staff.getPhoto());
+            String displayName = staff != null && staff.getNickname() != null ? staff.getNickname() : manager.getName();
+            return new ActivityManagerSummary(displayName, manager.getPublicStaffPhoto());
         }
     }
 

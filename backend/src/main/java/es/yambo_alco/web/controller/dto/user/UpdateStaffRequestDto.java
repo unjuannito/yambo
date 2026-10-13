@@ -20,7 +20,7 @@ public class UpdateStaffRequestDto {
     @Size(max = 50, message = "Nickname must be at most 50 characters")
     private String nickname;
 
-    private Boolean publicVisible;
+    private Boolean photoConsent;
 
     @Size(max = 300, message = "Instagram link must be at most 300 characters")
     @Pattern(regexp = "^$|^https://(www\\.)?instagram\\.com/.+", message = "Instagram link must start with https://www.instagram.com/")
@@ -32,7 +32,7 @@ public class UpdateStaffRequestDto {
                 .bio(bio)
                 .funFact(funFact)
                 .nickname(nickname)
-                .publicVisible(publicVisible)
+                .photoConsent(photoConsent)
                 .instagramUrl(instagramUrl)
                 .build();
     }

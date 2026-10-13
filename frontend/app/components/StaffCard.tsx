@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import type { StaffMember } from "~/services/publicService";
 import { projectColor } from "~/utils/projectColor";
 import { Modal } from "~/components/common/Modal";
+import ElephantAvatar from "~/components/ElephantAvatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { faInstagram } from "@fortawesome/free-brands-svg-icons";
 
 interface StaffCardProps {
@@ -69,9 +69,7 @@ export default function StaffCard({ member, roleLabel, projectName }: StaffCardP
                             style={{ objectPosition: "center top" }}
                         />
                     ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-yambo-green-100 to-yambo-purple-100 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faUser} className="w-10 h-10 text-yambo-green-300 opacity-60" />
-                        </div>
+                        <ElephantAvatar seed={member.id} config={member.avatar} title={displayName} className="w-full h-full" />
                     )}
                 </div>
                 <div className="p-3">
@@ -111,9 +109,7 @@ export default function StaffCard({ member, roleLabel, projectName }: StaffCardP
                                     style={{ objectPosition: "center top" }}
                                 />
                             ) : (
-                                <div className="w-full aspect-square rounded-2xl bg-gradient-to-br from-yambo-green-100 to-yambo-purple-100 flex items-center justify-center">
-                                    <FontAwesomeIcon icon={faUser} className="w-16 h-16 text-yambo-green-300 opacity-60" />
-                                </div>
+                                <ElephantAvatar seed={member.id} config={member.avatar} title={displayName} className="w-full aspect-[5/6] rounded-2xl" />
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
