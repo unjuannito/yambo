@@ -39,6 +39,15 @@ public class Staff {
     @Column(length = 500)
     private String photo;
 
+    /** The photo as uploaded; {@link #photo} is this one framed with {@link #photoEdit}. */
+    @Column(name = "photo_original", length = 500)
+    private String photoOriginal;
+
+    /** Framing applied to the original; null for photos uploaded before it could be adjusted. */
+    @Column(name = "photo_edit", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private StaffPhotoEdit photoEdit;
+
     @Column(columnDefinition = "TEXT")
     private String bio;
 

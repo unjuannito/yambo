@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        staff.photo stays the framed image every page shows. The photo as uploaded and the
+        framing (centre, zoom, rotation) are kept so it can be adjusted again later.
+    -->
+    <changeSet id="101-01-staff-photo-edit" author="yambo">
+        <addColumn tableName="staff">
+            <column name="photo_original" type="VARCHAR(500)"/>
+            <column name="photo_edit" type="jsonb"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

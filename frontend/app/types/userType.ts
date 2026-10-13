@@ -1,3 +1,4 @@
+import type { PhotoEdit } from "~/utils/photoCrop";
 import type { ElephantAvatarConfig } from "~/components/ElephantAvatar";
 
 export type NotificationPreferences = {
@@ -14,7 +15,11 @@ export type NotificationPreferences = {
  * o con un rol de monitor/coordinador en algún grupo.
  */
 export type StaffData = {
+    /** La foto ya encuadrada, la que se muestra. */
     photo?: string | null;
+    /** La foto tal como se subió, para poder volver a encuadrarla. */
+    photoOriginal?: string | null;
+    photoEdit?: PhotoEdit | null;
     bio?: string | null;
     funFact?: string | null;
     nickname?: string | null;
