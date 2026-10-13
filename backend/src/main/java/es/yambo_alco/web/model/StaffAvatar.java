@@ -34,7 +34,12 @@ public class StaffAvatar {
     private String eyes;
 
     @NotNull
-    @Pattern(regexp = "none|tuft|beanie|flower|curls|cap|crown|bow|party|headphones|mohawk")
+    @Pattern(regexp = "none|tuft|curls|afro|bun|fringe|spiky|wavy|pigtails|long|mohawk|buzz")
+    private String hair;
+
+    /** Hat or accessory worn on the head. */
+    @NotNull
+    @Pattern(regexp = "none|beanie|cap|crown|bow|party|headphones|flower")
     private String top;
 
     @NotNull

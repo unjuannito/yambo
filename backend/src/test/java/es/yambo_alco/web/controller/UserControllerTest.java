@@ -97,7 +97,7 @@ class UserControllerTest {
     @WithMockUser
     void updateStaffAvatar_ShouldSaveTheCustomElephant() throws Exception {
         // Given
-        StaffAvatar avatar = StaffAvatar.builder().background(2).clothes("stripes").eyes("happy").top("flower").extra("none").flip(true).build();
+        StaffAvatar avatar = StaffAvatar.builder().background(2).clothes("stripes").eyes("happy").hair("curls").top("flower").extra("none").flip(true).build();
         User currentUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
                 .profiles(Set.of()).build();
         User updatedUser = User.builder().id("U0000001").email("testuser@example.com").name("Name")
@@ -111,7 +111,7 @@ class UserControllerTest {
                 .header("Authorization", "Bearer test.jwt.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"background": 2, "clothes": "stripes", "eyes": "happy", "top": "flower", "extra": "none", "trunkUp": false, "flip": true}
+                        {"background": 2, "clothes": "stripes", "eyes": "happy", "hair": "curls", "top": "flower", "extra": "none", "trunkUp": false, "flip": true}
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.staff.avatar.clothes").value("stripes"))
@@ -125,7 +125,7 @@ class UserControllerTest {
                 .header("Authorization", "Bearer test.jwt.token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"background": 99, "clothes": "cape", "eyes": "happy", "top": "flower"}
+                        {"background": 99, "clothes": "cape", "eyes": "happy", "hair": "none", "top": "flower", "extra": "none"}
                         """))
                 .andExpect(status().isBadRequest());
     }

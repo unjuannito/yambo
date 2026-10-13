@@ -855,7 +855,7 @@ public class UserServiceTest {
                 .name("Name")
                 .staff(Staff.builder().manual(true).build())
                 .build();
-        StaffAvatar avatar = StaffAvatar.builder().background(3).clothes("jacket").eyes("glasses").top("beanie").extra("none").trunkUp(true).build();
+        StaffAvatar avatar = StaffAvatar.builder().background(3).clothes("jacket").eyes("glasses").hair("curls").top("beanie").extra("none").trunkUp(true).build();
 
         when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -874,7 +874,7 @@ public class UserServiceTest {
 
         // When & Then
         assertThatThrownBy(() -> userService.updateStaffAvatar("U0000001",
-                StaffAvatar.builder().background(0).clothes("dots").eyes("dots").top("none").extra("none").build()))
+                StaffAvatar.builder().background(0).clothes("dots").eyes("dots").hair("curls").top("none").extra("none").build()))
                 .isInstanceOf(BadRequestException.class);
         verify(userRepository, never()).save(any());
     }
