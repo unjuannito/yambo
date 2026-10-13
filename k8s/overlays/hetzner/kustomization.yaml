@@ -17,10 +17,10 @@ resources:
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: "1.18.10"
+    newTag: "1.18.11"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: "1.18.10"
+    newTag: "1.18.11"
 
 # ── DOMINIO ──────────────────────────────────────────────────────────────
 # Único sitio donde se escribe el dominio de este entorno. Para cambiarlo basta
