@@ -4,6 +4,7 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.StaffAvatar;
+import es.yambo_alco.web.model.StaffPhotoEdit;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -1376,5 +1377,131 @@ public class UserServiceTest {
                 "PG000001", UserProjectGroupRole.PARENT, "A0000001"))
                 .isInstanceOf(BadRequestException.class);
         verify(userRepository, never()).save(any());
+    }
+
+    // ── Photo framing ───────────────────────────────────────────────────
+
+    private static StaffPhotoEdit framing(double zoom) {
+        return StaffPhotoEdit.builder().x(0.2).y(-0.1).zoom(zoom).rotation(90.0).build();
+    }
+
+    private User staffUser(Staff staff) {
+        User user = User.builder().id("U0000001").email("user@example.com").name("Name").staff(staff).build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        Mockito.lenient().when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        return user;
+    }
+
+    @Test
+    void updateStaff_WithFramedPhoto_ShouldKeepTheOriginalAndTheFraming() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true).build());
+
+        // When
+        userService.updateStaff("U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // Then
+        assertThat(user.getStaff().getPhoto()).isEqualTo("/uploads/framed.jpg");
+        assertThat(user.getStaff().getPhotoOriginal()).isEqualTo("/uploads/original.jpg");
+        assertThat(user.getStaff().getPhotoEdit()).isEqualTo(framing(1.5));
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+    }
+
+    @Test
+    void updateStaff_AdjustingAPhotoUploadedBeforeFraming_ShouldKeepItAsTheOriginal() {
+        // Given — an old photo, with no original of its own
+        User user = staffUser(Staff.builder().manual(true).photo("/uploads/old.jpg").build());
+
+        // When — it is framed for the first time, then framed again
+        userService.updateStaff("U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-1.jpg").photoOriginal("/uploads/old.jpg").photoEdit(framing(1.2)).build());
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+        userService.updateStaff("U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-2.jpg").photoOriginal("/uploads/old.jpg").photoEdit(framing(2.0)).build());
+
+        // Then — only the framing that is no longer used is deleted
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/framed-1.jpg", "U0000001");
+        verify(uploadedFileService, never()).deleteOwnedByUrl("/uploads/old.jpg", "U0000001");
+        assertThat(user.getStaff().getPhotoOriginal()).isEqualTo("/uploads/old.jpg");
+        assertThat(user.getStaff().getPhotoEdit().getZoom()).isEqualTo(2.0);
+    }
+
+    @Test
+    void updateStaff_RemovingThePhoto_ShouldRemoveTheOriginalAndTheFraming() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true)
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // When
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("").build());
+
+        // Then
+        assertThat(user.getStaff().getPhoto()).isNull();
+        assertThat(user.getStaff().getPhotoOriginal()).isNull();
+        assertThat(user.getStaff().getPhotoEdit()).isNull();
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/framed.jpg", "U0000001");
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/original.jpg", "U0000001");
+    }
+
+    @Test
+    void updateStaff_WithoutPhotoFields_ShouldLeaveThePhotoAlone() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true)
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // When
+        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").build());
+
+        // Then
+        assertThat(user.getStaff().getPhoto()).isEqualTo("/uploads/framed.jpg");
+        assertThat(user.getStaff().getPhotoOriginal()).isEqualTo("/uploads/original.jpg");
+        assertThat(user.getStaff().getPhotoEdit()).isEqualTo(framing(1.5));
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+    }
+
+    @Test
+    void updateStaffByAdmin_ReframingTheSamePicture_ShouldKeepTheConsent() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true).photoConsent(true).photoConsentAt(LocalDateTime.now())
+                .photo("/uploads/framed-1.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.2)).build());
+
+        // When
+        userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-2.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(2.0)).build());
+
+        // Then
+        assertThat(user.getStaff().isPhotoConsent()).isTrue();
+        assertThat(user.getStaff().getPhoto()).isEqualTo("/uploads/framed-2.jpg");
+    }
+
+    @Test
+    void updateStaffByAdmin_UploadingADifferentPicture_ShouldWithdrawTheConsent() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true).photoConsent(true).photoConsentAt(LocalDateTime.now())
+                .photo("/uploads/framed-1.jpg").photoOriginal("/uploads/original-1.jpg").photoEdit(framing(1.2)).build());
+
+        // When
+        userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-2.jpg").photoOriginal("/uploads/original-2.jpg").photoEdit(framing(1.0)).build());
+
+        // Then
+        assertThat(user.getStaff().isPhotoConsent()).isFalse();
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/original-1.jpg", "U0000001");
+    }
+
+    @Test
+    void deleteStaffData_ShouldAlsoDeleteTheOriginalPhoto() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true)
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // When
+        userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/original.jpg", "U0000001");
+        assertThat(user.getStaff().getPhotoOriginal()).isNull();
+        assertThat(user.getStaff().getPhotoEdit()).isNull();
     }
 }

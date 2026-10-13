@@ -1,6 +1,7 @@
 import { ApiService } from './apiService';
 import type { ElephantAvatarConfig } from '~/components/ElephantAvatar';
 import type { CurrentUser, NotificationPreferences } from '~/types/userType';
+import type { PhotoEdit } from '~/utils/photoCrop';
 
 export interface UpdateProfileRequest {
   name: string;
@@ -10,6 +11,8 @@ export interface UpdateProfileRequest {
 /** Los campos omitidos no se tocan; los vacíos se borran. */
 export interface UpdateStaffRequest {
   photo?: string;
+  photoOriginal?: string | null;
+  photoEdit?: PhotoEdit | null;
   bio?: string;
   funFact?: string;
   nickname?: string;

@@ -1,6 +1,8 @@
 package es.yambo_alco.web.controller.dto.user;
 
 import es.yambo_alco.web.service.StaffUpdate;
+import es.yambo_alco.web.model.StaffPhotoEdit;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -10,6 +12,12 @@ import lombok.Data;
 public class UpdateStaffRequestDto {
     @Size(max = 500, message = "Photo must be at most 500 characters")
     private String photo;
+
+    @Size(max = 500, message = "Original photo must be at most 500 characters")
+    private String photoOriginal;
+
+    @Valid
+    private StaffPhotoEdit photoEdit;
 
     @Size(max = 500, message = "Bio must be at most 500 characters")
     private String bio;
@@ -29,6 +37,8 @@ public class UpdateStaffRequestDto {
     public StaffUpdate toUpdate() {
         return StaffUpdate.builder()
                 .photo(photo)
+                .photoOriginal(photoOriginal)
+                .photoEdit(photoEdit)
                 .bio(bio)
                 .funFact(funFact)
                 .nickname(nickname)

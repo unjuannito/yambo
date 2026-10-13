@@ -1,3 +1,4 @@
+import type { PhotoEdit } from "~/utils/photoCrop";
 import type { User } from "~/types/userType";
 import type { GroupRole } from "~/types/role";
 import { ApiService, type PagedParams } from "./apiService";
@@ -39,6 +40,8 @@ export interface UpdateUserDetailsRequest {
 /** Los campos omitidos no se tocan; los vacíos se borran. */
 export interface UpdateStaffRequest {
     photo?: string;
+    photoOriginal?: string | null;
+    photoEdit?: PhotoEdit | null;
     bio?: string;
     funFact?: string;
     nickname?: string;

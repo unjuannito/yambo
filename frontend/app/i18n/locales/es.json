@@ -1269,6 +1269,42 @@
       }
     }
   },
+  "unsavedChanges": {
+    "notice": "Tienes cambios sin guardar",
+    "title": "Cambios sin guardar",
+    "message": "Si sales ahora se perderán los cambios que no has guardado.",
+    "leave": "Salir sin guardar",
+    "stay": "Seguir editando"
+  },
+  "photoEditor": {
+    "title": "Ajustar la foto",
+    "frameLabel": "Encuadre de la foto: arrastra o usa las flechas para moverla, y + o - para el zoom",
+    "dragHint": "Arrastra para mover",
+    "dragHintTouch": "Arrastra y pellizca",
+    "zoom": "Zoom",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "straighten": "Enderezar",
+    "rotateLeft": "Girar 90° a la izquierda",
+    "rotateRight": "Girar 90° a la derecha",
+    "reset": "Restablecer",
+    "preview": "Así se verá",
+    "previewCard": "Tarjeta",
+    "previewAvatar": "Avatar",
+    "confirm": "Guardar encuadre",
+    "loading": "Cargando la foto...",
+    "loadError": "No se ha podido cargar la foto.",
+    "saveError": "No se ha podido guardar el encuadre. Inténtalo de nuevo.",
+    "uploadError": "Error al subir la imagen. Inténtalo de nuevo.",
+    "uploading": "Subiendo...",
+    "upload": "Subir foto",
+    "change": "Cambiar foto",
+    "adjust": "Ajustar foto",
+    "remove": "Eliminar",
+    "photoAlt": "Foto de perfil",
+    "formats": "JPEG, PNG o WebP. Podrás encuadrarla al subirla.",
+    "pendingSave": "La foto no se publica hasta que guardes la ficha."
+  },
   "myAccount": {
     "personalInfo": "Información personal",
     "personalInfoDesc": "Actualiza tu nombre y correo electrónico",
