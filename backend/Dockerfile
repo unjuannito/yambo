@@ -1,4 +1,10 @@
-# Stage 1: Cache dependencies (only re-runs when pom.xml changes)
+# syntax=docker/dockerfile:1
+# Requiere BuildKit (por defecto en Docker 23+ y en Docker Desktop; en Jenkins se
+# activa con DOCKER_BUILDKIT=1).
+
+# Stage 1: Cache dependencies
+# ~/.m2 es una caché de BuildKit que persiste entre builds: aunque pom.xml cambie
+# (cada PR sube la versión) solo se descarga lo que falte.
 FROM eclipse-temurin:21-jdk-alpine AS deps
 WORKDIR /workspace/app
 
@@ -6,12 +12,12 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 RUN chmod +x ./mvnw
-RUN ./mvnw dependency:go-offline -B
+RUN --mount=type=cache,target=/root/.m2 ./mvnw dependency:go-offline -B
 
 # Stage 2: Build and extract layers
 FROM deps AS build
 COPY src src
-RUN ./mvnw package -DskipTests -B
+RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests -B
 RUN java -Djarmode=layertools -jar target/*.jar extract --destination target/extracted
 
 # Stage 3: Runtime (layered for fast rebuilds)

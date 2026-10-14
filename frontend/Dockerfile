@@ -1,8 +1,13 @@
+# syntax=docker/dockerfile:1
+# Requiere BuildKit (por defecto en Docker 23+ y en Docker Desktop; en Jenkins se
+# activa con DOCKER_BUILDKIT=1). La caché de npm persiste entre builds, así que un
+# cambio en package.json (cada PR sube la versión) no vuelve a descargarlo todo.
+
 # ── Stage 1: Build ──────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps
+RUN --mount=type=cache,target=/root/.npm npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
 COPY . .
 RUN npm run build
 
@@ -23,7 +28,8 @@ COPY --from=builder --chown=app:app /app/build ./build
 COPY --from=builder --chown=app:app /app/package.json ./
 
 # Install production dependencies only (needed by react-router-serve)
-RUN npm install --legacy-peer-deps --omit=dev && chown -R app:app /app/node_modules
+RUN --mount=type=cache,target=/root/.npm npm install --legacy-peer-deps --omit=dev --prefer-offline --no-audit --no-fund \
+    && chown -R app:app /app/node_modules
 
 # Copy nginx and supervisord configs
 COPY nginx-main.conf /etc/nginx/nginx.conf
