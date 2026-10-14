@@ -446,6 +446,16 @@ pipeline {
                              fi' || true
                     """
                 }
+                // Sin esto el disco del build host se llena: imágenes de cada build,
+                // caché de BuildKit y cachés de dependencias crecen sin límite
+                // (ver scripts/ci/cleanup-build-host.sh). Nunca falla el build.
+                def builtImages = []
+                if (env.FRONTEND_TAG) { builtImages << "${FRONTEND_IMAGE}:${env.FRONTEND_TAG}" }
+                if (env.BACKEND_TAG)  { builtImages << "${BACKEND_IMAGE}:${env.BACKEND_TAG}" }
+                sh """
+                    ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
+                        'bash -s -- ${builtImages.join(' ')}' < scripts/ci/cleanup-build-host.sh || true
+                """
             }
         }
         success {
