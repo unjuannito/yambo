@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_EDIT, FRAME, MAX_ZOOM, normalizeEdit, pan, placement, rotateTo, zoomTo, type PhotoEdit } from "./photoCrop";
+import { DEFAULT_EDIT, FRAME, MAX_ZOOM, normalizeEdit, pan, placement, rotateTo, zoomAt, zoomTo, type PhotoEdit } from "./photoCrop";
 
 /** Comprueba que las cuatro esquinas del marco caen dentro de la foto colocada. */
 function coversFrame(imageWidth: number, imageHeight: number, edit: PhotoEdit): boolean {
@@ -74,6 +74,40 @@ describe("photoCrop", () => {
         expect(zoomed.zoom).toBe(3);
         expect(after.offsetX / after.width).toBeCloseTo(before.offsetX / before.width);
         expect(after.offsetY / after.height).toBeCloseTo(before.offsetY / before.height);
+    });
+
+    it("zooms towards a point keeping it under the cursor", () => {
+        for (const rotation of [0, 12, -90]) {
+            const start = { ...DEFAULT_EDIT, rotation, zoom: 1.5 };
+            const point = { x: 0.8, y: -1 };
+            // Punto de la foto (en sus ejes, sin escalar) que hay bajo el cursor
+            const photoPoint = (edit: PhotoEdit) => {
+                const place = placement(1200, 800, edit);
+                const radians = (rotation * Math.PI) / 180;
+                const dx = point.x - place.offsetX;
+                const dy = point.y - place.offsetY;
+                const u = dx * Math.cos(radians) + dy * Math.sin(radians);
+                const v = -dx * Math.sin(radians) + dy * Math.cos(radians);
+                return [u / place.width, v / place.height];
+            };
+            const zoomed = zoomAt(1200, 800, start, 2, point.x, point.y);
+            const [u0, v0] = photoPoint(start);
+            const [u1, v1] = photoPoint(zoomed);
+            expect(u1).toBeCloseTo(u0);
+            expect(v1).toBeCloseTo(v0);
+            expect(coversFrame(1200, 800, zoomed)).toBe(true);
+        }
+    });
+
+    it("zooms about the centre like zoomTo when the point is the centre", () => {
+        const start = { x: 0.3, y: -0.2, zoom: 1.4, rotation: 20 };
+        expect(zoomAt(900, 1300, start, 2.5, 0, 0)).toEqual(zoomTo(900, 1300, start, 2.5));
+    });
+
+    it("never leaves gaps when zooming out towards a corner", () => {
+        const start = { x: 0.9, y: 0.9, zoom: 3, rotation: 30 };
+        const zoomed = zoomAt(1200, 800, start, 1.1, -FRAME.width / 2, FRAME.height / 2);
+        expect(coversFrame(1200, 800, zoomed)).toBe(true);
     });
 
     it("pulls the photo back in when zooming out", () => {

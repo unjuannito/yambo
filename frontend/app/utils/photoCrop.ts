@@ -107,16 +107,29 @@ export function pan(imageWidth: number, imageHeight: number, rawEdit: PhotoEdit,
     return { ...edit, x: maxU > 0 ? u / maxU : 0, y: maxV > 0 ? v / maxV : 0 };
 }
 
-/** Cambia el zoom manteniendo el centro donde estaba en la medida de lo posible. */
-export function zoomTo(imageWidth: number, imageHeight: number, rawEdit: PhotoEdit, zoom: number): PhotoEdit {
+/**
+ * Cambia el zoom dejando quieto el punto (px, py) del marco, en unidades de marco desde su centro:
+ * lo que hay bajo el cursor o entre los dedos sigue ahí. Si no cabe, se ajusta sin dejar huecos.
+ */
+export function zoomAt(imageWidth: number, imageHeight: number, rawEdit: PhotoEdit, zoom: number, px: number, py: number): PhotoEdit {
     const edit = normalizeEdit(rawEdit);
     const before = layout(imageWidth, imageHeight, edit);
     const next = normalizeEdit({ ...edit, zoom });
     const after = layout(imageWidth, imageHeight, next);
     const ratio = after.scale / before.scale;
-    const u = clamp(edit.x * before.maxU * ratio, -after.maxU, after.maxU);
-    const v = clamp(edit.y * before.maxV * ratio, -after.maxV, after.maxV);
+    const place = placement(imageWidth, imageHeight, edit);
+    // El centro de la foto se aleja o se acerca al punto fijo en la misma proporción
+    const ox = px + (place.offsetX - px) * ratio;
+    const oy = py + (place.offsetY - py) * ratio;
+    // Del eje del marco al de la foto (rotación inversa)
+    const u = clamp(ox * after.cos + oy * after.sin, -after.maxU, after.maxU);
+    const v = clamp(-ox * after.sin + oy * after.cos, -after.maxV, after.maxV);
     return { ...next, x: after.maxU > 0 ? u / after.maxU : 0, y: after.maxV > 0 ? v / after.maxV : 0 };
+}
+
+/** Cambia el zoom manteniendo el centro donde estaba en la medida de lo posible. */
+export function zoomTo(imageWidth: number, imageHeight: number, rawEdit: PhotoEdit, zoom: number): PhotoEdit {
+    return zoomAt(imageWidth, imageHeight, rawEdit, zoom, 0, 0);
 }
 
 export function rotateTo(rawEdit: PhotoEdit, rotation: number): PhotoEdit {

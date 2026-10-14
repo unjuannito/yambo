@@ -11,6 +11,7 @@ import {
     placement,
     renderCrop,
     rotateTo,
+    zoomAt,
     zoomTo,
     type PhotoEdit,
 } from "~/utils/photoCrop";
@@ -70,6 +71,8 @@ function FramedPhoto({ frameWidth, ...photo }: Omit<PlacedPhotoProps, "unit" | "
 /** Margen alrededor del marco donde se ve, atenuado, lo que queda fuera del recorte. */
 const STAGE_PADDING = 28;
 const ZOOM_STEP = 0.25;
+/** Hasta dónde acerca el doble clic. */
+const DOUBLE_CLICK_ZOOM = 2;
 /** El deslizador endereza hasta ±45°; los giros completos van con los botones de 90°. */
 const MAX_STRAIGHTEN = 45;
 
@@ -160,6 +163,12 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
     const ready = size !== null && !error;
 
     const setZoom = (zoom: number) => size && setEdit((prev) => zoomTo(size.width, size.height, prev, zoom));
+    /** Un punto de la pantalla en unidades de marco, desde el centro del marco (que es el del escenario). */
+    const toFrame = (clientX: number, clientY: number) => {
+        const rect = stageRef.current?.getBoundingClientRect();
+        if (!rect) return { x: 0, y: 0 };
+        return { x: (clientX - rect.left - rect.width / 2) / unit, y: (clientY - rect.top - rect.height / 2) / unit };
+    };
     const move = (dx: number, dy: number) => size && setEdit((prev) => pan(size.width, size.height, prev, dx, dy));
 
     // El giro se reparte en vueltas de 90° (botones) y un enderezado fino (deslizador)
@@ -193,7 +202,9 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
             const distance = Math.hypot(a.x - b.x, a.y - b.y);
             if (pinchDistance.current) {
                 const factor = distance / pinchDistance.current;
-                setEdit((prev) => zoomTo(size.width, size.height, prev, prev.zoom * factor));
+                // Acerca hacia el punto entre los dos dedos
+                const middle = toFrame((a.x + b.x) / 2, (a.y + b.y) / 2);
+                setEdit((prev) => zoomAt(size.width, size.height, prev, prev.zoom * factor, middle.x, middle.y));
             }
             pinchDistance.current = distance;
             return;
@@ -208,9 +219,28 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
         if (pointers.current.size === 0) setDragging(false);
     };
 
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        if (!size) return;
-        setEdit((prev) => zoomTo(size.width, size.height, prev, prev.zoom * (1 - e.deltaY * 0.0015)));
+    // La rueda acerca hacia el cursor. Va con un listener no pasivo para que no desplace la página de detrás.
+    useEffect(() => {
+        const stage = stageRef.current;
+        if (!stage || !size) return;
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const point = toFrame(e.clientX, e.clientY);
+            setEdit((prev) => zoomAt(size.width, size.height, prev, prev.zoom * (1 - e.deltaY * 0.0015), point.x, point.y));
+        };
+        stage.addEventListener("wheel", handleWheel, { passive: false });
+        return () => stage.removeEventListener("wheel", handleWheel);
+    }, [size, unit]);
+
+    // Doble clic o doble toque: acerca a ese punto, o vuelve a la foto entera si ya estaba cerca
+    const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!ready || !size) return;
+        const point = toFrame(e.clientX, e.clientY);
+        setEdit((prev) =>
+            prev.zoom < DOUBLE_CLICK_ZOOM
+                ? zoomAt(size.width, size.height, prev, DOUBLE_CLICK_ZOOM, point.x, point.y)
+                : zoomTo(size.width, size.height, prev, 1),
+        );
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -283,7 +313,7 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerEnd}
                         onPointerCancel={handlePointerEnd}
-                        onWheel={handleWheel}
+                        onDoubleClick={handleDoubleClick}
                         onKeyDown={handleKeyDown}
                     >
                         <PlacedPhoto src={src} size={size} edit={edit} unit={unit} className="opacity-35" />
