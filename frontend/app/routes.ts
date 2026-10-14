@@ -54,12 +54,17 @@ export default [
 
         // Proyectos
         route("mi-espacio/admin/equipo", "routes/dashboard/staff/index.tsx"),
-        route("mi-espacio/proyectos", "routes/dashboard/projects/index.tsx"),
-        route("mi-espacio/proyectos/:projectId", "routes/dashboard/projects/$projectId/_layout.tsx", [
-            index("routes/dashboard/projects/$projectId/index.tsx"),
-            route("equipos", "routes/dashboard/projects/$projectId/equipos.tsx"),
-            route("personal", "routes/dashboard/projects/$projectId/personal.tsx"),
-            route("padres", "routes/dashboard/projects/$projectId/padres.tsx"),
+        route("mi-espacio/proyectos", "routes/dashboard/projects/_shell.tsx", [
+            index("routes/dashboard/projects/index.tsx"),
+            route(":projectId", "routes/dashboard/projects/$projectId/_layout.tsx", [
+                index("routes/dashboard/projects/$projectId/index.tsx"),
+                route("equipo", "routes/dashboard/projects/$projectId/equipo.tsx"),
+                route("padres", "routes/dashboard/projects/$projectId/padres.tsx"),
+                route("ajustes", "routes/dashboard/projects/$projectId/ajustes.tsx"),
+                // URLs anteriores a la fusión de «Equipos» y «Personal»
+                route("equipos", "routes/dashboard/projects/$projectId/index.tsx", { id: "project-legacy-equipos" }),
+                route("personal", "routes/dashboard/projects/$projectId/index.tsx", { id: "project-legacy-personal" }),
+            ]),
         ]),
 
         // Actividades

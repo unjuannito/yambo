@@ -39,6 +39,9 @@ class ProjectServiceTest {
     @Mock
     private SeoMetadataService seoMetadataService;
 
+    @Mock
+    private SlugService slugService;
+
     @InjectMocks
     private ProjectService projectService;
 
@@ -87,13 +90,14 @@ class ProjectServiceTest {
     void createProject_WhenValidData_ShouldCreateProject() {
         Project saved = Project.builder().id("PRJ001").name("New Project").active(true).build();
         when(projectRepository.existsByName("New Project")).thenReturn(false);
+        when(slugService.forProject("New Project")).thenReturn("new-project");
         when(projectRepository.save(any(Project.class))).thenReturn(saved);
 
         Project result = projectService.createProject("New Project", null, "2025", null, null, null, null, null);
 
         assertEquals(saved, result);
         verify(projectRepository).existsByName("New Project");
-        verify(projectRepository).save(any(Project.class));
+        verify(projectRepository).save(org.mockito.ArgumentMatchers.argThat(p -> "new-project".equals(p.getSlug())));
         verify(seoMetadataService).generateAndSaveForProject(saved);
     }
 

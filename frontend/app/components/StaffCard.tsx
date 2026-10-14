@@ -8,6 +8,7 @@ import { Modal } from "~/components/common/Modal";
 import ElephantAvatar from "~/components/ElephantAvatar";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faInstagram } from "@fortawesome/free-brands-svg-icons";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 interface StaffCardProps {
     member: StaffMember;
@@ -65,11 +66,13 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
             >
                 <div className="w-full h-[220px] overflow-hidden">
                     {member.photo ? (
-                        <img
+                        <ResponsiveImage
                             src={member.photo}
                             alt={displayName}
                             className="w-full h-full object-cover"
                             style={{ objectPosition: "center top" }}
+                            sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
+                            maxWidth={480}
                         />
                     ) : (
                         <ElephantAvatar seed={member.id} config={member.avatar} title={displayName} className="w-full h-full" />
@@ -100,11 +103,13 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                     <div className="flex flex-col sm:flex-row gap-5 sm:gap-6">
                         <div className="w-full sm:w-64 shrink-0">
                             {member.photo ? (
-                                <img
+                                <ResponsiveImage
                                     src={member.photo}
                                     alt={displayName}
                                     className="w-full max-h-[50vh] sm:max-h-none rounded-2xl object-cover"
                                     style={{ objectPosition: "center top" }}
+                                    sizes="(min-width: 640px) 256px, 100vw"
+                                    maxWidth={800}
                                 />
                             ) : (
                                 <ElephantAvatar seed={member.id} config={member.avatar} title={displayName} className="w-full aspect-[5/6] rounded-2xl" />

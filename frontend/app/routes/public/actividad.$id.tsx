@@ -1,7 +1,8 @@
-import { useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getSiteUrl } from "~/utils/env.server";
 import { activityJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { buildMeta, isIndexableActivity, metaDescription } from "~/utils/seo";
 import type { Route } from "./+types/actividad.$id";
 import type { Activity } from "~/types/activity";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -9,6 +10,8 @@ import { faShareNodes, faCalendarDays, faMapPin, faEuroSign, faTag, faBell } fro
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { publicService } from "~/services/publicService";
+import { activityPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const backendUrl =
@@ -35,7 +38,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         });
     }
 
-    const activity = await activityRes.json();
+    const activity: Activity = await activityRes.json();
+    // Los enlaces antiguos llevan el id: se envían a la URL con nombre
+    if (activity.slug && params.id !== activity.slug) {
+        throw redirect(activityPath(activity), 301);
+    }
     const contactSettings = contactRes.ok ? await contactRes.json() : {};
     return { activity, siteUrl: getSiteUrl(), contactEmail: contactSettings["contact.email"] || "yamboalcobendas@gmail.com", savedEmail: backendCookie || "" };
 }
@@ -43,16 +50,12 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 export function meta({ data }: Route.MetaArgs) {
     const { t } = useTranslation();
     const { activity, siteUrl } = data;
-    const pageUrl = `${siteUrl}/actividades/${activity.id}`;
-    const now = new Date();
-    const activityDate = activity.date ? new Date(activity.date) : null;
-    const isPast = activityDate ? activityDate < now : false;
-
+    const pageUrl = `${siteUrl}${activityPath(activity)}`;
     const cancelled = activity.status?.value === "CANCELLED";
     const statusPrefix = cancelled ? `[${t('public.activityCancelledTitle')}] ` : "";
 
     const descParts = [
-        activity.description?.slice(0, 160),
+        activity.description && metaDescription(activity.description, 120),
         activity.location && `${activity.location}`,
         activity.price != null && `${activity.price} €`,
         activity.date &&
@@ -64,21 +67,16 @@ export function meta({ data }: Route.MetaArgs) {
             })}`,
     ].filter(Boolean) as string[];
     const description = descParts.join(" | ") || activity.name;
-    const robots = cancelled || isPast ? "noindex, follow" : "index, follow";
 
     return [
-        { title: `${statusPrefix}${activity.name} — Yambo ${t('public.activitiesTitle')}` },
-        { name: "description", content: description },
-        ...(activity.location
-            ? [{ name: "keywords", content: `Yambo, ${activity.name}, Alcobendas, ${activity.location}` }]
-            : []),
-        { tagName: "link", rel: "canonical", href: pageUrl },
-        { property: "og:title", content: `${statusPrefix}${activity.name}` },
-        { property: "og:description", content: description },
-        { property: "og:url", content: pageUrl },
-        { property: "og:type", content: "event" },
-        ...(activity.image ? [{ property: "og:image", content: activity.image }] : []),
-        { name: "robots", content: robots },
+        ...buildMeta({
+            siteUrl,
+            path: activityPath(activity),
+            title: `${statusPrefix}${activity.name} | Yambo`,
+            description,
+            image: activity.image,
+            index: isIndexableActivity(activity),
+        }),
         { "script:ld+json": activityJsonLd(activity, siteUrl) },
         {
             "script:ld+json": breadcrumbJsonLd([
@@ -163,10 +161,11 @@ export default function ActivityDetail() {
                 {/* Left: Image panel — fixed */}
                 {imageUrl ? (
                     <div className={`w-2/5 fixed top-[calc(4rem+53px)] left-0 h-[calc(100vh-4rem-53px)] overflow-hidden ${cancelled ? "opacity-55" : ""}`}>
-                        <img
+                        <ResponsiveImage
                             src={imageUrl}
                             alt={activity.name}
                             className="w-full h-full object-contain bg-yambo-black"
+                            sizes="40vw"
                         />
                     </div>
                 ) : (
@@ -356,10 +355,11 @@ export default function ActivityDetail() {
                     {/* Cover image */}
                     {imageUrl ? (
                         <div className={`relative w-full aspect-[9/16] max-h-[60vh] rounded-2xl overflow-hidden mb-5 shadow-lg bg-yambo-black ${cancelled ? "opacity-55" : ""}`}>
-                            <img
+                            <ResponsiveImage
                                 src={imageUrl}
                                 alt={activity.name}
                                 className="w-full h-full object-contain"
+                                sizes="100vw"
                             />
                         </div>
                     ) : (

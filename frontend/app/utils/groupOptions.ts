@@ -89,3 +89,36 @@ export async function loadAssignableGroupOptionsGrouped(
 
     return result;
 }
+
+/** Un proyecto con su grupo de proyecto (sin nombre) y sus grupos de edad. */
+export type AssignTarget = {
+    projectId: string;
+    projectName: string;
+    /** Grupo de nivel proyecto: ahí van los coordinadores y los monitores sin grupo. */
+    defaultGroupId: string;
+    groups: { id: string; name: string }[];
+};
+
+export function toAssignTarget(project: ActiveProject, groups: ProjectGroup[], defaultGroupId: string): AssignTarget {
+    return {
+        projectId: project.id,
+        projectName: project.name,
+        defaultGroupId,
+        groups: groups
+            .filter((g): g is ProjectGroup & { name: string } => !!g.name)
+            .map((g) => ({ id: g.id, name: g.name })),
+    };
+}
+
+/** Proyectos activos a los que se puede asignar a alguien, con sus grupos. */
+export async function loadAssignTargets(api: ProjectGroupApi = projectService): Promise<AssignTarget[]> {
+    const projectsRes = await api.listProjects(0, 100, undefined, true);
+    return Promise.all(
+        projectsRes.content.map(async (project) => {
+            const groups = await api.listGroups(project.id);
+            // Older projects may not have a project-level group; create it on demand.
+            const defaultGroup = groups.find((g) => !g.name) ?? (await api.createGroup(project.id, null));
+            return toAssignTarget(project, groups, defaultGroup.id);
+        }),
+    );
+}

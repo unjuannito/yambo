@@ -14,3 +14,11 @@ export function getSiteUrl(): string {
     const raw = process.env.FRONTEND_URL || "http://localhost";
     return raw.replace(/\/+$/, ""); // strip trailing slashes
 }
+
+/**
+ * Solo producción debe aparecer en buscadores. Los entornos de pruebas
+ * (develop, previews) ponen SEO_INDEXABLE=false para no competir con ella.
+ */
+export function isSiteIndexable(): boolean {
+    return process.env.SEO_INDEXABLE !== "false";
+}

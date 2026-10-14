@@ -1,15 +1,7 @@
-import { useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
+import { Navigate, useParams } from "react-router";
 
+/** La pestaña por defecto de un proyecto, y el destino de las antiguas «equipos» y «personal». */
 export default function ProjectIndex() {
     const { projectId } = useParams();
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        if (projectId) {
-            navigate(`/mi-espacio/proyectos/${projectId}/equipos`, { replace: true });
-        }
-    }, [projectId, navigate]);
-
-    return null;
+    return <Navigate to={`/mi-espacio/proyectos/${projectId}/equipo`} replace />;
 }

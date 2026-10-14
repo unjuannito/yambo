@@ -2,6 +2,8 @@ import { getActiveProjects } from "~/services/publicService.server";
 import { getPublicActivities } from "~/services/publicService.server";
 import { getPublishedLegalPages } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
+import { isIndexableActivity } from "~/utils/seo";
+import { activityPath, projectPath } from "~/utils/publicPaths";
 
 /**
  * Resource route – returns a dynamic XML sitemap.
@@ -44,7 +46,7 @@ export async function loader() {
         projectEntries = projects.map(
             (p) => `
   <url>
-    <loc>${escapeXml(siteUrl)}/proyectos/${escapeXml(p.id)}</loc>
+    <loc>${escapeXml(siteUrl + projectPath(p))}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`,
@@ -57,25 +59,15 @@ export async function loader() {
     let activityEntries: string[] = [];
     try {
         const activities = await getPublicActivities();
-        const today = new Date().toISOString().split("T")[0];
-        activityEntries = activities
-            .filter(
-                (a) =>
-                    a.status?.value !== "CANCELLED" &&
-                    a.date,
-            )
-            .map(
-                (a) => {
-                    const isPast = a.date && new Date(a.date!) < new Date();
-                    return `
+        // Solo las que la propia página deja indexar; las pasadas y canceladas llevan noindex
+        activityEntries = activities.filter((a) => isIndexableActivity(a)).map(
+            (a) => `
   <url>
-    <loc>${escapeXml(siteUrl)}/actividades/${escapeXml(a.id)}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>${isPast ? "monthly" : "daily"}</changefreq>
-    <priority>${isPast ? "0.4" : "0.7"}</priority>
-  </url>`;
-                },
-            );
+    <loc>${escapeXml(siteUrl + activityPath(a))}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`,
+        );
     } catch {
         // Backend unreachable → skip activity entries
     }

@@ -11,6 +11,8 @@ const OVERVIEW_CALLOUTS: Callout[] = [
 ];
 
 export function GuideOauthGoogle() {
+    // El dominio de esta web, sea cual sea: el panel no se renderiza en servidor
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     return (
         <article className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8">
             <div className="flex items-center gap-3 mb-6">
@@ -98,11 +100,11 @@ export function GuideOauthGoogle() {
                         <div className="mt-2 space-y-2">
                             <div>
                                 <p className="font-medium text-yellow-800 text-xs">Orígenes de JavaScript autorizados:</p>
-                                <code className="block bg-white border border-yellow-300 px-3 py-1.5 rounded-lg text-xs mt-0.5">https://yambo.cabrasky.net</code>
+                                <code className="block bg-white border border-yellow-300 px-3 py-1.5 rounded-lg text-xs mt-0.5">{origin}</code>
                             </div>
                             <div>
                                 <p className="font-medium text-yellow-800 text-xs">URI de redirección autorizados:</p>
-                                <code className="block bg-white border border-yellow-300 px-3 py-1.5 rounded-lg text-xs mt-0.5">https://yambo.cabrasky.net/api/auth/google/callback</code>
+                                <code className="block bg-white border border-yellow-300 px-3 py-1.5 rounded-lg text-xs mt-0.5">{origin}/api/auth/google/callback</code>
                             </div>
                         </div>
                         <p className="text-yellow-700 mt-2 text-xs">Si estás probando en local (tu ordenador), añade también <code className="bg-yellow-100 px-1 rounded">http://localhost:5173</code> como origen y <code className="bg-yellow-100 px-1 rounded">http://localhost:5173/api/auth/google/callback</code> como redirección.</p>

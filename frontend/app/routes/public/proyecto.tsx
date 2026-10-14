@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getProjectDetail } from "~/services/publicService.server";
 import type { ProjectDetail, StaffMember, ProjectGroupDetail } from "~/services/publicService";
@@ -8,16 +8,24 @@ import { projectColor } from "~/utils/projectColor";
 import type { Route } from "./+types/proyecto";
 import { getSiteUrl } from "~/utils/env.server";
 import { projectJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { buildMeta, metaDescription } from "~/utils/seo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { projectPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export async function loader({ params }: Route.LoaderArgs) {
+  let project: ProjectDetail;
   try {
-    const project = await getProjectDetail(params.projectId!);
-    return { project, siteUrl: getSiteUrl() };
+    project = await getProjectDetail(params.projectId!);
   } catch {
     throw new Response(null, { status: 404, statusText: "Not Found" });
   }
+  // Los enlaces antiguos llevan el id: se envían a la URL con nombre
+  if (project.slug && params.projectId !== project.slug) {
+    throw redirect(projectPath(project), 301);
+  }
+  return { project, siteUrl: getSiteUrl() };
 }
 
 export function meta({ data }: Route.MetaArgs) {
@@ -26,21 +34,20 @@ export function meta({ data }: Route.MetaArgs) {
   const seo = project?.seo;
   const siteUrl = data?.siteUrl ?? "";
 
-  const title = project ? `Yambo - ${project.name}` : t('public.projectNotFound');
-  const description = seo?.metaDescription ?? project?.description ?? t('common.description');
-  const pageUrl = project ? `${siteUrl}/proyectos/${project.id}` : `${siteUrl}/proyectos`;
+  const title = project ? `${project.name} | Yambo` : t('public.projectNotFound');
+  const description = seo?.metaDescription || project?.description || t('public.projectsMetaDescription');
+  const pageUrl = project ? `${siteUrl}${projectPath(project)}` : `${siteUrl}/proyectos`;
 
   return [
-    { title },
-    { name: "description", content: description },
-    ...(seo?.keywords?.length ? [{ name: "keywords", content: seo.keywords.join(", ") }] : []),
-    { tagName: "link", rel: "canonical", href: pageUrl },
-    { property: "og:title", content: title },
-    { property: "og:description", content: seo?.ogDescription ?? description },
-    { property: "og:url", content: pageUrl },
-    { property: "og:type", content: "website" },
-    { name: "robots", content: "index, follow" },
-    ...(project?.image ? [{ property: "og:image", content: project.image }] : []),
+    ...buildMeta({
+      siteUrl,
+      path: project ? projectPath(project) : "/proyectos",
+      title,
+      description: metaDescription(description),
+      image: project?.image,
+      // Un proyecto archivado sigue siendo visitable, pero no debe salir en buscadores
+      index: project?.active !== false,
+    }),
     ...(project ? [
       { "script:ld+json": projectJsonLd(project, siteUrl) },
       { "script:ld+json": breadcrumbJsonLd([
@@ -150,10 +157,12 @@ export default function Proyecto() {
         {/* Project image */}
         {project.image && (
           <div className="w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-10 shadow-lg fade-up" style={{ animationDelay: "0.1s" }}>
-            <img
+            <ResponsiveImage
               src={project.image}
               alt={project.name}
               className="w-full h-full object-cover"
+              sizes="(min-width: 1024px) 1024px, 100vw"
+              priority
             />
           </div>
         )}

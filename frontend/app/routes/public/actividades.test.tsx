@@ -165,7 +165,7 @@ const mockActivities = [
 describe("actividades — meta()", () => {
     it("returns SEO meta with title and description", () => {
         const data = { activities: mockActivities, siteUrl: "https://yambo.cabrasky.net" };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const titles = result.filter((r: any) => r.title);
         const descriptions = result.filter((r: any) => r.name === "description");

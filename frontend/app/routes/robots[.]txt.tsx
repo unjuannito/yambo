@@ -1,4 +1,4 @@
-import { getSiteUrl } from "~/utils/env.server";
+import { getSiteUrl, isSiteIndexable } from "~/utils/env.server";
 
 /**
  * Resource route – returns a dynamic robots.txt.
@@ -7,17 +7,26 @@ import { getSiteUrl } from "~/utils/env.server";
 export async function loader() {
     const siteUrl = getSiteUrl();
 
-    const robotsTxt = [
-        "User-agent: *",
-        "Allow: /",
-        "",
-        "# Private areas",
-        "Disallow: /mi-espacio/",
-        "Disallow: /login",
-        "Disallow: /register",
-        "",
-        `Sitemap: ${siteUrl}/sitemap.xml`,
-    ].join("\n");
+    // Fuera de producción no se bloquea el rastreo: así los buscadores llegan a ver el
+    // `noindex` que root.tsx pone en cada página y sacan de su índice lo que ya tuvieran.
+    const robotsTxt = isSiteIndexable()
+        ? [
+              "User-agent: *",
+              "Allow: /",
+              "",
+              "# Private areas",
+              "Disallow: /mi-espacio/",
+              "Disallow: /api/",
+              "Disallow: /login",
+              "Disallow: /register",
+              "Disallow: /forgot-password",
+              "Disallow: /reset-password",
+              "Disallow: /project-role-invitation/",
+              "Disallow: /design-system",
+              "",
+              `Sitemap: ${siteUrl}/sitemap.xml`,
+          ].join("\n")
+        : ["User-agent: *", "Allow: /"].join("\n");
 
     return new Response(robotsTxt, {
         status: 200,

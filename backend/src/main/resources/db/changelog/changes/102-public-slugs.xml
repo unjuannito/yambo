@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Readable public URLs (/proyectos/jambo, /actividades/campamento-de-verano-2026).
+        The column is nullable: existing rows get their slug from SlugService.backfill()
+        on startup, where the accent-stripping lives.
+    -->
+    <changeSet id="102-01-project-slug" author="yambo">
+        <addColumn tableName="project">
+            <column name="slug" type="VARCHAR(120)"/>
+        </addColumn>
+        <createIndex tableName="project" indexName="ux_project_slug" unique="true">
+            <column name="slug"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="102-02-activity-slug" author="yambo">
+        <addColumn tableName="activity">
+            <column name="slug" type="VARCHAR(120)"/>
+        </addColumn>
+        <createIndex tableName="activity" indexName="ux_activity_slug" unique="true">
+            <column name="slug"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

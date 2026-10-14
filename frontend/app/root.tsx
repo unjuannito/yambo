@@ -5,6 +5,7 @@ import {
     Outlet,
     Scripts,
     ScrollRestoration,
+    useRouteLoaderData,
 } from "react-router";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
@@ -19,6 +20,15 @@ import { useTranslation } from "react-i18next";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { isSiteIndexable } from "./utils/env.server";
+
+export function loader() {
+    return {
+        indexable: isSiteIndexable(),
+        // Código de Search Console para verificar la propiedad por «prefijo de URL»
+        googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || null,
+    };
+}
 
 function WebSocketProvider({ children }: { children: React.ReactNode }) {
     useWebSocket();
@@ -38,9 +48,17 @@ export const links: Route.LinksFunction = () => [
         href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap",
     },
     { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
+    // Generados desde logo.svg con scripts/generate-brand-assets.sh
+    { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+    { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+    { rel: "manifest", href: "/manifest.webmanifest" },
 ];
 
 export default function Document() {
+    const rootData = useRouteLoaderData<typeof loader>("root");
+    const indexable = rootData?.indexable ?? true;
+    const googleSiteVerification = rootData?.googleSiteVerification;
     return (
         <html lang="es">
             <head>
@@ -49,11 +67,12 @@ export default function Document() {
                     name="viewport"
                     content="width=device-width, initial-scale=1"
                 />
-                <link
-                    rel="shortcut icon"
-                    href="/logo.png"
-                    type="image/x-icon"
-                />
+                {/* Entornos de pruebas: gana sobre el `robots` de cada página (se aplica el más restrictivo) */}
+                {!indexable && <meta name="robots" content="noindex, nofollow" />}
+                <meta name="theme-color" content="#32a45e" />
+                {googleSiteVerification && (
+                    <meta name="google-site-verification" content={googleSiteVerification} />
+                )}
                 <Meta />
                 <Links />
             </head>

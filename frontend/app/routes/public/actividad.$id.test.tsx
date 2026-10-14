@@ -125,7 +125,7 @@ const MOCK_SITE_URL = "https://yambo.cabrasky.net";
 describe("actividad.$id — meta()", () => {
     it("returns SEO meta for a future open-registration activity", () => {
         const data = { activity: mockActivity, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const titles = result.filter((r: any) => r.title);
         const descriptions = result.filter(
@@ -137,7 +137,7 @@ describe("actividad.$id — meta()", () => {
         const ogType = result.filter((r: any) => r.property === "og:type");
         const ogImage = result.filter((r: any) => r.property === "og:image");
 
-        expect(titles[0].title).toBe("Taller de Navidad — Yambo Actividades");
+        expect(titles[0].title).toBe("Taller de Navidad | Yambo");
         expect(descriptions[0].content).toContain("Un taller navideño");
         expect(descriptions[0].content).toContain("Local Yambo");
         expect(descriptions[0].content).toContain("5 €");
@@ -145,9 +145,9 @@ describe("actividad.$id — meta()", () => {
         expect(canonical[0].href).toBe(
             "https://yambo.cabrasky.net/actividades/ACT001",
         );
-        expect(ogTitle[0].content).toBe("Taller de Navidad");
-        expect(ogType[0].content).toBe("event");
-        expect(ogImage[0].content).toBe("/uploads/navidad.jpg");
+        expect(ogTitle[0].content).toBe("Taller de Navidad | Yambo");
+        expect(ogType[0].content).toBe("website");
+        expect(ogImage[0].content).toBe("https://yambo.cabrasky.net/uploads/navidad.jpg");
     });
 
     it("prefixes title with [Cancelada] for cancelled activities", () => {
@@ -161,13 +161,13 @@ describe("actividad.$id — meta()", () => {
             date: "2024-01-01T10:00:00",
         };
         const data = { activity: cancelled, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const titles = result.filter((r: any) => r.title);
         const robots = result.filter((r: any) => r.name === "robots");
 
         expect(titles[0].title).toBe(
-            "[Actividad cancelada] Taller de Navidad — Yambo Actividades",
+            "[Actividad cancelada] Taller de Navidad | Yambo",
         );
         expect(robots[0].content).toBe("noindex, follow");
     });
@@ -178,42 +178,40 @@ describe("actividad.$id — meta()", () => {
             date: "2024-06-01T10:00:00",
         };
         const data = { activity: past, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const robots = result.filter((r: any) => r.name === "robots");
         expect(robots[0].content).toBe("noindex, follow");
     });
 
-    it("includes keywords only when location is present", () => {
+    it("does not emit meta keywords, which search engines ignore", () => {
         const data = { activity: mockActivity, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
-        const keywords = result.filter((r: any) => r.name === "keywords");
-        expect(keywords[0].content).toContain("Alcobendas");
-        expect(keywords[0].content).toContain("Local Yambo");
+        expect(result.filter((r: any) => r.name === "keywords")).toHaveLength(0);
     });
 
-    it("omits keywords when location is absent", () => {
-        const noLocation = { ...mockActivity, location: null };
-        const data = { activity: noLocation, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+    it("strips Markdown from the description", () => {
+        const markdown = { ...mockActivity, description: "## Taller\n\n**Ven** a pintar" };
+        const data = { activity: markdown, siteUrl: MOCK_SITE_URL };
+        const result = meta({ data } as any) as any[];
 
-        const keywords = result.filter((r: any) => r.name === "keywords");
-        expect(keywords.length).toBe(0);
+        const description = result.find((r: any) => r.name === "description");
+        expect(description.content).toContain("Taller Ven a pintar");
     });
 
-    it("omits og:image when no image is set", () => {
+    it("shares the brand image when no image is set", () => {
         const noImage = { ...mockActivity, image: null };
         const data = { activity: noImage, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const ogImage = result.filter((r: any) => r.property === "og:image");
-        expect(ogImage.length).toBe(0);
+        expect(ogImage[0].content).toBe("https://yambo.cabrasky.net/og-default.png");
     });
 
     it("includes JSON-LD for Event schema", () => {
         const data = { activity: mockActivity, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const ldJson = result.filter(
             (r: any) => r["script:ld+json"],
@@ -224,7 +222,7 @@ describe("actividad.$id — meta()", () => {
 
     it("includes JSON-LD for BreadcrumbList", () => {
         const data = { activity: mockActivity, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any);
+        const result = meta({ data } as any) as any[];
 
         const ldJson = result.filter(
             (r: any) => r["script:ld+json"],

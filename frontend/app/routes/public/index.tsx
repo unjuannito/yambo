@@ -15,6 +15,7 @@ import {
 } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
 import { organizationJsonLd, webSiteJsonLd } from "~/utils/jsonld";
+import { buildMeta } from "~/utils/seo";
 import type { Route } from "./+types";
 
 export function meta({ data }: Route.MetaArgs) {
@@ -26,22 +27,7 @@ export function meta({ data }: Route.MetaArgs) {
     const tiktok = data?.contactSettings?.["contact.tiktok"];
 
     return [
-        { title },
-        { name: "description", content: description },
-        { name: "keywords", content: t("public.homeKeywords") },
-        { tagName: "link", rel: "canonical", href: siteUrl },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:url", content: siteUrl },
-        { property: "og:image", content: `${siteUrl}/logo.png` },
-        { property: "og:type", content: "website" },
-        { property: "og:site_name", content: "Yambo" },
-        { property: "og:locale", content: "es_ES" },
-        { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: title },
-        { name: "twitter:description", content: description },
-        { name: "robots", content: "index, follow" },
-        { name: "author", content: t("public.homeAuthor") },
+        ...buildMeta({ siteUrl, path: "", title, description }),
         { "script:ld+json": organizationJsonLd(siteUrl, { instagram, tiktok }) },
         { "script:ld+json": webSiteJsonLd(siteUrl) },
     ];

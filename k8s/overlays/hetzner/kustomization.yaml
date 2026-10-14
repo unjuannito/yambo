@@ -17,17 +17,57 @@ resources:
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: "1.18.5"
+    newTag: "1.18.6"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: "1.18.5"
+    newTag: "1.18.6"
+
+# ── DOMINIO ──────────────────────────────────────────────────────────────
+# Único sitio donde se escribe el dominio de este entorno. Para cambiarlo basta
+# con esta línea; los `replacements` de abajo lo llevan al Ingress, al CORS del
+# backend y al FRONTEND_URL (canonical, sitemap, Open Graph). Ver README,
+# «Cambiar de dominio», para el resto de pasos (DNS, OAuth, Search Console).
+configMapGenerator:
+  - name: yambo-domain
+    literals:
+      - host=yambo.cabrasky.net
+    options:
+      disableNameSuffixHash: true
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: yambo-domain
+      fieldPath: data.host
+    targets:
+      - select:
+          kind: Ingress
+          name: yambo-ingress
+        fieldPaths:
+          - spec.rules.0.host
+      - select:
+          kind: Deployment
+          name: yambo-backend
+        fieldPaths:
+          - spec.template.spec.containers.0.env.0.value
+        options:
+          delimiter: "//"
+          index: 1
+      - select:
+          kind: Deployment
+          name: yambo-frontend
+        fieldPaths:
+          - spec.template.spec.containers.0.env.1.value
+        options:
+          delimiter: "//"
+          index: 1
 
 patches:
-  # Dominio real de producción
+  # Dominio: DOMAIN se sustituye por el de `yambo-domain` (arriba)
   - patch: |-
       - op: replace
         path: /spec/rules/0/host
-        value: yambo.cabrasky.net
+        value: DOMAIN
     target:
       kind: Ingress
       name: yambo-ingress
@@ -35,7 +75,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: "https://yambo.cabrasky.net"
+        value: "https://DOMAIN"
     target:
       kind: Deployment
       name: yambo-backend
@@ -43,7 +83,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/1/value
-        value: "https://yambo.cabrasky.net"
+        value: "https://DOMAIN"
     target:
       kind: Deployment
       name: yambo-frontend
