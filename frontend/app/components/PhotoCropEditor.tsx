@@ -396,43 +396,43 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         )}
                     </div>
                     <div className="flex items-center justify-between gap-3 mt-2 mx-auto" style={{ maxWidth: frameWidth + STAGE_PADDING * 2 }}>
-                        <p className="text-xs text-gray-400">
-                            <span className="sm:hidden">{t("photoEditor.dragHintTouch")}</span>
-                            <span className="hidden sm:inline">{t("photoEditor.dragHint")}</span>
-                        </p>
-                        <div className="flex items-center gap-3 shrink-0">
-                            {onReplaceFile && (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={busy}
-                                        className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
-                                    >
-                                        <FontAwesomeIcon icon={faImage} className="mr-1" />
-                                        {t("photoEditor.replace")}
-                                    </button>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept={ACCEPTED_TYPES.join(",")}
-                                        onChange={(e) => replace(e.target.files?.[0])}
-                                        className="hidden"
-                                        data-testid="photo-editor-replace-input"
-                                    />
-                                </>
-                            )}
-                            <button
-                                type="button"
-                                onClick={() => setEdit({ ...DEFAULT_EDIT })}
-                                disabled={!ready || untouched}
-                                className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
-                            >
-                                <FontAwesomeIcon icon={faRotateLeft} className="mr-1" />
-                                {t("photoEditor.reset")}
-                            </button>
-                        </div>
+                        {onReplaceFile ? (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={busy}
+                                    className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
+                                >
+                                    <FontAwesomeIcon icon={faImage} className="mr-1" />
+                                    {t("photoEditor.replace")}
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept={ACCEPTED_TYPES.join(",")}
+                                    onChange={(e) => replace(e.target.files?.[0])}
+                                    className="hidden"
+                                    data-testid="photo-editor-replace-input"
+                                />
+                            </>
+                        ) : (
+                            <span />
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setEdit({ ...DEFAULT_EDIT })}
+                            disabled={!ready || untouched}
+                            className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
+                        >
+                            <FontAwesomeIcon icon={faRotateLeft} className="mr-1" />
+                            {t("photoEditor.reset")}
+                        </button>
                     </div>
+                    <p className="mt-1 text-xs text-gray-400 text-center">
+                        <span className="sm:hidden">{t("photoEditor.dragHintTouch")}</span>
+                        <span className="hidden sm:inline">{t("photoEditor.dragHint")}</span>
+                    </p>
                     {replaceError && <p role="alert" className="mt-1 text-xs text-red-500 text-center">{replaceError}</p>}
                 </div>
 
