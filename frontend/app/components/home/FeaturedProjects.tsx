@@ -3,6 +3,7 @@ import type { FeaturedProject } from "~/services/publicService";
 import { projectColor } from "~/utils/projectColor";
 import SectionWrapper from "~/components/home/SectionWrapper";
 import { projectPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 interface FeaturedProjectsProps {
     projects: FeaturedProject[];
@@ -46,12 +47,12 @@ export default function FeaturedProjects({ projects, title, sectionIndex }: Feat
                             >
                                 <div className="bg-white rounded-[calc(1rem-2px)] overflow-hidden">
                                     <div className="relative overflow-hidden">
-                                        <img
-                                            loading="lazy"
-                                            decoding="async"
+                                        <ResponsiveImage
                                             src={project.image}
                                             alt={project.name}
                                             className="w-full h-56 object-contain group-hover:scale-105 transition-transform duration-500"
+                                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                                            maxWidth={1200}
                                         />
                                         <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white to-transparent" />
                                     </div>

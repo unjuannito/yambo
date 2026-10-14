@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { fireConfetti } from "~/utils/confetti";
 import SectionWrapper from "~/components/home/SectionWrapper";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 interface AboutBullet {
     icon: string;
@@ -136,12 +137,11 @@ export default function AboutUs({ title, intro, bulletsJson, image, sectionIndex
 
                     <div className="relative group fade-up" style={{ animationDelay: "0.2s" }}>
                         <div className="absolute -inset-3 bg-gradient-to-br from-yambo-green-200 to-yambo-purple-200 rounded-3xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                        <img
-                            loading="lazy"
-                            decoding="async"
+                        <ResponsiveImage
                             src={image || DEFAULT_IMAGE}
                             alt={title || t("public.aboutSection")}
                             className="relative rounded-3xl shadow-xl object-cover w-full h-full"
+                            sizes="(min-width: 1024px) 50vw, 100vw"
                         />
                     </div>
                 </div>

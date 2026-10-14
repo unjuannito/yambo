@@ -10,6 +10,7 @@ import type { Route } from "./+types/proyectos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
 import { projectPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export function meta({ data }: Route.MetaArgs) {
   const { t } = useTranslation();
@@ -69,12 +70,12 @@ export default function Proyectos() {
                 >
                   {project.image ? (
                     <div className="w-full h-48 overflow-hidden">
-                      <img
-                        loading="lazy"
-                        decoding="async"
+                      <ResponsiveImage
                         src={project.image}
                         alt={project.name}
                         className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        maxWidth={1200}
                       />
                     </div>
                   ) : (
