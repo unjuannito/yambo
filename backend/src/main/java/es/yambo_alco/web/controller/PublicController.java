@@ -101,11 +101,13 @@ public class PublicController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/activities/{id}")
-    public ResponseEntity<PublicActivityDetailResponse> getPublicActivity(@PathVariable String id) {
-        Activity activity = activityRepository.findByIdAndIsPublicTrue(id)
+    /** {@code idOrSlug}: the slug of the public URL, or the id that older links carry. */
+    @GetMapping("/activities/{idOrSlug}")
+    public ResponseEntity<PublicActivityDetailResponse> getPublicActivity(@PathVariable String idOrSlug) {
+        Activity activity = activityRepository.findBySlugAndIsPublicTrue(idOrSlug)
+                .or(() -> activityRepository.findByIdAndIsPublicTrue(idOrSlug))
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Activity not found"));
-        SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, id).orElse(null);
+        SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, activity.getId()).orElse(null);
         return ResponseEntity.ok(new PublicActivityDetailResponse(activity, seo));
     }
 
@@ -124,10 +126,13 @@ public class PublicController {
         private String email;
     }
 
-    @GetMapping("/projects/{id}")
-    public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable String id) {
-        Project project = projectRepository.findById(id)
+    /** {@code idOrSlug}: the slug of the public URL, or the id that older links carry. */
+    @GetMapping("/projects/{idOrSlug}")
+    public ResponseEntity<ProjectDetailResponse> getProjectDetail(@PathVariable String idOrSlug) {
+        Project project = projectRepository.findBySlug(idOrSlug)
+                .or(() -> projectRepository.findById(idOrSlug))
                 .orElseThrow(() -> new es.yambo_alco.web.exception.ResourceNotFoundException("Project not found"));
+        String id = project.getId();
         List<ProjectGroup> groups = projectGroupRepository.findByProjectId(id);
         List<User> staff = userRepository.findPublicStaffByProjectId(id);
         SeoMetadata seo = seoMetadataService.getByEntity(SeoEntityType.PROJECT, id).orElse(null);
@@ -146,6 +151,7 @@ public class PublicController {
     @Data
     public static class FeaturedProjectResponse {
         private String id;
+        private String slug;
         private String name;
         private String description;
         private String image;
@@ -154,6 +160,7 @@ public class PublicController {
 
         public FeaturedProjectResponse(Project project) {
             this.id = project.getId();
+            this.slug = project.getSlug();
             this.name = project.getName();
             this.description = project.getDescription();
             this.image = project.getImage();
@@ -236,6 +243,7 @@ public class PublicController {
     @Data
     public static class ActiveProjectResponse {
         private String id;
+        private String slug;
         private String name;
         private String season;
         private String description;
@@ -246,6 +254,7 @@ public class PublicController {
 
         public ActiveProjectResponse(Project project) {
             this.id = project.getId();
+            this.slug = project.getSlug();
             this.name = project.getName();
             this.season = project.getSeason();
             this.description = project.getDescription();
@@ -259,7 +268,9 @@ public class PublicController {
     @Data
     public static class ProjectDetailResponse {
         private String id;
+        private String slug;
         private String name;
+        private boolean active;
         private String season;
         private String description;
         private String image;
@@ -271,7 +282,9 @@ public class PublicController {
 
         public ProjectDetailResponse(Project project, List<ProjectGroup> groups, List<User> staff, SeoMetadata seo) {
             this.id = project.getId();
+            this.slug = project.getSlug();
             this.name = project.getName();
+            this.active = project.isActive();
             this.season = project.getSeason();
             this.description = project.getDescription();
             this.image = project.getImage();
@@ -303,6 +316,7 @@ public class PublicController {
     @Data
     public static class PublicActivityResponse {
         private String id;
+        private String slug;
         private String name;
         private String description;
         private String image;
@@ -316,6 +330,7 @@ public class PublicController {
 
         public PublicActivityResponse(Activity activity) {
             this.id = activity.getId();
+            this.slug = activity.getSlug();
             this.name = activity.getName();
             this.description = activity.getDescription();
             this.image = activity.getImage();
@@ -348,6 +363,7 @@ public class PublicController {
     @Data
     public static class PublicActivityDetailResponse {
         private String id;
+        private String slug;
         private String name;
         private String description;
         private String image;
@@ -362,6 +378,7 @@ public class PublicController {
 
         public PublicActivityDetailResponse(Activity activity, SeoMetadata seo) {
             this.id = activity.getId();
+            this.slug = activity.getSlug();
             this.name = activity.getName();
             this.description = activity.getDescription();
             this.image = activity.getImage();

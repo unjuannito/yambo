@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, NavLink, useParams, useNavigate } from "react-router";
+import { Outlet, NavLink, useLocation, useParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { adminUserService } from "~/services/adminUserService";
 import type { User } from "~/types/userType";
@@ -24,6 +24,9 @@ export default function UserLayout() {
     const { t } = useTranslation();
     const { userId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    // Quien llega desde «Proyectos y equipo» vuelve allí, no a la lista de usuarios
+    const backTo = (location.state as { back?: string } | null)?.back ?? "/mi-espacio/admin/usuarios";
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -82,7 +85,7 @@ export default function UserLayout() {
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-2">
                     <button type="button"
-                        onClick={() => navigate("/mi-espacio/admin/usuarios")}
+                        onClick={() => navigate(backTo)}
                         className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-yambo-green-50 hover:text-yambo-green-700 transition-colors"
                     >
                         <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
@@ -153,6 +156,7 @@ export default function UserLayout() {
                             <NavLink
                                 key={tab.key}
                                 to={tab.href}
+                                state={location.state}
                                 end
                                 className={({ isActive }) =>
                                     `flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${

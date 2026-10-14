@@ -39,3 +39,35 @@ describe("StaffCard", () => {
         expect(screen.getAllByText(/Llegué a Yambo de niña/)).toHaveLength(2);
     });
 });
+
+describe("StaffCard role badges", () => {
+    it("labels coordination first and does not repeat a project without age groups", () => {
+        const both: StaffMember = {
+            ...member,
+            role: "BOTH",
+            groups: [
+                { id: "G2", name: "Peques", projectName: "Barrio", role: "MONITOR" },
+                { id: "G1", name: null, projectName: "Jambo", role: "MONITOR" },
+                { id: "G1", name: null, projectName: "Jambo", role: "COORDINATOR" },
+            ],
+        };
+        const { container } = render(<StaffCard member={both} />);
+
+        const badges = [...container.querySelectorAll("span")].map((el) => el.textContent);
+        expect(badges).toEqual(["Coordinador - Jambo", "Monitor en Barrio Peques", "Monitor en Jambo"]);
+    });
+
+    it("shows only the monitor groups of the project on a project page", () => {
+        const both: StaffMember = {
+            ...member,
+            groups: [
+                { id: "G1", name: null, projectName: "Barrio", role: "COORDINATOR" },
+                { id: "G2", name: "Peques", projectName: "Barrio", role: "MONITOR" },
+                { id: "G3", name: null, projectName: "Jambo", role: "MONITOR" },
+            ],
+        };
+        const { container } = render(<StaffCard member={both} projectName="Barrio" />);
+
+        expect([...container.querySelectorAll("span")].map((el) => el.textContent)).toEqual(["Peques"]);
+    });
+});

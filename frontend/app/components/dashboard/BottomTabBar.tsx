@@ -124,7 +124,7 @@ export default function BottomTabBar({ links }: BottomTabBarProps) {
                                         <NavLink
                                             key={link.name}
                                             to={link.href}
-                                            end
+                                            end={!link.nested}
                                             onClick={() => setSheetOpen(false)}
                                             className={({ isActive }) =>
                                                 `flex flex-col items-center gap-1 p-1.5 rounded-xl text-xs text-center transition-colors ${

@@ -29,7 +29,7 @@ export function GuidePaginaPrincipal() {
                         <li>Ve a <strong>Administración → Página Principal</strong></li>
                         <li>Edita los textos, imágenes o secciones visibles</li>
                         <li>Pulsa <strong>«Guardar»</strong></li>
-                        <li>Abre <strong>yambo.cabrasky.net</strong> para comprobar el resultado</li>
+                        <li>Abre <a href="/" target="_blank" rel="noreferrer" className="font-bold underline">la página principal</a> para comprobar el resultado</li>
                     </ol>
                 </div>
 

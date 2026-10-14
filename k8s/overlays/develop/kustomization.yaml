@@ -17,17 +17,57 @@ resources:
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: "branch-develop-91f27c9"
+    newTag: "branch-develop-4fbd7db"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: "branch-develop-91f27c9"
+    newTag: "branch-develop-4fbd7db"
+
+# ── DOMINIO ──────────────────────────────────────────────────────────────
+# Único sitio donde se escribe el dominio de este entorno. Para cambiarlo basta
+# con esta línea; los `replacements` de abajo lo llevan al Ingress, al CORS del
+# backend y al FRONTEND_URL (canonical, sitemap, Open Graph). Ver README,
+# «Cambiar de dominio», para el resto de pasos (DNS, OAuth, Search Console).
+configMapGenerator:
+  - name: yambo-domain
+    literals:
+      - host=dev.yambo.cabrasky.net
+    options:
+      disableNameSuffixHash: true
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: yambo-domain
+      fieldPath: data.host
+    targets:
+      - select:
+          kind: Ingress
+          name: yambo-ingress
+        fieldPaths:
+          - spec.rules.0.host
+      - select:
+          kind: Deployment
+          name: yambo-backend
+        fieldPaths:
+          - spec.template.spec.containers.0.env.0.value
+        options:
+          delimiter: "//"
+          index: 1
+      - select:
+          kind: Deployment
+          name: yambo-frontend
+        fieldPaths:
+          - spec.template.spec.containers.0.env.1.value
+        options:
+          delimiter: "//"
+          index: 1
 
 patches:
-  # Dominio de desarrollo (público vía nginx .21 → k3s .22)
+  # Dominio (público vía nginx .21 → k3s .22): DOMAIN se sustituye por el de `yambo-domain` (arriba)
   - patch: |-
       - op: replace
         path: /spec/rules/0/host
-        value: dev.yambo.cabrasky.net
+        value: DOMAIN
     target:
       kind: Ingress
       name: yambo-ingress
@@ -35,7 +75,7 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/0/value
-        value: "https://dev.yambo.cabrasky.net"
+        value: "https://DOMAIN"
     target:
       kind: Deployment
       name: yambo-backend
@@ -43,7 +83,17 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/env/1/value
-        value: "https://dev.yambo.cabrasky.net"
+        value: "https://DOMAIN"
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  # Develop no debe salir en buscadores (contenido duplicado de producción)
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SEO_INDEXABLE
+          value: "false"
     target:
       kind: Deployment
       name: yambo-frontend

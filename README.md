@@ -179,7 +179,32 @@ La aplicación está escrita en **español** y se despliega mediante Docker Comp
 - Frontend: 2 réplicas (160Mi–448Mi)
 - PostgreSQL: 1 réplica con PVC de 5Gi
 - Ingress Traefik: `/api` → backend, `/` → frontend
-- Dominio: `yambo.cabrasky.net`
+- Dominio: `yambo.cabrasky.net` (definido en un solo sitio, ver abajo)
+
+#### Cambiar de dominio
+
+La web no lleva el dominio escrito en el código: lo lee de `FRONTEND_URL` al arrancar
+(URLs canónicas, sitemap, `robots.txt`, Open Graph). Para pasar, por ejemplo, a `yamboalcobendas.es`:
+
+1. **Overlay**: cambia la línea `host=` de `configMapGenerator` en
+   `k8s/overlays/hetzner/kustomization.yaml`. De ahí salen el host del Ingress, el CORS del
+   backend y `FRONTEND_URL`. Argo CD lo aplica al fusionar en `main`.
+2. **DNS y TLS**: apunta el dominio nuevo al proxy y emite su certificado.
+3. **Dominio antiguo**: mantenlo redirigiendo con 301 al nuevo (en el proxy) durante al menos
+   un año, para no perder el posicionamiento ni los enlaces compartidos.
+4. **Google OAuth**: añade el origen y la URI de redirección nuevos en Google Cloud
+   (la guía del panel «OAuth con Google» muestra los valores exactos).
+5. **Buscadores**: da de alta el dominio nuevo en Search Console y Bing Webmaster, envía
+   `/sitemap.xml` y usa «Cambio de dirección» en la propiedad antigua.
+6. **Correo**: revisa `MAIL_FROM` si el remitente usa el dominio.
+7. `PROD_DOMAIN` en el `Jenkinsfile` solo se usa para mostrar la URL al final del despliegue.
+
+Variables opcionales del frontend relacionadas con buscadores:
+
+| Variable | Para qué |
+|---|---|
+| `SEO_INDEXABLE=false` | Añade `noindex` a todo el sitio (develop y previews ya lo llevan). |
+| `GOOGLE_SITE_VERIFICATION` | Código de Search Console para verificar la propiedad por «prefijo de URL». |
 
 ---
 

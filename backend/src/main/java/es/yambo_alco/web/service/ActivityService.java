@@ -29,6 +29,7 @@ public class ActivityService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final ActivityWaitlistService activityWaitlistService;
+    private final SlugService slugService;
 
     public Activity getActivityById(@NonNull String id) {
         return activityRepository.findById(id)
@@ -81,6 +82,7 @@ public class ActivityService {
                 .isPublic(isPublic != null ? isPublic : false)
                 .project(project)
                 .manager(manager)
+                .slug(slugService.forActivity(name, date))
                 .build();
 
         return activityRepository.save(activity);

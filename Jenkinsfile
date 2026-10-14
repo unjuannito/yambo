@@ -62,6 +62,17 @@ pipeline {
         PROD_DOMAIN = 'yambo.cabrasky.net'
         DEV_DOMAIN  = 'dev.yambo.cabrasky.net'
 
+        // ── Cachés de dependencias en BUILD_HOST ─────────────────────────────
+        // Volúmenes Docker con nombre: sobreviven a los contenedores --rm y al
+        // borrado de ${REMOTE_DIR}, así que Maven, npm y Sonar no vuelven a
+        // descargar lo que ya tienen. Se comparten entre ramas y builds; para
+        // empezar de cero: `docker volume rm yambo-ci-m2 yambo-ci-npm yambo-ci-sonar yambo-ci-sonar-cli`.
+        M2_CACHE    = 'yambo-ci-m2'
+        NPM_CACHE   = 'yambo-ci-npm'
+        SONAR_CACHE = 'yambo-ci-sonar'
+        // Aparte: el escáner del frontend corre en paralelo con el del backend
+        SONAR_CLI_CACHE = 'yambo-ci-sonar-cli'
+
         // ── Namespaces ───────────────────────────────────────────────────────
         NS_PROD = 'yambo'
         NS_DEV  = 'yambo-develop'
@@ -85,6 +96,16 @@ pipeline {
                     env.IS_PR = env.CHANGE_ID ? 'true' : 'false'
                     env.IS_MAIN   = (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') ? 'true' : 'false'
                     env.IS_DEV    = (env.BRANCH_NAME == 'develop') ? 'true' : 'false'
+
+                    // Directorio de build AISLADO por rama+build en BUILD_HOST.
+                    // Antes era un /tmp/yambo-ci FIJO y compartido por TODAS las
+                    // ramas/builds: dos builds concurrentes colisionaban (el
+                    // `rm -rf` de Prepare de uno borraba el /app montado de otro
+                    // a mitad del mvnw -> "jacoco.exec No such file" y
+                    // "/app/pom.xml isn't a file"). Un dir unico evita la carrera.
+                    env.REMOTE_DIR = '/tmp/yambo-ci-' +
+                        env.BRANCH_NAME.toLowerCase().replaceAll('[^a-z0-9]+', '-').replaceAll('(^-+|-+$)', '') +
+                        '-' + env.BUILD_NUMBER
 
                     // Versiones
                     env.FRONTEND_VER = sh(
@@ -148,7 +169,7 @@ pipeline {
         // ═══════════════════════════════════════════════════════════════════
         // Necesario SIEMPRE que haya deploy (aunque solo cambie infra):
         // los stages Test/Sonar se saltan si no hay cambios FE/BE y el
-        // deploy necesita /tmp/yambo-ci con el código.
+        // deploy necesita ${REMOTE_DIR} con el código.
         // FIX 2026-09-23: los contenedores de Test/Sonar (maven, node) escriben
         // backend/target y frontend/node_modules vía bind mount con otro owner
         // → el `rm -rf` del usuario ssh fallaba con "Permission denied". Si el
@@ -162,12 +183,12 @@ pipeline {
                 sh """
                     tar czf - --exclude=.git --exclude=node_modules --exclude=frontend/node_modules --exclude=backend/target . | \
                     ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                        'if [ -e /tmp/yambo-ci ]; then \
-                           rm -rf /tmp/yambo-ci 2>/dev/null || \
+                        'if [ -e ${REMOTE_DIR} ]; then \
+                           rm -rf ${REMOTE_DIR} 2>/dev/null || \
                            docker run --rm -v /tmp:/host-tmp alpine:3 rm -rf /host-tmp/yambo-ci; \
                          fi && \
-                         [ ! -e /tmp/yambo-ci ] && \
-                         mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && ls /tmp/yambo-ci | head -20'
+                         [ ! -e ${REMOTE_DIR} ] && \
+                         mkdir -p ${REMOTE_DIR} && tar xzf - -C ${REMOTE_DIR} && ls ${REMOTE_DIR} | head -20'
                 """
             }
         }
@@ -187,8 +208,9 @@ pipeline {
                             sh """
                                 tar czf - --exclude=.git --exclude=node_modules backend | \
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                                    'mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && \
-                                     docker run --rm --cpus=1 -v /tmp/yambo-ci/backend:/app -w /app \
+                                    'mkdir -p ${REMOTE_DIR} && tar xzf - -C ${REMOTE_DIR} && \
+                                     docker run --rm --cpus=1 -v ${REMOTE_DIR}/backend:/app -w /app \
+                                       -v ${M2_CACHE}:/root/.m2 \
                                        maven:3.9-eclipse-temurin-21 sh -c "chmod +x mvnw && ./mvnw verify -T 1C -B -q"'
                             """
                         }
@@ -201,9 +223,10 @@ pipeline {
                             sh """
                                 tar czf - --exclude=.git --exclude=node_modules frontend | \
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                                    'mkdir -p /tmp/yambo-ci && tar xzf - -C /tmp/yambo-ci && \
-                                     docker run --rm --cpus=1 -v /tmp/yambo-ci/frontend:/app -w /app \
-                                       node:22-alpine sh -c "npm install --no-audit --no-fund && npm run typecheck && npm run build"'
+                                    'mkdir -p ${REMOTE_DIR} && tar xzf - -C ${REMOTE_DIR} && \
+                                     docker run --rm --cpus=1 -v ${REMOTE_DIR}/frontend:/app -w /app \
+                                       -v ${NPM_CACHE}:/root/.npm \
+                                       node:22-alpine sh -c "npm install --prefer-offline --no-audit --no-fund && npm run typecheck && npm run build"'
                             """
                         }
                     }
@@ -232,8 +255,9 @@ pipeline {
                             }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                                    'cd /tmp/yambo-ci/backend && \
-                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/backend:/app -w /app \
+                                    'cd ${REMOTE_DIR}/backend && \
+                                     docker run --rm --cpus=1 --network=host -v ${REMOTE_DIR}/backend:/app -w /app \
+                                       -v ${M2_CACHE}:/root/.m2 -v ${SONAR_CACHE}:/root/.sonar \
                                        maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} ${sonarArgs}"'
                             """
                         }
@@ -254,8 +278,9 @@ pipeline {
                             }
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                                    'cd /tmp/yambo-ci/frontend && \
-                                     docker run --rm --cpus=1 --network=host -v /tmp/yambo-ci/frontend:/app -w /app \
+                                    'cd ${REMOTE_DIR}/frontend && \
+                                     docker run --rm --cpus=1 --network=host -v ${REMOTE_DIR}/frontend:/app -w /app \
+                                       -u 0:0 -v ${SONAR_CLI_CACHE}:/root/.sonar -e SONAR_USER_HOME=/root/.sonar \
                                        -e SONAR_SCANNER_OPTS=-Xmx1024m \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024 ${sonarArgs}'
                             """
@@ -281,8 +306,9 @@ pipeline {
                         script {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                                    'cd /tmp/yambo-ci && \
-                                     docker build --memory=1g --memory-swap=1g -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
+                                    'cd ${REMOTE_DIR} && \
+                                     docker version --format "docker {{.Server.Version}}" && \
+                                     DOCKER_BUILDKIT=1 docker build --memory=1g --memory-swap=1g -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}'
                             """
@@ -295,8 +321,8 @@ pipeline {
                         script {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
-                                    'cd /tmp/yambo-ci && \
-                                     docker build --memory=1g --memory-swap=1g -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
+                                    'cd ${REMOTE_DIR} && \
+                                     DOCKER_BUILDKIT=1 docker build --memory=1g --memory-swap=1g -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${BACKEND_IMAGE}:${env.BACKEND_TAG}'
                             """
@@ -404,6 +430,24 @@ pipeline {
     }
 
     post {
+        always {
+            script {
+                if (env.REMOTE_DIR) {
+                    def rbase = env.REMOTE_DIR.substring(env.REMOTE_DIR.lastIndexOf('/') + 1)
+                    // Limpia el dir de build aislado en BUILD_HOST. Si los
+                    // contenedores (maven/node) dejaron ficheros con otro owner,
+                    // el `rm` normal falla y se borra desde un contenedor con el
+                    // mismo daemon docker. Nunca falla el build por la limpieza.
+                    sh """
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \\
+                            'if [ -e ${REMOTE_DIR} ]; then \\
+                               rm -rf ${REMOTE_DIR} 2>/dev/null || \\
+                               docker run --rm -v /tmp:/host-tmp alpine:3 rm -rf /host-tmp/${rbase}; \\
+                             fi' || true
+                    """
+                }
+            }
+        }
         success {
             script {
                 def envName = (env.IS_MAIN == 'true') ? 'PRODUCCIÓN (Hetzner)' : (env.IS_DEV == 'true') ? 'DESARROLLO (local)' : env.BRANCH_NAME

@@ -24,6 +24,7 @@ function renderProject(overrides: Partial<ProjectDetail> = {}) {
     const project: ProjectDetail = {
         id: "PRJ001",
         name: "Barrio",
+        active: true,
         season: null,
         description: null,
         image: null,

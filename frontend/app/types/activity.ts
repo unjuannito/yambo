@@ -33,6 +33,8 @@ export const ACTIVITY_STATUS_OPTIONS: { value: string; label: string }[] = [
 
 export interface Activity {
     id: string;
+    /** Nombre legible para la URL pública; solo lo envían los endpoints públicos. */
+    slug?: string | null;
     name: string;
     description: string | null;
     image: string | null;

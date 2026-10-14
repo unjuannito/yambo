@@ -3,6 +3,7 @@ import { getPublishedLegalPage } from "~/services/publicService.server";
 import type { LegalPage } from "~/services/legalPageService";
 import { getSiteUrl } from "~/utils/env.server";
 import { webPageJsonLd } from "~/utils/jsonld";
+import { buildMeta } from "~/utils/seo";
 
 export async function loader({ params }: { params: { id: string } }) {
     const siteUrl = getSiteUrl();
@@ -24,10 +25,12 @@ export function meta({ data: routeData }: { data: { page: LegalPage | null; notF
     }
     const page = routeData.page;
     return [
-        { title: `Yambo - ${page.title}` },
-        { name: "description", content: page.title },
-        { tagName: "link", rel: "canonical", href: `${routeData.siteUrl}/legal/${page.id}` },
-        { name: "robots", content: "index, follow" },
+        ...buildMeta({
+            siteUrl: routeData.siteUrl,
+            path: `/legal/${page.id}`,
+            title: `${page.title} | Yambo`,
+            description: page.title,
+        }),
         { "script:ld+json": webPageJsonLd({
             name: page.title,
             description: page.title,

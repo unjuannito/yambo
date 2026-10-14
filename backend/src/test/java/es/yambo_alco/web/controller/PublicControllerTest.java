@@ -141,6 +141,7 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("PRJ001"))
                 .andExpect(jsonPath("$.name").value("Barrio"))
+                .andExpect(jsonPath("$.active").value(true))
                 .andExpect(jsonPath("$.seo.slug").value("proyecto-barrio"));
     }
 
@@ -394,6 +395,66 @@ class PublicControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("ACT004"))
                 .andExpect(jsonPath("$.status.value").value("CANCELLED"));
+    }
+
+    // ── Slugs ───────────────────────────────────────────────────────────
+
+    @Test
+    @WithAnonymousUser
+    void getProjectDetail_BySlug_ShouldResolveTheProjectAndExposeItsSlug() throws Exception {
+        Project project = Project.builder().id("PRJ001").name("Jambo").slug("jambo").active(true).build();
+
+        when(projectRepository.findBySlug("jambo")).thenReturn(Optional.of(project));
+        when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/public/projects/jambo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("PRJ001"))
+                .andExpect(jsonPath("$.slug").value("jambo"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getProjectDetail_ById_ShouldStillWorkAndExposeTheSlug() throws Exception {
+        Project project = Project.builder().id("PRJ001").name("Jambo").slug("jambo").active(true).build();
+
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
+        when(projectGroupRepository.findByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(userRepository.findPublicStaffByProjectId("PRJ001")).thenReturn(Collections.emptyList());
+        when(seoMetadataService.getByEntity(SeoEntityType.PROJECT, "PRJ001")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/public/projects/PRJ001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.slug").value("jambo"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_BySlug_ShouldResolveTheActivityAndExposeItsSlug() throws Exception {
+        Project project = Project.builder().id("PRJ001").name("Barrio").build();
+        Activity activity = Activity.builder()
+                .id("ACT009").name("Campamento").slug("campamento-2026")
+                .date(LocalDateTime.of(2026, 7, 1, 10, 0))
+                .status(ActivityStatus.OPEN_REGISTRATION).isPublic(true)
+                .project(project)
+                .build();
+
+        when(activityRepository.findBySlugAndIsPublicTrue("campamento-2026")).thenReturn(Optional.of(activity));
+        when(seoMetadataService.getByEntity(SeoEntityType.ACTIVITY, "ACT009")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/public/activities/campamento-2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("ACT009"))
+                .andExpect(jsonPath("$.slug").value("campamento-2026"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicActivity_UnknownSlug_ShouldReturnNotFound() throws Exception {
+        mockMvc.perform(get("/public/activities/no-existe"))
+                .andExpect(status().isNotFound());
     }
 
     // ── GET /public/activities/{id} — public access ─────────────────────

@@ -16,6 +16,7 @@ import { faInstagram, faTiktok } from "@fortawesome/free-brands-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { getSiteUrl } from "~/utils/env.server";
 import { contactPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
+import { buildMeta } from "~/utils/seo";
 import { fireEmojiRain } from "~/utils/confetti";
 
 export function meta({ data }: Route.MetaArgs) {
@@ -29,16 +30,7 @@ export function meta({ data }: Route.MetaArgs) {
     const email = data?.settings?.["contact.email"];
 
     return [
-        { title },
-        { name: "description", content: description },
-        { name: "keywords", content: t("public.contactKeywords") },
-        { tagName: "link", rel: "canonical", href: `${siteUrl}/contacto` },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:url", content: `${siteUrl}/contacto` },
-        { property: "og:image", content: `${siteUrl}/logo.png` },
-        { property: "og:type", content: "website" },
-        { name: "robots", content: "index, follow" },
+        ...buildMeta({ siteUrl, path: "/contacto", title, description }),
         { "script:ld+json": contactPageJsonLd({ siteUrl, email, instagram, tiktok }) },
         {
             "script:ld+json": breadcrumbJsonLd([
