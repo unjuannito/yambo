@@ -16,7 +16,7 @@ export async function loader() {
     // NOTE: paths must match the canonical URLs in each page's meta() export
     // (no trailing slashes) to avoid canonical conflicts with Google.
     const staticPages: { loc: string; changefreq: string; priority: string }[] = [
-        { loc: "/",            changefreq: "weekly",  priority: "1.0" },
+        { loc: "",             changefreq: "weekly",  priority: "1.0" }, // portada: "" → sin barra final, igual que su canonical
         { loc: "/proyectos",   changefreq: "weekly",  priority: "0.9" },
         { loc: "/actividades", changefreq: "weekly",  priority: "0.8" },
         { loc: "/equipo",      changefreq: "monthly", priority: "0.7" },
