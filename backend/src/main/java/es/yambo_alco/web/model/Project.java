@@ -22,6 +22,10 @@ public class Project {
     @Column(nullable = false, unique = true)
     private String name;
 
+    /** Public URL fragment, assigned on creation and kept across renames. */
+    @Column(length = 120, unique = true)
+    private String slug;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean active = true;

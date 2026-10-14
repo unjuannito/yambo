@@ -31,6 +31,7 @@ import {
 } from "~/utils/activity-helpers";
 import ActivityCard from "~/components/ActivityCard";
 import Pagination from "~/components/Pagination";
+import { activityPath } from "~/utils/publicPaths";
 
 export function meta({ data }: Route.MetaArgs) {
     const { t } = useTranslation();
@@ -48,7 +49,7 @@ export function meta({ data }: Route.MetaArgs) {
         { "script:ld+json": itemListJsonLd(
             (data?.activities ?? [])
                 .filter((a) => isIndexableActivity(a))
-                .map((a) => ({ name: a.name, url: `${siteUrl}/actividades/${a.id}` })),
+                .map((a) => ({ name: a.name, url: `${siteUrl}${activityPath(a)}` })),
         ) },
     ];
 }

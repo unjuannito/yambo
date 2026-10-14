@@ -1,4 +1,4 @@
-import { useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import { useTranslation } from "react-i18next";
 import { getSiteUrl } from "~/utils/env.server";
 import { activityJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
@@ -10,6 +10,8 @@ import { faShareNodes, faCalendarDays, faMapPin, faEuroSign, faTag, faBell } fro
 import toast from "react-hot-toast";
 import { useState } from "react";
 import { publicService } from "~/services/publicService";
+import { activityPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const backendUrl =
@@ -36,7 +38,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         });
     }
 
-    const activity = await activityRes.json();
+    const activity: Activity = await activityRes.json();
+    // Los enlaces antiguos llevan el id: se envían a la URL con nombre
+    if (activity.slug && params.id !== activity.slug) {
+        throw redirect(activityPath(activity), 301);
+    }
     const contactSettings = contactRes.ok ? await contactRes.json() : {};
     return { activity, siteUrl: getSiteUrl(), contactEmail: contactSettings["contact.email"] || "yamboalcobendas@gmail.com", savedEmail: backendCookie || "" };
 }
@@ -44,7 +50,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 export function meta({ data }: Route.MetaArgs) {
     const { t } = useTranslation();
     const { activity, siteUrl } = data;
-    const pageUrl = `${siteUrl}/actividades/${activity.id}`;
+    const pageUrl = `${siteUrl}${activityPath(activity)}`;
     const cancelled = activity.status?.value === "CANCELLED";
     const statusPrefix = cancelled ? `[${t('public.activityCancelledTitle')}] ` : "";
 
@@ -65,7 +71,7 @@ export function meta({ data }: Route.MetaArgs) {
     return [
         ...buildMeta({
             siteUrl,
-            path: `/actividades/${activity.id}`,
+            path: activityPath(activity),
             title: `${statusPrefix}${activity.name} | Yambo`,
             description,
             image: activity.image,
@@ -155,10 +161,11 @@ export default function ActivityDetail() {
                 {/* Left: Image panel — fixed */}
                 {imageUrl ? (
                     <div className={`w-2/5 fixed top-[calc(4rem+53px)] left-0 h-[calc(100vh-4rem-53px)] overflow-hidden ${cancelled ? "opacity-55" : ""}`}>
-                        <img
+                        <ResponsiveImage
                             src={imageUrl}
                             alt={activity.name}
                             className="w-full h-full object-contain bg-yambo-black"
+                            sizes="40vw"
                         />
                     </div>
                 ) : (
@@ -348,10 +355,11 @@ export default function ActivityDetail() {
                     {/* Cover image */}
                     {imageUrl ? (
                         <div className={`relative w-full aspect-[9/16] max-h-[60vh] rounded-2xl overflow-hidden mb-5 shadow-lg bg-yambo-black ${cancelled ? "opacity-55" : ""}`}>
-                            <img
+                            <ResponsiveImage
                                 src={imageUrl}
                                 alt={activity.name}
                                 className="w-full h-full object-contain"
+                                sizes="100vw"
                             />
                         </div>
                     ) : (

@@ -9,6 +9,8 @@ import { buildMeta } from "~/utils/seo";
 import type { Route } from "./+types/proyectos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
+import { projectPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
 export function meta({ data }: Route.MetaArgs) {
   const { t } = useTranslation();
@@ -23,7 +25,7 @@ export function meta({ data }: Route.MetaArgs) {
         { name: t('nav.home'), url: siteUrl },
         { name: t('public.projectsTitle'), url: `${siteUrl}/proyectos` },
     ]) },
-    { "script:ld+json": itemListJsonLd((data?.projects ?? []).map((p) => ({ name: p.name, url: `${siteUrl}/proyectos/${p.id}` }))) },
+    { "script:ld+json": itemListJsonLd((data?.projects ?? []).map((p) => ({ name: p.name, url: `${siteUrl}${projectPath(p)}` }))) },
   ];
 }
 
@@ -53,7 +55,7 @@ export default function Proyectos() {
               return (
               <a
                 key={project.id}
-                href={`/proyectos/${project.id}`}
+                href={projectPath(project)}
                 className="group fade-up"
                 style={{
                   animationDelay: `${idx * 100}ms`,
@@ -68,12 +70,12 @@ export default function Proyectos() {
                 >
                   {project.image ? (
                     <div className="w-full h-48 overflow-hidden">
-                      <img
-                        loading="lazy"
-                        decoding="async"
+                      <ResponsiveImage
                         src={project.image}
                         alt={project.name}
                         className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        maxWidth={1200}
                       />
                     </div>
                   ) : (

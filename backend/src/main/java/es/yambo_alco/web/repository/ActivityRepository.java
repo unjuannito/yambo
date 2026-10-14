@@ -10,4 +10,7 @@ public interface ActivityRepository extends JpaRepository<Activity, String>, Jpa
     List<Activity> findByIsPublicTrueOrderByDateDesc();
     List<Activity> findByProjectIdOrderByDateAsc(String projectId);
     java.util.Optional<Activity> findByIdAndIsPublicTrue(String id);
+    java.util.Optional<Activity> findBySlugAndIsPublicTrue(String slug);
+    boolean existsBySlug(String slug);
+    List<Activity> findBySlugIsNull(org.springframework.data.domain.Sort sort);
 }

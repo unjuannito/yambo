@@ -10,6 +10,7 @@ import type { ProjectDetail, StaffMember } from "~/services/publicService";
 import type { Activity } from "~/types/activity";
 import { stripMarkdown } from "~/utils/activity-helpers";
 import { absoluteUrl } from "~/utils/seo";
+import { activityPath, projectPath } from "~/utils/publicPaths";
 
 /**
  * Las fechas llegan como hora local de Madrid sin zona («2026-12-20T10:00:00»);
@@ -179,7 +180,7 @@ export function projectJsonLd(project: ProjectDetail, siteUrl: string) {
         "@type": "CreativeWork",
         name: project.name,
         description: project.seo?.metaDescription ?? project.description ?? "",
-        url: `${siteUrl}/proyectos/${project.id}`,
+        url: `${siteUrl}${projectPath(project)}`,
         ...(project.image ? { image: absoluteUrl(siteUrl, project.image) } : {}),
         provider: {
             "@type": "NGO",
@@ -254,7 +255,7 @@ export function activityJsonLd(
         "@type": "Event",
         name: activity.name,
         description: activity.description ? stripMarkdown(activity.description) : "",
-        url: `${siteUrl}/actividades/${activity.id}`,
+        url: `${siteUrl}${activityPath(activity)}`,
         ...(activity.date ? { startDate: withMadridOffset(activity.date) } : {}),
         ...(activity.endDate ? { endDate: withMadridOffset(activity.endDate) } : {}),
         eventStatus: `https://schema.org/${eventStatus}`,
@@ -279,7 +280,7 @@ export function activityJsonLd(
                       "@type": "Offer",
                       price: activity.price,
                       priceCurrency: "EUR",
-                      url: `${siteUrl}/actividades/${activity.id}`,
+                      url: `${siteUrl}${activityPath(activity)}`,
                       availability: isPast
                           ? "https://schema.org/SoldOut"
                           : "https://schema.org/InStock",

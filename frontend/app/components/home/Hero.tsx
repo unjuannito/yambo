@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useKonamiCode } from "~/hooks/useKonamiCode";
 import { fireFireworks } from "~/utils/confetti";
+import { variantUrl } from "~/utils/imageVariants";
 
 interface HeroProps {
     title?: string;
@@ -56,6 +57,9 @@ export default function Hero({ title, subtitle, image }: HeroProps) {
         return () => clearTimeout(secretTimer);
     }, [showSecret]);
 
+    // Una portada subida pesa varios MB: de fondo basta su versión de 1600 px
+    const heroImage = variantUrl(image, 1600) ?? (image || DEFAULT_IMAGE);
+
     return (
         <section
             className={`w-full min-h-[calc(100vh-64px)] flex flex-col items-center justify-center text-center px-4 bg-cover bg-center bg-no-repeat overflow-hidden`}
@@ -66,7 +70,7 @@ export default function Hero({ title, subtitle, image }: HeroProps) {
                         rgb(0 0 0 / 0.5),
                         rgb(88 28 135 / 0.2)
                     ),
-                    url(${image || DEFAULT_IMAGE})
+                    url(${heroImage})
                 `,
             }}
         >

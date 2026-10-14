@@ -26,6 +26,10 @@ public class Activity {
     @Column(nullable = false)
     private String name;
 
+    /** Public URL fragment, assigned on creation and kept across renames. */
+    @Column(length = 120, unique = true)
+    private String slug;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

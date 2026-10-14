@@ -19,6 +19,9 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /workspace/app
 VOLUME /tmp
 
+# libvips resizes uploaded images to WebP on demand (ImageVariantService)
+RUN apk add --no-cache vips-tools
+
 # Create a non-root user for the runtime process
 RUN addgroup -S app && adduser -S app -G app
 

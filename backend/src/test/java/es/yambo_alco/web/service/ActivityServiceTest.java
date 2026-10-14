@@ -45,7 +45,8 @@ public class ActivityServiceTest {
         projectRepository = Mockito.mock(ProjectRepository.class);
         userRepository = Mockito.mock(UserRepository.class);
         activityWaitlistService = Mockito.mock(ActivityWaitlistService.class);
-        activityService = new ActivityService(activityRepository, projectRepository, userRepository, activityWaitlistService);
+        activityService = new ActivityService(activityRepository, projectRepository, userRepository, activityWaitlistService,
+                new SlugService(projectRepository, activityRepository));
 
         testProject = Project.builder()
                 .id("PRJ00001")
@@ -84,6 +85,7 @@ public class ActivityServiceTest {
         // Then
         assertThat(result.getName()).isEqualTo("Workshop");
         assertThat(result.getDescription()).isEqualTo("A description");
+        assertThat(result.getSlug()).isEqualTo("workshop-2026");
         assertThat(result.getDate()).isEqualTo(date);
         assertThat(result.getEndDate()).isNull();
         assertThat(result.getStatus()).isEqualTo(ActivityStatus.PLANNED);
