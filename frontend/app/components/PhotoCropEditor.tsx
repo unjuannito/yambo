@@ -11,11 +11,12 @@ import {
     placement,
     renderCrop,
     rotateTo,
+    zoomAt,
     zoomTo,
     type PhotoEdit,
 } from "~/utils/photoCrop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRotateLeft, faArrowRotateRight, faFloppyDisk, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRotateLeft, faArrowRotateRight, faFloppyDisk, faImage, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 
 interface PhotoCropEditorProps {
     isOpen: boolean;
@@ -27,7 +28,11 @@ interface PhotoCropEditorProps {
     /** Recibe el encuadre elegido y el recorte ya generado. */
     onConfirm: (edit: PhotoEdit, crop: Blob) => void | Promise<void>;
     saving?: boolean;
+    /** Sube otra foto para encuadrarla sin cerrar el editor; sin ella no se ofrece cambiarla. */
+    onReplaceFile?: (file: File) => Promise<void>;
 }
+
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 interface PlacedPhotoProps {
     src: string;
@@ -61,7 +66,7 @@ function PlacedPhoto({ src, size, edit, unit, className = "" }: PlacedPhotoProps
 function FramedPhoto({ frameWidth, ...photo }: Omit<PlacedPhotoProps, "unit" | "className"> & { frameWidth: number }) {
     const unit = frameWidth / FRAME.width;
     return (
-        <div className="relative overflow-hidden bg-gray-100" style={{ width: frameWidth, height: unit * FRAME.height }}>
+        <div className="relative shrink-0 overflow-hidden bg-gray-100" style={{ width: frameWidth, height: unit * FRAME.height }}>
             <PlacedPhoto {...photo} unit={unit} />
         </div>
     );
@@ -70,6 +75,8 @@ function FramedPhoto({ frameWidth, ...photo }: Omit<PlacedPhotoProps, "unit" | "
 /** Margen alrededor del marco donde se ve, atenuado, lo que queda fuera del recorte. */
 const STAGE_PADDING = 28;
 const ZOOM_STEP = 0.25;
+/** Hasta dónde acerca el doble clic. */
+const DOUBLE_CLICK_ZOOM = 2;
 /** El deslizador endereza hasta ±45°; los giros completos van con los botones de 90°. */
 const MAX_STRAIGHTEN = 45;
 
@@ -109,7 +116,7 @@ function Slider({ id, min, max, step, value, onChange, disabled, fillFrom = "min
  * Editor de encuadre de la foto de perfil: se arrastra para centrar, se acerca y se gira.
  * Devuelve el encuadre y el recorte final, listo para subir.
  */
-export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm, saving = false }: PhotoCropEditorProps) {
+export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm, saving = false, onReplaceFile }: PhotoCropEditorProps) {
     const { t } = useTranslation();
     const [edit, setEdit] = useState<PhotoEdit>(() => normalizeEdit(initialEdit));
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -117,6 +124,10 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
     const [rendering, setRendering] = useState(false);
     const [frameWidth, setFrameWidth] = useState(300);
     const [dragging, setDragging] = useState(false);
+    const [replacing, setReplacing] = useState(false);
+    const [replaceError, setReplaceError] = useState<string | null>(null);
+    const [dropping, setDropping] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const imageRef = useRef<HTMLImageElement | null>(null);
     const stageRef = useRef<HTMLDivElement | null>(null);
@@ -157,9 +168,15 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
     }, [isOpen]);
 
     const unit = frameWidth / FRAME.width;
-    const ready = size !== null && !error;
+    const ready = size !== null && !error && !replacing;
 
     const setZoom = (zoom: number) => size && setEdit((prev) => zoomTo(size.width, size.height, prev, zoom));
+    /** Un punto de la pantalla en unidades de marco, desde el centro del marco (que es el del escenario). */
+    const toFrame = (clientX: number, clientY: number) => {
+        const rect = stageRef.current?.getBoundingClientRect();
+        if (!rect) return { x: 0, y: 0 };
+        return { x: (clientX - rect.left - rect.width / 2) / unit, y: (clientY - rect.top - rect.height / 2) / unit };
+    };
     const move = (dx: number, dy: number) => size && setEdit((prev) => pan(size.width, size.height, prev, dx, dy));
 
     // El giro se reparte en vueltas de 90° (botones) y un enderezado fino (deslizador)
@@ -193,7 +210,9 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
             const distance = Math.hypot(a.x - b.x, a.y - b.y);
             if (pinchDistance.current) {
                 const factor = distance / pinchDistance.current;
-                setEdit((prev) => zoomTo(size.width, size.height, prev, prev.zoom * factor));
+                // Acerca hacia el punto entre los dos dedos
+                const middle = toFrame((a.x + b.x) / 2, (a.y + b.y) / 2);
+                setEdit((prev) => zoomAt(size.width, size.height, prev, prev.zoom * factor, middle.x, middle.y));
             }
             pinchDistance.current = distance;
             return;
@@ -208,9 +227,28 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
         if (pointers.current.size === 0) setDragging(false);
     };
 
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        if (!size) return;
-        setEdit((prev) => zoomTo(size.width, size.height, prev, prev.zoom * (1 - e.deltaY * 0.0015)));
+    // La rueda acerca hacia el cursor. Va con un listener no pasivo para que no desplace la página de detrás.
+    useEffect(() => {
+        const stage = stageRef.current;
+        if (!stage || !size) return;
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const point = toFrame(e.clientX, e.clientY);
+            setEdit((prev) => zoomAt(size.width, size.height, prev, prev.zoom * (1 - e.deltaY * 0.0015), point.x, point.y));
+        };
+        stage.addEventListener("wheel", handleWheel, { passive: false });
+        return () => stage.removeEventListener("wheel", handleWheel);
+    }, [size, unit]);
+
+    // Doble clic o doble toque: acerca a ese punto, o vuelve a la foto entera si ya estaba cerca
+    const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!ready || !size) return;
+        const point = toFrame(e.clientX, e.clientY);
+        setEdit((prev) =>
+            prev.zoom < DOUBLE_CLICK_ZOOM
+                ? zoomAt(size.width, size.height, prev, DOUBLE_CLICK_ZOOM, point.x, point.y)
+                : zoomTo(size.width, size.height, prev, 1),
+        );
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -244,7 +282,42 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
         }
     };
 
-    const busy = saving || rendering;
+    const replace = async (file: File | undefined) => {
+        if (!file || !onReplaceFile) return;
+        setReplaceError(null);
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            setReplaceError(t("photoEditor.uploadError"));
+            return;
+        }
+        setReplacing(true);
+        try {
+            await onReplaceFile(file);
+        } catch {
+            setReplaceError(t("photoEditor.uploadError"));
+        } finally {
+            setReplacing(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    // Soltar un fichero encima del escenario cambia la foto
+    const dropProps = onReplaceFile
+        ? {
+              onDragOver: (e: React.DragEvent<HTMLDivElement>) => {
+                  if (!e.dataTransfer.types.includes("Files")) return;
+                  e.preventDefault();
+                  setDropping(true);
+              },
+              onDragLeave: () => setDropping(false),
+              onDrop: (e: React.DragEvent<HTMLDivElement>) => {
+                  e.preventDefault();
+                  setDropping(false);
+                  if (!replacing) replace(e.dataTransfer.files[0]);
+              },
+          }
+        : {};
+
+    const busy = saving || rendering || replacing;
     const iconButtonClass =
         "w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:border-yambo-green-400 hover:text-yambo-green-600 transition-colors disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-gray-600";
 
@@ -283,7 +356,8 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerEnd}
                         onPointerCancel={handlePointerEnd}
-                        onWheel={handleWheel}
+                        onDoubleClick={handleDoubleClick}
+                        {...dropProps}
                         onKeyDown={handleKeyDown}
                     >
                         <PlacedPhoto src={src} size={size} edit={edit} unit={unit} className="opacity-35" />
@@ -292,6 +366,12 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                             style={{ width: frameWidth, height: unit * FRAME.height }}
                         >
                             <PlacedPhoto src={src} size={size} edit={edit} unit={unit} />
+                            {/* Guía del avatar redondo: el círculo central del marco */}
+                            <div
+                                aria-hidden
+                                data-testid="avatar-guide"
+                                className="absolute left-0 right-0 top-1/2 -translate-y-1/2 aspect-square rounded-full border-2 border-dashed border-white/60 pointer-events-none"
+                            />
                             {/* Cuadrícula de tercios mientras se mueve */}
                             <div
                                 aria-hidden
@@ -306,25 +386,54 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         </div>
                         {!ready && (
                             <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-300 bg-gray-900 px-4 text-center">
-                                {error ?? t("photoEditor.loading")}
+                                {replacing ? t("photoEditor.uploading") : error ?? t("photoEditor.loading")}
+                            </div>
+                        )}
+                        {dropping && (
+                            <div className="absolute inset-2 flex items-center justify-center rounded-xl border-2 border-dashed border-yambo-green-300 bg-gray-900/80 text-sm font-semibold text-white pointer-events-none">
+                                {t("photoEditor.dropHint")}
                             </div>
                         )}
                     </div>
                     <div className="flex items-center justify-between gap-3 mt-2 mx-auto" style={{ maxWidth: frameWidth + STAGE_PADDING * 2 }}>
-                        <p className="text-xs text-gray-400">
-                            <span className="sm:hidden">{t("photoEditor.dragHintTouch")}</span>
-                            <span className="hidden sm:inline">{t("photoEditor.dragHint")}</span>
-                        </p>
+                        {onReplaceFile ? (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={busy}
+                                    className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
+                                >
+                                    <FontAwesomeIcon icon={faImage} className="mr-1" />
+                                    {t("photoEditor.replace")}
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept={ACCEPTED_TYPES.join(",")}
+                                    onChange={(e) => replace(e.target.files?.[0])}
+                                    className="hidden"
+                                    data-testid="photo-editor-replace-input"
+                                />
+                            </>
+                        ) : (
+                            <span />
+                        )}
                         <button
                             type="button"
                             onClick={() => setEdit({ ...DEFAULT_EDIT })}
                             disabled={!ready || untouched}
-                            className="shrink-0 text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
+                            className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
                         >
                             <FontAwesomeIcon icon={faRotateLeft} className="mr-1" />
                             {t("photoEditor.reset")}
                         </button>
                     </div>
+                    <p className="mt-1 text-xs text-gray-400 text-center">
+                        <span className="sm:hidden">{t("photoEditor.dragHintTouch")}</span>
+                        <span className="hidden sm:inline">{t("photoEditor.dragHint")}</span>
+                    </p>
+                    {replaceError && <p role="alert" className="mt-1 text-xs text-red-500 text-center">{replaceError}</p>}
                 </div>
 
                 <div className="space-y-4 sm:space-y-5 min-w-0">
@@ -406,18 +515,18 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         </div>
                     </div>
 
-                    {/* Vistas previas: cómo queda en la tarjeta del equipo y en el avatar redondo */}
+                    {/* Vistas previas: la tarjeta del equipo (5:6, el marco entero) y el avatar redondo (el centro) */}
                     <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
                         <p className="text-xs font-medium text-gray-500 mb-2">{t("photoEditor.preview")}</p>
                         <div className="flex items-end gap-4">
                             <div className="text-center">
-                                <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100" style={{ width: 95, height: 80 }}>
-                                    <FramedPhoto src={src} size={size} edit={edit} frameWidth={95} />
+                                <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                                    <FramedPhoto src={src} size={size} edit={edit} frameWidth={70} />
                                 </div>
                                 <span className="block text-[11px] text-gray-400 mt-1">{t("photoEditor.previewCard")}</span>
                             </div>
                             <div className="text-center">
-                                <div className="rounded-full overflow-hidden shadow-sm ring-2 ring-yambo-green-100 mx-auto" style={{ width: 56, height: 56 }}>
+                                <div className="flex items-center justify-center rounded-full overflow-hidden shadow-sm ring-2 ring-yambo-green-100 mx-auto" style={{ width: 56, height: 56 }}>
                                     <FramedPhoto src={src} size={size} edit={edit} frameWidth={56} />
                                 </div>
                                 <span className="block text-[11px] text-gray-400 mt-1">{t("photoEditor.previewAvatar")}</span>

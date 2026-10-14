@@ -64,13 +64,13 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                 }}
                 className="h-full rounded-2xl shadow-md overflow-hidden bg-white hover:shadow-xl transition-all duration-300 hover-lift cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-yambo-green-400"
             >
-                <div className="w-full h-[220px] overflow-hidden">
+                <div className="w-full aspect-[5/6] overflow-hidden">
                     {member.photo ? (
                         <ResponsiveImage
                             src={member.photo}
                             alt={displayName}
                             className="w-full h-full object-cover"
-                            style={{ objectPosition: "center top" }}
+                           
                             sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
                             maxWidth={480}
                         />
@@ -107,7 +107,7 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                                     src={member.photo}
                                     alt={displayName}
                                     className="w-full max-h-[50vh] sm:max-h-none rounded-2xl object-cover"
-                                    style={{ objectPosition: "center top" }}
+                                   
                                     sizes="(min-width: 640px) 256px, 100vw"
                                     maxWidth={800}
                                 />
