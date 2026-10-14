@@ -62,6 +62,17 @@ pipeline {
         PROD_DOMAIN = 'yambo.cabrasky.net'
         DEV_DOMAIN  = 'dev.yambo.cabrasky.net'
 
+        // ── Cachés de dependencias en BUILD_HOST ─────────────────────────────
+        // Volúmenes Docker con nombre: sobreviven a los contenedores --rm y al
+        // borrado de ${REMOTE_DIR}, así que Maven, npm y Sonar no vuelven a
+        // descargar lo que ya tienen. Se comparten entre ramas y builds; para
+        // empezar de cero: `docker volume rm yambo-ci-m2 yambo-ci-npm yambo-ci-sonar yambo-ci-sonar-cli`.
+        M2_CACHE    = 'yambo-ci-m2'
+        NPM_CACHE   = 'yambo-ci-npm'
+        SONAR_CACHE = 'yambo-ci-sonar'
+        // Aparte: el escáner del frontend corre en paralelo con el del backend
+        SONAR_CLI_CACHE = 'yambo-ci-sonar-cli'
+
         // ── Namespaces ───────────────────────────────────────────────────────
         NS_PROD = 'yambo'
         NS_DEV  = 'yambo-develop'
@@ -199,6 +210,7 @@ pipeline {
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'mkdir -p ${REMOTE_DIR} && tar xzf - -C ${REMOTE_DIR} && \
                                      docker run --rm --cpus=1 -v ${REMOTE_DIR}/backend:/app -w /app \
+                                       -v ${M2_CACHE}:/root/.m2 \
                                        maven:3.9-eclipse-temurin-21 sh -c "chmod +x mvnw && ./mvnw verify -T 1C -B -q"'
                             """
                         }
@@ -213,7 +225,8 @@ pipeline {
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'mkdir -p ${REMOTE_DIR} && tar xzf - -C ${REMOTE_DIR} && \
                                      docker run --rm --cpus=1 -v ${REMOTE_DIR}/frontend:/app -w /app \
-                                       node:22-alpine sh -c "npm install --no-audit --no-fund && npm run typecheck && npm run build"'
+                                       -v ${NPM_CACHE}:/root/.npm \
+                                       node:22-alpine sh -c "npm install --prefer-offline --no-audit --no-fund && npm run typecheck && npm run build"'
                             """
                         }
                     }
@@ -244,6 +257,7 @@ pipeline {
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd ${REMOTE_DIR}/backend && \
                                      docker run --rm --cpus=1 --network=host -v ${REMOTE_DIR}/backend:/app -w /app \
+                                       -v ${M2_CACHE}:/root/.m2 -v ${SONAR_CACHE}:/root/.sonar \
                                        maven:3.9-eclipse-temurin-21 sh -c "./mvnw org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar -Dsonar.projectKey=yambo-backend -Dsonar.projectName=yambo-backend -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} ${sonarArgs}"'
                             """
                         }
@@ -266,6 +280,7 @@ pipeline {
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd ${REMOTE_DIR}/frontend && \
                                      docker run --rm --cpus=1 --network=host -v ${REMOTE_DIR}/frontend:/app -w /app \
+                                       -u 0:0 -v ${SONAR_CLI_CACHE}:/root/.sonar -e SONAR_USER_HOME=/root/.sonar \
                                        -e SONAR_SCANNER_OPTS=-Xmx1024m \
                                        sonarsource/sonar-scanner-cli:11 sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectBaseDir=/app -Dsonar.javascript.node.maxspace=1024 ${sonarArgs}'
                             """
@@ -292,7 +307,8 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd ${REMOTE_DIR} && \
-                                     docker build --memory=1g --memory-swap=1g -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
+                                     docker version --format "docker {{.Server.Version}}" && \
+                                     DOCKER_BUILDKIT=1 docker build --memory=1g --memory-swap=1g -t ${FRONTEND_IMAGE}:${env.FRONTEND_TAG} frontend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${FRONTEND_IMAGE}:${env.FRONTEND_TAG}'
                             """
@@ -306,7 +322,7 @@ pipeline {
                             sh """
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${SSH_KEY} ${BUILD_HOST} \
                                     'cd ${REMOTE_DIR} && \
-                                     docker build --memory=1g --memory-swap=1g -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
+                                     DOCKER_BUILDKIT=1 docker build --memory=1g --memory-swap=1g -t ${BACKEND_IMAGE}:${env.BACKEND_TAG} backend && \
                                      echo ${REGISTRY_PASS} | docker login ${REGISTRY} -u ${REGISTRY_USER} --password-stdin && \
                                      docker push ${BACKEND_IMAGE}:${env.BACKEND_TAG}'
                             """
