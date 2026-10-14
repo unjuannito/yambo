@@ -102,7 +102,7 @@ export default function TeamDirectory() {
             <div key={user.id} className="flex flex-col rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200">
                 <div className="relative w-full h-40 overflow-hidden">
                     {user.staff?.photo ? (
-                        <ResponsiveImage src={user.staff.photo} alt={displayName} className="w-full h-full object-cover" style={{ objectPosition: "center top" }} sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw" maxWidth={480} />
+                        <ResponsiveImage src={user.staff.photo} alt={displayName} className="w-full h-full object-cover" sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw" maxWidth={480} />
                     ) : (
                         <ElephantAvatar seed={user.id} config={user.staff?.avatar} title={displayName} className="block" />
                     )}

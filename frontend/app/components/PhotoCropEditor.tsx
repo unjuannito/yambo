@@ -61,7 +61,7 @@ function PlacedPhoto({ src, size, edit, unit, className = "" }: PlacedPhotoProps
 function FramedPhoto({ frameWidth, ...photo }: Omit<PlacedPhotoProps, "unit" | "className"> & { frameWidth: number }) {
     const unit = frameWidth / FRAME.width;
     return (
-        <div className="relative overflow-hidden bg-gray-100" style={{ width: frameWidth, height: unit * FRAME.height }}>
+        <div className="relative shrink-0 overflow-hidden bg-gray-100" style={{ width: frameWidth, height: unit * FRAME.height }}>
             <PlacedPhoto {...photo} unit={unit} />
         </div>
     );
@@ -406,18 +406,18 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         </div>
                     </div>
 
-                    {/* Vistas previas: cómo queda en la tarjeta del equipo y en el avatar redondo */}
+                    {/* Vistas previas: cómo queda en la tarjeta del equipo y en el avatar redondo, recortadas al centro como allí */}
                     <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
                         <p className="text-xs font-medium text-gray-500 mb-2">{t("photoEditor.preview")}</p>
                         <div className="flex items-end gap-4">
                             <div className="text-center">
-                                <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100" style={{ width: 95, height: 80 }}>
+                                <div className="flex items-center justify-center rounded-xl overflow-hidden shadow-sm border border-gray-100" style={{ width: 95, height: 80 }}>
                                     <FramedPhoto src={src} size={size} edit={edit} frameWidth={95} />
                                 </div>
                                 <span className="block text-[11px] text-gray-400 mt-1">{t("photoEditor.previewCard")}</span>
                             </div>
                             <div className="text-center">
-                                <div className="rounded-full overflow-hidden shadow-sm ring-2 ring-yambo-green-100 mx-auto" style={{ width: 56, height: 56 }}>
+                                <div className="flex items-center justify-center rounded-full overflow-hidden shadow-sm ring-2 ring-yambo-green-100 mx-auto" style={{ width: 56, height: 56 }}>
                                     <FramedPhoto src={src} size={size} edit={edit} frameWidth={56} />
                                 </div>
                                 <span className="block text-[11px] text-gray-400 mt-1">{t("photoEditor.previewAvatar")}</span>

@@ -70,7 +70,7 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                             src={member.photo}
                             alt={displayName}
                             className="w-full h-full object-cover"
-                            style={{ objectPosition: "center top" }}
+                           
                             sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
                             maxWidth={480}
                         />
@@ -107,7 +107,7 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                                     src={member.photo}
                                     alt={displayName}
                                     className="w-full max-h-[50vh] sm:max-h-none rounded-2xl object-cover"
-                                    style={{ objectPosition: "center top" }}
+                                   
                                     sizes="(min-width: 640px) 256px, 100vw"
                                     maxWidth={800}
                                 />
