@@ -116,6 +116,76 @@ describe("PhotoCropEditor", () => {
         expect(edit.x).toBeGreaterThan(0);
     });
 
+    it("zooms with the wheel without scrolling the page behind", async () => {
+        const { onConfirm } = await open();
+
+        const frame = screen.getByRole("application");
+        const notPrevented = fireEvent.wheel(frame, { deltaY: -200, clientX: 30, clientY: -20, cancelable: true });
+        expect(notPrevented).toBe(false);
+        fireEvent.click(screen.getByRole("button", { name: /photoEditor.confirm/ }));
+
+        await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+        const [edit] = onConfirm.mock.calls[0];
+        expect(edit.zoom).toBeCloseTo(1.3);
+        // Acerca hacia el cursor, arriba a la derecha: la foto se desplaza hacia abajo a la izquierda
+        expect(edit.x).toBeLessThan(0);
+        expect(edit.y).toBeGreaterThan(0);
+    });
+
+    it("zooms in on double click and back out on the next one", async () => {
+        const { onConfirm } = await open();
+
+        const frame = screen.getByRole("application");
+        fireEvent.doubleClick(frame, { clientX: -40, clientY: 0 });
+        fireEvent.click(screen.getByRole("button", { name: /photoEditor.confirm/ }));
+        await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+        expect(onConfirm.mock.calls[0][0].zoom).toBe(2);
+        // Clic a la izquierda del centro: la foto se desplaza a la derecha para acercar ese punto
+        expect(onConfirm.mock.calls[0][0].x).toBeGreaterThan(0);
+
+        fireEvent.doubleClick(frame, { clientX: 0, clientY: 0 });
+        fireEvent.click(screen.getByRole("button", { name: /photoEditor.confirm/ }));
+        await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(2));
+        expect(onConfirm.mock.calls[1][0].zoom).toBe(1);
+    });
+
+    it("marks the avatar circle inside the frame", async () => {
+        await open();
+        expect(screen.getByTestId("avatar-guide")).toBeInTheDocument();
+    });
+
+    it("picks another photo without closing the editor", async () => {
+        const onReplaceFile = vi.fn(async () => {});
+        await open({ onReplaceFile });
+
+        const file = new File(["x"], "otra.png", { type: "image/png" });
+        fireEvent.change(screen.getByTestId("photo-editor-replace-input"), { target: { files: [file] } });
+        await waitFor(() => expect(onReplaceFile).toHaveBeenCalledWith(file));
+    });
+
+    it("takes a photo dropped on the frame and rejects other files", async () => {
+        const onReplaceFile = vi.fn(async () => {});
+        await open({ onReplaceFile });
+
+        const frame = screen.getByRole("application");
+        const photo = new File(["x"], "soltada.jpg", { type: "image/jpeg" });
+        fireEvent.dragOver(frame, { dataTransfer: { types: ["Files"], files: [photo] } });
+        expect(screen.getByText("photoEditor.dropHint")).toBeInTheDocument();
+        fireEvent.drop(frame, { dataTransfer: { types: ["Files"], files: [photo] } });
+        await waitFor(() => expect(onReplaceFile).toHaveBeenCalledWith(photo));
+        expect(screen.queryByText("photoEditor.dropHint")).not.toBeInTheDocument();
+
+        const pdf = new File(["x"], "doc.pdf", { type: "application/pdf" });
+        fireEvent.drop(frame, { dataTransfer: { types: ["Files"], files: [pdf] } });
+        expect(await screen.findByRole("alert")).toHaveTextContent("photoEditor.uploadError");
+        expect(onReplaceFile).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not offer another photo without a way to upload it", async () => {
+        await open();
+        expect(screen.queryByRole("button", { name: /photoEditor.replace/ })).not.toBeInTheDocument();
+    });
+
     it("goes back to the default framing with reset", async () => {
         const { onConfirm } = await open({ initialEdit: { x: 0.4, y: -0.2, zoom: 3, rotation: 45 } });
 

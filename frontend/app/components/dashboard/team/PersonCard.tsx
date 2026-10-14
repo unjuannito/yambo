@@ -40,7 +40,7 @@ export function PersonCard({ user, actions }: PersonCardProps) {
         <div className="relative flex items-center gap-3 rounded-2xl border border-gray-100 bg-white pl-2 pr-1 py-2 hover:border-yambo-green-200 hover:shadow-sm transition-all">
             <div className="w-11 h-11 shrink-0 rounded-full overflow-hidden bg-yambo-green-50">
                 {user.staff?.photo ? (
-                    <ResponsiveImage src={user.staff.photo} alt="" className="w-full h-full object-cover" style={{ objectPosition: "center top" }} sizes="44px" maxWidth={160} />
+                    <ResponsiveImage src={user.staff.photo} alt="" className="w-full h-full object-cover" sizes="44px" maxWidth={160} />
                 ) : (
                     <ElephantAvatar seed={user.id} config={user.staff?.avatar} title={displayName} className="w-full h-full" />
                 )}
