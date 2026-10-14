@@ -17,7 +17,7 @@ resources:
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: "branch-develop-06bfe6b"
+    newTag: "branch-develop-777a00d"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
     newTag: "branch-develop-06bfe6b"
