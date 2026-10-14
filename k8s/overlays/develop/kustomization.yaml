@@ -17,10 +17,10 @@ resources:
 images:
   - name: yambo-web-frontend
     newName: registry.cabrasky.net/yambo-web-frontend
-    newTag: "branch-develop-166014a"
+    newTag: "branch-develop-0c773d3"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: "branch-develop-166014a"
+    newTag: "branch-develop-0c773d3"
 
 patches:
   # Dominio de desarrollo (público vía nginx .21 → k3s .22)
