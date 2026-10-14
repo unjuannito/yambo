@@ -292,6 +292,12 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                             style={{ width: frameWidth, height: unit * FRAME.height }}
                         >
                             <PlacedPhoto src={src} size={size} edit={edit} unit={unit} />
+                            {/* Guía del avatar redondo: el círculo central del marco */}
+                            <div
+                                aria-hidden
+                                data-testid="avatar-guide"
+                                className="absolute left-0 right-0 top-1/2 -translate-y-1/2 aspect-square rounded-full border-2 border-dashed border-white/60 pointer-events-none"
+                            />
                             {/* Cuadrícula de tercios mientras se mueve */}
                             <div
                                 aria-hidden
@@ -406,13 +412,13 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         </div>
                     </div>
 
-                    {/* Vistas previas: cómo queda en la tarjeta del equipo y en el avatar redondo, recortadas al centro como allí */}
+                    {/* Vistas previas: la tarjeta del equipo (5:6, el marco entero) y el avatar redondo (el centro) */}
                     <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
                         <p className="text-xs font-medium text-gray-500 mb-2">{t("photoEditor.preview")}</p>
                         <div className="flex items-end gap-4">
                             <div className="text-center">
-                                <div className="flex items-center justify-center rounded-xl overflow-hidden shadow-sm border border-gray-100" style={{ width: 95, height: 80 }}>
-                                    <FramedPhoto src={src} size={size} edit={edit} frameWidth={95} />
+                                <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                                    <FramedPhoto src={src} size={size} edit={edit} frameWidth={70} />
                                 </div>
                                 <span className="block text-[11px] text-gray-400 mt-1">{t("photoEditor.previewCard")}</span>
                             </div>
