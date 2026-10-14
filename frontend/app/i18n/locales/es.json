@@ -1328,6 +1328,8 @@
     "rotateLeft": "Girar 90° a la izquierda",
     "rotateRight": "Girar 90° a la derecha",
     "reset": "Restablecer",
+    "replace": "Otra foto",
+    "dropHint": "Suelta la foto aquí",
     "preview": "Así se verá",
     "previewCard": "Tarjeta",
     "previewAvatar": "Avatar",

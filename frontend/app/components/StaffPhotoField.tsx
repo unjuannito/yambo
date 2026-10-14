@@ -38,14 +38,19 @@ export function StaffPhotoField({ value, onChange, placeholder, label, unsaved =
     // Foto abierta en el editor: la recién subida o la que ya había
     const [editing, setEditing] = useState<{ original: string; edit: PhotoEdit | null } | null>(null);
 
+    /** Sube la foto original y la abre en el editor, sin encuadre previo. */
+    const uploadOriginal = async (file: File) => {
+        const original = await fileService.upload(await downscaleImage(file));
+        setEditing({ original: original.url, edit: null });
+    };
+
     const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         setError(null);
         setUploading(true);
         try {
-            const original = await fileService.upload(await downscaleImage(file));
-            setEditing({ original: original.url, edit: null });
+            await uploadOriginal(file);
         } catch {
             setError(t("photoEditor.uploadError"));
         } finally {
@@ -126,6 +131,7 @@ export function StaffPhotoField({ value, onChange, placeholder, label, unsaved =
                     initialEdit={editing.edit}
                     onCancel={() => setEditing(null)}
                     onConfirm={handleConfirm}
+                    onReplaceFile={uploadOriginal}
                     saving={saving}
                 />
             )}

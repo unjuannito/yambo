@@ -154,6 +154,38 @@ describe("PhotoCropEditor", () => {
         expect(screen.getByTestId("avatar-guide")).toBeInTheDocument();
     });
 
+    it("picks another photo without closing the editor", async () => {
+        const onReplaceFile = vi.fn(async () => {});
+        await open({ onReplaceFile });
+
+        const file = new File(["x"], "otra.png", { type: "image/png" });
+        fireEvent.change(screen.getByTestId("photo-editor-replace-input"), { target: { files: [file] } });
+        await waitFor(() => expect(onReplaceFile).toHaveBeenCalledWith(file));
+    });
+
+    it("takes a photo dropped on the frame and rejects other files", async () => {
+        const onReplaceFile = vi.fn(async () => {});
+        await open({ onReplaceFile });
+
+        const frame = screen.getByRole("application");
+        const photo = new File(["x"], "soltada.jpg", { type: "image/jpeg" });
+        fireEvent.dragOver(frame, { dataTransfer: { types: ["Files"], files: [photo] } });
+        expect(screen.getByText("photoEditor.dropHint")).toBeInTheDocument();
+        fireEvent.drop(frame, { dataTransfer: { types: ["Files"], files: [photo] } });
+        await waitFor(() => expect(onReplaceFile).toHaveBeenCalledWith(photo));
+        expect(screen.queryByText("photoEditor.dropHint")).not.toBeInTheDocument();
+
+        const pdf = new File(["x"], "doc.pdf", { type: "application/pdf" });
+        fireEvent.drop(frame, { dataTransfer: { types: ["Files"], files: [pdf] } });
+        expect(await screen.findByRole("alert")).toHaveTextContent("photoEditor.uploadError");
+        expect(onReplaceFile).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not offer another photo without a way to upload it", async () => {
+        await open();
+        expect(screen.queryByRole("button", { name: /photoEditor.replace/ })).not.toBeInTheDocument();
+    });
+
     it("goes back to the default framing with reset", async () => {
         const { onConfirm } = await open({ initialEdit: { x: 0.4, y: -0.2, zoom: 3, rotation: 45 } });
 

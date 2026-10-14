@@ -16,7 +16,7 @@ import {
     type PhotoEdit,
 } from "~/utils/photoCrop";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRotateLeft, faArrowRotateRight, faFloppyDisk, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRotateLeft, faArrowRotateRight, faFloppyDisk, faImage, faMagnifyingGlassMinus, faMagnifyingGlassPlus, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 
 interface PhotoCropEditorProps {
     isOpen: boolean;
@@ -28,7 +28,11 @@ interface PhotoCropEditorProps {
     /** Recibe el encuadre elegido y el recorte ya generado. */
     onConfirm: (edit: PhotoEdit, crop: Blob) => void | Promise<void>;
     saving?: boolean;
+    /** Sube otra foto para encuadrarla sin cerrar el editor; sin ella no se ofrece cambiarla. */
+    onReplaceFile?: (file: File) => Promise<void>;
 }
+
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 interface PlacedPhotoProps {
     src: string;
@@ -112,7 +116,7 @@ function Slider({ id, min, max, step, value, onChange, disabled, fillFrom = "min
  * Editor de encuadre de la foto de perfil: se arrastra para centrar, se acerca y se gira.
  * Devuelve el encuadre y el recorte final, listo para subir.
  */
-export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm, saving = false }: PhotoCropEditorProps) {
+export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm, saving = false, onReplaceFile }: PhotoCropEditorProps) {
     const { t } = useTranslation();
     const [edit, setEdit] = useState<PhotoEdit>(() => normalizeEdit(initialEdit));
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -120,6 +124,10 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
     const [rendering, setRendering] = useState(false);
     const [frameWidth, setFrameWidth] = useState(300);
     const [dragging, setDragging] = useState(false);
+    const [replacing, setReplacing] = useState(false);
+    const [replaceError, setReplaceError] = useState<string | null>(null);
+    const [dropping, setDropping] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const imageRef = useRef<HTMLImageElement | null>(null);
     const stageRef = useRef<HTMLDivElement | null>(null);
@@ -160,7 +168,7 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
     }, [isOpen]);
 
     const unit = frameWidth / FRAME.width;
-    const ready = size !== null && !error;
+    const ready = size !== null && !error && !replacing;
 
     const setZoom = (zoom: number) => size && setEdit((prev) => zoomTo(size.width, size.height, prev, zoom));
     /** Un punto de la pantalla en unidades de marco, desde el centro del marco (que es el del escenario). */
@@ -274,7 +282,42 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
         }
     };
 
-    const busy = saving || rendering;
+    const replace = async (file: File | undefined) => {
+        if (!file || !onReplaceFile) return;
+        setReplaceError(null);
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            setReplaceError(t("photoEditor.uploadError"));
+            return;
+        }
+        setReplacing(true);
+        try {
+            await onReplaceFile(file);
+        } catch {
+            setReplaceError(t("photoEditor.uploadError"));
+        } finally {
+            setReplacing(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    // Soltar un fichero encima del escenario cambia la foto
+    const dropProps = onReplaceFile
+        ? {
+              onDragOver: (e: React.DragEvent<HTMLDivElement>) => {
+                  if (!e.dataTransfer.types.includes("Files")) return;
+                  e.preventDefault();
+                  setDropping(true);
+              },
+              onDragLeave: () => setDropping(false),
+              onDrop: (e: React.DragEvent<HTMLDivElement>) => {
+                  e.preventDefault();
+                  setDropping(false);
+                  if (!replacing) replace(e.dataTransfer.files[0]);
+              },
+          }
+        : {};
+
+    const busy = saving || rendering || replacing;
     const iconButtonClass =
         "w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:border-yambo-green-400 hover:text-yambo-green-600 transition-colors disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-gray-600";
 
@@ -314,6 +357,7 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         onPointerUp={handlePointerEnd}
                         onPointerCancel={handlePointerEnd}
                         onDoubleClick={handleDoubleClick}
+                        {...dropProps}
                         onKeyDown={handleKeyDown}
                     >
                         <PlacedPhoto src={src} size={size} edit={edit} unit={unit} className="opacity-35" />
@@ -342,7 +386,12 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                         </div>
                         {!ready && (
                             <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-300 bg-gray-900 px-4 text-center">
-                                {error ?? t("photoEditor.loading")}
+                                {replacing ? t("photoEditor.uploading") : error ?? t("photoEditor.loading")}
+                            </div>
+                        )}
+                        {dropping && (
+                            <div className="absolute inset-2 flex items-center justify-center rounded-xl border-2 border-dashed border-yambo-green-300 bg-gray-900/80 text-sm font-semibold text-white pointer-events-none">
+                                {t("photoEditor.dropHint")}
                             </div>
                         )}
                     </div>
@@ -351,16 +400,40 @@ export function PhotoCropEditor({ isOpen, src, initialEdit, onCancel, onConfirm,
                             <span className="sm:hidden">{t("photoEditor.dragHintTouch")}</span>
                             <span className="hidden sm:inline">{t("photoEditor.dragHint")}</span>
                         </p>
-                        <button
-                            type="button"
-                            onClick={() => setEdit({ ...DEFAULT_EDIT })}
-                            disabled={!ready || untouched}
-                            className="shrink-0 text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
-                        >
-                            <FontAwesomeIcon icon={faRotateLeft} className="mr-1" />
-                            {t("photoEditor.reset")}
-                        </button>
+                        <div className="flex items-center gap-3 shrink-0">
+                            {onReplaceFile && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={busy}
+                                        className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
+                                    >
+                                        <FontAwesomeIcon icon={faImage} className="mr-1" />
+                                        {t("photoEditor.replace")}
+                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept={ACCEPTED_TYPES.join(",")}
+                                        onChange={(e) => replace(e.target.files?.[0])}
+                                        className="hidden"
+                                        data-testid="photo-editor-replace-input"
+                                    />
+                                </>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setEdit({ ...DEFAULT_EDIT })}
+                                disabled={!ready || untouched}
+                                className="text-xs font-medium text-yambo-green-600 hover:text-yambo-green-700 disabled:text-gray-300 transition-colors"
+                            >
+                                <FontAwesomeIcon icon={faRotateLeft} className="mr-1" />
+                                {t("photoEditor.reset")}
+                            </button>
+                        </div>
                     </div>
+                    {replaceError && <p role="alert" className="mt-1 text-xs text-red-500 text-center">{replaceError}</p>}
                 </div>
 
                 <div className="space-y-4 sm:space-y-5 min-w-0">
