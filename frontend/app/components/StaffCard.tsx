@@ -64,7 +64,7 @@ export default function StaffCard({ member, projectName }: StaffCardProps) {
                 }}
                 className="h-full rounded-2xl shadow-md overflow-hidden bg-white hover:shadow-xl transition-all duration-300 hover-lift cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-yambo-green-400"
             >
-                <div className="w-full h-[220px] overflow-hidden">
+                <div className="w-full aspect-[5/6] overflow-hidden">
                     {member.photo ? (
                         <ResponsiveImage
                             src={member.photo}

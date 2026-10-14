@@ -100,11 +100,11 @@ export default function TeamDirectory() {
         const displayName = user.staff?.nickname || user.name;
         return (
             <div key={user.id} className="flex flex-col rounded-2xl bg-white shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200">
-                <div className="relative w-full h-40 overflow-hidden">
+                <div className="relative w-full aspect-[5/6] overflow-hidden">
                     {user.staff?.photo ? (
                         <ResponsiveImage src={user.staff.photo} alt={displayName} className="w-full h-full object-cover" sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw" maxWidth={480} />
                     ) : (
-                        <ElephantAvatar seed={user.id} config={user.staff?.avatar} title={displayName} className="block" />
+                        <ElephantAvatar seed={user.id} config={user.staff?.avatar} title={displayName} className="w-full h-full" />
                     )}
                     {user.hasAccount === false && (
                         <span className="absolute top-2 left-2 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yambo-black/80 text-white">

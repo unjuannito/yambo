@@ -72,7 +72,7 @@ export function StaffPhotoField({ value, onChange, placeholder, label, unsaved =
                 <img
                     src={value.photo}
                     alt={t("photoEditor.photoAlt")}
-                    className="w-24 h-24 shrink-0 rounded-full object-cover object-top shadow-md ring-4 ring-yambo-green-100"
+                    className="w-24 h-24 shrink-0 rounded-full object-cover shadow-md ring-4 ring-yambo-green-100"
                 />
             ) : (
                 <div className="w-24 h-24 shrink-0 rounded-full bg-gradient-to-br from-yambo-green-400 to-yambo-green-600 flex items-center justify-center text-white text-3xl font-bold shadow-md ring-4 ring-yambo-green-100">
