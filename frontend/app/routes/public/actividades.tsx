@@ -19,6 +19,7 @@ import {
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd, itemListJsonLd } from "~/utils/jsonld";
 import { buildMeta, isIndexableActivity } from "~/utils/seo";
+import { activitiesCard, shareImagePaths } from "~/utils/shareCards";
 import type { Route } from "./+types/actividades";
 import toast from "react-hot-toast";
 import { fireEmojiRain } from "~/utils/confetti";
@@ -40,7 +41,14 @@ export function meta({ data }: Route.MetaArgs) {
     const description = t('public.activitiesMetaDescription');
 
     return [
-        ...buildMeta({ siteUrl, path: "/actividades", title, description }),
+        ...buildMeta({
+            siteUrl,
+            path: "/actividades",
+            title,
+            description,
+            image: shareImagePaths.page("actividades", activitiesCard(data?.activities ?? [])),
+            imageAlt: t('public.activitiesTitle'),
+        }),
         { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/actividades` }) },
         { "script:ld+json": breadcrumbJsonLd([
             { name: t('nav.home'), url: siteUrl },

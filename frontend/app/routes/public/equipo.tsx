@@ -8,6 +8,7 @@ import { projectColor } from "~/utils/projectColor";
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd, teamJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
+import { shareImagePaths, staffCard } from "~/utils/shareCards";
 import type { Route } from "./+types/equipo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
@@ -19,7 +20,14 @@ export function meta({ data }: Route.MetaArgs) {
   const description = t('public.staffMetaDescription');
 
   return [
-    ...buildMeta({ siteUrl, path: "/equipo", title, description }),
+    ...buildMeta({
+      siteUrl,
+      path: "/equipo",
+      title,
+      description,
+      image: shareImagePaths.page("equipo", staffCard(data?.staff ?? [])),
+      imageAlt: t('public.staffTitle'),
+    }),
     { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/equipo` }) },
     { "script:ld+json": breadcrumbJsonLd([
         { name: t('nav.home'), url: siteUrl },

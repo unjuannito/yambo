@@ -67,4 +67,27 @@ class ImageVariantControllerTest {
         mockMvc.perform(get("/uploads/_w/481/foto_abc12345.jpg"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @WithAnonymousUser
+    void getShareImage_ShouldServeTheJpegWithALongCache() throws Exception {
+        Path image = Files.writeString(tempDir.resolve("foto.jpg.jpg"), "jpeg-bytes");
+        when(imageVariantService.shareImage("foto_abc12345.jpg")).thenReturn(Optional.of(image));
+
+        mockMvc.perform(get("/uploads/_og/foto_abc12345.jpg"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"))
+                .andExpect(header().string("Cache-Control", "max-age=31536000, public, immutable"))
+                .andExpect(content().string("jpeg-bytes"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getShareImage_ShouldRedirectToTheOriginalWhenItCannotBeConverted() throws Exception {
+        when(imageVariantService.shareImage("logo_abc12345.svg")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/uploads/_og/logo_abc12345.svg"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "../logo_abc12345.svg"));
+    }
 }

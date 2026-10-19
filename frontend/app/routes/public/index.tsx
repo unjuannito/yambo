@@ -16,6 +16,7 @@ import {
 import { getSiteUrl } from "~/utils/env.server";
 import { organizationJsonLd, webSiteJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
+import { homeCard, shareImagePaths } from "~/utils/shareCards";
 import type { Route } from "./+types";
 
 export function meta({ data }: Route.MetaArgs) {
@@ -27,7 +28,7 @@ export function meta({ data }: Route.MetaArgs) {
     const tiktok = data?.contactSettings?.["contact.tiktok"];
 
     return [
-        ...buildMeta({ siteUrl, path: "", title, description }),
+        ...buildMeta({ siteUrl, path: "", title, description, image: shareImagePaths.page("inicio", homeCard(data?.settings ?? {})), imageAlt: "Yambo, asociación juvenil en Alcobendas" }),
         { "script:ld+json": organizationJsonLd(siteUrl, { instagram, tiktok }) },
         { "script:ld+json": webSiteJsonLd(siteUrl) },
     ];

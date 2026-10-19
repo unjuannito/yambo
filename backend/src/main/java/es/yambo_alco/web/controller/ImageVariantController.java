@@ -21,7 +21,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Serves uploaded images resized for where they are shown:
- * {@code /uploads/_w/480/foto_a7bx3k9q.jpg} is that photo as a 480px-wide WebP.
+ * {@code /uploads/_w/480/foto_a7bx3k9q.jpg} is that photo as a 480px-wide WebP, and
+ * {@code /uploads/_og/foto_a7bx3k9q.jpg} is it as a JPEG of at most 1200×630 for link previews.
  */
 @RestController
 @RequiredArgsConstructor
@@ -43,10 +44,26 @@ public class ImageVariantController {
                     .build();
         }
 
-        // A stored name never changes content (uploads get a random suffix), so variants are immutable
+        return immutable(variant.get(), WEBP);
+    }
+
+    @GetMapping("/uploads/_og/{storedName:.+}")
+    public ResponseEntity<Resource> getShareImage(@PathVariable String storedName) {
+        Optional<Path> image = imageVariantService.shareImage(storedName);
+
+        if (image.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, "../" + UriUtils.encodePathSegment(storedName, StandardCharsets.UTF_8))
+                    .build();
+        }
+        return immutable(image.get(), MediaType.IMAGE_JPEG);
+    }
+
+    // A stored name never changes content (uploads get a random suffix), so variants are immutable
+    private static ResponseEntity<Resource> immutable(Path file, MediaType type) {
         return ResponseEntity.ok()
-                .contentType(WEBP)
+                .contentType(type)
                 .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
-                .body(new FileSystemResource(variant.get()));
+                .body(new FileSystemResource(file));
     }
 }

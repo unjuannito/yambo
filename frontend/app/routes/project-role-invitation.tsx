@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router";
+import type { Route } from "./+types/project-role-invitation";
+import { getProjectRoleInvitationInfo } from "~/services/publicService.server";
+import { getSiteUrl } from "~/utils/env.server";
+import { buildMeta } from "~/utils/seo";
+import { shareImagePaths } from "~/utils/shareCards";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "~/hooks/useAuth";
 import { projectRoleInvitationService } from "~/services/projectRoleInvitationService";
@@ -38,6 +43,35 @@ const ROLE_LABELS: Record<GroupRole, string> = {
     COORDINATOR: "coordinador/a",
     MONITOR: "monitor/a",
 };
+
+/**
+ * Solo para la vista previa del enlace (WhatsApp, correo…): la página carga la
+ * invitación en el navegador. No se devuelve el correo ni nada que no salga en la tarjeta.
+ */
+export async function loader({ params }: Route.LoaderArgs) {
+    const info = await getProjectRoleInvitationInfo(params.token).catch(() => null);
+    return {
+        siteUrl: getSiteUrl(),
+        invitation: info ? { projectName: info.projectName, role: info.role } : null,
+    };
+}
+
+export function meta({ data, params }: Route.MetaArgs) {
+    const invitation = data?.invitation;
+    const title = invitation ? `Invitación a ${invitation.projectName} | Yambo` : "Invitación | Yambo";
+    const description = invitation
+        ? `Te invitan a unirte a ${invitation.projectName} como ${ROLE_LABELS[invitation.role] ?? "miembro"}. Acepta la invitación desde este enlace.`
+        : "Acepta la invitación para unirte a un proyecto de Yambo.";
+    return buildMeta({
+        siteUrl: data?.siteUrl ?? "",
+        path: `/project-role-invitation/${params.token}`,
+        title,
+        description,
+        image: shareImagePaths.projectInvitation(params.token),
+        imageAlt: title,
+        index: false,
+    });
+}
 
 export default function ProjectRoleInvitationAccept() {
     const { token } = useParams();

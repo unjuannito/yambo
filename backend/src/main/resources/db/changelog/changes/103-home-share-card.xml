@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Texts and image of the card shown when the home page is shared (og:image), editable
+        from the admin. They need the "home" category to be returned by /public/settings/home;
+        an empty image means "use the hero image".
+    -->
+    <changeSet id="103-01-home-share-card" author="yambo">
+        <insert tableName="settings">
+            <column name="id" value="hshr0001"/>
+            <column name="key" value="home.share.eyebrow"/>
+            <column name="value" value="Asociación juvenil · Alcobendas"/>
+            <column name="description" value="Small label above the title of the home page share card"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hshr0002"/>
+            <column name="key" value="home.share.title"/>
+            <column name="value" value="Vive, aprende y crece con Yambo"/>
+            <column name="description" value="Title of the home page share card"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hshr0003"/>
+            <column name="key" value="home.share.subtitle"/>
+            <column name="value" value="Ocio educativo y tiempo libre para jóvenes"/>
+            <column name="description" value="Line under the title of the home page share card"/>
+            <column name="category" value="home"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="hshr0004"/>
+            <column name="key" value="home.share.image"/>
+            <column name="value" value=""/>
+            <column name="description" value="Image of the home page share card; empty uses the hero image"/>
+            <column name="category" value="home"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

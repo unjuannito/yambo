@@ -72,7 +72,20 @@ describe("buildMeta", () => {
 
         expect(meta).toContainEqual({ tagName: "link", rel: "canonical", href: SITE_URL });
         expect(content(meta, "og:image")).toBe("https://yambo.cabrasky.net/og-default.png");
+        expect(content(meta, "og:image:width")).toBe("1200");
+        expect(content(meta, "og:image:height")).toBe("630");
         expect(content(meta, "twitter:card")).toBe("summary_large_image");
+    });
+
+    it("declares the size of share cards, but not of arbitrary uploads", () => {
+        const card = buildMeta({ siteUrl: SITE_URL, path: "/a", title: "A", description: "", image: "/og/actividades/A1?v=x", imageAlt: "Taller" });
+        const upload = buildMeta({ siteUrl: SITE_URL, path: "/a", title: "A", description: "", image: "/uploads/taller.jpg" });
+
+        expect(content(card, "og:image:type")).toBe("image/jpeg");
+        expect(content(card, "og:image:width")).toBe("1200");
+        expect(content(card, "og:image:alt")).toBe("Taller");
+        expect(content(upload, "og:image:width")).toBeUndefined();
+        expect(content(upload, "og:image:alt")).toBeUndefined();
     });
 
     it("marks pages that must stay out of search engines", () => {

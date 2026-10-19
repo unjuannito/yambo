@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.18.10",
+  "version": "1.19.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,6 +14,8 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/plus-jakarta-sans": "^5.2.5",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-brands-svg-icons": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
@@ -21,6 +23,7 @@
     "@mdxeditor/editor": "^3.52.4",
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
+    "@resvg/resvg-js": "^2.6.2",
     "@stomp/stompjs": "^7.3.0",
     "@types/axios": "^0.9.36",
     "axios": "^1.9.0",
@@ -28,12 +31,14 @@
     "chart.js": "^4.4.8",
     "i18next": "^26.3.6",
     "isbot": "^5.1.27",
+    "jpeg-js": "^0.4.4",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.6.0",
     "react-i18next": "^17.0.9",
     "react-router": "^7.5.3",
+    "satori": "^0.12.2",
     "tailwind-merge": "^3.4.0",
     "tailwind-scrollbar": "^4.0.2"
   },

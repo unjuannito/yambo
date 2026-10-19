@@ -11,18 +11,29 @@ import { AuthLayout } from "~/routes/AuthLayout";
 import { useAuth } from "~/hooks/useAuth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import type { Route } from "./+types/register";
+import { getSiteUrl } from "~/utils/env.server";
+import { buildMeta } from "~/utils/seo";
+import { shareImagePaths } from "~/utils/shareCards";
 
 export const ssr = false;
 
-export function meta() {
+export function loader() {
+    return { siteUrl: getSiteUrl() };
+}
+
+/** Al registro solo se llega con una invitación: la vista previa del enlace lo cuenta así. */
+export function meta({ data }: Route.MetaArgs) {
     const { t } = useTranslation();
-    return [
-        { title: t('register.pageTitle') },
-        {
-            name: "description",
-            content: t('register.pageDesc'),
-        },
-    ];
+    return buildMeta({
+        siteUrl: data?.siteUrl ?? "",
+        path: "/register",
+        title: t('register.pageTitle'),
+        description: t('register.pageDesc'),
+        image: shareImagePaths.invitation(),
+        imageAlt: "Te han invitado a Yambo",
+        index: false,
+    });
 }
 
 export default function Register() {
