@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash, faHouse } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
 import { PageContainer } from "~/components/common/PageContainer";
+import { HOME_SHARE_DEFAULTS } from "~/utils/shareCards";
 
 export function meta() {
     return [
@@ -20,7 +21,7 @@ export function meta() {
     ];
 }
 
-type MainPageTab = "sections" | "hero" | "about";
+type MainPageTab = "sections" | "hero" | "about" | "share";
 
 interface BulletItem {
     icon: string;
@@ -72,6 +73,14 @@ export default function MainPageEditor() {
     const [aboutImage, setAboutImage] = useState("");
     const [aboutBullets, setAboutBullets] = useState<BulletItem[]>([{ ...EMPTY_BULLET }]);
 
+    // Al compartir (og:image de la portada)
+    const [shareEyebrow, setShareEyebrow] = useState("");
+    const [shareTitle, setShareTitle] = useState("");
+    const [shareSubtitle, setShareSubtitle] = useState("");
+    const [shareImage, setShareImage] = useState("");
+    // Cambia al guardar para que la vista previa pida la tarjeta nueva
+    const [sharePreviewVersion, setSharePreviewVersion] = useState(() => Date.now());
+
     const loadSettings = useCallback(async () => {
         try {
             setLoading(true);
@@ -85,6 +94,10 @@ export default function MainPageEditor() {
             setHeroImage(get("home.hero.image"));
             setAboutIntro(get("home.about.intro"));
             setAboutImage(get("home.about.image"));
+            setShareEyebrow(get("home.share.eyebrow"));
+            setShareTitle(get("home.share.title"));
+            setShareSubtitle(get("home.share.subtitle"));
+            setShareImage(get("home.share.image"));
 
             // Sections config
             const sectionsRaw = get("home.sections.config");
@@ -175,6 +188,24 @@ export default function MainPageEditor() {
         }
     };
 
+    const handleSaveShare = async () => {
+        try {
+            setSaving(true);
+            await settingsService.updateSettingsBulk({
+                "home.share.eyebrow": shareEyebrow.trim(),
+                "home.share.title": shareTitle.trim(),
+                "home.share.subtitle": shareSubtitle.trim(),
+                "home.share.image": shareImage,
+            });
+            setSharePreviewVersion(Date.now());
+            toast.success("Tarjeta para compartir guardada");
+        } catch (err) {
+            toast.error(getErrorMessage(err, "No se ha podido guardar la tarjeta para compartir"));
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleSaveAbout = async () => {
         try {
             setSaving(true);
@@ -222,6 +253,7 @@ export default function MainPageEditor() {
         { key: "sections", label: "Secciones" },
         { key: "hero", label: "Hero" },
         { key: "about", label: "Sobre Nosotros" },
+        { key: "share", label: "Al compartir" },
     ];
 
     if (loading) {
@@ -617,6 +649,84 @@ export default function MainPageEditor() {
                                 disabled={saving}
                             >
                                 {saving ? "Guardando..." : "Guardar Sobre Nosotros"}
+                            </ButtonComponent>
+                        </div>
+                    </section>
+                )}
+
+                {/* Share Tab */}
+                {activeTab === "share" && (
+                    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6">
+                        <div>
+                            <h2 className="text-xl font-bold font-display text-yambo-black mb-1">Al compartir</h2>
+                            <p className="text-sm text-gray-400 mb-4">
+                                La imagen que aparece al mandar el enlace de la portada por WhatsApp, Telegram o redes.
+                                Los campos vacíos usan el texto de ejemplo.
+                            </p>
+                        </div>
+
+                        <InputComponent
+                            label="Etiqueta"
+                            value={shareEyebrow}
+                            maxLength={40}
+                            placeholder={HOME_SHARE_DEFAULTS.eyebrow}
+                            onChange={(e) => setShareEyebrow(e.target.value)}
+                        />
+                        <InputComponent
+                            label="Título"
+                            value={shareTitle}
+                            maxLength={60}
+                            placeholder={HOME_SHARE_DEFAULTS.title}
+                            onChange={(e) => setShareTitle(e.target.value)}
+                        />
+                        <InputComponent
+                            label="Subtítulo"
+                            value={shareSubtitle}
+                            maxLength={70}
+                            placeholder={HOME_SHARE_DEFAULTS.subtitle}
+                            onChange={(e) => setShareSubtitle(e.target.value)}
+                        />
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Imagen</label>
+                            <p className="text-xs text-gray-400 mb-2">
+                                Mejor una foto apaisada. Si no subes ninguna se usa la imagen del Hero.
+                            </p>
+                            <FileUploader
+                                compact
+                                multiple={false}
+                                label="Subir imagen para compartir"
+                                accept="image/jpeg,image/png,image/webp"
+                                onUpload={(file) => setShareImage(file.url)}
+                            />
+                            {shareImage && (
+                                <button
+                                    type="button"
+                                    className="mt-2 text-sm text-gray-500 hover:text-red-600"
+                                    onClick={() => setShareImage("")}
+                                >
+                                    <FontAwesomeIcon icon={faXmark} className="mr-1" />
+                                    Quitar imagen (usar la del Hero)
+                                </button>
+                            )}
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Vista previa (se actualiza al guardar)</p>
+                            <img
+                                src={`/og/inicio?v=${sharePreviewVersion}`}
+                                alt="Tarjeta que se ve al compartir la portada"
+                                className="w-full max-w-2xl aspect-[1200/630] rounded-2xl border border-gray-100 bg-gray-50"
+                            />
+                        </div>
+
+                        <div className="flex justify-end pt-4 border-t border-gray-100">
+                            <ButtonComponent
+                                variant="primary"
+                                onClick={handleSaveShare}
+                                disabled={saving}
+                            >
+                                {saving ? "Guardando..." : "Guardar"}
                             </ButtonComponent>
                         </div>
                     </section>

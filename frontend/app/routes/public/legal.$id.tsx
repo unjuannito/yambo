@@ -4,6 +4,7 @@ import type { LegalPage } from "~/services/legalPageService";
 import { getSiteUrl } from "~/utils/env.server";
 import { webPageJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
+import { legalCard, shareImagePaths } from "~/utils/shareCards";
 
 export async function loader({ params }: { params: { id: string } }) {
     const siteUrl = getSiteUrl();
@@ -30,6 +31,8 @@ export function meta({ data: routeData }: { data: { page: LegalPage | null; notF
             path: `/legal/${page.id}`,
             title: `${page.title} | Yambo`,
             description: page.title,
+            image: shareImagePaths.legal(page, legalCard(page)),
+            imageAlt: page.title,
         }),
         { "script:ld+json": webPageJsonLd({
             name: page.title,

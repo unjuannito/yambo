@@ -17,6 +17,7 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { getSiteUrl } from "~/utils/env.server";
 import { contactPageJsonLd, breadcrumbJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
+import { contactCard, shareImagePaths } from "~/utils/shareCards";
 import { fireEmojiRain } from "~/utils/confetti";
 
 export function meta({ data }: Route.MetaArgs) {
@@ -30,7 +31,14 @@ export function meta({ data }: Route.MetaArgs) {
     const email = data?.settings?.["contact.email"];
 
     return [
-        ...buildMeta({ siteUrl, path: "/contacto", title, description }),
+        ...buildMeta({
+            siteUrl,
+            path: "/contacto",
+            title,
+            description,
+            image: shareImagePaths.page("contacto", contactCard(data?.settings ?? {})),
+            imageAlt: t("public.contactTitle"),
+        }),
         { "script:ld+json": contactPageJsonLd({ siteUrl, email, instagram, tiktok }) },
         {
             "script:ld+json": breadcrumbJsonLd([

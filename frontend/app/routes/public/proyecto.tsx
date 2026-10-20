@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { projectPath } from "~/utils/publicPaths";
 import { ResponsiveImage } from "~/components/common/ResponsiveImage";
+import { projectCardVersion, shareImagePaths } from "~/utils/shareCards";
 
 export async function loader({ params }: Route.LoaderArgs) {
   let project: ProjectDetail;
@@ -44,7 +45,8 @@ export function meta({ data }: Route.MetaArgs) {
       path: project ? projectPath(project) : "/proyectos",
       title,
       description: metaDescription(description),
-      image: project?.image,
+      image: project ? shareImagePaths.project(project, projectCardVersion(project)) : null,
+      imageAlt: project?.name,
       // Un proyecto archivado sigue siendo visitable, pero no debe salir en buscadores
       index: project?.active !== false,
     }),

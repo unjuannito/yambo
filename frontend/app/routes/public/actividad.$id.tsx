@@ -12,6 +12,7 @@ import { useState } from "react";
 import { publicService } from "~/services/publicService";
 import { activityPath } from "~/utils/publicPaths";
 import { ResponsiveImage } from "~/components/common/ResponsiveImage";
+import { activityCardVersion, shareImagePaths } from "~/utils/shareCards";
 
 export async function loader({ params, request }: Route.LoaderArgs) {
     const backendUrl =
@@ -74,7 +75,8 @@ export function meta({ data }: Route.MetaArgs) {
             path: activityPath(activity),
             title: `${statusPrefix}${activity.name} | Yambo`,
             description,
-            image: activity.image,
+            image: shareImagePaths.activity(activity, activityCardVersion(activity)),
+            imageAlt: activity.name,
             index: isIndexableActivity(activity),
         }),
         { "script:ld+json": activityJsonLd(activity, siteUrl) },

@@ -147,7 +147,8 @@ describe("actividad.$id — meta()", () => {
         );
         expect(ogTitle[0].content).toBe("Taller de Navidad | Yambo");
         expect(ogType[0].content).toBe("website");
-        expect(ogImage[0].content).toBe("https://yambo.cabrasky.net/uploads/navidad.jpg");
+        // La tarjeta de compartir de la actividad, versionada por su contenido
+        expect(ogImage[0].content).toMatch(/^https:\/\/yambo\.cabrasky\.net\/og\/actividades\/ACT001\?v=\w+$/);
     });
 
     it("prefixes title with [Cancelada] for cancelled activities", () => {
@@ -200,13 +201,12 @@ describe("actividad.$id — meta()", () => {
         expect(description.content).toContain("Taller Ven a pintar");
     });
 
-    it("shares the brand image when no image is set", () => {
-        const noImage = { ...mockActivity, image: null };
-        const data = { activity: noImage, siteUrl: MOCK_SITE_URL };
-        const result = meta({ data } as any) as any[];
+    it("shares a new card URL when the activity changes", () => {
+        const ogImage = (activity: Record<string, unknown>) =>
+            (meta({ data: { activity, siteUrl: MOCK_SITE_URL } } as any) as any[]).find((r: any) => r.property === "og:image").content;
 
-        const ogImage = result.filter((r: any) => r.property === "og:image");
-        expect(ogImage[0].content).toBe("https://yambo.cabrasky.net/og-default.png");
+        expect(ogImage({ ...mockActivity, image: null })).not.toBe(ogImage(mockActivity));
+        expect(ogImage({ ...mockActivity })).toBe(ogImage(mockActivity));
     });
 
     it("includes JSON-LD for Event schema", () => {

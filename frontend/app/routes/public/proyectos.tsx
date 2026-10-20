@@ -6,6 +6,7 @@ import { projectColor } from "~/utils/projectColor";
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd, itemListJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
+import { projectsCard, shareImagePaths } from "~/utils/shareCards";
 import type { Route } from "./+types/proyectos";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder } from "@fortawesome/free-solid-svg-icons";
@@ -19,7 +20,14 @@ export function meta({ data }: Route.MetaArgs) {
   const description = t('public.projectsMetaDescription');
 
   return [
-    ...buildMeta({ siteUrl, path: "/proyectos", title, description }),
+    ...buildMeta({
+      siteUrl,
+      path: "/proyectos",
+      title,
+      description,
+      image: shareImagePaths.page("proyectos", projectsCard(data?.projects ?? [])),
+      imageAlt: t('public.projectsTitle'),
+    }),
     { "script:ld+json": collectionPageJsonLd({ name: title, description, url: `${siteUrl}/proyectos` }) },
     { "script:ld+json": breadcrumbJsonLd([
         { name: t('nav.home'), url: siteUrl },

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -19,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Resized WebP copies of uploaded images, made the first time each size is requested and
- * kept on disk next to the originals ({@code uploads/.variants/{width}/{name}.webp}).
+ * kept on disk next to the originals ({@code uploads/.variants/{width}/{name}.webp}), plus a
+ * JPEG sized for link previews ({@code uploads/.variants/share/{name}.jpg}).
  *
  * <p>The conversion is delegated to libvips ({@code vipsthumbnail}): it honours the EXIF
  * orientation of phone photos and streams the image instead of decoding it into the JVM heap.
@@ -35,6 +37,9 @@ public class ImageVariantService {
 
     private static final Set<String> CONVERTIBLE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final int QUALITY = 80;
+    /** Open Graph size: what WhatsApp, Telegram and social networks show in a link preview. */
+    public static final String SHARE_SIZE = "1200x630";
+    private static final int SHARE_QUALITY = 82;
     private static final long TIMEOUT_SECONDS = 30;
 
     private final FileStorageService fileStorageService;
@@ -61,12 +66,31 @@ public class ImageVariantService {
         if (!WIDTHS.contains(width)) {
             throw new ResourceNotFoundException("Unsupported image width: " + width);
         }
+        // "NNNx>": fit to that width, never enlarge
+        return produce(storedName, fileStorageService.variantPath(storedName, width),
+                List.of("--size", width + "x>"), "[Q=" + QUALITY + ",strip]");
+    }
+
+    /**
+     * The image fitted inside {@link #SHARE_SIZE} as a JPEG, creating it if needed: the frontend
+     * draws it into the link preview card, which only reads JPEG and PNG. It is not cropped,
+     * because many images are posters whose text must stay whole, and transparent logos are
+     * laid on white instead of the black a JPEG would give them.
+     * Empty when the image cannot be converted here; the caller should serve the original.
+     *
+     * @throws ResourceNotFoundException if the file does not exist
+     */
+    public Optional<Path> shareImage(String storedName) {
+        return produce(storedName, fileStorageService.shareImagePath(storedName),
+                // "WxH>": fit inside, never enlarge
+                List.of("--size", SHARE_SIZE + ">"), "[Q=" + SHARE_QUALITY + ",strip,optimize_coding,background=255]");
+    }
+
+    private Optional<Path> produce(String storedName, Path target, List<String> options, String saveOptions) {
         Path original = fileStorageService.getFilePath(storedName);
         if (toolMissing || !isConvertible(storedName)) {
             return Optional.empty();
         }
-
-        Path target = fileStorageService.variantPath(storedName, width);
         if (Files.exists(target)) {
             return Optional.of(target);
         }
@@ -74,7 +98,7 @@ public class ImageVariantService {
         Object lock = locks.computeIfAbsent(target, p -> new Object());
         try {
             synchronized (lock) {
-                if (Files.exists(target) || convert(original, target, width)) {
+                if (Files.exists(target) || convert(original, target, options, saveOptions)) {
                     return Optional.of(target);
                 }
                 return Optional.empty();
@@ -89,7 +113,7 @@ public class ImageVariantService {
         return dot >= 0 && CONVERTIBLE_EXTENSIONS.contains(storedName.substring(dot + 1).toLowerCase(Locale.ROOT));
     }
 
-    private boolean convert(Path original, Path target, int width) {
+    private boolean convert(Path original, Path target, List<String> options, String saveOptions) {
         Path temp = null;
         boolean acquired = false;
         try {
@@ -100,25 +124,28 @@ public class ImageVariantService {
             }
             Files.createDirectories(target.getParent());
             // Written to a temp file and moved into place, so a half-written variant is never served
-            temp = Files.createTempFile(target.getParent(), "tmp-", ".webp");
+            // Same extension as the target: vipsthumbnail picks the output format from it
+            String name = target.getFileName().toString();
+            temp = Files.createTempFile(target.getParent(), "tmp-", name.substring(name.lastIndexOf('.')));
 
-            Process process = new ProcessBuilder(
-                    command,
-                    original.toString(),
-                    // "NNNx>": fit to that width, never enlarge
-                    "--size", width + "x>",
-                    "-o", temp + "[Q=" + QUALITY + ",strip]")
+            List<String> args = new ArrayList<>();
+            args.add(command);
+            args.add(original.toString());
+            args.addAll(options);
+            args.add("-o");
+            args.add(temp + saveOptions);
+            Process process = new ProcessBuilder(args)
                     .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .start();
 
             if (!process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
-                log.warn("Timed out converting {} to {}px", original.getFileName(), width);
+                log.warn("Timed out converting {} ({})", original.getFileName(), options);
                 return false;
             }
             if (process.exitValue() != 0 || Files.size(temp) == 0) {
-                log.warn("Could not convert {} to {}px (exit code {})", original.getFileName(), width, process.exitValue());
+                log.warn("Could not convert {} ({}, exit code {})", original.getFileName(), options, process.exitValue());
                 return false;
             }
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);

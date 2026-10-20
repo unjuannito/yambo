@@ -110,4 +110,11 @@ export default [
     // SEO resource routes
     route("sitemap.xml", "routes/sitemap[.]xml.tsx"),
     route("robots.txt", "routes/robots[.]txt.tsx"),
+    // Imágenes para compartir enlaces (og:image)
+    route("og/actividades/:id", "routes/og/actividad.$id.tsx"),
+    route("og/proyectos/:id", "routes/og/proyecto.$id.tsx"),
+    route("og/invitacion", "routes/og/invitacion.tsx"),
+    route("og/invitacion/:token", "routes/og/invitacion.$token.tsx"),
+    route("og/legal/:id", "routes/og/legal.$id.tsx"),
+    route("og/:page", "routes/og/pagina.tsx"),
 ] satisfies RouteConfig;

@@ -11,6 +11,8 @@ const SITE_NAME = "Yambo";
 const DESCRIPTION_MAX = 160;
 /** 1200×630, generada desde el logo con scripts/generate-brand-assets.sh. */
 const DEFAULT_IMAGE = "/og-default.png";
+/** Las tarjetas de `/og/...` (ver shareCards.ts) también miden 1200×630, pero en JPEG. */
+const SHARE_CARD = /^\/og(\/|$)/;
 
 /** Los buscadores y las redes necesitan URLs completas; las subidas se guardan como `/uploads/...`. */
 export function absoluteUrl(siteUrl: string, path: string): string {
@@ -44,13 +46,20 @@ export interface PageMeta {
     description: string;
     /** Imagen para compartir; por defecto la de la marca. Admite rutas relativas. */
     image?: string | null;
+    /** Qué muestra la imagen, para lectores de pantalla y para quien no la carga. */
+    imageAlt?: string;
     type?: "website" | "article" | "profile";
     index?: boolean;
 }
 
-export function buildMeta({ siteUrl, path, title, description, image, type = "website", index = true }: PageMeta): MetaDescriptor[] {
+export function buildMeta({ siteUrl, path, title, description, image, imageAlt, type = "website", index = true }: PageMeta): MetaDescriptor[] {
     const url = absoluteUrl(siteUrl, path).replace(/\/$/, "") || siteUrl;
-    const imageUrl = absoluteUrl(siteUrl, image || DEFAULT_IMAGE);
+    const imagePath = image || DEFAULT_IMAGE;
+    const imageUrl = absoluteUrl(siteUrl, imagePath);
+    // Con el tamaño declarado, WhatsApp y Facebook enseñan la vista previa grande desde
+    // el primer envío, sin esperar a descargar la imagen para medirla
+    const isCard = SHARE_CARD.test(imagePath);
+    const knownSize = imagePath === DEFAULT_IMAGE || isCard;
 
     return [
         { title },
@@ -64,9 +73,16 @@ export function buildMeta({ siteUrl, path, title, description, image, type = "we
         { property: "og:description", content: description },
         { property: "og:url", content: url },
         { property: "og:image", content: imageUrl },
+        ...(knownSize ? [
+            { property: "og:image:type", content: isCard ? "image/jpeg" : "image/png" },
+            { property: "og:image:width", content: "1200" },
+            { property: "og:image:height", content: "630" },
+        ] : []),
+        ...(imageAlt ? [{ property: "og:image:alt", content: imageAlt }] : []),
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
         { name: "twitter:image", content: imageUrl },
+        ...(imageAlt ? [{ name: "twitter:image:alt", content: imageAlt }] : []),
     ];
 }

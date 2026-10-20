@@ -100,7 +100,21 @@ public class FileStorageService {
      * Where the resized WebP copy of an image lives. The file may not exist yet.
      */
     public Path variantPath(String storedName, int width) {
-        Path path = uploadPath.resolve(VARIANTS_DIR).resolve(String.valueOf(width)).resolve(storedName + ".webp").normalize();
+        return insideVariants(String.valueOf(width), storedName + ".webp");
+    }
+
+    /** Folder, inside {@link #VARIANTS_DIR}, holding the copies cut for link previews. */
+    static final String SHARE_DIR = "share";
+
+    /**
+     * Where the link preview (Open Graph) JPEG of an image lives. The file may not exist yet.
+     */
+    public Path shareImagePath(String storedName) {
+        return insideVariants(SHARE_DIR, storedName + ".jpg");
+    }
+
+    private Path insideVariants(String folder, String fileName) {
+        Path path = uploadPath.resolve(VARIANTS_DIR).resolve(folder).resolve(fileName).normalize();
         if (!path.startsWith(uploadPath.resolve(VARIANTS_DIR))) {
             throw new BadRequestException("Invalid file path");
         }
@@ -114,8 +128,9 @@ public class FileStorageService {
             return;
         }
         try (var widths = Files.list(variantsRoot)) {
-            for (Path widthDir : widths.toList()) {
-                Files.deleteIfExists(widthDir.resolve(storedName + ".webp"));
+            for (Path folder : widths.toList()) {
+                Files.deleteIfExists(folder.resolve(storedName + ".webp"));
+                Files.deleteIfExists(folder.resolve(storedName + ".jpg"));
             }
         } catch (IOException e) {
             log.warn("Failed to delete image variants of {}", storedName, e);
