@@ -2,9 +2,20 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Staff;
+import es.yambo_alco.web.model.StaffAvatar;
+import es.yambo_alco.web.model.StaffPhotoEdit;
+import es.yambo_alco.web.model.NotificationPreferences;
+import es.yambo_alco.web.model.Profile;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.repository.RoleRepository;
+import es.yambo_alco.web.model.UserFilter;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
+import es.yambo_alco.web.repository.ProfileRepository;
+import es.yambo_alco.web.repository.StaffRepository;
+import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,10 +23,12 @@ import org.mockito.Mockito;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -32,56 +45,117 @@ public class UserServiceTest {
 
     private UserRepository userRepository;
     private PasswordEncoder passwordEncoder;
-    private UserService userService;
-    private RoleRepository roleRepository;
+        private UserService userService;
+        private ProfileRepository profileRepository;
+        private StaffRepository staffRepository;
+        private UploadedFileService uploadedFileService;
+    private ProjectGroupRepository projectGroupRepository;
+    private UserProjectGroupRepository userProjectGroupRepository;
     private PendingDeletionService pendingDeletionService;
+    private AccessGrantService accessGrantService;
 
     @BeforeEach
     public void setup() {
         userRepository = Mockito.mock(UserRepository.class);
         passwordEncoder = Mockito.mock(PasswordEncoder.class);
-        roleRepository = Mockito.mock(RoleRepository.class);
+        profileRepository = Mockito.mock(ProfileRepository.class);
+        projectGroupRepository = Mockito.mock(ProjectGroupRepository.class);
+        userProjectGroupRepository = Mockito.mock(UserProjectGroupRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
-        userService = new UserService(userRepository, passwordEncoder, roleRepository, pendingDeletionService);
+        accessGrantService = Mockito.mock(AccessGrantService.class);
+        staffRepository = Mockito.mock(StaffRepository.class);
+        uploadedFileService = Mockito.mock(UploadedFileService.class);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService, staffRepository, uploadedFileService);
     }
 
     @Test
     public void listUsers_returnsPageFromRepository() {
-        User u = User.builder().id(1L).username("u").email("a@b.com").name("User").enabled(true).build();
+        User u = User.builder().id("U0000001").email("a@b.com").name("User").enabled(true).build();
         Page<User> page = new PageImpl<>(List.of(u));
         when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
                 .thenReturn(page);
 
-        Page<User> res = userService.listUsers(null, null, null, (List<String>) null, (List<String>) null,
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null, null),
                 PageRequest.of(0, 10));
         assertThat(res.getTotalElements()).isEqualTo(1);
-        assertThat(res.getContent().get(0).getUsername()).isEqualTo("u");
+        assertThat(res.getContent().get(0).getEmail()).isEqualTo("a@b.com");
+    }
+
+    @Test
+    void listUsers_WithNameQuery_ShouldFilterByName() {
+        User u = User.builder().id("U0000001").email("john@example.com").name("John").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter(null, null, "John", null, null, null, null, null, null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getName()).isEqualTo("John");
+    }
+
+    @Test
+    void listUsers_WithQuery_ShouldUseQueryContains() {
+        User u = User.builder().id("U0000001").email("test@example.com").name("Test User").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter("test@", null, null, null, null, null, null, null, null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getEmail()).isEqualTo("test@example.com");
+    }
+
+    @Test
+    void listUsers_WithEnabledFilter_ShouldFilterByEnabled() {
+        User u = User.builder().id("U0000001").email("enabled@example.com").name("Enabled User").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, true, null, null, null, null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).isEnabled()).isTrue();
+    }
+
+    @Test
+    void listUsers_WithRoleFilter_ShouldFilterByRole() {
+        User u = User.builder().id("U0000001").email("monitor@example.com").name("Monitor").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, "MONITOR", null),
+                PageRequest.of(0, 10));
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getEmail()).isEqualTo("monitor@example.com");
     }
 
     @Test
     public void updateProfile_WithValidData_ShouldUpdateUser() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("old@example.com")
                 .name("Old Name")
                 .build();
 
         User updatedUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("new@example.com")
                 .name("New Name")
-                .updatedAt(LocalDateTime.now())
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateProfile(1L, "New Name", "new@example.com");
+        User result = userService.updateProfile("U0000001", "New Name", "new@example.com");
 
         // Then
         assertThat(result.getName()).isEqualTo("New Name");
@@ -93,15 +167,15 @@ public class UserServiceTest {
     public void updateProfile_WithExistingEmail_ShouldThrowException() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
+                .id("U0000001")
                 .email("old@example.com")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile(1L, "New Name", "existing@example.com"))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "existing@example.com"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Email already in use");
 
@@ -111,10 +185,10 @@ public class UserServiceTest {
     @Test
     public void updateProfile_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateProfile(1L, "New Name", "new@example.com"))
+        assertThatThrownBy(() -> userService.updateProfile("U0000001", "New Name", "new@example.com"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -123,16 +197,16 @@ public class UserServiceTest {
     public void changePassword_WithValidData_ShouldUpdatePassword() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
+                .id("U0000001")
                 .password("encodedOldPassword")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("oldPassword", "encodedOldPassword")).thenReturn(true);
         when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
 
         // When
-        userService.changePassword(1L, "oldPassword", "newPassword");
+        userService.changePassword("U0000001", "oldPassword", "newPassword");
 
         // Then
         verify(passwordEncoder).encode("newPassword");
@@ -143,15 +217,15 @@ public class UserServiceTest {
     public void changePassword_WithWrongOldPassword_ShouldThrowException() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
+                .id("U0000001")
                 .password("encodedOldPassword")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.matches("wrongPassword", "encodedOldPassword")).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> userService.changePassword(1L, "wrongPassword", "newPassword"))
+        assertThatThrownBy(() -> userService.changePassword("U0000001", "wrongPassword", "newPassword"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Old password is incorrect");
 
@@ -162,97 +236,97 @@ public class UserServiceTest {
     @Test
     public void changePassword_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.changePassword(1L, "oldPassword", "newPassword"))
+        assertThatThrownBy(() -> userService.changePassword("U0000001", "oldPassword", "newPassword"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
 
     @Test
-    public void updateUserRoles_WithValidData_ShouldUpdateRoles() {
+        public void updateUserProfiles_WithValidData_ShouldUpdateProfiles() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
+                .profiles(new HashSet<>())
                 .build();
 
-        Role role1 = Role.builder().id("ROLE_USER").build();
-        Role role2 = Role.builder().id("ROLE_ADMIN").build();
+        Profile role1 = Profile.builder().id("ROLE_USER").build();
+        Profile role2 = Profile.builder().id("ROLE_ADMIN").build();
 
         User updatedUser = User.builder()
-                .id(1L)
-                .username("testuser")
-                .roles(Set.of(role1, role2))
-                .updatedAt(LocalDateTime.now())
+                .id("U0000001")
+                .email("testuser")
+                .profiles(Set.of(role1, role2))
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
-        when(roleRepository.findById("ROLE_USER")).thenReturn(Optional.of(role1));
-        when(roleRepository.findById("ROLE_ADMIN")).thenReturn(Optional.of(role2));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(profileRepository.findById("ROLE_USER")).thenReturn(Optional.of(role1));
+        when(profileRepository.findById("ROLE_ADMIN")).thenReturn(Optional.of(role2));
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
 
         // When
-        User result = userService.updateUserRoles(1L, Set.of("ROLE_USER", "ROLE_ADMIN"));
+        User result = userService.updateUserProfiles("U0000001", Set.of("ROLE_USER", "ROLE_ADMIN"));
 
         // Then
-        assertThat(result.getRoles()).hasSize(2);
-        assertThat(result.getRoles()).extracting("id").contains("ROLE_USER", "ROLE_ADMIN");
+        assertThat(result.getProfiles()).hasSize(2);
+        assertThat(result.getProfiles()).extracting("id").contains("ROLE_USER", "ROLE_ADMIN");
         verify(userRepository).save(any(User.class));
     }
 
     @Test
-    public void updateUserRoles_WithEmptyRoles_ShouldThrowException() {
+        public void updateUserProfiles_WithEmptyProfiles_ShouldThrowException() {
         // Given
-        User existingUser = User.builder().id(1L).build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        User existingUser = User.builder().id("U0000001").build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, Set.of()))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of()))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("At least one role must be specified");
+                .hasMessage("At least one profile must be specified");
 
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    public void updateUserRoles_WithNullRoles_ShouldThrowException() {
+        public void updateUserProfiles_WithNullProfiles_ShouldThrowException() {
         // Given
-        User existingUser = User.builder().id(1L).build();
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        User existingUser = User.builder().id("U0000001").build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, null))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", null))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("At least one role must be specified");
+                .hasMessage("At least one profile must be specified");
 
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    public void updateUserRoles_WithNonExistentUser_ShouldThrowException() {
+        public void updateUserProfiles_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, Set.of("ROLE_USER")))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of("ROLE_USER")))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
 
     @Test
-    public void updateUserRoles_WithNonExistentRole_ShouldThrowException() {
+        public void updateUserProfiles_WithNonExistentProfile_ShouldThrowException() {
         // Given
-        User existingUser = User.builder().id(1L).build();
+        User existingUser = User.builder().id("U0000001").build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
-        when(roleRepository.findById("NON_EXISTENT_ROLE")).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(profileRepository.findById("NON_EXISTENT_ROLE")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUserRoles(1L, Set.of("NON_EXISTENT_ROLE")))
+        assertThatThrownBy(() -> userService.updateUserProfiles("U0000001", Set.of("NON_EXISTENT_ROLE")))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Role not found: NON_EXISTENT_ROLE");
+                .hasMessage("Profile not found: NON_EXISTENT_ROLE");
 
         verify(userRepository, never()).save(any(User.class));
     }
@@ -261,21 +335,19 @@ public class UserServiceTest {
     public void getUserById_WithExistingUser_ShouldReturnUser() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
                 .email("test@example.com")
                 .name("Test User")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When
-        User result = userService.getUserById(1L);
+        User result = userService.getUserById("U0000001");
 
         // Then
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getUsername()).isEqualTo("testuser");
+        assertThat(result.getId()).isEqualTo("U0000001");
         assertThat(result.getEmail()).isEqualTo("test@example.com");
         assertThat(result.getName()).isEqualTo("Test User");
     }
@@ -283,10 +355,10 @@ public class UserServiceTest {
     @Test
     public void getUserById_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.getUserById(1L))
+        assertThatThrownBy(() -> userService.getUserById("U0000001"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
     }
@@ -295,19 +367,19 @@ public class UserServiceTest {
     public void deleteUser_WithExistingUser_ShouldScheduleDeletion() {
         // Given
         User existingUser = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .email("test@example.com")
                 .name("Test User")
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
 
         // When
-        userService.deleteUser(1L);
+        userService.deleteUser("U0000001");
 
         // Then
-        verify(userRepository).findById(1L);
+        verify(userRepository).findById("U0000001");
         verify(pendingDeletionService).scheduleDeletion(any(), any(), any());
         verify(userRepository, never()).delete(any(User.class));
     }
@@ -315,14 +387,1121 @@ public class UserServiceTest {
     @Test
     public void deleteUser_WithNonExistentUser_ShouldThrowException() {
         // Given
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.deleteUser(1L))
+        assertThatThrownBy(() -> userService.deleteUser("U0000001"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
 
         verify(userRepository, never()).delete(any(User.class));
         verify(pendingDeletionService, never()).scheduleDeletion(any(), any(), any());
+    }
+
+    @Test
+    public void updateUser_WhenValidData_ShouldUpdateNameEmailAndProfiles() {
+        // Given
+        User user = User.builder()
+                .id("U0000001")
+                .name("Old Name")
+                .email("old@example.com")
+                .profiles(new HashSet<>())
+                .build();
+
+        Profile profile1 = Profile.builder().id("P0000001").name("Profile 1").build();
+        Profile profile2 = Profile.builder().id("P0000002").name("Profile 2").build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(profileRepository.findById("P0000001")).thenReturn(Optional.of(profile1));
+        when(profileRepository.findById("P0000002")).thenReturn(Optional.of(profile2));
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
+
+        // When
+        User result = userService.updateUser("U0000001", "New Name", "new@example.com",
+                Set.of("P0000001", "P0000002"));
+
+        // Then
+        assertThat(result.getName()).isEqualTo("New Name");
+        assertThat(result.getEmail()).isEqualTo("new@example.com");
+        assertThat(result.getProfiles()).hasSize(2);
+        assertThat(result.getProfiles()).contains(profile1, profile2);
+    }
+
+    @Test
+    public void updateUser_WhenEmailAlreadyExists_ShouldThrowException() {
+        // Given
+        User user = User.builder()
+                .id("U0000001")
+                .name("User 1")
+                .email("user1@example.com")
+                .build();
+
+        User existingUser = User.builder()
+                .id("U0000002")
+                .name("User 2")
+                .email("user2@example.com")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("user2@example.com")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser("U0000001", "New Name", "user2@example.com", Set.of("P0000001")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Email is already in use");
+    }
+
+    @Test
+    public void updateUser_WhenProfileNotFound_ShouldThrowException() {
+        // Given
+        User user = User.builder()
+                .id("U0000001")
+                .name("User 1")
+                .email("user1@example.com")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("user1@example.com")).thenReturn(Optional.of(user));
+        when(profileRepository.findById("P0000001")).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser("U0000001", "New Name", "user1@example.com", Set.of("P0000001")))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Profile not found: P0000001");
+    }
+
+    @Test
+    public void updateUser_WhenUserNotFound_ShouldThrowException() {
+        // Given
+        when(userRepository.findById("U0000999")).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser("U0000999", "New Name", "new@example.com", Set.of("P0000001")))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("User not found");
+    }
+
+    @Test
+    public void deleteUser_WhenSystemUser_ShouldThrowBadRequest() {
+        // Given
+        User systemUser = User.builder()
+                .id("UADMIN01")
+                .email("admin@example.com")
+                .name("Admin")
+                .system(true)
+                .build();
+
+        when(userRepository.findById("UADMIN01")).thenReturn(Optional.of(systemUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.deleteUser("UADMIN01"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Cannot delete a system user");
+
+        verify(userRepository, never()).delete(any(User.class));
+        verify(pendingDeletionService, never()).scheduleDeletion(any(), any(), any());
+    }
+
+    @Test
+    public void updateUserProfiles_WhenSystemUserRemovesAdmin_ShouldThrowBadRequest() {
+        // Given
+        User systemUser = User.builder()
+                .id("UADMIN01")
+                .email("admin@example.com")
+                .name("Admin")
+                .system(true)
+                .build();
+
+        when(userRepository.findById("UADMIN01")).thenReturn(Optional.of(systemUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUserProfiles("UADMIN01", Set.of("USER")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Cannot remove the ADMIN profile from a system user");
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    // ==================== Notification Preferences Tests ====================
+
+    @Test
+    public void getNotificationPreferences_WhenNull_ShouldReturnDefaults() {
+        User user = User.builder()
+                .id("U0000001")
+                .notificationPreferences(null)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+
+        NotificationPreferences result = userService.getNotificationPreferences("U0000001");
+
+        assertThat(result).isNotNull();
+        assertThat(result.isOrderStatus()).isTrue();
+        assertThat(result.isOrderCancelled()).isTrue();
+        assertThat(result.isIssueCreated()).isTrue();
+        assertThat(result.isIssueComments()).isTrue();
+        assertThat(result.isIssueStatus()).isTrue();
+    }
+
+    @Test
+    public void getNotificationPreferences_WhenSet_ShouldReturnStored() {
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(true)
+                .issueCreated(false)
+                .issueComments(true)
+                .issueStatus(false)
+                .build();
+
+        User user = User.builder()
+                .id("U0000001")
+                .notificationPreferences(prefs)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+
+        NotificationPreferences result = userService.getNotificationPreferences("U0000001");
+
+        assertThat(result).isNotNull();
+        assertThat(result.isOrderStatus()).isFalse();
+        assertThat(result.isOrderCancelled()).isTrue();
+        assertThat(result.isIssueCreated()).isFalse();
+        assertThat(result.isIssueComments()).isTrue();
+        assertThat(result.isIssueStatus()).isFalse();
+    }
+
+    @Test
+    public void getNotificationPreferences_WhenUserNotFound_ShouldThrow() {
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getNotificationPreferences("U0000001"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("User not found");
+    }
+
+    @Test
+    public void updateNotificationPreferences_ShouldPersist() {
+        User user = User.builder()
+                .id("U0000001")
+                .notificationPreferences(null)
+                .build();
+
+        NotificationPreferences newPrefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(false)
+                .issueCreated(true)
+                .issueComments(false)
+                .issueStatus(true)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        NotificationPreferences result = userService.updateNotificationPreferences("U0000001", newPrefs);
+
+        assertThat(result.isOrderStatus()).isFalse();
+        assertThat(result.isOrderCancelled()).isFalse();
+        assertThat(result.isIssueCreated()).isTrue();
+        assertThat(result.isIssueComments()).isFalse();
+        assertThat(result.isIssueStatus()).isTrue();
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateStaff_WithPhotoBioFunFact_ShouldUpdateStaffData() {
+        // Given
+        UserProjectGroup monitorRole = UserProjectGroup.builder()
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .groupRoles(Set.of(monitorRole))
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().photo(" new-photo.jpg ").bio("New bio").funFact("New fun fact").build());
+
+        // Then — the staff row is created on demand and linked to the user
+        assertThat(result.getStaff()).isNotNull();
+        assertThat(result.getStaff().getUser()).isSameAs(existingUser);
+        assertThat(result.getStaff().getPhoto()).isEqualTo("new-photo.jpg");
+        assertThat(result.getStaff().getBio()).isEqualTo("New bio");
+        assertThat(result.getStaff().getFunFact()).isEqualTo("New fun fact");
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateStaff_ForNonStaffUser_ShouldThrow() {
+        // Given — dormant staff data (not manual, no MONITOR/COORDINATOR role) does not make the user staff
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .groupRoles(Set.of())
+                .staff(Staff.builder().bio("Old bio").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateStaff("U0000001", StaffUpdate.builder().bio("New bio").build()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("MONITOR or COORDINATOR");
+
+        assertThat(existingUser.getStaff().getBio()).isEqualTo("Old bio");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStaff_WithBlankAndNullFields_ShouldClearBlankAndKeepNull() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true)
+                        .photo("old-photo.jpg").bio("Old bio").funFact("Old fun fact").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().photo("").bio("  ").build());
+
+        // Then
+        assertThat(result.getStaff().getPhoto()).isNull();
+        assertThat(result.getStaff().getBio()).isNull();
+        assertThat(result.getStaff().getFunFact()).isEqualTo("Old fun fact");
+    }
+
+    @Test
+    void updateStaff_WithNicknameAndPhotoConsent_ShouldUpdateFields() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaff("U0000001", StaffUpdate.builder().nickname(" Nick ").photoConsent(true)
+                .instagramUrl("https://www.instagram.com/p/abc/").build());
+
+        // Then
+        assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
+        assertThat(result.getStaff().getInstagramUrl()).isEqualTo("https://www.instagram.com/p/abc/");
+        assertThat(result.getStaff().isPhotoConsent()).isTrue();
+        assertThat(result.isPublicStaff()).isTrue();
+    }
+
+    @Test
+    void updateStaff_PhotoConsent_ShouldKeepTheConsentDateInSync() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — opting in records the date
+        userService.updateStaff("U0000001", StaffUpdate.builder().photoConsent(true).build());
+        LocalDateTime optedInAt = existingUser.getStaff().getPhotoConsentAt();
+        assertThat(optedInAt).isNotNull();
+
+        // Saving again while already public keeps the original date
+        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").photoConsent(true).build());
+        assertThat(existingUser.getStaff().getPhotoConsentAt()).isEqualTo(optedInAt);
+
+        // Opting out clears it
+        userService.updateStaff("U0000001", StaffUpdate.builder().photoConsent(false).build());
+        assertThat(existingUser.getStaff().getPhotoConsentAt()).isNull();
+    }
+
+    @Test
+    void updateStaff_ReplacingPhoto_ShouldDeleteTheOldFile() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photo("/uploads/old.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — same photo again, then a new one
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/old.jpg").build());
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("/uploads/new.jpg").build());
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/old.jpg", "U0000001");
+        assertThat(existingUser.getStaff().getPhoto()).isEqualTo("/uploads/new.jpg");
+    }
+
+    @Test
+    void deleteStaffData_ForCurrentStaff_ShouldEmptyTheCardAndKeepTheRow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photoConsent(true).photo("/uploads/p.jpg")
+                        .bio("Bio").funFact("Fun").nickname("Nick").instagramUrl("https://www.instagram.com/p/abc/").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        assertThat(result.isStaff()).isTrue();
+        assertThat(result.getStaff().getPhoto()).isNull();
+        assertThat(result.getStaff().getBio()).isNull();
+        assertThat(result.getStaff().getFunFact()).isNull();
+        assertThat(result.getStaff().getNickname()).isNull();
+        assertThat(result.getStaff().getInstagramUrl()).isNull();
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+        verify(staffRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteStaffData_ForFormerStaff_ShouldRemoveTheRow() {
+        // Given — dormant data of someone who is no longer staff
+        Staff dormant = Staff.builder().photo("/uploads/p.jpg").bio("Bio").build();
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(dormant)
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When
+        User result = userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        verify(staffRepository).delete(dormant);
+        assertThat(result.getStaff()).isNull();
+    }
+
+    @Test
+    void purgeStaffInactiveSince_ShouldRemoveExpiredCardsAndTheirPhotos() {
+        // Given
+        User formerUser = User.builder().id("U0000001").build();
+        Staff expired = Staff.builder().userId("U0000001").user(formerUser).photo("/uploads/p.jpg").build();
+        formerUser.setStaff(expired);
+        LocalDateTime cutoff = LocalDateTime.now().minusMonths(12);
+
+        when(staffRepository.findByInactiveSinceBefore(cutoff)).thenReturn(List.of(expired));
+
+        // When
+        int purged = userService.purgeStaffInactiveSince(cutoff);
+
+        // Then
+        assertThat(purged).isEqualTo(1);
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/p.jpg", "U0000001");
+        verify(staffRepository).delete(expired);
+        assertThat(formerUser.getStaff()).isNull();
+    }
+
+    @Test
+    void setManualStaff_True_ShouldEndTheInactivePeriod() {
+        // Given — came back to the team before the data was purged
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().bio("Bio").inactiveSince(LocalDateTime.now().minusMonths(3)).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", true);
+
+        // Then
+        assertThat(result.getStaff().getInactiveSince()).isNull();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void updateStaffAvatar_ShouldSaveAndResetTheCustomElephant() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+        StaffAvatar avatar = StaffAvatar.builder().background(3).clothes("jacket").eyes("glasses").hair("curls").top("beanie").extra("none").trunkUp(true).build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When / Then
+        assertThat(userService.updateStaffAvatar("U0000001", avatar).getStaff().getAvatar()).isEqualTo(avatar);
+        assertThat(userService.updateStaffAvatar("U0000001", null).getStaff().getAvatar()).isNull();
+    }
+
+    @Test
+    void updateStaffAvatar_ForNonStaffUser_ShouldThrow() {
+        // Given
+        User existingUser = User.builder().id("U0000001").email("user@example.com").name("Name").build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateStaffAvatar("U0000001",
+                StaffAvatar.builder().background(0).clothes("dots").eyes("dots").hair("curls").top("none").extra("none").build()))
+                .isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void isPublicStaff_WhenNoLongerStaff_ShouldBeFalse() {
+        // Given — opted in, but neither manual nor holding a staff role any more
+        User user = User.builder()
+                .id("U0000001")
+                .staff(Staff.builder().photoConsent(true).build())
+                .build();
+
+        // Then
+        assertThat(user.isPublicStaff()).isFalse();
+    }
+
+    @Test
+    void updateStaffByAdmin_ConsentingForSomeoneElse_ShouldThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photo("/uploads/p.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().photoConsent(true).build()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("consent to showing their own photo");
+
+        assertThat(existingUser.getStaff().isPhotoConsent()).isFalse();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateStaffByAdmin_CanFillInTheWholeCardOfSomeoneElse() {
+        // Given — the team's cards are filled in centrally
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                .photo("/uploads/new.jpg").bio("Bio").nickname("Nick").funFact("Fun").build());
+
+        // Then — everything is saved; the photo stays hidden until its owner consents
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+        assertThat(result.getStaff().getNickname()).isEqualTo("Nick");
+        assertThat(result.getStaff().getPhoto()).isEqualTo("/uploads/new.jpg");
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+        assertThat(result.isPublicStaff()).isTrue();
+        assertThat(result.getPublicStaffPhoto()).isNull();
+    }
+
+    @Test
+    void updateStaffByAdmin_ChangingSomeoneElsesPhoto_ShouldWithdrawTheirConsent() {
+        // Given — the consent was given for the previous photo
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photoConsent(true).photoConsentAt(LocalDateTime.now())
+                        .photo("/uploads/old.jpg").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When — editing the text keeps the consent...
+        userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").build());
+        assertThat(existingUser.getStaff().isPhotoConsent()).isTrue();
+        // ...changing the photo withdraws it
+        User result = userService.updateStaffByAdmin("A0000001", "U0000001",
+                StaffUpdate.builder().photo("/uploads/new.jpg").build());
+
+        // Then
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+        assertThat(result.getStaff().getPhotoConsentAt()).isNull();
+        assertThat(result.getPublicStaffPhoto()).isNull();
+    }
+
+    @Test
+    void updateStaffByAdmin_CanWithdrawSomeoneElsesConsent() {
+        // Given — already public: sending true again keeps it, sending false hides it
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photoConsent(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User kept = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().bio("Bio").photoConsent(true).build());
+        assertThat(kept.getStaff().isPhotoConsent()).isTrue();
+        User hidden = userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder().photoConsent(false).build());
+
+        // Then
+        assertThat(hidden.getStaff().isPhotoConsent()).isFalse();
+        assertThat(hidden.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void updateStaffByAdmin_AdminCanConsentForTheirOwnPhoto() {
+        // Given
+        User admin = User.builder()
+                .id("A0000001")
+                .email("admin@example.com")
+                .name("Admin")
+                .staff(Staff.builder().manual(true).build())
+                .build();
+
+        when(userRepository.findById("A0000001")).thenReturn(Optional.of(admin));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateStaffByAdmin("A0000001", "A0000001", StaffUpdate.builder().photoConsent(true).build());
+
+        // Then
+        assertThat(result.getStaff().isPhotoConsent()).isTrue();
+    }
+
+    @Test
+    void setManualStaff_False_ShouldWithdrawPhotoConsent() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).photoConsent(true).build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+    }
+
+    @Test
+    void removeGroupRole_LastStaffRole_ShouldWithdrawPhotoConsent() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Grupo A").build();
+        UserProjectGroup upg = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>())
+                .staff(Staff.builder().photoConsent(true).bio("Bio").build())
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+
+        // Then — hidden, but the data is kept (and its retention period starts)
+        assertThat(result.isStaff()).isFalse();
+        assertThat(result.getStaff().isPhotoConsent()).isFalse();
+        assertThat(result.getStaff().getInactiveSince()).isNotNull();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+    }
+
+    @Test
+    void setManualStaff_True_ShouldPromoteUserWithoutGroupRoles() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", true);
+
+        // Then
+        assertThat(result.getStaff().isManual()).isTrue();
+        assertThat(result.isStaff()).isTrue();
+    }
+
+    @Test
+    void setManualStaff_False_ShouldKeepStaffData() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .staff(Staff.builder().manual(true).bio("Bio").build())
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.isStaff()).isFalse();
+        assertThat(result.getStaff().getBio()).isEqualTo("Bio");
+        assertThat(result.getStaffPhoto()).isNull();
+    }
+
+    @Test
+    void setManualStaff_FalseWithoutStaffData_ShouldNotCreateIt() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+
+        // When
+        User result = userService.setManualStaff("U0000001", false);
+
+        // Then
+        assertThat(result.getStaff()).isNull();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProfile_WithSameEmail_ShouldNotThrow() {
+        // Given
+        User existingUser = User.builder()
+                .id("U0000001")
+                .email("user@example.com")
+                .name("Old Name")
+                .build();
+
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.updateProfile("U0000001", "New Name", "user@example.com");
+
+        // Then
+        assertThat(result.getName()).isEqualTo("New Name");
+        verify(userRepository, never()).existsByEmail(anyString());
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void listUsers_WithInvalidSortField_ShouldUseDefaultSort() {
+        // Given
+        User u = User.builder().id("U0000001").email("a@b.com").name("User").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(Pageable.class)))
+                .thenReturn(page);
+
+        // When
+        PageRequest pageable = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("invalidField"));
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, null, null, null), pageable);
+
+        // Then
+        assertThat(res.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void listUsers_WithPermissionsFilter_ShouldApplySpec() {
+        // Given
+        User u = User.builder().id("U0000002").email("b@c.com").name("User 2").enabled(true).build();
+        Page<User> page = new PageImpl<>(List.of(u));
+        when(userRepository.findAll(Mockito.<Specification<User>>any(), Mockito.any(PageRequest.class)))
+                .thenReturn(page);
+
+        // When
+        Page<User> res = userService.listUsers(new UserFilter(null, null, null, null, null, null, List.of("PERM001"), null, null),
+                PageRequest.of(0, 10));
+
+        // Then
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        assertThat(res.getContent().get(0).getId()).isEqualTo("U0000002");
+    }
+
+    // ── assignGroupRole with PARENT ──────────────────────────────────
+
+    @Test
+    void assignGroupRole_WithMonitorRole_ShouldPromoteUserToStaff() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Grupo A").build();
+        Profile monitorProfile = new Profile();
+        monitorProfile.setId("P0000004");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(profileRepository.findById("P0000004")).thenReturn(Optional.of(monitorProfile));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+
+        // Then
+        assertThat(result.getStaff()).isNotNull();
+        assertThat(result.getStaff().isManual()).isFalse();
+        assertThat(result.isStaff()).isTrue();
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_ShouldNotCreateStaff() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getStaff()).isNull();
+        assertThat(result.isStaff()).isFalse();
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_OnProjectLevelGroup_ShouldSucceed() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).hasSize(1);
+        UserProjectGroup upg = result.getGroupRoles().iterator().next();
+        assertThat(upg.getRole()).isEqualTo(UserProjectGroupRole.PARENT);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_OnNamedGroup_ShouldThrow() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        User user = User.builder().id(userId).groupRoles(new HashSet<>()).profiles(new HashSet<>()).build();
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name("Subgroup").build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Parents must be assigned to the project-level group");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void assignGroupRole_WithParentRole_AlreadyExists_ShouldReturnEarly() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+        UserProjectGroup existing = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.PARENT)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(existing))).profiles(new HashSet<>()).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        // When
+        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).hasSize(1);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void removeGroupRole_WithParentRole_ShouldRemoveIt() {
+        // Given
+        String userId = "U0000001";
+        String groupId = "PG000001";
+        ProjectGroup group = ProjectGroup.builder().id(groupId).name(null).build();
+        UserProjectGroup upg = UserProjectGroup.builder()
+                .user(User.builder().id(userId).build())
+                .projectGroup(group)
+                .role(UserProjectGroupRole.PARENT)
+                .build();
+        User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>()).build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+
+        // Then
+        assertThat(result.getGroupRoles()).isEmpty();
+        verify(userRepository).save(user);
+    }
+
+    // ── Staff without an account ────────────────────────────────────────
+
+    @Test
+    void createStaffWithoutAccount_WithOnlyAName_ShouldAddThemToTheStaffByHand() {
+        // Given
+        when(passwordEncoder.encode(anyString())).thenReturn("unusable-hash");
+        when(profileRepository.findAllById(List.of("USER"))).thenReturn(List.of(Profile.builder().id("USER").build()));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // When
+        User result = userService.createStaffWithoutAccount(" Juan ", null, " Juanito ", null, null, "A0000001");
+
+        // Then — public as staff, but cannot log in and has no email yet
+        assertThat(result.getName()).isEqualTo("Juan");
+        assertThat(result.getEmail()).isNull();
+        assertThat(result.isHasAccount()).isFalse();
+        assertThat(result.getStaff().isManual()).isTrue();
+        assertThat(result.getStaff().getNickname()).isEqualTo("Juanito");
+        assertThat(result.isStaff()).isTrue();
+        assertThat(result.isPublicStaff()).isTrue();
+        assertThat(result.getProfiles()).extracting(Profile::getId).containsExactly("USER");
+    }
+
+    @Test
+    void createStaffWithoutAccount_WithAnEmailInUse_ShouldThrow() {
+        // Given
+        when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
+
+        // When & Then
+        assertThatThrownBy(() -> userService.createStaffWithoutAccount("Juan", "Taken@example.com", null, null, null, "A0000001"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("already in use");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createStaffWithoutAccount_WithGroupAndRole_ShouldJoinThatGroup() {
+        // Given
+        ProjectGroup group = ProjectGroup.builder().id("PG000001").name("Grupo A").build();
+        Profile monitorProfile = Profile.builder().id("P0000004").build();
+        when(passwordEncoder.encode(anyString())).thenReturn("unusable-hash");
+        when(profileRepository.findAllById(List.of("USER"))).thenReturn(List.of());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User saved = inv.getArgument(0);
+            if (saved.getId() == null) saved.setId("U0000009");
+            when(userRepository.findById("U0000009")).thenReturn(Optional.of(saved));
+            return saved;
+        });
+        when(projectGroupRepository.findById("PG000001")).thenReturn(Optional.of(group));
+        when(profileRepository.findById("P0000004")).thenReturn(Optional.of(monitorProfile));
+
+        // When
+        User result = userService.createStaffWithoutAccount("Juan", "juan@example.com", null,
+                "PG000001", UserProjectGroupRole.MONITOR, "A0000001");
+
+        // Then — staff through the role, not by hand
+        assertThat(result.isHasAccount()).isFalse();
+        assertThat(result.getEmail()).isEqualTo("juan@example.com");
+        assertThat(result.getStaff().isManual()).isFalse();
+        assertThat(result.getGroupRoles()).hasSize(1);
+        assertThat(result.isStaff()).isTrue();
+    }
+
+    @Test
+    void createStaffWithoutAccount_WithAGroupButAParentRole_ShouldThrow() {
+        assertThatThrownBy(() -> userService.createStaffWithoutAccount("Juan", null, null,
+                "PG000001", UserProjectGroupRole.PARENT, "A0000001"))
+                .isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).save(any());
+    }
+
+    // ── Photo framing ───────────────────────────────────────────────────
+
+    private static StaffPhotoEdit framing(double zoom) {
+        return StaffPhotoEdit.builder().x(0.2).y(-0.1).zoom(zoom).rotation(90.0).build();
+    }
+
+    private User staffUser(Staff staff) {
+        User user = User.builder().id("U0000001").email("user@example.com").name("Name").staff(staff).build();
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
+        Mockito.lenient().when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        return user;
+    }
+
+    @Test
+    void updateStaff_WithFramedPhoto_ShouldKeepTheOriginalAndTheFraming() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true).build());
+
+        // When
+        userService.updateStaff("U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // Then
+        assertThat(user.getStaff().getPhoto()).isEqualTo("/uploads/framed.jpg");
+        assertThat(user.getStaff().getPhotoOriginal()).isEqualTo("/uploads/original.jpg");
+        assertThat(user.getStaff().getPhotoEdit()).isEqualTo(framing(1.5));
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+    }
+
+    @Test
+    void updateStaff_AdjustingAPhotoUploadedBeforeFraming_ShouldKeepItAsTheOriginal() {
+        // Given — an old photo, with no original of its own
+        User user = staffUser(Staff.builder().manual(true).photo("/uploads/old.jpg").build());
+
+        // When — it is framed for the first time, then framed again
+        userService.updateStaff("U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-1.jpg").photoOriginal("/uploads/old.jpg").photoEdit(framing(1.2)).build());
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+        userService.updateStaff("U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-2.jpg").photoOriginal("/uploads/old.jpg").photoEdit(framing(2.0)).build());
+
+        // Then — only the framing that is no longer used is deleted
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/framed-1.jpg", "U0000001");
+        verify(uploadedFileService, never()).deleteOwnedByUrl("/uploads/old.jpg", "U0000001");
+        assertThat(user.getStaff().getPhotoOriginal()).isEqualTo("/uploads/old.jpg");
+        assertThat(user.getStaff().getPhotoEdit().getZoom()).isEqualTo(2.0);
+    }
+
+    @Test
+    void updateStaff_RemovingThePhoto_ShouldRemoveTheOriginalAndTheFraming() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true)
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // When
+        userService.updateStaff("U0000001", StaffUpdate.builder().photo("").build());
+
+        // Then
+        assertThat(user.getStaff().getPhoto()).isNull();
+        assertThat(user.getStaff().getPhotoOriginal()).isNull();
+        assertThat(user.getStaff().getPhotoEdit()).isNull();
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/framed.jpg", "U0000001");
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/original.jpg", "U0000001");
+    }
+
+    @Test
+    void updateStaff_WithoutPhotoFields_ShouldLeaveThePhotoAlone() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true)
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // When
+        userService.updateStaff("U0000001", StaffUpdate.builder().bio("Bio").build());
+
+        // Then
+        assertThat(user.getStaff().getPhoto()).isEqualTo("/uploads/framed.jpg");
+        assertThat(user.getStaff().getPhotoOriginal()).isEqualTo("/uploads/original.jpg");
+        assertThat(user.getStaff().getPhotoEdit()).isEqualTo(framing(1.5));
+        verify(uploadedFileService, never()).deleteOwnedByUrl(any(), any());
+    }
+
+    @Test
+    void updateStaffByAdmin_ReframingTheSamePicture_ShouldKeepTheConsent() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true).photoConsent(true).photoConsentAt(LocalDateTime.now())
+                .photo("/uploads/framed-1.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.2)).build());
+
+        // When
+        userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-2.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(2.0)).build());
+
+        // Then
+        assertThat(user.getStaff().isPhotoConsent()).isTrue();
+        assertThat(user.getStaff().getPhoto()).isEqualTo("/uploads/framed-2.jpg");
+    }
+
+    @Test
+    void updateStaffByAdmin_UploadingADifferentPicture_ShouldWithdrawTheConsent() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true).photoConsent(true).photoConsentAt(LocalDateTime.now())
+                .photo("/uploads/framed-1.jpg").photoOriginal("/uploads/original-1.jpg").photoEdit(framing(1.2)).build());
+
+        // When
+        userService.updateStaffByAdmin("A0000001", "U0000001", StaffUpdate.builder()
+                .photo("/uploads/framed-2.jpg").photoOriginal("/uploads/original-2.jpg").photoEdit(framing(1.0)).build());
+
+        // Then
+        assertThat(user.getStaff().isPhotoConsent()).isFalse();
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/original-1.jpg", "U0000001");
+    }
+
+    @Test
+    void deleteStaffData_ShouldAlsoDeleteTheOriginalPhoto() {
+        // Given
+        User user = staffUser(Staff.builder().manual(true)
+                .photo("/uploads/framed.jpg").photoOriginal("/uploads/original.jpg").photoEdit(framing(1.5)).build());
+
+        // When
+        userService.deleteStaffData("U0000001");
+
+        // Then
+        verify(uploadedFileService).deleteOwnedByUrl("/uploads/original.jpg", "U0000001");
+        assertThat(user.getStaff().getPhotoOriginal()).isNull();
+        assertThat(user.getStaff().getPhotoEdit()).isNull();
     }
 }

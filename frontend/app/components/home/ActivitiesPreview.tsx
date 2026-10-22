@@ -1,117 +1,83 @@
-import React from "react";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import type { Activity } from "~/types/activity";
+import { UPCOMING_STATUSES } from "~/utils/activity-helpers";
+import ActivityCard from "~/components/ActivityCard";
+import SectionWrapper from "~/components/home/SectionWrapper";
 
-const activities = [
-  {
-    id: 1,
-    date: "15 Mayo",
-    time: "17:00",
-    title: "Taller de Robótica",
-    monitorName: "Javi",
-    monitorAvatar: "/monitores/javier.jpg",
-    badge: "Inscripciones abiertas",
-    badgeClass: "bg-green-100 text-green-800"
-  },
-  {
-    id: 2,
-    date: "16 Mayo",
-    time: "18:30",
-    title: "Clínica de Fútbol",
-    monitorName: "Lukas",
-    monitorAvatar: "/monitores/lukas.jpg",
-    badge: "Próxima",
-    badgeClass: "bg-blue-100 text-blue-800"
-  },
-  {
-    id: 3,
-    date: "17 Mayo",
-    time: "16:00",
-    title: "Clase de Pintura",
-    monitorName: "Ekiñe",
-    monitorAvatar: "/monitores/ekine.jpg",
-    badge: "Inscripciones cerradas",
-    badgeClass: "bg-red-100 text-red-800"
-  },
-  {
-    id: 4,
-    date: "18 Mayo",
-    time: "19:00",
-    title: "Yoga al Aire Libre",
-    monitorName: "Laura",
-    monitorAvatar: "/monitores/laura.jpg",
-    badge: "Inscripciones abiertas",
-    badgeClass: "bg-green-100 text-green-800"
-  },
-  {
-    id: 5,
-    date: "19 Mayo",
-    time: "17:30",
-    title: "Taller de Teatro",
-    monitorName: "MiniCampi",
-    monitorAvatar: "/monitores/mini-campi.jpg",
-    badge: "Próxima",
-    badgeClass: "bg-blue-100 text-blue-800"
-  },
-  {
-    id: 6,
-    date: "20 Mayo",
-    time: "18:00",
-    title: "Charla de Medio Ambiente",
-    monitorName: "Irene",
-    monitorAvatar: "/monitores/irene.jpg",
-    badge: "Inscripciones abiertas",
-    badgeClass: "bg-green-100 text-green-800"
-  },
-  {
-    id: 7,
-    date: "21 Mayo",
-    time: "17:00",
-    title: "Cocina Saludable",
-    monitorName: "Samuel",
-    monitorAvatar: "/monitores/samu.jpg",
-    badge: "Próxima",
-    badgeClass: "bg-blue-100 text-blue-800"
-  },
-  {
-    id: 8,
-    date: "22 Mayo",
-    time: "16:30",
-    title: "Club de Lectura",
-    monitorName: "Paula",
-    monitorAvatar: "/monitores/paula.jpg",
-    badge: "Inscripciones cerradas",
-    badgeClass: "bg-red-100 text-red-800"
-  }
-];
+interface ActivitiesPreviewProps {
+    title?: string;
+    activities: Activity[];
+    sectionIndex: number;
+}
 
-export default function ActivitiesPreview() {
-  return (
-    <section id="actividades" className="w-full bg-white py-16">
-      <div className="max-w-6xl mx-auto px-4">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">
-          Actividades
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {activities.map((act) => (
-            <div key={act.id} className="border rounded-lg p-4 hover:shadow-md transition">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-500">{act.date} · {act.time}</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${act.badgeClass}`}>{act.badge}</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-3">{act.title}</h3>
-              <div className="flex items-center mb-4">
-                <img src={act.monitorAvatar} alt={act.monitorName} className="h-8 w-8 rounded-full mr-2 object-cover" />
-                <span className="text-sm text-gray-700">{act.monitorName}</span>
-              </div>
-              <a
-                href="/actividades"
-                className="inline-block mt-auto text-blue-600 hover:underline text-sm"
-              >
-                Ver todas
-              </a>
+export default function ActivitiesPreview({ title, activities, sectionIndex }: ActivitiesPreviewProps) {
+    const { t } = useTranslation();
+
+    const displayActivities = useMemo(() => {
+        const now = new Date();
+
+        const upcoming = activities.filter((a) => {
+            const endOrStart = a.endDate ?? a.date;
+            if (endOrStart) return new Date(endOrStart).getTime() >= now.getTime();
+            return a.status && UPCOMING_STATUSES.has(a.status.value as any);
+        });
+
+        const past = activities.filter((a) => {
+            const endOrStart = a.endDate ?? a.date;
+            if (endOrStart) return new Date(endOrStart).getTime() < now.getTime();
+            return !(a.status && UPCOMING_STATUSES.has(a.status.value as any));
+        });
+
+        const sortedUpcoming = [...upcoming].sort((a, b) => {
+            const aDate = a.date ? new Date(a.date).getTime() : Infinity;
+            const bDate = b.date ? new Date(b.date).getTime() : Infinity;
+            return aDate - bDate;
+        });
+
+        const sortedPast = [...past].sort((a, b) => {
+            const aDate = a.date ? new Date(a.date).getTime() : -Infinity;
+            const bDate = b.date ? new Date(b.date).getTime() : -Infinity;
+            return bDate - aDate;
+        });
+
+        const result = sortedUpcoming.slice(0, 3);
+        if (result.length < 3) {
+            result.push(...sortedPast.slice(0, 3 - result.length));
+        }
+        return result;
+    }, [activities]);
+
+    return (
+        <SectionWrapper
+            id="actividades"
+            sectionIndex={sectionIndex}
+            title={title}
+            subtitle={t("public.activitiesSubtitle")}
+        >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {displayActivities.map((act) => (
+                    <ActivityCard
+                        key={act.id}
+                        activity={act}
+                        expanded={false}
+                        onToggle={() => {}}
+                        compact
+                    />
+                ))}
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+
+            <div className="text-center mt-10">
+                <a
+                    href="/actividades"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white bg-gradient-to-r from-yambo-green-500 to-yambo-green-600 hover:shadow-lg hover:shadow-yambo-green-500/25 transition-all duration-300"
+                >
+                    {t("public.activitiesShowAll")}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            </div>
+        </SectionWrapper>
+    );
 }

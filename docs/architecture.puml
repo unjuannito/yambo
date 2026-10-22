@@ -1,0 +1,96 @@
+@startuml architecture
+!theme plain
+skinparam backgroundColor transparent
+skinparam defaultFontName "Segoe UI, Arial, sans-serif"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 10
+
+skinparam component {
+  BackgroundColor #F8F9FA
+  BorderColor #DEE2E6
+  FontColor #212529
+}
+
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #ADB5BD
+  FontColor #212529
+}
+
+skinparam database {
+  BackgroundColor #FFF3CD
+  BorderColor #FFC107
+}
+
+skinparam cloud {
+  BackgroundColor #E8F4FD
+  BorderColor #0D6EFD
+}
+
+skinparam arrow {
+  Color #6C757D
+  FontColor #6C757D
+}
+
+title Yambo — Diagrama de Arquitectura
+
+cloud "Navegador" as client
+
+node "Nginx\n(Proxy Inverso)\n:80" as nginx #D1ECF1
+
+node "Frontend" as frontend_container #D4EDDA {
+  component "React 19 + React Router 7\n(SSR)" as react
+  component "Node.js 20\n:3000" as node
+  component "Nginx estático\n/assets (1yr cache)" as frontend_nginx
+  component "supervisord" as supervisor
+
+  supervisor --> node
+  supervisor --> frontend_nginx
+}
+
+node "Backend" as backend_container #CCE5FF {
+  component "Spring Boot 3.4.6\nJava 21\n:8080" as spring
+  component "Spring Security\n(JWT stateless)" as security
+  component "Spring Data JPA\n+ Liquibase" as jpa
+  component "Thymeleaf\n(Email templates)" as thymeleaf
+
+  spring --> security
+  spring --> jpa
+  spring --> thymeleaf
+}
+
+database "PostgreSQL 15\nyambo_db\n:5432" as db #FFF3CD
+
+node "Servicios Externos" as external #F8D7DA {
+  component "SMTP\n(Email)" as smtp
+  component "Ollama\n(IA / LLM)" as ollama
+}
+
+' === Conexiones ===
+client -down-> nginx : "HTTP"
+
+nginx -down-> node : "/* → :3000\n(SSR)"
+nginx -down-> spring : "/api/* → :8080"
+nginx -down-> frontend_nginx : "/assets/*\n/uploads/*"
+
+jpa -down-> db : "JDBC"
+
+thymeleaf -right-> smtp : "SMTP :587"
+spring -right-> ollama : "HTTP API"
+
+note right of db
+  <b>Volúmenes Docker</b>
+  ● postgres_data
+  ● uploads_data
+end note
+
+note bottom of nginx
+  <b>Producción (K8s)</b>
+  Traefik Ingress
+  yambo.cabrasky.net
+  Backend: 2 réplicas
+  Frontend: 2 réplicas
+end note
+
+@enduml

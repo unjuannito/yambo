@@ -15,36 +15,33 @@ class UserTest {
     void builder_ShouldCreateUserWithAllFields() {
         LocalDateTime now = LocalDateTime.now();
         User user = User.builder()
-                .id(1L)
-                .username("testuser")
+                .id("U0000001")
+                .email("testuser")
                 .password("password123")
                 .email("test@example.com")
                 .name("Test User")
                 .createdAt(now)
-                .updatedAt(now)
                 .enabled(true)
                 .build();
 
-        assertEquals(1L, user.getId());
-        assertEquals("testuser", user.getUsername());
+        assertEquals("U0000001", user.getId());
         assertEquals("password123", user.getPassword());
         assertEquals("test@example.com", user.getEmail());
         assertEquals("Test User", user.getName());
         assertEquals(now, user.getCreatedAt());
-        assertEquals(now, user.getUpdatedAt());
         assertTrue(user.isEnabled());
     }
 
     @Test
     void getAuthorities_ShouldReturnCorrectAuthorities() {
         User user = User.builder()
-                .roles(Set.of(
-                        Role.builder().id("ADMIN")
+                .profiles(Set.of(
+                        Profile.builder().id("ADMIN")
                                 .permissions(Set.of(
                                         Permission.builder().id("READ_PRIVILEGES").build(),
                                         Permission.builder().id("WRITE_PRIVILEGES").build()))
                                 .build(),
-                        Role.builder().id("USER").build()))
+                        Profile.builder().id("USER").build()))
                 .build();
 
         Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
@@ -77,18 +74,52 @@ class UserTest {
     @Test
     void equalsAndHashCode_ShouldWorkCorrectly() {
         User user1 = User.builder()
-                .id(1L)
-                .username("user")
+                .id("U0000001")
+                .email("user")
                 .email("user@example.com")
                 .build();
 
         User user2 = User.builder()
-                .id(1L)
-                .username("user")
+                .id("U0000001")
+                .email("user")
                 .email("user@example.com")
                 .build();
 
         assertEquals(user1, user2);
         assertEquals(user1.hashCode(), user2.hashCode());
+    }
+
+    @Test
+    void notificationPreferences_ShouldBeStoredOnUser() {
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(true)
+                .issueCreated(false)
+                .issueComments(true)
+                .issueStatus(false)
+                .build();
+
+        User user = User.builder()
+                .id("U0000001")
+                .email("test@example.com")
+                .notificationPreferences(prefs)
+                .build();
+
+        assertNotNull(user.getNotificationPreferences());
+        assertFalse(user.getNotificationPreferences().isOrderStatus());
+        assertTrue(user.getNotificationPreferences().isOrderCancelled());
+        assertFalse(user.getNotificationPreferences().isIssueCreated());
+        assertTrue(user.getNotificationPreferences().isIssueComments());
+        assertFalse(user.getNotificationPreferences().isIssueStatus());
+    }
+
+    @Test
+    void notificationPreferences_WhenNotSet_ShouldBeNull() {
+        User user = User.builder()
+                .id("U0000001")
+                .email("test@example.com")
+                .build();
+
+        assertNull(user.getNotificationPreferences());
     }
 }

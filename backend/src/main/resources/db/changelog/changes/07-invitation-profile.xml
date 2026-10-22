@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- Create invitation_profile if it does not exist -->
+    <changeSet id="07-create-invitation-profiles" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="invitation_profile"/>
+            </not>
+        </preConditions>
+        <createTable tableName="invitation_profile">
+            <column name="invitation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="invitation_profile" columnNames="invitation_id, profile_id" constraintName="pk_invitation_profile"/>
+        <addForeignKeyConstraint baseTableName="invitation_profile"
+                                  baseColumnNames="invitation_id"
+                                  referencedTableName="invitations"
+                                  referencedColumnNames="id"
+                                  constraintName="fk_invitation_profile_invitation"
+                                  onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="invitation_profile"
+                                  baseColumnNames="profile_id"
+                                  referencedTableName="profile"
+                                  referencedColumnNames="id"
+                                  constraintName="fk_invitation_profile_profile"
+                                  onDelete="CASCADE"/>
+        <createIndex tableName="invitation_profile" indexName="idx_invitation_profile_invitation">
+            <column name="invitation_id"/>
+        </createIndex>
+        <createIndex tableName="invitation_profile" indexName="idx_invitation_profile_profile">
+            <column name="profile_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

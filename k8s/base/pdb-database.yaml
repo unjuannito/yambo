@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: yambo-database-pdb
+  namespace: yambo
+spec:
+  # StatefulSet with 1 replica — allow 0 disruptions (never kill the DB pod voluntarily)
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: postgres

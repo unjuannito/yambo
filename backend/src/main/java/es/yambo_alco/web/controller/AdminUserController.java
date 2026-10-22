@@ -1,14 +1,20 @@
 package es.yambo_alco.web.controller;
-
-import es.yambo_alco.web.controller.UserController.UserResponse;
+import es.yambo_alco.web.controller.dto.user.StaffDto;
+import es.yambo_alco.web.controller.dto.user.UpdateStaffRequestDto;
+import es.yambo_alco.web.model.ProjectGroup;
+import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserFilter;
+import es.yambo_alco.web.model.UserProjectGroup;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
+import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.PasswordResetService;
 import es.yambo_alco.web.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -18,10 +24,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,15 +49,21 @@ public class AdminUserController {
 
     private final UserService userService;
     private final AuthService authService;
+    private final AccessGrantService accessGrantService;
+    private final PasswordResetService passwordResetService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('LIST_USERS')")
-    public ResponseEntity<Page<UserResponse>> listUsers(
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
+    public ResponseEntity<Page<AdminUserResponse>> listUsers(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String id,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) Boolean enabled,
             @RequestParam(required = false) String permissions,
-            @RequestParam(required = false) String roles,
+            @RequestParam(required = false) String profiles,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean staff,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size,
             @RequestParam(required = false) String sortBy,
@@ -58,9 +73,9 @@ public class AdminUserController {
             perms = Arrays.stream(permissions.split(",")).map(String::trim).filter(s -> !s.isEmpty())
                     .collect(Collectors.toSet());
         }
-        List<String> rolesList = null;
-        if (roles != null && !roles.isBlank()) {
-            rolesList = Arrays.stream(roles.split(",")).map(String::trim).filter(s -> !s.isEmpty())
+        List<String> profilesList = null;
+        if (profiles != null && !profiles.isBlank()) {
+            profilesList = Arrays.stream(profiles.split(",")).map(String::trim).filter(s -> !s.isEmpty())
                     .collect(Collectors.toList());
         }
 
@@ -68,39 +83,155 @@ public class AdminUserController {
         PageRequest pr = (sortBy == null || sortBy.isBlank()) ? PageRequest.of(page, size)
                 : PageRequest.of(page, size, dir, sortBy);
 
-        Page<User> users = userService.listUsers(name, email, enabled, perms == null ? null : List.copyOf(perms),
-                rolesList, pr);
-        return ResponseEntity.ok(users.map(UserResponse::new));
+        UserFilter userFilter = new UserFilter(query, id, name, email, enabled, perms == null ? null : List.copyOf(perms),
+                profilesList, role, staff);
+        Page<User> users = userService.listUsers(userFilter, pr);
+        return ResponseEntity.ok(users.map(AdminUserResponse::new));
     }
 
-    @PutMapping("/roles")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<UserResponse> updateUserRoles(@RequestParam Long userId,
-            @Valid @RequestBody UpdateRolesRequest request) {
-        User updatedUser = userService.updateUserRoles(userId, request.getRoleIds());
-        UserResponse response = new UserResponse(updatedUser);
+    @PutMapping("/profiles")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateUserProfiles(@RequestParam @NonNull String userId,
+            @Valid @RequestBody UpdateProfilesRequest request) {
+        User admin = authService.getCurrentUser(true);
+        User updatedUser = userService.updateUserProfiles(userId, request.getProfileIds(), admin.getId());
+        AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
 
     @Data
-    public static class UpdateRolesRequest {
-        @NotEmpty(message = "At least one role must be specified")
-        private Set<String> roleIds;
+    public static class UpdateProfilesRequest {
+        @NotEmpty(message = "At least one profile must be specified")
+        private Set<String> profileIds;
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<UserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         User userToUpdate = userService.getUserById(request.getId());
 
-        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(), request.getEmail());
-        UserResponse response = new UserResponse(updatedUser);
+        User updatedUser = userService.updateProfile(userToUpdate.getId(), request.getName(),
+                request.getEmail() != null ? request.getEmail() : "");
+        AdminUserResponse response = new AdminUserResponse(updatedUser);
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{userId}/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateStaff(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody UpdateStaffRequestDto request) {
+        User admin = authService.getCurrentUser(true);
+        User updatedUser = userService.updateStaffByAdmin(admin.getId(), userId, request.toUpdate());
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    /** Adds someone to the staff before they have an account. */
+    @PostMapping("/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'create')")
+    public ResponseEntity<AdminUserResponse> createStaffWithoutAccount(@Valid @RequestBody CreateStaffRequest request) {
+        User admin = authService.getCurrentUser(true);
+        User created = userService.createStaffWithoutAccount(request.getName(), request.getEmail(),
+                request.getNickname(), request.getGroupId(), request.getRole(), admin.getId());
+        return ResponseEntity.ok(new AdminUserResponse(created));
+    }
+
+    /** Sends someone added without an account the link to set their password. */
+    @PostMapping("/{userId}/account-access")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> giveAccountAccess(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody AccountAccessRequest request) {
+        passwordResetService.giveAccountAccess(userId, request.getEmail());
+        return ResponseEntity.ok(new AdminUserResponse(userService.getUserById(userId)));
+    }
+
+    @PutMapping("/{userId}/staff/avatar")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateStaffAvatar(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody StaffAvatar avatar) {
+        return ResponseEntity.ok(new AdminUserResponse(userService.updateStaffAvatar(userId, avatar)));
+    }
+
+    @DeleteMapping("/{userId}/staff/avatar")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> resetStaffAvatar(@PathVariable @NonNull String userId) {
+        return ResponseEntity.ok(new AdminUserResponse(userService.updateStaffAvatar(userId, null)));
+    }
+
+    @DeleteMapping("/{userId}/staff")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> deleteStaffData(@PathVariable @NonNull String userId) {
+        return ResponseEntity.ok(new AdminUserResponse(userService.deleteStaffData(userId)));
+    }
+
+    @PutMapping("/{userId}/staff/manual")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> setManualStaff(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody SetManualStaffRequest request) {
+        User updatedUser = userService.setManualStaff(userId, request.getManual());
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @PutMapping("/{userId}/groups")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> updateUserGroups(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody UpdateGroupsRequest request) {
+        // Legacy endpoint — kept for backward compatibility but now role-based
+        // Assigns all provided groups as MONITOR role
+        User admin = authService.getCurrentUser(true);
+        for (String groupId : request.getGroupIds()) {
+            userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR, admin.getId());
+        }
+        User user = userService.getUserById(userId);
+        return ResponseEntity.ok(new AdminUserResponse(user));
+    }
+
+    @PostMapping("/{userId}/group-roles")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> assignGroupRole(
+            @PathVariable @NonNull String userId,
+            @Valid @RequestBody AssignGroupRoleRequest request) {
+        User admin = authService.getCurrentUser(true);
+        User updatedUser = userService.assignGroupRole(userId, request.getGroupId(), request.getRole(), admin.getId());
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @DeleteMapping("/{userId}/group-roles/{groupId}/{role}")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'update')")
+    public ResponseEntity<AdminUserResponse> removeGroupRole(
+            @PathVariable @NonNull String userId,
+            @PathVariable @NonNull String groupId,
+            @PathVariable @NonNull UserProjectGroupRole role) {
+        User updatedUser = userService.removeGroupRole(userId, groupId, role);
+        return ResponseEntity.ok(new AdminUserResponse(updatedUser));
+    }
+
+    @GetMapping("/{userId}/group-roles")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
+    public ResponseEntity<List<GroupRoleResponse>> getUserGroupRoles(
+            @PathVariable @NonNull String userId) {
+        List<UserProjectGroup> groupRoles = userService.getUserGroupRoles(userId);
+        List<GroupRoleResponse> response = groupRoles.stream()
+                .map(GroupRoleResponse::new)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    /** Historial de cómo obtuvo sus perfiles/roles el usuario (origen de cada concesión). */
+    @GetMapping("/{userId}/grants")
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'read')")
+    public ResponseEntity<List<AccessGrantService.AccessGrantDto>> getUserGrants(
+            @PathVariable @NonNull String userId) {
+        return ResponseEntity.ok(accessGrantService.getUserHistory(userId));
+    }
+
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
-    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+    @PreAuthorize("@permissionCheck.hasPermission('user', 'delete')")
+    public ResponseEntity<String> deleteUser(@PathVariable @NonNull String userId) {
         User currentUser = authService.getCurrentUser(true);
         if (currentUser.getId().equals(userId)) {
             return ResponseEntity.badRequest().body("Cannot delete your own account");
@@ -112,15 +243,158 @@ public class AdminUserController {
 
     @Data
     public static class UpdateProfileRequest {
-        @NotNull(message = "User ID cannot be null")
-        private Long id;
+        @NonNull
+        @NotBlank(message = "User ID cannot be blank")
+        private String id;
 
+        @NonNull
         @NotBlank(message = "Name cannot be blank")
         @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
         private String name;
 
-        @NotBlank(message = "Email cannot be blank")
+        /** May be blank for people added without an account, who may not have one yet. */
         @Email(message = "Email should be valid")
         private String email;
+    }
+
+    @Data
+    public static class CreateStaffRequest {
+        @NotBlank(message = "Name cannot be blank")
+        @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
+        private String name;
+
+        @Email(message = "Email should be valid")
+        private String email;
+
+        @Size(max = 50, message = "Nickname must be at most 50 characters")
+        private String nickname;
+
+        private String groupId;
+
+        private UserProjectGroupRole role;
+    }
+
+    @Data
+    public static class AccountAccessRequest {
+        @Email(message = "Email should be valid")
+        private String email;
+    }
+
+    @Data
+    public static class SetManualStaffRequest {
+        @jakarta.validation.constraints.NotNull(message = "Manual is required")
+        private Boolean manual;
+    }
+
+    @Data
+    public static class UpdateGroupsRequest {
+        @jakarta.validation.constraints.NotNull(message = "Group IDs cannot be null")
+        private Set<String> groupIds;
+    }
+
+    @Data
+    public static class AssignGroupRoleRequest {
+        @NotBlank(message = "Group ID is required")
+        private String groupId;
+
+        @jakarta.validation.constraints.NotNull(message = "Role is required")
+        private UserProjectGroupRole role;
+    }
+
+    @Data
+    public static class AdminUserResponse {
+        private String id;
+        private String email;
+        private String name;
+        private StaffDto staff;
+        private GroupRoleResponse[] groupRoles;
+        private AdminUserProfileResponse[] profiles;
+        private AdminUserPermissionResponse[] permissions;
+        private String createdAt;
+        private boolean enabled;
+        private boolean system;
+        private boolean hasAccount;
+
+        public AdminUserResponse(User user) {
+            this.hasAccount = user.isHasAccount();
+            this.id = user.getId();
+            this.email = user.getEmail();
+            this.name = user.getName();
+            this.staff = StaffDto.from(user);
+            this.groupRoles = user.getGroupRoles().stream()
+                    .map(GroupRoleResponse::new)
+                    .toArray(GroupRoleResponse[]::new);
+
+            this.profiles = user.getProfiles().stream()
+                    .map(profile -> new AdminUserProfileResponse(profile.getId(), profile.getName()))
+                    .toArray(AdminUserProfileResponse[]::new);
+
+            Map<String, Set<String>> resourceActions = user.getProfiles().stream()
+                    .flatMap(profile -> profile.getPermissions().stream())
+                    .collect(Collectors.groupingBy(
+                            p -> p.getResource().getValue(),
+                            Collectors.mapping(p -> p.getAction().getValue(), Collectors.toSet())));
+            this.permissions = resourceActions.entrySet().stream()
+                    .map(entry -> new AdminUserPermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
+                    .toArray(AdminUserPermissionResponse[]::new);
+            this.createdAt = user.getCreatedAt() != null ? user.getCreatedAt().toString() : null;
+
+            this.enabled = user.isEnabled();
+            this.system = user.isSystem();
+        }
+    }
+
+    @Data
+    public static class AdminUserProfileResponse {
+        private String id;
+        private String name;
+
+        public AdminUserProfileResponse(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    @Data
+    public static class AdminGroupResponse {
+        private String id;
+        private String name;
+        private String projectId;
+        private String projectName;
+
+        public AdminGroupResponse(ProjectGroup group) {
+            this.id = group.getId();
+            this.name = group.getName();
+            this.projectId = group.getProject().getId();
+            this.projectName = group.getProject().getName();
+        }
+    }
+
+    @Data
+    public static class GroupRoleResponse {
+        private String groupId;
+        private String groupName;
+        private String projectId;
+        private String projectName;
+        private String role;
+
+        public GroupRoleResponse(UserProjectGroup upg) {
+            this.groupId = upg.getProjectGroup().getId();
+            this.groupName = upg.getProjectGroup().getName();
+            this.projectId = upg.getProjectGroup().getProject().getId();
+            this.projectName = upg.getProjectGroup().getProject().getName();
+            this.role = upg.getRole().name();
+        }
+    }
+
+    @Data
+    public static class AdminUserPermissionResponse {
+        private String obj;
+        private String[] actions;
+
+        public AdminUserPermissionResponse(String obj, String[] actions) {
+            this.obj = obj;
+            this.actions = actions;
+        }
     }
 }

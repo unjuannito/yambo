@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- 
+        Seed permission data based on PermissionResource and PermissionAction enums.
+        Resources: USER, PROFILE, INVITATION, PRODUCT, PROJECT, FAMILY_PRODUCT
+        Actions: CREATE, READ, UPDATE, DELETE
+        
+        Permission IDs follow pattern: P + 2-digit resource index + 2-digit action index + 3 random chars
+        For simplicity, using sequential IDs: P0000001, P0000002, etc.
+    -->
+
+    <changeSet id="13-01-seed-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource IN ('USER', 'PROFILE', 'INVITATION', 'PRODUCT', 'PROJECT', 'FAMILY_PRODUCT')</sqlCheck>
+        </preConditions>
+
+        <!-- USER permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PUSR_CRT"/>
+            <column name="resource" value="USER"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PUSR_RD"/>
+            <column name="resource" value="USER"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PUSR_UPD"/>
+            <column name="resource" value="USER"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PUSR_DEL"/>
+            <column name="resource" value="USER"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+
+        <!-- PROFILE permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PPRF_CRT"/>
+            <column name="resource" value="PROFILE"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRF_RD"/>
+            <column name="resource" value="PROFILE"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRF_UPD"/>
+            <column name="resource" value="PROFILE"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRF_DEL"/>
+            <column name="resource" value="PROFILE"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+
+        <!-- INVITATION permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PINV_CRT"/>
+            <column name="resource" value="INVITATION"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PINV_RD"/>
+            <column name="resource" value="INVITATION"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PINV_UPD"/>
+            <column name="resource" value="INVITATION"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PINV_DEL"/>
+            <column name="resource" value="INVITATION"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+
+        <!-- PRODUCT permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PPRD_CRT"/>
+            <column name="resource" value="PRODUCT"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRD_RD"/>
+            <column name="resource" value="PRODUCT"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRD_UPD"/>
+            <column name="resource" value="PRODUCT"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRD_DEL"/>
+            <column name="resource" value="PRODUCT"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+
+        <!-- PROJECT permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PPRJ_CRT"/>
+            <column name="resource" value="PROJECT"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRJ_RD"/>
+            <column name="resource" value="PROJECT"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRJ_UPD"/>
+            <column name="resource" value="PROJECT"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPRJ_DEL"/>
+            <column name="resource" value="PROJECT"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+
+        <!-- FAMILY_PRODUCT permissions -->
+        <insert tableName="permission">
+            <column name="id" value="PFAM_CRT"/>
+            <column name="resource" value="FAMILY_PRODUCT"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PFAM_RD"/>
+            <column name="resource" value="FAMILY_PRODUCT"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PFAM_UPD"/>
+            <column name="resource" value="FAMILY_PRODUCT"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PFAM_DEL"/>
+            <column name="resource" value="FAMILY_PRODUCT"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!-- Create default ADMIN profile with all permissions -->
+    <changeSet id="13-02-seed-admin-profile" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile WHERE id = 'ADMIN'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="profile">
+            <column name="id" value="ADMIN"/>
+            <column name="name" value="Administrator"/>
+        </insert>
+    </changeSet>
+
+    <!-- Assign all permissions to ADMIN profile -->
+    <changeSet id="13-03-assign-admin-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'ADMIN'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'ADMIN'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <!-- USER permissions -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PUSR_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PUSR_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PUSR_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PUSR_DEL"/>
+        </insert>
+
+        <!-- PROFILE permissions -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRF_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRF_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRF_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRF_DEL"/>
+        </insert>
+
+        <!-- INVITATION permissions -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PINV_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PINV_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PINV_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PINV_DEL"/>
+        </insert>
+
+        <!-- PRODUCT permissions -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRD_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRD_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRD_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRD_DEL"/>
+        </insert>
+
+        <!-- PROJECT permissions -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRJ_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRJ_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRJ_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPRJ_DEL"/>
+        </insert>
+
+        <!-- FAMILY_PRODUCT permissions -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PFAM_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PFAM_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PFAM_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PFAM_DEL"/>
+        </insert>
+    </changeSet>
+
+    <!-- Create default USER profile with read-only permissions -->
+    <changeSet id="13-04-seed-user-profile" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile WHERE id = 'USER'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="profile">
+            <column name="id" value="USER"/>
+            <column name="name" value="Standard User"/>
+        </insert>
+    </changeSet>
+
+    <!-- Assign read permissions to USER profile -->
+    <changeSet id="13-05-assign-user-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'USER'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'USER'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <!-- USER can read products, projects, and family products -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="USER"/>
+            <column name="permission_id" value="PPRD_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="USER"/>
+            <column name="permission_id" value="PPRJ_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="USER"/>
+            <column name="permission_id" value="PFAM_RD"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

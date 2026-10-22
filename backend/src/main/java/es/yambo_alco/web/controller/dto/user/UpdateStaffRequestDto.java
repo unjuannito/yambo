@@ -1,0 +1,49 @@
+package es.yambo_alco.web.controller.dto.user;
+
+import es.yambo_alco.web.service.StaffUpdate;
+import es.yambo_alco.web.model.StaffPhotoEdit;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+/** Null fields are left untouched; blank fields are cleared. */
+@Data
+public class UpdateStaffRequestDto {
+    @Size(max = 500, message = "Photo must be at most 500 characters")
+    private String photo;
+
+    @Size(max = 500, message = "Original photo must be at most 500 characters")
+    private String photoOriginal;
+
+    @Valid
+    private StaffPhotoEdit photoEdit;
+
+    @Size(max = 500, message = "Bio must be at most 500 characters")
+    private String bio;
+
+    @Size(max = 100, message = "Fun fact must be at most 100 characters")
+    private String funFact;
+
+    @Size(max = 50, message = "Nickname must be at most 50 characters")
+    private String nickname;
+
+    private Boolean photoConsent;
+
+    @Size(max = 300, message = "Instagram link must be at most 300 characters")
+    @Pattern(regexp = "^$|^https://(www\\.)?instagram\\.com/.+", message = "Instagram link must start with https://www.instagram.com/")
+    private String instagramUrl;
+
+    public StaffUpdate toUpdate() {
+        return StaffUpdate.builder()
+                .photo(photo)
+                .photoOriginal(photoOriginal)
+                .photoEdit(photoEdit)
+                .bio(bio)
+                .funFact(funFact)
+                .nickname(nickname)
+                .photoConsent(photoConsent)
+                .instagramUrl(instagramUrl)
+                .build();
+    }
+}

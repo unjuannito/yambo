@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create change_log table -->
+    <changeSet id="95-01-create-change-log" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="change_log"/>
+            </not>
+        </preConditions>
+        <createTable tableName="change_log">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="entity_type" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_id" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)"/>
+            <column name="issue_id" type="VARCHAR(255)"/>
+            <column name="order_id" type="VARCHAR(255)"/>
+            <column name="changed_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="summary" type="TEXT"/>
+            <column name="before_json" type="TEXT"/>
+            <column name="after_json" type="TEXT"/>
+        </createTable>
+        <createIndex indexName="idx_change_log_order_id" tableName="change_log">
+            <column name="order_id"/>
+        </createIndex>
+        <createIndex indexName="idx_change_log_entity" tableName="change_log">
+            <column name="entity_type"/>
+            <column name="entity_id"/>
+        </createIndex>
+        <createIndex indexName="idx_change_log_changed_at" tableName="change_log">
+            <column name="changed_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

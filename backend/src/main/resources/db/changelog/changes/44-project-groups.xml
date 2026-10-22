@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create project_group table -->
+    <changeSet id="44-1" author="yambo">
+        <createTable tableName="project_group">
+            <column name="id" type="CHAR(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="CHAR(8)">
+                <constraints nullable="false"
+                             foreignKeyName="fk_project_group_project"
+                             references="project(id)"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Create user_project_group join table (many-to-many: user <-> project_group) -->
+    <changeSet id="44-2" author="yambo">
+        <createTable tableName="user_project_group">
+            <column name="user_id" type="CHAR(8)">
+                <constraints nullable="false"
+                             foreignKeyName="fk_upg_user"
+                             references="public.user(id)"/>
+            </column>
+            <column name="project_group_id" type="CHAR(8)">
+                <constraints nullable="false"
+                             foreignKeyName="fk_upg_project_group"
+                             references="project_group(id)"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="user_project_group"
+                       columnNames="user_id, project_group_id"/>
+    </changeSet>
+
+    <!-- Drop the old group_name column from user table -->
+    <changeSet id="44-3" author="yambo">
+        <dropColumn tableName="user" columnName="group_name"/>
+    </changeSet>
+
+    <!-- Make name nullable to allow project-level membership without a named group -->
+    <changeSet id="44-4" author="yambo">
+        <dropNotNullConstraint tableName="project_group" columnName="name" columnDataType="VARCHAR(100)"/>
+    </changeSet>
+
+</databaseChangeLog>

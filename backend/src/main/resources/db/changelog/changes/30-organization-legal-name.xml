@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+
+    <!-- Add legal name setting for payment instructions -->
+    <changeSet id="30-01-add-legal-name-setting" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'organization.legal_name'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0010"/>
+            <column name="key" value="organization.legal_name"/>
+            <column name="value" value="Asociación Yambo ALCO"/>
+            <column name="description" value="Nombre legal de la organización para transferencias bancarias"/>
+            <column name="category" value="organization"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="36-issue-comment-status" author="yambo">
+        <comment>Add optional status column to issue_comment to track status updates performed with comments</comment>
+
+        <addColumn tableName="issue_comment">
+            <column name="status" type="integer"/>
+        </addColumn>
+
+        <createIndex tableName="issue_comment" indexName="idx_issue_comment_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

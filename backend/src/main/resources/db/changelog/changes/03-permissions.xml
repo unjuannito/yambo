@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="06-create-permission-table" author="yambo">
+        <createTable tableName="permission">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="resource" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+                <column name="action" type="varchar(16)">
+                    <constraints nullable="false"/>
+                </column>
+                <column name="has_condition" type="boolean" defaultValueBoolean="false">
+                    <constraints nullable="false"/>
+                </column>
+        </createTable>
+        <addUniqueConstraint
+            tableName="permission"
+            columnNames="resource, action"
+            constraintName="uk_permission_resource_action"/>
+    </changeSet>
+
+    <changeSet id="07-create-profile-permission" author="yambo">
+        <createTable tableName="profile_permission">
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_profile_permission"/>
+            </column>
+            <column name="permission_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_profile_permission"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="profile_permission"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_profile_permission_profile"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="profile_permission"
+            baseColumnNames="permission_id"
+            referencedTableName="permission"
+            referencedColumnNames="id"
+            constraintName="fk_profile_permission_permission"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="08-create-user-permission" author="yambo">
+        <createTable tableName="user_permission">
+            <column name="user_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_permission"/>
+            </column>
+            <column name="permission_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_permission"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="user_permission"
+            baseColumnNames="user_id"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_user_permission_user"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="user_permission"
+            baseColumnNames="permission_id"
+            referencedTableName="permission"
+            referencedColumnNames="id"
+            constraintName="fk_user_permission_permission"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="09-create-condition" author="yambo">
+        <createTable tableName="condition">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="permission_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="condition"
+            baseColumnNames="permission_id"
+            referencedTableName="permission"
+            referencedColumnNames="id"
+            constraintName="fk_condition_permission"
+            onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

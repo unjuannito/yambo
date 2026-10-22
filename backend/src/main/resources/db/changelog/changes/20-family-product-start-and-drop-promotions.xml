@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="20-01-add-start-to-family-product" author="yambo">
+        <addColumn tableName="family_product">
+            <column name="start_tms" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20-02-drop-promotion-table" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="promotion"/>
+        </preConditions>
+        <dropTable tableName="promotion" cascadeConstraints="true"/>
+    </changeSet>
+
+</databaseChangeLog>

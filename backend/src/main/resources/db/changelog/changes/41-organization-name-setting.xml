@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Add short organization name setting (used in email subjects) -->
+    <changeSet id="41-01-add-organization-name-setting" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM settings WHERE key = 'organization.name'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SETT0022"/>
+            <column name="key" value="organization.name"/>
+            <column name="value" value="Yambo"/>
+            <column name="description" value="Nombre corto de la organización (usado en correos)"/>
+            <column name="category" value="organization"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

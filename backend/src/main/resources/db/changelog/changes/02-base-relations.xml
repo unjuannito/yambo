@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="04-create-user-profile" author="yambo">
+        <createTable tableName="user_profile">
+            <column name="user_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_profile"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_profile"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="user_profile"
+            baseColumnNames="user_id"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_user_profile_user"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="user_profile"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_user_profile_profile"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="05-create-user-project" author="yambo">
+        <createTable tableName="user_project">
+            <column name="user_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_project"/>
+            </column>
+            <column name="project_id" type="char(8)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_project"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="user_project"
+            baseColumnNames="user_id"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            constraintName="fk_user_project_user"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="user_project"
+            baseColumnNames="project_id"
+            referencedTableName="project"
+            referencedColumnNames="id"
+            constraintName="fk_user_project_project"
+            onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

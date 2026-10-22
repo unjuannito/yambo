@@ -1,0 +1,98 @@
+import { ApiService } from './apiService';
+import type { GroupRole } from '~/types/role';
+import type { DropWatcher } from '~/types/issueType';
+
+export interface RoleAccess {
+  projectId: string;
+  role: GroupRole;
+}
+
+export interface FamilyProduct {
+  id: string;
+  name: string;
+  startTms: string;
+  endTms: string;
+  status?: string;
+  active?: boolean;
+  projectIds?: string[];
+  roleAccess?: RoleAccess[];
+}
+
+export interface CreateFamilyProductRequest {
+  name: string;
+  startTms: string;
+  endTms: string;
+  projectIds?: string[];
+  roleAccess?: RoleAccess[];
+}
+
+export interface UpdateFamilyProductRequest {
+  name?: string;
+  startTms?: string;
+  endTms?: string;
+  projectIds?: string[];
+  roleAccess?: RoleAccess[];
+}
+
+export class FamilyProductService extends ApiService {
+  public async listFamilyProducts(
+    page = 0,
+    size = 50,
+    name?: string,
+    active?: boolean
+  ): Promise<{ content: FamilyProduct[]; page: { totalElements: number; totalPages: number; number: number; size: number } }> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+    });
+    if (name) params.append('name', name);
+    if (active !== undefined) params.append('active', active.toString());
+
+    return await this.get(`/family-products?${params.toString()}`);
+  }
+
+  public async getFamilyProduct(id: string): Promise<FamilyProduct> {
+    return await this.get(`/family-products/${id}`);
+  }
+
+  public async createFamilyProduct(request: CreateFamilyProductRequest): Promise<FamilyProduct> {
+    return await this.post('/family-products', request);
+  }
+
+  public async updateFamilyProduct(id: string, request: UpdateFamilyProductRequest): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}`, request);
+  }
+
+  public async assignProjects(id: string, projectIds: string[]): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}/projects`, { projectIds });
+  }
+
+  public async assignRoleAccess(id: string, roleAccess: RoleAccess[]): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}/role-access`, { roleAccess });
+  }
+
+  public async deleteFamilyProduct(id: string): Promise<void> {
+    return await this.delete(`/family-products/${id}`);
+  }
+
+  public async updateFamilyProductStatus(id: string, status: string): Promise<FamilyProduct> {
+    return await this.put(`/family-products/${id}/status`, { status });
+  }
+
+  public async getDropWatchers(familyProductId: string): Promise<DropWatcher[]> {
+    return await this.get<DropWatcher[]>(`/family-products/${familyProductId}/watchers`);
+  }
+
+  public async addDropWatcher(familyProductId: string, email: string, userId?: string): Promise<DropWatcher> {
+    return await this.post<DropWatcher, { email: string; userId?: string }>(
+      `/family-products/${familyProductId}/watchers`,
+      { email, userId }
+    );
+  }
+
+  public async removeDropWatcher(familyProductId: string, email: string): Promise<void> {
+    return await this.deleteWithBody(`/family-products/${familyProductId}/watchers`, { email });
+  }
+}
+
+export const familyProductService = new FamilyProductService();

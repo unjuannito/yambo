@@ -1,0 +1,130 @@
+package es.yambo_alco.web.controller;
+
+import es.yambo_alco.web.config.TestSecurityConfig;
+import es.yambo_alco.web.model.FamilyProduct;
+import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.service.AuthService;
+import es.yambo_alco.web.service.BatchEmailService;
+import es.yambo_alco.web.service.FamilyProductService;
+import es.yambo_alco.web.service.FamilyProductWatcherService;
+import es.yambo_alco.web.util.PermissionCheckService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDateTime;
+import java.util.Set;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(controllers = FamilyProductController.class)
+@Import(TestSecurityConfig.class)
+@SuppressWarnings("null")
+class FamilyProductControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private FamilyProductService familyProductService;
+
+    @MockitoBean
+    private PermissionCheckService permissionCheckService;
+
+    @MockitoBean
+    private AuthService authService;
+
+    @MockitoBean
+    private BatchEmailService batchEmailService;
+
+    @MockitoBean
+    private FamilyProductWatcherService familyProductWatcherService;
+
+    @BeforeEach
+    void setUp() {
+        when(permissionCheckService.hasPermission(anyString(), anyString())).thenReturn(true);
+        when(permissionCheckService.hasPermission(any(es.yambo_alco.web.model.enums.PermissionResource.class),
+                any(es.yambo_alco.web.model.enums.PermissionAction.class))).thenReturn(true);
+    }
+
+    @Test
+    @WithMockUser
+    void createFamilyProduct_WithStartAndEnd_ShouldReturnCreated() throws Exception {
+        LocalDateTime start = LocalDateTime.now().minusDays(1);
+        LocalDateTime end = LocalDateTime.now().plusDays(10);
+
+        FamilyProduct familyProduct = FamilyProduct.builder()
+                .id("FAM001")
+                .name("Drop")
+                .startTms(start)
+                .endTms(end)
+                .projects(Set.of(Project.builder().id("PRJ001").build()))
+                .build();
+
+        when(familyProductService.createFamilyProduct(anyString(), any(LocalDateTime.class), any(LocalDateTime.class), any(), any()))
+                .thenReturn(familyProduct);
+
+        String payload = """
+                {
+                    "name": "Drop",
+                    "startTms": "2026-01-01T10:00:00",
+                    "endTms": "2026-02-01T10:00:00",
+                    "projectIds": ["PRJ001"]
+                }
+                """;
+
+        mockMvc.perform(post("/family-products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("FAM001"))
+                .andExpect(jsonPath("$.startTms").exists())
+                .andExpect(jsonPath("$.endTms").exists())
+                .andExpect(jsonPath("$.projectIds[0]").value("PRJ001"));
+    }
+
+    @Test
+    @WithMockUser
+    void updateFamilyProduct_WithStartAndEnd_ShouldReturnOk() throws Exception {
+        LocalDateTime start = LocalDateTime.now().minusDays(2);
+        LocalDateTime end = LocalDateTime.now().plusDays(2);
+
+        FamilyProduct familyProduct = FamilyProduct.builder()
+                .id("FAM001")
+                .name("Drop Updated")
+                .startTms(start)
+                .endTms(end)
+                .build();
+
+        when(familyProductService.updateFamilyProduct(anyString(), any(), any(), any(), any(), any()))
+                .thenReturn(familyProduct);
+
+        String payload = """
+                {
+                    "name": "Drop Updated",
+                    "startTms": "2026-01-02T10:00:00",
+                    "endTms": "2026-02-02T10:00:00"
+                }
+                """;
+
+        mockMvc.perform(put("/family-products/FAM001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Drop Updated"))
+                .andExpect(jsonPath("$.startTms").exists())
+                .andExpect(jsonPath("$.endTms").exists());
+    }
+}

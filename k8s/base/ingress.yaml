@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: yambo-ingress
+  namespace: yambo
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # Allow large file uploads (images, ~15 MB)
+    traefik.ingress.kubernetes.io/buffering-maxrequestbodybytes: "15728640"
+spec:
+  ingressClassName: traefik
+  defaultBackend:
+    service:
+      name: yambo-frontend-service
+      port:
+        number: 80
+  rules:
+    - host: OVERLAY_PATCH_REQUIRED
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: yambo-backend-service
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: yambo-frontend-service
+                port:
+                  number: 80

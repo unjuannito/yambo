@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="49-1" author="yambo">
+        <comment>Seed home sections configuration setting</comment>
+        <insert tableName="settings" schemaName="public">
+            <column name="id" value="SETT0032"/>
+            <column name="key" value="home.sections.config"/>
+            <column name="value" value='[{"id":"hero","visible":true,"title":""},{"id":"about","visible":true,"title":"¿Qué es Yambo?"},{"id":"projects","visible":true,"title":"Proyectos Destacados"},{"id":"activities","visible":true,"title":"Actividades"},{"id":"monitors","visible":true,"title":"Equipo de Monitores"}]'/>
+            <column name="description" value="Configuración de secciones de la página principal (orden, visibilidad, títulos)"/>
+            <column name="category" value="home"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="50-01-create-activity-table" author="yambo">
+        <createTable tableName="activity">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="date" type="timestamp"/>
+            <column name="badge_text" type="varchar(64)"/>
+            <column name="badge_class" type="varchar(64)"/>
+            <column name="is_public" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="char(8)">
+                <constraints nullable="false" foreignKeyName="fk_activity_project" references="project(id)"/>
+            </column>
+            <column name="manager_id" type="char(8)">
+                <constraints foreignKeyName="fk_activity_manager" references="user(id)"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="50-02-insert-activity-permissions" author="yambo">
+        <!-- Create -->
+        <insert tableName="permission">
+            <column name="id" value="PACT_CRT"/>
+            <column name="resource" value="ACTIVITY"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <!-- Read -->
+        <insert tableName="permission">
+            <column name="id" value="PACT_RD"/>
+            <column name="resource" value="ACTIVITY"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <!-- Update -->
+        <insert tableName="permission">
+            <column name="id" value="PACT_UPD"/>
+            <column name="resource" value="ACTIVITY"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <!-- Delete -->
+        <insert tableName="permission">
+            <column name="id" value="PACT_DEL"/>
+            <column name="resource" value="ACTIVITY"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="50-03-assign-activity-permissions-monitor" author="yambo">
+        <!-- Assign to Monitor (P0000004) -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000004"/>
+            <column name="permission_id" value="PACT_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000004"/>
+            <column name="permission_id" value="PACT_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000004"/>
+            <column name="permission_id" value="PACT_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000004"/>
+            <column name="permission_id" value="PACT_DEL"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="50-04-assign-activity-permissions-admin" author="yambo">
+        <!-- Assign to Admin (ADMIN) -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PACT_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PACT_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PACT_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PACT_DEL"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

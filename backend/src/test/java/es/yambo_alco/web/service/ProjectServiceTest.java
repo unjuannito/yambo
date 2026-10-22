@@ -1,0 +1,250 @@
+package es.yambo_alco.web.service;
+
+import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.Project;
+import es.yambo_alco.web.model.enums.SeoEntityType;
+import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.ProjectRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
+class ProjectServiceTest {
+
+    @Mock
+    private ProjectRepository projectRepository;
+
+    @Mock
+    private ProjectGroupRepository projectGroupRepository;
+
+    @Mock
+    private SeoMetadataService seoMetadataService;
+
+    @Mock
+    private SlugService slugService;
+
+    @InjectMocks
+    private ProjectService projectService;
+
+    @Test
+    void getProjectById_WhenProjectExists_ShouldReturnProject() {
+        // Given
+        Project project = Project.builder().id("PRJ001").name("Project 1").active(true).build();
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
+
+        // When
+        Project result = projectService.getProjectById("PRJ001");
+
+        // Then
+        assertEquals(project, result);
+        verify(projectRepository).findById("PRJ001");
+    }
+
+    @Test
+    void getProjectById_WhenProjectDoesNotExist_ShouldThrowException() {
+        when(projectRepository.findById("PRJ404")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> projectService.getProjectById("PRJ404"));
+        assertEquals("Project not found", exception.getMessage());
+        verify(projectRepository).findById("PRJ404");
+    }
+
+    @Test
+    void listProjects_ShouldReturnFilteredProjects() {
+        Pageable pageable = PageRequest.of(0, 10);
+        List<Project> projects = List.of(
+                Project.builder().id("PRJ001").name("Project 1").active(true).build(),
+                Project.builder().id("PRJ002").name("Project 2").active(false).build()
+        );
+        Page<Project> expected = new PageImpl<>(projects, pageable, projects.size());
+
+        doReturn(expected).when(projectRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Project>>any(), eq(pageable));
+
+        Page<Project> result = projectService.listProjects("Project", null, null, pageable);
+
+        assertEquals(expected, result);
+        verify(projectRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Project>>any(), eq(pageable));
+    }
+
+    @Test
+    void createProject_WhenValidData_ShouldCreateProject() {
+        Project saved = Project.builder().id("PRJ001").name("New Project").active(true).build();
+        when(projectRepository.existsByName("New Project")).thenReturn(false);
+        when(slugService.forProject("New Project")).thenReturn("new-project");
+        when(projectRepository.save(any(Project.class))).thenReturn(saved);
+
+        Project result = projectService.createProject("New Project", null, "2025", null, null, null, null, null);
+
+        assertEquals(saved, result);
+        verify(projectRepository).existsByName("New Project");
+        verify(projectRepository).save(org.mockito.ArgumentMatchers.argThat(p -> "new-project".equals(p.getSlug())));
+        verify(seoMetadataService).generateAndSaveForProject(saved);
+    }
+
+    @Test
+    void createProject_WhenNameAlreadyExists_ShouldThrowException() {
+        when(projectRepository.existsByName("Existing"))
+                .thenReturn(true);
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> projectService.createProject("Existing", true, null, null, null, null, null, null));
+        assertEquals("Project name already exists", exception.getMessage());
+        verify(projectRepository).existsByName("Existing");
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProject_WhenValidData_ShouldUpdateProject() {
+        Project existing = Project.builder().id("PRJ001").name("Old").active(true).build();
+        Project saved = Project.builder().id("PRJ001").name("New").active(false).build();
+
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(existing));
+        when(projectRepository.existsByName("New")).thenReturn(false);
+        when(projectRepository.save(any(Project.class))).thenReturn(saved);
+
+        Project result = projectService.updateProject("PRJ001", "New", false, "2026", null, null, null, null, null);
+
+        assertEquals(saved, result);
+        verify(projectRepository).findById("PRJ001");
+        verify(projectRepository).existsByName("New");
+        verify(projectRepository).save(any(Project.class));
+        verify(seoMetadataService).generateAndSaveForProject(saved);
+    }
+
+    @Test
+    void deleteProject_WhenProjectExists_ShouldDelete() {
+        Project project = Project.builder().id("PRJ001").name("Project").build();
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(project));
+
+        projectService.deleteProject("PRJ001");
+
+        verify(projectRepository).findById("PRJ001");
+        verify(seoMetadataService).deleteByEntity(SeoEntityType.PROJECT, "PRJ001");
+        verify(projectRepository).delete(project);
+    }
+
+    // ── Coordination email ──────────────────────────────────────────────
+
+    private Project captureSavedOnCreate(String coordinationEmail) {
+        when(projectRepository.existsByName("P")).thenReturn(false);
+        when(projectRepository.save(any(Project.class))).thenAnswer(inv -> inv.getArgument(0));
+        projectService.createProject("P", null, null, null, null, null, null, coordinationEmail);
+        ArgumentCaptor<Project> captor = ArgumentCaptor.forClass(Project.class);
+        verify(projectRepository).save(captor.capture());
+        return captor.getValue();
+    }
+
+    @Test
+    void createProject_WithCoordinationEmail_ShouldTrimAndStore() {
+        Project saved = captureSavedOnCreate("  coord@yambo.es  ");
+        assertEquals("coord@yambo.es", saved.getCoordinationEmail());
+    }
+
+    @Test
+    void createProject_WithoutCoordinationEmail_ShouldStoreNull() {
+        assertNull(captureSavedOnCreate(null).getCoordinationEmail());
+    }
+
+    @Test
+    void createProject_WithBlankCoordinationEmail_ShouldStoreNull() {
+        assertNull(captureSavedOnCreate("   ").getCoordinationEmail());
+    }
+
+    @Test
+    void createProject_WithInvalidCoordinationEmail_ShouldThrowAndNotSave() {
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> projectService.createProject("P", null, null, null, null, null, null, "not-an-email"));
+        assertEquals("Invalid coordination email", exception.getMessage());
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProject_WithCoordinationEmail_ShouldTrimAndStore() {
+        Project existing = Project.builder().id("PRJ001").name("P").build();
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(existing));
+        when(projectRepository.save(any(Project.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Project result = projectService.updateProject("PRJ001", null, null, null, null, null, null, null, " new@yambo.es ");
+
+        assertEquals("new@yambo.es", result.getCoordinationEmail());
+    }
+
+    @Test
+    void updateProject_WithNullCoordinationEmail_ShouldKeepCurrentValue() {
+        Project existing = Project.builder().id("PRJ001").name("P").coordinationEmail("keep@yambo.es").build();
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(existing));
+        when(projectRepository.save(any(Project.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Project result = projectService.updateProject("PRJ001", null, null, null, null, null, null, null, null);
+
+        assertEquals("keep@yambo.es", result.getCoordinationEmail());
+    }
+
+    @Test
+    void updateProject_WithEmptyCoordinationEmail_ShouldClearValue() {
+        Project existing = Project.builder().id("PRJ001").name("P").coordinationEmail("old@yambo.es").build();
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(existing));
+        when(projectRepository.save(any(Project.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Project result = projectService.updateProject("PRJ001", null, null, null, null, null, null, null, "");
+
+        assertNull(result.getCoordinationEmail());
+    }
+
+    @Test
+    void updateProject_WithInvalidCoordinationEmail_ShouldThrowAndLeaveProjectUntouched() {
+        Project existing = Project.builder().id("PRJ001").name("Old").coordinationEmail("old@yambo.es").build();
+
+        assertThrows(BadRequestException.class,
+                () -> projectService.updateProject("PRJ001", "New", null, null, null, null, null, null, "bad@"));
+
+        assertEquals("Old", existing.getName());
+        assertEquals("old@yambo.es", existing.getCoordinationEmail());
+        verify(projectRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProject_CoordinationEmail_ShouldOnlyAffectTargetProject() {
+        Project first = Project.builder().id("PRJ001").name("A").coordinationEmail("a@yambo.es").build();
+        Project second = Project.builder().id("PRJ002").name("B").coordinationEmail("b@yambo.es").build();
+        when(projectRepository.findById("PRJ001")).thenReturn(Optional.of(first));
+        when(projectRepository.save(any(Project.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        projectService.updateProject("PRJ001", null, null, null, null, null, null, null, "changed@yambo.es");
+
+        assertEquals("changed@yambo.es", first.getCoordinationEmail());
+        assertEquals("b@yambo.es", second.getCoordinationEmail());
+        verify(projectRepository, never()).findById("PRJ002");
+        verify(projectRepository).save(first);
+    }
+
+    @Test
+    void normalizeCoordinationEmail_ShouldRejectMalformedValues() {
+        for (String bad : List.of("plain", "a@b", "a b@c.es", "@yambo.es", "a@@yambo.es")) {
+            assertThrows(BadRequestException.class,
+                    () -> ProjectService.normalizeCoordinationEmail(bad), bad);
+        }
+        assertThrows(BadRequestException.class,
+                () -> ProjectService.normalizeCoordinationEmail("a".repeat(250) + "@x.es"));
+    }
+}

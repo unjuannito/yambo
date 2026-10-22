@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actividad abierta</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header('#22c55e', ${headerIcon}, '¡Inscripciones abiertas!')}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">
+                    ¡<span th:text="${activityName}">Actividad</span> ya está abierta!
+                </h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    La actividad que te interesaba ya tiene las inscripciones abiertas.
+                </p>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    <strong th:text="${activityName}">Nombre de la actividad</strong>
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${activityUrl}, 'Apuntarme ahora', '#22c55e')}"/>
+
+                <p style="margin: 20px 0 0 0; color: #e74c3c; font-size: 14px; line-height: 1.6;">
+                    <strong>¡No esperes demasiado!</strong> Las plazas son limitadas.
+                </p>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

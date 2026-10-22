@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Issue #76: order:create para MERCH_MG (admin de merch) -->
+    <changeSet id="94-01" author="system">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'MERCH_MG'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'MERCH_MG' AND permission_id = 'PORD_CRT'</sqlCheck>
+            </and>
+        </preConditions>
+        <comment>Grant order create permission to MERCH_MG profile (admin create orders on behalf of members)</comment>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PORD_CRT"/>
+        </insert>
+    </changeSet>
+
+    <!-- Issue #76: order:delete para MERCH_MG (poder eliminar pedidos desde la UI) -->
+    <changeSet id="94-02" author="system">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'MERCH_MG'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'MERCH_MG' AND permission_id = 'PORD_DEL'</sqlCheck>
+            </and>
+        </preConditions>
+        <comment>Grant order delete permission to MERCH_MG profile</comment>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="PORD_DEL"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

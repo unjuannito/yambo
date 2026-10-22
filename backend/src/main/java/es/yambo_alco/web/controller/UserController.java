@@ -1,7 +1,14 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.controller.dto.user.StaffDto;
+import es.yambo_alco.web.controller.dto.user.UpdateStaffRequestDto;
 import es.yambo_alco.web.model.DeletionObjectType;
+import es.yambo_alco.web.model.NotificationPreferences;
+import es.yambo_alco.web.model.StaffAvatar;
+import es.yambo_alco.web.model.Permission;
+import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PendingDeletionService;
 import es.yambo_alco.web.service.UserService;
@@ -12,12 +19,13 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 
 @RestController
 @RequestMapping("/user")
@@ -46,6 +54,35 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/staff")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> updateStaff(@Valid @RequestBody UpdateStaffRequestDto request) {
+        User currentUser = authService.getCurrentUser(true);
+        User updatedUser = userService.updateStaff(currentUser.getId(), request.toUpdate());
+        return ResponseEntity.ok(new UserResponse(updatedUser));
+    }
+
+    @PutMapping("/staff/avatar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> updateStaffAvatar(@Valid @RequestBody StaffAvatar avatar) {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(new UserResponse(userService.updateStaffAvatar(currentUser.getId(), avatar)));
+    }
+
+    @DeleteMapping("/staff/avatar")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> resetStaffAvatar() {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(new UserResponse(userService.updateStaffAvatar(currentUser.getId(), null)));
+    }
+
+    @DeleteMapping("/staff")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponse> deleteStaffData() {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(new UserResponse(userService.deleteStaffData(currentUser.getId())));
+    }
+
     @PutMapping("/change-password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
@@ -54,12 +91,27 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/notification-preferences")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<NotificationPreferences> getNotificationPreferences() {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(userService.getNotificationPreferences(currentUser.getId()));
+    }
+
+    @PutMapping("/notification-preferences")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<NotificationPreferences> updateNotificationPreferences(
+            @RequestBody NotificationPreferences preferences) {
+        User currentUser = authService.getCurrentUser(true);
+        return ResponseEntity.ok(userService.updateNotificationPreferences(currentUser.getId(), preferences));
+    }
+
     @PostMapping("/delete")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> scheduleAccountDeletion() {
         User currentUser = authService.getCurrentUser(true);
         pendingDeletionService.scheduleDeletion(DeletionObjectType.USER, currentUser.getId().toString(),
-            java.time.LocalDateTime.now().plusDays(DEFAULT_DELETION_DAYS));
+                java.time.LocalDateTime.now().plusDays(DEFAULT_DELETION_DAYS));
         return ResponseEntity.ok("User account scheduled for deletion in " + DEFAULT_DELETION_DAYS + " days");
     }
 
@@ -86,26 +138,63 @@ public class UserController {
 
     @Data
     public static class UserResponse {
-        private Long id;
-        private String username;
+        private String id;
         private String email;
         private String name;
-        private String[] roles;
-        private String[] permissions;
-        private boolean enabled;
+        private StaffDto staff;
+        private boolean hasAccount;
+        private NotificationPreferences notificationPreferences;
+        private GroupRoleResponse[] groupRoles;
+        private PermissionResponse[] permissions;
 
         public UserResponse(User user) {
             this.id = user.getId();
-            this.username = user.getUsername();
             this.email = user.getEmail();
             this.name = user.getName();
-            this.roles = user.getRoles().stream().map(role -> role.getId()).toArray(String[]::new);
-            this.permissions = user.getRoles().stream()
-                    .flatMap(role -> role.getPermissions().stream())
-                    .map(permission -> permission.getId())
-                    .distinct()
-                    .toArray(String[]::new);
-            this.enabled = user.isEnabled();
+            this.staff = StaffDto.from(user);
+            this.hasAccount = user.isHasAccount();
+            this.notificationPreferences = user.getNotificationPreferences() != null
+                    ? user.getNotificationPreferences()
+                    : NotificationPreferences.defaults();
+            this.groupRoles = user.getGroupRoles().stream()
+                    .map(GroupRoleResponse::new)
+                    .toArray(GroupRoleResponse[]::new);
+            Map<String, Set<String>> resourceActions = user.getProfiles().stream()
+                    .flatMap(profile -> profile.getPermissions().stream())
+                    .collect(Collectors.groupingBy(
+                            p -> p.getResource().getValue(),
+                            Collectors.mapping(p -> p.getAction().getValue(), Collectors.toSet())));
+            this.permissions = resourceActions.entrySet().stream()
+                    .map(entry -> new PermissionResponse(entry.getKey(), entry.getValue().toArray(new String[0])))
+                    .toArray(PermissionResponse[]::new);
+        }
+    }
+
+    @Data
+    public static class GroupRoleResponse {
+        private String groupId;
+        private String groupName;
+        private String projectId;
+        private String projectName;
+        private String role;
+
+        public GroupRoleResponse(UserProjectGroup upg) {
+            this.groupId = upg.getProjectGroup().getId();
+            this.groupName = upg.getProjectGroup().getName();
+            this.projectId = upg.getProjectGroup().getProject().getId();
+            this.projectName = upg.getProjectGroup().getProject().getName();
+            this.role = upg.getRole().name();
+        }
+    }
+
+    @Data
+    public static class PermissionResponse {
+        private String obj;
+        private String[] actions;
+
+        public PermissionResponse(String obj, String[] actions) {
+            this.obj = obj;
+            this.actions = actions;
         }
     }
 }

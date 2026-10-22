@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Shared email fragments.
+  Usage: th:replace="~{emails/fragments/layout :: fragmentName(...)}"
+-->
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────── -->
+<th:block th:fragment="header(headerColor, headerIcon, headerTitle)">
+    <tr>
+        <td th:style="'background-color: ' + ${headerColor} + '; padding: 30px; text-align: center;'">
+            <h1 style="margin: 0; color: #ffffff; font-size: 24px;">
+                <span th:utext="${#strings.isEmpty(headerIcon) ? headerTitle : (headerIcon + ' ' + headerTitle)}">Título</span>
+            </h1>
+            <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">
+                <span th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}">19/02/2026 12:00</span>
+            </p>
+        </td>
+    </tr>
+</th:block>
+
+<!-- ── Footer ──────────────────────────────────────────────────────── -->
+<th:block th:fragment="footer">
+    <tr>
+        <td style="background-color: #ecf0f1; padding: 20px 30px; text-align: center;">
+            <p style="margin: 0; color: #7f8c8d; font-size: 14px;">
+                Este es un correo automático, por favor no responda a este mensaje.
+            </p>
+            <p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 12px;">
+                &copy; <span th:text="${currentYear}">2026</span> <span th:text="${organizationName}">Yambo</span>. Todos los derechos reservados.
+            </p>
+            <p th:if="${preferencesUrl}" style="margin: 8px 0 0 0;">
+                <a th:href="${preferencesUrl}" style="color: #8B5CF6; font-size: 12px; text-decoration: none;">
+                    Gestionar preferencias de notificación
+                </a>
+            </p>
+        </td>
+    </tr>
+</th:block>
+
+<!-- ── Product table ───────────────────────────────────────────────── -->
+<th:block th:fragment="productTable(products, totalPrice)">
+    <div style="margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Productos</h3>
+        <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #34495e;">
+                    <th style="padding: 12px; text-align: left; color: #ffffff; font-size: 14px;">Producto</th>
+                    <th style="padding: 12px; text-align: center; color: #ffffff; font-size: 14px;">Cantidad</th>
+                    <th style="padding: 12px; text-align: right; color: #ffffff; font-size: 14px;">Precio</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="product : ${products}" style="border-bottom: 1px solid #ecf0f1;">
+                    <td style="padding: 12px; color: #555555; font-size: 14px;">
+                        <div th:text="${product.name()}">Producto</div>
+                        <div th:if="${product.configuration() != null and !product.configuration().empty}"
+                             style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">
+                            <em th:text="${product.configuration()}">Config</em>
+                        </div>
+                    </td>
+                    <td style="padding: 12px; text-align: center; color: #555555; font-size: 14px;"
+                        th:text="${product.quantity()}">1</td>
+                    <td style="padding: 12px; text-align: right; color: #555555; font-size: 14px;"
+                        th:text="${#numbers.formatDecimal(product.price(), 1, 2)} + ' €'">10.00 €</td>
+                </tr>
+                <tr style="background-color: #ecf0f1; font-weight: bold;">
+                    <td colspan="2" style="padding: 12px; text-align: right; color: #2c3e50; font-size: 16px;">Total:</td>
+                    <td style="padding: 12px; text-align: right; color: #2c3e50; font-size: 16px;"
+                        th:text="${#numbers.formatDecimal(totalPrice, 1, 2)} + ' €'">100.00 €</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</th:block>
+
+<!-- ── Order details box ───────────────────────────────────────────── -->
+<th:block th:fragment="orderDetails(orderId, orderDate, statusLabel, statusColor)">
+    <div style="background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Detalles del Pedido</h3>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>ID del Pedido:</strong> <span th:text="${orderId}"></span>
+        </p>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>Fecha:</strong> <span th:text="${#temporals.format(orderDate, 'dd/MM/yyyy HH:mm')}"></span>
+        </p>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>Estado:</strong>
+            <span th:style="'color: ' + ${statusColor} + '; font-weight: bold;'" th:text="${statusLabel}">ESTADO</span>
+        </p>
+    </div>
+</th:block>
+
+<!-- ── CTA button ──────────────────────────────────────────────────── -->
+<th:block th:fragment="ctaButton(url, label, color)">
+    <div style="text-align: center; margin: 30px 0;">
+        <a th:href="${url}"
+           th:style="'display: inline-block; padding: 15px 30px; background-color: ' + ${color} + '; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;'"
+           th:text="${label}">Acción</a>
+    </div>
+</th:block>
+
+<!-- ── Issue details box ───────────────────────────────────────────── -->
+<th:block th:fragment="issueDetails(issueId, issueTitle, productName)">
+    <div style="background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Detalles de la Incidencia</h3>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>ID:</strong> <span th:text="${issueId}"></span>
+        </p>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>Título:</strong> <span th:text="${issueTitle}"></span>
+        </p>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>Producto:</strong> <span th:text="${productName}"></span>
+        </p>
+    </div>
+</th:block>
+
+</body>
+</html>

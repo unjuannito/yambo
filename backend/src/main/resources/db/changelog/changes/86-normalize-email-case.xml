@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="86-normalize-email-case" author="cabrasky">
+        <comment>Normalize existing user emails to lowercase for case-insensitive login</comment>
+
+        <sql>
+            UPDATE public.user
+            SET email = LOWER(email)
+            WHERE email != LOWER(email);
+        </sql>
+
+        <sql>
+            UPDATE nominative_invitations
+            SET email = LOWER(email)
+            WHERE email != LOWER(email);
+        </sql>
+
+        <sql>
+            UPDATE password_reset_token
+            SET email = LOWER(email)
+            WHERE email != LOWER(email);
+        </sql>
+
+        <addColumn tableName="user_login_history">
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <sql>
+            UPDATE user_login_history ulh
+            SET email = LOWER(u.email)
+            FROM public.user u
+            WHERE ulh.user_id = u.id
+              AND ulh.email IS NULL;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

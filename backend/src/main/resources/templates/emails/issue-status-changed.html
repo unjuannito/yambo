@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estado de Incidencia Actualizado</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header(${headerColor}, ${headerIcon}, 'Estado Actualizado')}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    El estado de una incidencia ha sido actualizado.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: issueDetails(${issueId}, ${issueTitle}, ${productName})}"/>
+
+                <!-- Status Change -->
+                <div style="background-color: #fff8e1; border-left: 4px solid #f39c12; padding: 15px 20px; margin: 20px 0;">
+                    <p style="margin: 0 0 10px 0; color: #555555; font-size: 14px;">
+                        <strong>Cambio de estado por <span th:text="${changedBy}"></span></strong>
+                    </p>
+                    <p style="margin: 0 0 10px 0; color: #555555; font-size: 13px;">
+                        <em th:text="${#temporals.format(changedAt, 'dd/MM/yyyy HH:mm')}"></em>
+                    </p>
+                    <p style="margin: 0; color: #555555; font-size: 15px;">
+                        <span th:text="${oldStatusText}" style="text-decoration: line-through;">Abierto</span>
+                        <span style="margin: 0 10px;">➜</span>
+                        <span th:text="${newStatusText}" th:style="'color: ' + ${statusColor} + '; font-weight: bold;'">En Progreso</span>
+                    </p>
+                </div>
+
+                <p style="margin: 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    Puedes ver todos los detalles de la incidencia desde tu panel de control.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${issueLink}, 'Ver Incidencia', '#3498db')}"/>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yambo-backend
+  namespace: yambo
+  labels:
+    app: yambo-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: yambo-backend
+  template:
+    metadata:
+      labels:
+        app: yambo-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: yambo-backend
+                topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: wait-for-db
+          image: postgres:15-alpine
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 70
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h db -p 5432 -U postgres; do
+                echo "waiting for db...";
+                sleep 2;
+              done
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+      containers:
+        - name: backend
+          image: yambo-web-backend:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+          ports:
+            - containerPort: 8080
+          env:
+            # CORS — set to real domain via overlay patch
+            - name: CORS_ALLOWED_ORIGINS
+              value: "OVERLAY_PATCH_REQUIRED"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://db:5432/yambo_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: DB_PASS
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: JWT_SECRET
+            - name: MAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_HOST
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_USERNAME
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_PASSWORD
+            - name: MAIL_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_FROM
+            - name: UPLOAD_DIR
+              value: "/data/uploads"
+            - name: TZ
+              value: "Europe/Madrid"
+            - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+              value: "60000"
+          volumeMounts:
+            - name: uploads-storage
+              mountPath: /data/uploads
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 15
+      volumes:
+        - name: uploads-storage
+          persistentVolumeClaim:
+            claimName: uploads-pvc

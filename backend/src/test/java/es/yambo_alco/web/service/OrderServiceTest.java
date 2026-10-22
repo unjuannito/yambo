@@ -1,0 +1,2829 @@
+package es.yambo_alco.web.service;
+
+import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.exception.ResourceNotFoundException;
+import es.yambo_alco.web.model.*;
+import es.yambo_alco.web.model.OrderFilter;
+import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
+import es.yambo_alco.web.repository.IssueRepository;
+import es.yambo_alco.web.repository.OrderProductRepository;
+import es.yambo_alco.web.repository.OrderRepository;
+import es.yambo_alco.web.repository.OrderStatusHistoryRepository;
+import es.yambo_alco.web.repository.ProductRepository;
+import es.yambo_alco.web.repository.UploadedFileRepository;
+import es.yambo_alco.web.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
+class OrderServiceTest {
+
+    @Mock
+    private OrderRepository orderRepository;
+
+    @Mock
+    private OrderProductRepository orderProductRepository;
+
+    @Mock
+    private ProductRepository productRepository;
+
+    @Mock
+    private UploadedFileRepository uploadedFileRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private IssueRepository issueRepository;
+
+    @Mock
+    private OrderStatusHistoryRepository orderStatusHistoryRepository;
+
+    @Mock
+    private AuthService authService;
+
+    @Mock
+    private MailService mailService;
+
+    @Mock
+    private UserService userService;
+
+    @Mock
+    private ProductService productService;
+
+    @Mock
+    private IssueService issueService;
+
+    @Mock
+    private OrderChangeService orderChangeService;
+
+    @InjectMocks
+    private OrderService orderService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(productService.calculatePrice(any(Product.class), any())).thenReturn(BigDecimal.TEN);
+        // Default: el socio existe y sin groupRoles (acceso a productos sin familia).
+        // Los tests de roleAccess sobreescriben este mock.
+        lenient().when(userRepository.findById(anyString())).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+    }
+
+    @Test
+    void createOrder_WhenNoProducts_ShouldThrowException() {
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of()));
+        assertEquals("Order must contain at least one product", exception.getMessage());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void createOrder_WhenProductMissing_ShouldThrowException() {
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD404")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD404")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertEquals("Product not found: PROD404", exception.getMessage());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void createOrder_WhenValid_ShouldCreateOrderAndProducts() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null) // No family = accessible to all
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(2)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
+
+        assertEquals("ORD001", result.getId());
+        verify(orderRepository).save(any(Order.class));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals("ORD001", captor.getValue().getOrderId());
+        assertEquals(BigDecimal.TEN, captor.getValue().getPrice()); // Price should be calculated from basePrice
+    }
+
+    @Test
+    void createOrder_WhenProductExpired_ShouldThrowException() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().minusDays(10))
+                .endTms(LocalDateTime.now().minusDays(1)) // Expired
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertTrue(exception.getMessage().contains("no longer available"));
+    }
+
+    @Test
+    void createOrder_WhenProductNotYetAvailable_ShouldThrowException() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().plusDays(1)) // Not yet available
+                .endTms(LocalDateTime.now().plusDays(10))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertTrue(exception.getMessage().contains("not yet available"));
+    }
+
+    @Test
+    void createOrder_WhenUserLacksRequiredProfile_ShouldThrowException() {
+        Project otherProject = Project.builder().id("PRJ002").build();
+        ProjectGroup otherProjectGroup = ProjectGroup.builder().id("PG002").project(otherProject).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(otherProjectGroup)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .groupRoles(Set.of(groupRole))
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().minusDays(1))
+                .endTms(LocalDateTime.now().plusDays(10))
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrder("USER001", List.of(orderProduct)));
+        assertTrue(exception.getMessage().contains("don't have access"));
+    }
+
+    @Test
+    void createOrder_WhenUserHasRequiredProfileAndTimeValid_ShouldCreateOrder() {
+        Project project = Project.builder().id("PRJ001").build();
+        ProjectGroup projectGroup = ProjectGroup.builder().id("PG001").project(project).build();
+        UserProjectGroup groupRole = UserProjectGroup.builder()
+                .projectGroup(projectGroup)
+                .role(UserProjectGroupRole.MONITOR)
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .groupRoles(Set.of(groupRole))
+                .build();
+
+        FamilyProduct family = FamilyProduct.builder()
+                .id("FAMILY001")
+                .name("Test Family")
+                .startTms(LocalDateTime.now().minusDays(1))
+                .endTms(LocalDateTime.now().plusDays(10))
+                .roleAccess(Set.of(FamilyProductRoleAccess.builder()
+                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(family)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
+
+        assertEquals("ORD001", result.getId());
+        verify(orderRepository).save(any(Order.class));
+        verify(orderProductRepository).save(any(OrderProduct.class));
+    }
+
+    @Test
+    void getOrderById_WhenMissing_ShouldThrowException() {
+        when(orderRepository.findById("ORD404")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.getOrderById("ORD404"));
+        assertEquals("Order not found", exception.getMessage());
+    }
+
+    @Test
+    void createOrderWithJustification_WhenJustificationBlank_ShouldThrowException() {
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .build();
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.createOrderWithJustification("USER001", List.of(orderProduct), "   ", "ADMIN001"));
+        assertEquals("Justification is required when creating an order for another user", exception.getMessage());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void createOrderWithJustification_WhenValid_ShouldCreateIssueLinkedToProducts() {
+        User user = User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null)
+                .build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .id(UUID.randomUUID())
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .build();
+
+        Order saved = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PENDING_PAYMENT).build();
+        when(orderRepository.save(any(Order.class))).thenReturn(saved);
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(saved));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenReturn(orderProduct);
+        // getOrderProducts() → findAll(Specification) devuelve el producto guardado
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        Order result = orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
+
+        assertEquals("ORD001", result.getId());
+        // La incidencia de justificación se crea vinculada al order_product
+        verify(issueService).createIssue(List.of(orderProduct.getId()), "Pedido creado por administración",
+                "Pedido por WhatsApp", "ADMIN001", true);
+    }
+
+    @Test
+    void createOrderWithJustification_ShouldSendAdminUpdateEmail_WhenUserHasEmail() {
+        User user = User.builder().id("USER001").email("buyer@test.com").name("Buyer")
+                .profiles(Set.of()).groupRoles(Set.of()).build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+
+        Product product = Product.builder().id("PROD001").name("Test Product")
+                .basePrice(BigDecimal.TEN).familyProduct(null).build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .id(UUID.randomUUID()).productId("PROD001").quantity(1).price(BigDecimal.TEN).build();
+
+        Order saved = Order.builder().id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT).createdAt(LocalDateTime.now()).build();
+        when(orderRepository.save(any(Order.class))).thenReturn(saved);
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(saved));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenReturn(orderProduct);
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
+
+        verify(mailService).sendOrderAdminUpdate(
+                eq("buyer@test.com"), eq("Buyer"), eq("ORD001"), any(LocalDateTime.class),
+                eq("creado"), anyList(), any(BigDecimal.class), eq("Pedido por WhatsApp"),
+                eq("ISS001"), eq(List.of()), isNull(), eq(OrderStatus.PENDING_PAYMENT));
+    }
+
+    @Test
+    void createOrderWithJustification_ShouldNotSendAdminUpdateEmail_WhenOrderStatusNotificationsDisabled() {
+        User user = User.builder().id("USER001").email("buyer@test.com").name("Buyer")
+                .profiles(Set.of()).groupRoles(Set.of()).build();
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001"))
+                .thenReturn(NotificationPreferences.builder().orderStatus(false).build());
+
+        Product product = Product.builder().id("PROD001").name("Test Product")
+                .basePrice(BigDecimal.TEN).familyProduct(null).build();
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .id(UUID.randomUUID()).productId("PROD001").quantity(1).price(BigDecimal.TEN).build();
+
+        Order saved = Order.builder().id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT).createdAt(LocalDateTime.now()).build();
+        when(orderRepository.save(any(Order.class))).thenReturn(saved);
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(saved));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenReturn(orderProduct);
+        when(orderProductRepository.findAll(any(Specification.class))).thenReturn(List.of(orderProduct));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        orderService.createOrderWithJustification("USER001", List.of(orderProduct), "Pedido por WhatsApp", "ADMIN001");
+
+        verify(mailService, never()).sendOrderAdminUpdate(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void updateOrderStatus_WhenCancelled_ShouldThrowException() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.CANCELED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED));
+        assertEquals("Cannot update status of canceled order", exception.getMessage());
+    }
+
+    @Test
+    void updateOrderStatus_WhenClosedToOther_ShouldThrowException() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.CLOSED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED));
+        assertEquals("Cannot change status of closed order", exception.getMessage());
+    }
+
+    @Test
+    void updateOrderProducts_WhenModified_ShouldUpdateInPlacePreservingId() {
+        // La línea existente debe ACTUALIZARSE conservando su ID — no borrarse y
+        // recrearse — porque issue.ordered_product_id tiene FK onDelete=CASCADE
+        // y borrar los order_product eliminaría las incidencias vinculadas.
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("Test").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID existingId = UUID.randomUUID();
+        OrderProduct existingOp = OrderProduct.builder()
+                .id(existingId)
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+        when(orderProductRepository.findById(existingId)).thenReturn(Optional.of(existingOp));
+
+        OrderProductOperation op = new OrderProductOperation(existingId, "PROD001", 3, null, "modified");
+
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
+
+        // No se borra la línea; se actualiza el existente conservando su ID.
+        verify(orderProductRepository, never()).deleteByOrderId(anyString());
+        verify(orderProductRepository, never()).delete(any(OrderProduct.class));
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(existingId, captor.getValue().getId()); // ID conservado
+        assertEquals(3, captor.getValue().getQuantity());    // cantidad actualizada
+    }
+
+    @Test
+    void updateOrderProducts_WhenRemoved_ShouldDeleteOnlyThatLine() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        UUID removedId = UUID.randomUUID();
+        OrderProduct removedOp = OrderProduct.builder()
+                .id(removedId)
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+        when(orderProductRepository.findById(removedId)).thenReturn(Optional.of(removedOp));
+        when(issueRepository.findAllByOrderedProductId(removedId)).thenReturn(List.of());
+
+        OrderProductOperation op = new OrderProductOperation(removedId, "PROD001", 1, null, "removed");
+
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
+
+        // La línea se borra individualmente; NO se usa deleteByOrderId
+        verify(orderProductRepository, never()).deleteByOrderId(anyString());
+        verify(orderProductRepository).delete(removedOp);
+    }
+
+    @Test
+    void updateOrderProducts_WhenRemoved_ShouldCloseLinkedIssueAndRecordChange() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        UUID removedId = UUID.randomUUID();
+        OrderProduct removedOp = OrderProduct.builder().id(removedId).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+        when(orderProductRepository.findById(removedId)).thenReturn(Optional.of(removedOp));
+
+        Issue linkedIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
+        when(issueRepository.findAllByOrderedProductId(removedId)).thenReturn(List.of(linkedIssue));
+
+        OrderProductOperation op = new OrderProductOperation(removedId, "PROD001", 1, null, "removed");
+
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
+
+        // La incidencia vinculada al producto eliminado se cierra.
+        assertEquals(IssueStatus.CLOSED, linkedIssue.getStatus());
+        verify(issueRepository).save(linkedIssue);
+        // El cambio se registra en el historial del pedido.
+        verify(orderChangeService).record(eq("ORD001"), eq(removedId), eq("REMOVED"),
+                eq("ADMIN001"), isNull(), anyString(), any(), isNull());
+    }
+
+    @Test
+    void updateOrderProducts_WhenModifiedWithConfigChange_ShouldPreserveOrderProductId() {
+        // Al modificar la configuración de una línea, el ID del order_product debe
+        // conservarse para no perder las incidencias vinculadas (onDelete=CASCADE).
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("Test").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID existingId = UUID.randomUUID();
+        OrderProduct existingOp = OrderProduct.builder()
+                .id(existingId)
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration("{\"Talla\":\"S\"}")
+                .build();
+        when(orderProductRepository.findById(existingId)).thenReturn(Optional.of(existingOp));
+
+        OrderProductOperation op = new OrderProductOperation(existingId, "PROD001", 1, "{\"Talla\":\"M\"}", "modified");
+
+        orderService.updateOrderProducts("ORD001", List.of(op), "ADMIN001", null);
+
+        // No se borra la línea; se reutiliza su ID aunque cambie la configuración.
+        verify(orderProductRepository, never()).delete(any(OrderProduct.class));
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(existingId, captor.getValue().getId());
+        assertEquals("{\"Talla\":\"M\"}", captor.getValue().getConfiguration());
+    }
+
+    @Test
+    void updateOrderProductsWithJustification_ShouldLinkIssueOnlyToAffectedProducts() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("P1").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+        when(productRepository.findById("PROD002")).thenReturn(Optional.of(
+                Product.builder().id("PROD002").name("P2").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+
+        // Estado original (1ª llamada a getOrderProducts)
+        OrderProduct beforeOp1 = OrderProduct.builder().id(id1).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+        OrderProduct beforeOp2 = OrderProduct.builder().id(id2).orderId("ORD001").productId("PROD002")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+
+        // Entidad gestionada que se muta en la operación "modified" (2ª llamada)
+        OrderProduct existingOp1 = OrderProduct.builder().id(id1).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+        OrderProduct existingOp2 = OrderProduct.builder().id(id2).orderId("ORD001").productId("PROD002")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+
+        when(orderProductRepository.findAll(any(Specification.class)))
+                .thenReturn(List.of(beforeOp1, beforeOp2),      // before (snapshot)
+                        List.of(existingOp1, existingOp2));     // after (ya mutado)
+        when(orderProductRepository.findById(id2)).thenReturn(Optional.of(existingOp2));
+        when(orderProductRepository.save(any(OrderProduct.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        Issue justificationIssue = Issue.builder().id("ISS001").build();
+        when(issueService.createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean()))
+                .thenReturn(justificationIssue);
+
+        // Solo PROD002 cambia (cantidad 1 → 2); PROD001 queda igual.
+        OrderProductOperation op1 = new OrderProductOperation(id1, "PROD001", 1, null, "unchanged");
+        OrderProductOperation op2 = new OrderProductOperation(id2, "PROD002", 2, null, "modified");
+
+        orderService.updateOrderProductsWithJustification("ORD001", List.of(op1, op2),
+                "Cambio por WhatsApp", "ADMIN001");
+
+        // La incidencia de modificación se vincula SOLO al producto afectado (id2)
+        verify(issueService).createIssue(List.of(id2), "Pedido modificado por administración",
+                "Cambio por WhatsApp", "ADMIN001", true);
+        // El cambio se registra vinculado a la incidencia creada.
+        verify(orderChangeService).record(eq("ORD001"), eq(id2), eq("MODIFIED"),
+                eq("ADMIN001"), eq("ISS001"), anyString(), any(), any());
+    }
+
+    @Test
+    void updateOrderProductsWithExistingIssue_ShouldCommentOnExistingIssueInsteadOfCreatingNewOne() {
+        Order order = Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(
+                User.builder().id("USER001").profiles(Set.of()).groupRoles(Set.of()).build()));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(
+                Product.builder().id("PROD001").name("P1").basePrice(BigDecimal.TEN).familyProduct(null).build()));
+
+        UUID id1 = UUID.randomUUID();
+        OrderProduct existingOp = OrderProduct.builder().id(id1).orderId("ORD001").productId("PROD001")
+                .quantity(1).price(BigDecimal.TEN).configuration(null).build();
+
+        when(orderProductRepository.findAll(any(Specification.class)))
+                .thenReturn(List.of(existingOp), List.of(existingOp));
+        when(orderProductRepository.findById(id1)).thenReturn(Optional.of(existingOp));
+        when(orderProductRepository.save(any(OrderProduct.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Issue existingIssue = Issue.builder().id("ISS001").build();
+        when(issueService.getIssueWithComments("ISS001")).thenReturn(existingIssue);
+
+        OrderProductOperation op = new OrderProductOperation(id1, "PROD001", 2, null, "modified");
+
+        orderService.updateOrderProductsWithExistingIssue("ORD001", List.of(op),
+                "Cambio por WhatsApp", "ISS001", "ADMIN001");
+
+        // Se añade un comentario a la incidencia existente y NO se crea una incidencia nueva.
+        verify(issueService).addComment(eq("ISS001"), eq("Cambio por WhatsApp"), eq("ADMIN001"), isNull());
+        verify(issueService, never()).createIssue(anyList(), anyString(), anyString(), anyString(), anyBoolean());
+    }
+
+    @Test
+    void cancelOrder_WhenNotPendingPayment_ShouldThrowException() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.cancelOrder("ORD001", false));
+        assertEquals("Order can only be canceled when pending payment or confirming payment", exception.getMessage());
+    }
+
+    @Test
+    void cancelOrder_WhenConfirmingPayment_ShouldCancel() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.CONFIRMING_PAYMENT).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.cancelOrder("ORD001", true);
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        assertNotNull(result.getClosedAt());
+    }
+
+    @Test
+    void cancelOrder_WhenPendingPayment_ShouldCancel() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.PENDING_PAYMENT).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.cancelOrder("ORD001", false);
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        assertNotNull(result.getClosedAt());
+    }
+
+    @Test
+    void cancelOrder_ByUser_ShouldSendEmailWithCanceledByAdminFalse() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+
+        orderService.cancelOrder("ORD001", false);
+
+        verify(mailService).sendOrderCanceled(
+                eq("user@test.com"),
+                eq("Test User"),
+                eq("ORD001"),
+                any(LocalDateTime.class),
+                any(),
+                any(),
+                eq(false));
+    }
+
+    @Test
+    void cancelOrder_ByAdmin_ShouldSendEmailWithCanceledByAdminTrue() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+
+        orderService.cancelOrder("ORD001", true);
+
+        verify(mailService).sendOrderCanceled(
+                eq("user@test.com"),
+                eq("Test User"),
+                eq("ORD001"),
+                any(LocalDateTime.class),
+                any(),
+                any(),
+                eq(true));
+    }
+
+    @Test
+    void cancelOrder_WhenEmailFails_ShouldStillCancel() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
+
+        Order result = orderService.cancelOrder("ORD001", false);
+
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderStatus_ToCanceled_ShouldSendCancelEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.CANCELED);
+
+        verify(mailService).sendOrderCanceled(any(), any(), any(), any(), any(), any(), eq(true));
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void getOrderProducts_WhenExists_ShouldReturnProducts() {
+        Order order = Order.builder().id("ORD001").status(OrderStatus.PAYMENT_CONFIRMED).createdAt(LocalDateTime.now()).build();
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        OrderProduct orderProduct = OrderProduct.builder().orderId("ORD001").productId("PROD001").quantity(1).price(BigDecimal.TEN).build();
+        when(orderProductRepository.findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any()))
+                .thenReturn(List.of(orderProduct));
+
+        List<OrderProduct> result = orderService.getOrderProducts("ORD001");
+
+        assertEquals(1, result.size());
+        verify(orderProductRepository).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
+    }
+
+    @Test
+    void listOrders_ShouldDelegateToRepository() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(new OrderFilter(null, null, null, "USER001", List.of(OrderStatus.PAYMENT_CONFIRMED), LocalDateTime.now().minusDays(1), LocalDateTime.now()), pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    private static Stream<Arguments> provideListOrdersStringFilters() {
+        return Stream.of(
+            Arguments.of(new OrderFilter("search-term", null, null, null, null, null, null), "query"),
+            Arguments.of(new OrderFilter(null, "ORD001", null, null, null, null, null), "orderId"),
+            Arguments.of(new OrderFilter(null, null, "John Doe", null, null, null, null), "customerName")
+        );
+    }
+
+    @ParameterizedTest(name = "listOrders with filter: {1}")
+    @MethodSource("provideListOrdersStringFilters")
+    void listOrders_WithStringFilter_ShouldDelegateToRepository(OrderFilter filter, @SuppressWarnings("unused") String description) {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(filter, pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    @Test
+    void listOrders_WithMultipleStatuses_ShouldFilterByStatuses() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        OrderFilter filter = new OrderFilter(null, null, null, null, List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_CONFIRMED), null, null);
+
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(filter, pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    @Test
+    void listOrders_WithDateRange_ShouldFilterByDates() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+        OrderFilter filter = new OrderFilter(null, null, null, null, null, LocalDateTime.now().minusDays(7), LocalDateTime.now());
+
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        orderService.listOrders(filter, pageable);
+
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any(), eq(pageable));
+    }
+
+    @Test
+    void createOrder_WithNoConfiguration_ShouldUseBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("25.00"), captor.getValue().getPrice());
+    }
+
+    @Test
+    void createOrder_WithEmptyConfiguration_ShouldUseBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("")
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("25.00"), captor.getValue().getPrice());
+    }
+
+    @Test
+    void createOrder_WithOptionPrice_ShouldAddToBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        ProductOption option = ProductOption.builder()
+                .name("CustomText")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(option));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"CustomText\":\"My Name\"}")
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("30.00"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("30.00"), captor.getValue().getPrice()); // 25 + 5
+    }
+
+    @Test
+    void createOrder_WithSelectOptionValue_ShouldAddValuePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        OptionValue smallValue = OptionValue.builder()
+                .id("small")
+                .label("Small")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        OptionValue largeValue = OptionValue.builder()
+                .id("large")
+                .label("Large")
+                .price(new BigDecimal("3.00"))
+                .build();
+
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(smallValue, largeValue))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(sizeOption));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"Size\":\"Large\"}")
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("28.00"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("28.00"), captor.getValue().getPrice()); // 25 + 3
+    }
+
+    @Test
+    void createOrder_WithMultipleOptions_ShouldAddAllPrices() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        OptionValue colorRed = OptionValue.builder()
+                .id("red")
+                .label("Red")
+                .price(new BigDecimal("2.00"))
+                .build();
+
+        OptionValue colorBlue = OptionValue.builder()
+                .id("blue")
+                .label("Blue")
+                .price(new BigDecimal("2.50"))
+                .build();
+
+        ProductOption colorOption = ProductOption.builder()
+                .name("Color")
+                .type("select")
+                .values(List.of(colorRed, colorBlue))
+                .build();
+
+        ProductOption customNameOption = ProductOption.builder()
+                .name("CustomName")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(colorOption, customNameOption));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"Color\":\"Blue\",\"CustomName\":\"John\"}")
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("32.50"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("32.50"), captor.getValue().getPrice()); // 25 + 2.5 + 5
+    }
+
+    @Test
+    void createOrder_WithInvalidConfiguration_ShouldUseBasePrice() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{invalid json")
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("25.00"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("25.00"), captor.getValue().getPrice()); // Falls back to base price
+    }
+
+    @Test
+    void createOrder_WithNonExistentOptionInConfig_ShouldIgnoreIt() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        ProductOption option = ProductOption.builder()
+                .name("RealOption")
+                .type("text_input")
+                .price(new BigDecimal("5.00"))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(new BigDecimal("25.00"))
+                .familyProduct(null)
+                .build();
+        product.setOptions(List.of(option));
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.ZERO)
+                .configuration("{\"FakeOption\":\"value\",\"RealOption\":\"My Name\"}")
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(productService.calculatePrice(any(Product.class), any())).thenReturn(new BigDecimal("30.00"));
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        ArgumentCaptor<OrderProduct> captor = ArgumentCaptor.forClass(OrderProduct.class);
+        verify(orderProductRepository).save(captor.capture());
+        assertEquals(new BigDecimal("30.00"), captor.getValue().getPrice()); // Only adds real option: 25 + 5
+    }
+
+    // Email notification tests
+    @Test
+    void updateOrderStatus_WhenStatusChanges_ShouldSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(2)
+                .price(new BigDecimal("25.00"))
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        verify(mailService).sendOrderStatusUpdate(
+                eq("user@test.com"),
+                eq("Test User"),
+                eq("ORD001"),
+                any(LocalDateTime.class),
+                eq(OrderStatus.PAYMENT_CONFIRMED),
+                any(),
+                eq(new BigDecimal("50.00")) // 2 * 25.00
+        );
+    }
+
+    @Test
+    void updateOrderStatus_WhenEmailFails_ShouldStillUpdateOrder() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        doThrow(new RuntimeException("Email service unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        // Should not throw exception even if email fails
+        Order result = orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        assertEquals(OrderStatus.PAYMENT_CONFIRMED, result.getStatus());
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderStatus_WhenUserNotFound_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER404")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER404")).thenReturn(Optional.empty());
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void updateOrderStatus_WhenUserHasNoEmail_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email(null)
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void updateOrderStatus_WhenSameStatus_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    // Configuration validation tests
+
+    @Test
+    void updateOrderStatus_WithInvalidConfiguration_ShouldFilterOut() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        OptionValue sizeValue = OptionValue.builder()
+                .id("xl")
+                .label("XL")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(sizeValue))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .build();
+        product.setOptions(List.of(sizeOption));
+
+        // Configuration contains an invalid option "Color" that doesn't exist
+        OrderProduct orderProduct = OrderProduct.builder()
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(new BigDecimal("25.00"))
+                .configuration("{\"Size\":\"xl\",\"Color\":\"red\"}")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Size: XL");
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<MailService.OrderProductInfo>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mailService).sendOrderStatusUpdate(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                captor.capture(),
+                any()
+        );
+
+        // Verify that configuration only contains valid option (Size) and shows label (XL) not ID (xl)
+        List<MailService.OrderProductInfo> productInfos = captor.getValue();
+        assertEquals(1, productInfos.size());
+        String config = productInfos.get(0).configuration();
+        assertNotNull(config);
+        assertTrue(config.contains("Size: XL"));
+        assertFalse(config.contains("Color"));
+    }
+
+    @Test
+    void updateOrderStatus_WithInvalidSelectValue_ShouldFilterOut() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        OptionValue sizeValue = OptionValue.builder()
+                .id("xl")
+                .label("XL")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(sizeValue))
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .build();
+        product.setOptions(List.of(sizeOption));
+
+        // Configuration has invalid value "xxl" for Size option
+        OrderProduct orderProduct = OrderProduct.builder()
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(new BigDecimal("25.00"))
+                .configuration("{\"Size\":\"xxl\"}")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<MailService.OrderProductInfo>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mailService).sendOrderStatusUpdate(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                captor.capture(),
+                any()
+        );
+
+        // Configuration should be null or empty since the only option value is invalid
+        List<MailService.OrderProductInfo> productInfos = captor.getValue();
+        assertEquals(1, productInfos.size());
+        String config = productInfos.get(0).configuration();
+        assertNull(config); // Should be null since all values were filtered out
+    }
+
+    @Test
+    void updateOrderStatus_WithNullAndBlankValues_ShouldFilterOut() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        OptionValue colorValue = OptionValue.builder()
+                .id("red")
+                .label("Red")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        ProductOption colorOption = ProductOption.builder()
+                .name("Color")
+                .type("select")
+                .values(List.of(colorValue))
+                .build();
+
+        ProductOption notesOption = ProductOption.builder()
+                .name("Notes")
+                .type("text_input")
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .build();
+        product.setOptions(List.of(colorOption, notesOption));
+
+        // Configuration has a valid value and a blank value
+        OrderProduct orderProduct = OrderProduct.builder()
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(new BigDecimal("25.00"))
+                .configuration("{\"Color\":\"red\",\"Notes\":\"\"}")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Color: Red");
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<MailService.OrderProductInfo>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mailService).sendOrderStatusUpdate(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                captor.capture(),
+                any()
+        );
+
+        // Configuration should only contain Color, not Notes (blank)
+        List<MailService.OrderProductInfo> productInfos = captor.getValue();
+        assertEquals(1, productInfos.size());
+        String config = productInfos.get(0).configuration();
+        assertNotNull(config);
+        assertTrue(config.contains("Color: Red"));
+        assertFalse(config.contains("Notes"));
+    }
+
+    @Test
+    void updateOrderStatus_WithValidConfiguration_ShouldShowLabels() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        OptionValue sizeValue = OptionValue.builder()
+                .id("xl")
+                .label("Extra Large")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        OptionValue colorValue = OptionValue.builder()
+                .id("blue")
+                .label("Ocean Blue")
+                .price(BigDecimal.ZERO)
+                .build();
+
+        ProductOption sizeOption = ProductOption.builder()
+                .name("Size")
+                .type("select")
+                .values(List.of(sizeValue))
+                .build();
+
+        ProductOption colorOption = ProductOption.builder()
+                .name("Color")
+                .type("select")
+                .values(List.of(colorValue))
+                .build();
+
+        ProductOption customTextOption = ProductOption.builder()
+                .name("CustomText")
+                .type("text_input")
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .build();
+        product.setOptions(List.of(sizeOption, colorOption, customTextOption));
+
+        // Configuration with IDs for select options
+        OrderProduct orderProduct = OrderProduct.builder()
+                .orderId("ORD001")
+                .productId("PROD001")
+                .quantity(1)
+                .price(new BigDecimal("25.00"))
+                .configuration("{\"Size\":\"xl\",\"Color\":\"blue\",\"CustomText\":\"My Name\"}")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of(orderProduct));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        when(productService.formatConfiguration(any(), any(Product.class))).thenReturn("Size: Extra Large\nColor: Ocean Blue\nCustomText: My Name");
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<MailService.OrderProductInfo>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mailService).sendOrderStatusUpdate(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                captor.capture(),
+                any()
+        );
+
+        // Configuration should show labels for select options, not IDs
+        List<MailService.OrderProductInfo> productInfos = captor.getValue();
+        assertEquals(1, productInfos.size());
+        String config = productInfos.get(0).configuration();
+        assertNotNull(config);
+        assertTrue(config.contains("Size: Extra Large"));
+        assertTrue(config.contains("Color: Ocean Blue"));
+        assertTrue(config.contains("CustomText: My Name"));
+        // Should not contain IDs
+        assertFalse(config.contains("xl") && config.contains("Size:"));
+        assertFalse(config.contains("blue") && config.contains("Color:"));
+    }
+
+    // Order product status propagation tests
+
+    @Test
+    void updateOrderStatusByFamilyProduct_PendingFabrication_ShouldTransitionOrderToPendingProducts() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Order order = Order.builder()
+                .id("ORD001").customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .createdAt(LocalDateTime.now()).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION);
+
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        assertEquals(1, result.size());
+        assertEquals("ORD001", result.get(0).orderId());
+        assertEquals(OrderStatus.PENDING_PRODUCTS, result.get(0).newStatus());
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_OrderClosed_ShouldNotTransitionOrder() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.ORDER_CLOSED);
+
+        assertTrue(result.isEmpty());
+        // ORDER_CLOSED does not trigger order-level status transition
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_ShouldSkipOrdersWithoutPaymentConfirmed() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        // Order is already PENDING_PRODUCTS (not PAYMENT_CONFIRMED) — should not re-transition
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Order order = Order.builder()
+                .id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now()).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION);
+
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        assertTrue(result.isEmpty());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_NoProducts_ShouldDoNothing() {
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of());
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.PENDING_FABRICATION);
+
+        assertTrue(result.isEmpty());
+        verify(orderProductRepository, never()).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
+        verify(orderRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_OrderAlreadyPendingProducts_ShouldNotTransitionAgain() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Order order = Order.builder()
+                .id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now()).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        List<OrderService.PendingOrderEmail> result = orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.TO_BE_DELIVERED);
+
+        // Order should stay at PENDING_PRODUCTS (not PAYMENT_CONFIRMED, so no transition)
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        assertTrue(result.isEmpty());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    // ---- hasOpenIssues tests ----
+
+    @Test
+    void hasOpenIssues_WithOpenIssue_ShouldReturnTrue() {
+        Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
+
+        assertTrue(orderService.hasOpenIssues("ORD001"));
+    }
+
+    @Test
+    void hasOpenIssues_WithInProgressIssue_ShouldReturnTrue() {
+        Issue issue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(issue));
+
+        assertTrue(orderService.hasOpenIssues("ORD001"));
+    }
+
+    @Test
+        void hasOpenIssues_WithClosedIssue_ShouldReturnFalse() {
+                Issue issue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(issue));
+
+                assertFalse(orderService.hasOpenIssues("ORD001"));
+    }
+
+    @Test
+        void hasOpenIssues_WithOnlyClosedIssues_ShouldReturnFalse() {
+                Issue closed1 = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
+                Issue closed2 = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
+                when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(closed1, closed2));
+
+        assertFalse(orderService.hasOpenIssues("ORD001"));
+    }
+
+    @Test
+    void hasOpenIssues_WithNoIssues_ShouldReturnFalse() {
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+
+        assertFalse(orderService.hasOpenIssues("ORD001"));
+    }
+
+    // ---- checkAndCloseOrder tests ----
+
+    @Test
+    void checkAndCloseOrder_WhenProductsExistAndNoOpenIssues_ShouldClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        assertNotNull(order.getClosedAt());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenOpenIssues_ShouldNotClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenInProgressIssues_ShouldNotClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Issue inProgressIssue = Issue.builder().id("ISS001").status(IssueStatus.IN_PROGRESS).build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(inProgressIssue));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+        void checkAndCloseOrder_WhenClosedIssues_ShouldClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+                Issue closedIssue = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+                when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(closedIssue));
+                when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+                assertEquals(OrderStatus.CLOSED, order.getStatus());
+                assertNotNull(order.getClosedAt());
+                verify(orderRepository).save(order);
+    }
+
+    @Test
+        void checkAndCloseOrder_WhenOnlyClosedIssues_ShouldClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+                Issue closed1 = Issue.builder().id("ISS001").status(IssueStatus.CLOSED).build();
+                Issue closed2 = Issue.builder().id("ISS002").status(IssueStatus.CLOSED).build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+                when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(closed1, closed2));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        assertNotNull(order.getClosedAt());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenAlreadyClosed_ShouldDoNothing() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.CLOSED)
+                .closedAt(LocalDateTime.now().minusDays(1))
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        verify(orderProductRepository, never()).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenAlreadyCanceled_ShouldDoNothing() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.CANCELED)
+                .closedAt(LocalDateTime.now().minusDays(1))
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        verify(orderProductRepository, never()).findAll(org.mockito.ArgumentMatchers.<Specification<OrderProduct>>any());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenNoIssues_ShouldClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenClosed_ShouldSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        verify(mailService).sendOrderStatusUpdate(
+                eq("user@test.com"), eq("Test User"), eq("ORD001"),
+                any(), eq(OrderStatus.CLOSED), any(), any());
+    }
+
+    @Test
+    void checkAndCloseOrder_WhenEmailFails_ShouldStillClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        orderService.checkAndCloseOrder("ORD001");
+
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        verify(orderRepository).save(order);
+    }
+
+    // ---- updateOrderStatusByFamilyProduct: DELIVERED triggers auto-close ----
+
+    @Test
+    void updateOrderStatusByFamilyProduct_Delivered_ShouldTriggerAutoClose() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Order order = Order.builder()
+                .id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now()).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+
+        orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.DELIVERED);
+
+        // Auto-close should be triggered: PENDING_PRODUCTS + no open issues -> CLOSED
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        assertNotNull(order.getClosedAt());
+    }
+
+    @Test
+    void updateOrderStatusByFamilyProduct_Delivered_WithOpenIssues_ShouldNotAutoClose() {
+        Product product = Product.builder().id("PROD001").name("T-Shirt").build();
+        OrderProduct op = OrderProduct.builder()
+                .orderId("ORD001").productId("PROD001").quantity(1)
+                .price(BigDecimal.TEN).build();
+        Order order = Order.builder()
+                .id("ORD001").customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now()).build();
+
+        Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
+
+        @SuppressWarnings("unchecked")
+        Specification<Product> prodSpec = any(Specification.class);
+        when(productRepository.findAll(prodSpec)).thenReturn(List.of(product));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(op));
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
+
+        orderService.updateOrderStatusByFamilyProduct("FAM001", es.yambo_alco.web.model.enums.FamilyProductStatus.DELIVERED);
+
+        // Should NOT auto-close because of open issues
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+    }
+
+    // ---- getOrdersByCustomer tests ----
+
+    @Test
+    void getOrdersByCustomer_ShouldReturnOrders() {
+        Order order1 = Order.builder().id("ORD001").customerId("USER001").build();
+        Order order2 = Order.builder().id("ORD002").customerId("USER001").build();
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any()))
+                .thenReturn(List.of(order1, order2));
+
+        List<Order> result = orderService.getOrdersByCustomer("USER001");
+
+        assertEquals(2, result.size());
+        verify(orderRepository).findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any());
+    }
+
+    @Test
+    void getOrdersByCustomer_WhenNoOrders_ShouldReturnEmptyList() {
+        when(orderRepository.findAll(org.mockito.ArgumentMatchers.<Specification<Order>>any()))
+                .thenReturn(List.of());
+
+        List<Order> result = orderService.getOrdersByCustomer("USER001");
+
+        assertTrue(result.isEmpty());
+    }
+
+    // ---- createOrder: email behavior ----
+
+    @Test
+    void createOrder_ShouldSendCreationEmail() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .name("Test User")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        // sendOrderStatusUpdateEmail internally calls getOrderProducts -> getOrderById
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(
+                Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PENDING_PAYMENT).createdAt(LocalDateTime.now()).build()));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(orderProduct));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+
+        orderService.createOrder("USER001", List.of(orderProduct));
+
+        verify(mailService).sendOrderStatusUpdate(
+                eq("test@test.com"), eq("Test User"), eq("ORD001"),
+                any(), eq(OrderStatus.PENDING_PAYMENT), any(), any());
+    }
+
+    @Test
+    void createOrder_WhenEmailFails_ShouldStillCreateOrder() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .name("Test User")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(
+                Order.builder().id("ORD001").customerId("USER001").status(OrderStatus.PENDING_PAYMENT).createdAt(LocalDateTime.now()).build()));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> opSpec = any(Specification.class);
+        when(orderProductRepository.findAll(opSpec)).thenReturn(List.of(orderProduct));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
+
+        assertNotNull(result);
+        assertEquals("ORD001", result.getId());
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    // ---- createOrder: order status defaults ----
+
+    @Test
+    void createOrder_ShouldSetStatusToPendingPayment() {
+        User user = User.builder()
+                .id("USER001")
+                .email("test@test.com")
+                .profiles(Set.of())
+                .build();
+
+        Product product = Product.builder()
+                .id("PROD001")
+                .name("Test Product")
+                .basePrice(BigDecimal.TEN)
+                .familyProduct(null)
+                .build();
+
+        OrderProduct orderProduct = OrderProduct.builder()
+                .productId("PROD001")
+                .quantity(1)
+                .price(BigDecimal.TEN)
+                .configuration(null)
+                .build();
+
+        when(productRepository.findById("PROD001")).thenReturn(Optional.of(product));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            saved.setId("ORD001");
+            return saved;
+        });
+
+        Order result = orderService.createOrder("USER001", List.of(orderProduct));
+
+        assertEquals(OrderStatus.PENDING_PAYMENT, result.getStatus());
+    }
+
+    // ---- updateOrderStatus: closedAt set ----
+
+    @Test
+    void updateOrderStatus_ToClosed_ShouldSetClosedAt() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.updateOrderStatus("ORD001", OrderStatus.CLOSED);
+
+        assertEquals(OrderStatus.CLOSED, result.getStatus());
+        assertNotNull(result.getClosedAt());
+    }
+
+    @Test
+    void updateOrderStatus_ToCanceled_ShouldSetClosedAt() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.updateOrderStatus("ORD001", OrderStatus.CANCELED);
+
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        assertNotNull(result.getClosedAt());
+    }
+
+    // ---- cancelOrder: email edge cases ----
+
+    @Test
+    void cancelOrder_WhenUserNotFound_ShouldStillCancel() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER404")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER404")).thenReturn(Optional.empty());
+
+        Order result = orderService.cancelOrder("ORD001", false);
+
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void cancelOrder_WhenUserHasNoEmail_ShouldStillCancel() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email(null)
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+
+        Order result = orderService.cancelOrder("ORD001", false);
+
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    // ---- uploadReceipt tests ----
+
+    @Test
+    void uploadReceipt_WhenValid_ShouldTransitionToConfirmingPayment() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Order result = orderService.uploadReceipt("ORD001", "USER001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceipt_WhenNotOwner_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.uploadReceipt("ORD001", "USER999", "FL000001"));
+        assertEquals("Order does not belong to the specified customer", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceipt_WhenNotPendingPayment_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.uploadReceipt("ORD001", "USER001", "FL000001"));
+        assertEquals("Receipt can only be uploaded when order is pending payment", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceipt_WhenFileNotFound_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL999999")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.uploadReceipt("ORD001", "USER001", "FL999999"));
+        assertEquals("Uploaded file not found: FL999999", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceipt_WhenEmailFails_ShouldStillUpload() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        Order result = orderService.uploadReceipt("ORD001", "USER001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    // ---- uploadReceiptAsAdmin tests ----
+
+    @Test
+    void uploadReceiptAsAdmin_WhenValid_ShouldTransitionToConfirmingPayment() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN01").name("Admin").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenNotPendingOrConfirmingPayment_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.uploadReceiptAsAdmin("ORD001", "FL000001"));
+        assertEquals("Receipt can only be uploaded when order is pending or confirming payment", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenFileNotFound_ShouldThrowException() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL999999")).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> orderService.uploadReceiptAsAdmin("ORD001", "FL999999"));
+        assertEquals("Uploaded file not found: FL999999", exception.getMessage());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenEmailFails_ShouldStillUpload() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN01").name("Admin").build();
+        User customer = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(customer));
+        @SuppressWarnings("unchecked")
+        Specification<OrderProduct> anySpec = any(Specification.class);
+        when(orderProductRepository.findAll(anySpec)).thenReturn(List.of());
+        when(userService.getNotificationPreferences("USER001")).thenReturn(NotificationPreferences.defaults());
+        doThrow(new RuntimeException("Email unavailable"))
+                .when(mailService).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_DoesNotCheckOwnership() {
+        // Admin should be able to upload receipt for any order regardless of customer
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id("FL000001")
+                .originalName("receipt.pdf")
+                .storedName("receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(1024L)
+                .url("/uploads/receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN99").name("Different Admin").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000001")).thenReturn(Optional.of(file));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+
+        // Should succeed without ownership check
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000001");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000001", result.getReceiptFileId());
+    }
+
+    @Test
+    void uploadReceiptAsAdmin_WhenConfirmingPayment_ShouldReplaceReceipt() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.CONFIRMING_PAYMENT)
+                .receiptFileId("FL000001")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UploadedFile newFile = UploadedFile.builder()
+                .id("FL000002")
+                .originalName("new-receipt.pdf")
+                .storedName("new-receipt_abc.pdf")
+                .contentType("application/pdf")
+                .size(2048L)
+                .url("/uploads/new-receipt_abc.pdf")
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        User admin = User.builder().id("ADMIN01").name("Admin").build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(uploadedFileRepository.findById("FL000002")).thenReturn(Optional.of(newFile));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(authService.getCurrentUser(true)).thenReturn(admin);
+
+        Order result = orderService.uploadReceiptAsAdmin("ORD001", "FL000002");
+
+        assertEquals(OrderStatus.CONFIRMING_PAYMENT, result.getStatus());
+        assertEquals("FL000002", result.getReceiptFileId());
+    }
+
+    // Notification preferences tests
+
+    @Test
+    void updateOrderStatus_WhenOrderStatusNotificationsDisabled_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(false)
+                .orderCancelled(true)
+                .issueCreated(true)
+                .issueComments(true)
+                .issueStatus(true)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(prefs);
+
+        orderService.updateOrderStatus("ORD001", OrderStatus.PAYMENT_CONFIRMED);
+
+        verify(mailService, never()).sendOrderStatusUpdate(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void cancelOrder_WhenCancelNotificationsDisabled_ShouldNotSendEmail() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PAYMENT)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        User user = User.builder()
+                .id("USER001")
+                .email("user@test.com")
+                .name("Test User")
+                .build();
+
+        NotificationPreferences prefs = NotificationPreferences.builder()
+                .orderStatus(true)
+                .orderCancelled(false)
+                .issueCreated(true)
+                .issueComments(true)
+                .issueStatus(true)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById("USER001")).thenReturn(Optional.of(user));
+        when(userService.getNotificationPreferences("USER001")).thenReturn(prefs);
+
+        Order result = orderService.cancelOrder("ORD001", false);
+
+        assertEquals(OrderStatus.CANCELED, result.getStatus());
+        verify(mailService, never()).sendOrderCanceled(any(), any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    // ── confirmOrderDelivery ──
+
+    @Test
+    void confirmOrderDelivery_WhenValid_ShouldTriggerClose() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of());
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.confirmOrderDelivery("ORD001", "USER001");
+
+        assertEquals(OrderStatus.CLOSED, order.getStatus());
+        verify(orderRepository).save(argThat(o -> o.getStatus() == OrderStatus.CLOSED));
+    }
+
+    @Test
+    void confirmOrderDelivery_WhenWrongUser_ShouldThrowForbidden() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("OWNER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        es.yambo_alco.web.exception.ForbiddenException exception = assertThrows(
+                es.yambo_alco.web.exception.ForbiddenException.class,
+                () -> orderService.confirmOrderDelivery("ORD001", "OTHER_USER"));
+        assertEquals("You do not have permission to update this order", exception.getMessage());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrderDelivery_WhenWrongStatus_ShouldThrowBadRequest() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PAYMENT_CONFIRMED)
+                .build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> orderService.confirmOrderDelivery("ORD001", "USER001"));
+        assertEquals("Order can only be confirmed as delivered when in PENDING_PRODUCTS status",
+                exception.getMessage());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmOrderDelivery_WhenOpenIssues_ShouldNotCloseOrder() {
+        Order order = Order.builder()
+                .id("ORD001")
+                .customerId("USER001")
+                .status(OrderStatus.PENDING_PRODUCTS)
+                .createdAt(LocalDateTime.now())
+                .build();
+        Issue openIssue = Issue.builder().id("ISS001").status(IssueStatus.OPEN).build();
+
+        when(orderRepository.findById("ORD001")).thenReturn(Optional.of(order));
+        when(issueRepository.findByOrderId("ORD001")).thenReturn(List.of(openIssue));
+
+        orderService.confirmOrderDelivery("ORD001", "USER001");
+
+        assertEquals(OrderStatus.PENDING_PRODUCTS, order.getStatus());
+        verify(orderRepository, never()).save(any());
+    }
+}
+
+

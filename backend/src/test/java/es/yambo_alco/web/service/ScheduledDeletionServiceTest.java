@@ -37,7 +37,7 @@ public class ScheduledDeletionServiceTest {
         PendingDeletion userDeletion = PendingDeletion.builder()
                 .id("1")
                 .objectType(DeletionObjectType.USER)
-                .objectId("1")
+                .objectId("U0000001")
                 .scheduledAt(now.minusDays(1))
                 .build();
 
@@ -47,7 +47,7 @@ public class ScheduledDeletionServiceTest {
         scheduledDeletionService.processPendingDeletions();
 
         // Then
-        verify(userRepository).deleteById(1L);
+        verify(userRepository).deleteById("U0000001");
         verify(pendingDeletionRepository).delete(userDeletion);
     }
 
@@ -70,18 +70,18 @@ public class ScheduledDeletionServiceTest {
         PendingDeletion userDeletion = PendingDeletion.builder()
                 .id("1")
                 .objectType(DeletionObjectType.USER)
-                .objectId("1")
+                .objectId("U0000001")
                 .scheduledAt(LocalDateTime.now().minusDays(1))
                 .build();
 
         lenient().when(pendingDeletionRepository.findByScheduledAtBefore(any(LocalDateTime.class))).thenReturn(List.of(userDeletion));
-        doThrow(new RuntimeException("Database error")).when(userRepository).deleteById(1L);
+        doThrow(new RuntimeException("Database error")).when(userRepository).deleteById("U0000001");
 
         // When
         scheduledDeletionService.processPendingDeletions();
 
         // Then
-        verify(userRepository).deleteById(1L);
+        verify(userRepository).deleteById("U0000001");
         verify(pendingDeletionRepository).save(userDeletion); // Should save with failed status
         verify(pendingDeletionRepository, never()).delete(userDeletion);
     }

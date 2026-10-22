@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Create user_login_history table -->
+    <changeSet id="65-01-create-user-login-history" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="user_login_history"/>
+            </not>
+        </preConditions>
+        <createTable tableName="user_login_history">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="logged_in_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ip_address" type="VARCHAR(45)"/>
+            <column name="user_agent" type="VARCHAR(512)"/>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="user_login_history"
+            baseColumnNames="user_id"
+            constraintName="fk_login_history_user"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <createIndex indexName="idx_login_history_user_id" tableName="user_login_history">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex indexName="idx_login_history_logged_in_at" tableName="user_login_history">
+            <column name="logged_in_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

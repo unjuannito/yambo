@@ -1,0 +1,120 @@
+import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+
+interface ImageCarouselProps {
+  images: string[];
+  alt: string;
+  className?: string;
+  onImageClick?: (index: number) => void;
+  showArrowsOnHover?: boolean;
+}
+
+export default function ImageCarousel({
+  images,
+  alt,
+  className = "",
+  onImageClick,
+  showArrowsOnHover = true,
+}: ImageCarouselProps) {
+  const { t } = useTranslation();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (isHovered && images.length > 1) {
+      intervalRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+      }, 1250);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isHovered, images.length]);
+
+  const goToSlide = (index: number) => setCurrentIndex(index);
+
+  const nextSlide = () =>
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+
+  const prevSlide = () =>
+    setCurrentIndex(
+      (prevIndex) => (prevIndex - 1 + images.length) % images.length
+    );
+
+  if (!images || images.length === 0) {
+    return (
+      <div
+        className={`w-full h-48 bg-yambo-green-50 rounded-2xl flex items-center justify-center ${className}`}
+      >
+        <span className="text-gray-400">{t("component.imageCarousel.noImage")}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative w-full h-48 overflow-hidden rounded-2xl ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div
+        className="flex transition-transform duration-500 ease-in-out h-full"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      >
+        {images.map((image, index) => (
+          <img
+            key={index}
+            src={image}
+            alt={`${alt} ${index + 1}`}
+            className={`w-full h-full object-contain flex-shrink-0 ${onImageClick ? "cursor-pointer" : ""}`}
+            onClick={() => onImageClick?.(index)}
+            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onImageClick) { e.preventDefault(); onImageClick(index); } }}
+            role={onImageClick ? "button" : undefined}
+            tabIndex={onImageClick ? 0 : undefined}
+          />
+        ))}
+      </div>
+
+      {images.length > 1 && isHovered && showArrowsOnHover && (
+        <>
+          <button type="button"
+            onClick={prevSlide}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/80 backdrop-blur-sm text-gray-700 w-8 h-8 rounded-full hover:bg-white transition-all shadow-md flex items-center justify-center"
+          >
+            ‹
+          </button>
+          <button type="button"
+            onClick={nextSlide}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/80 backdrop-blur-sm text-gray-700 w-8 h-8 rounded-full hover:bg-white transition-all shadow-md flex items-center justify-center"
+          >
+            ›
+          </button>
+        </>
+      )}
+
+      {images.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1.5">
+          {images.map((_, index) => (
+            <button type="button"
+              key={`dot-${index}`}
+              onClick={() => goToSlide(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                index === currentIndex
+                  ? "bg-yambo-green-500 w-4"
+                  : "bg-white/60 hover:bg-white/80"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

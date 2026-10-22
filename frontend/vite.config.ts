@@ -1,21 +1,39 @@
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  cacheDir: ".vite",
+
+  plugins: [
+    reactRouter(),
+    tailwindcss(),
+    tsconfigPaths(),
+  ],
+
   server: {
-    host: true, // Listen on all addresses, including LAN and public addresses
+    host: true,
     port: 5173,
     strictPort: true,
     watch: {
-      usePolling: true, // Enable polling for file changes (important for Docker/WSL)
-      interval: 500, // Check for changes every 500ms
+        usePolling: true,
+        interval: 1000,
     },
-    hmr: {
-      host: '0.0.0.0', // HMR host
-      port: 5173,
+  },
+
+  optimizeDeps: {
+    force: false,
+  },
+
+  test: {
+    environment: "jsdom",
+    passWithNoTests: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "coverage",
+      include: ["app/**"],
     },
   },
 });

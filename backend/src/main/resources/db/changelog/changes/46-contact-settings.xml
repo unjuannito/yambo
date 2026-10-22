@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="46-01-seed-contact-settings" author="yambo">
+        <insert tableName="settings">
+            <column name="id" value="SETT0023"/>
+            <column name="key" value="contact.email"/>
+            <column name="value" value=""/>
+            <column name="description" value="Correo electrónico de contacto público"/>
+            <column name="category" value="contact"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SETT0026"/>
+            <column name="key" value="contact.instagram"/>
+            <column name="value" value=""/>
+            <column name="description" value="URL o usuario de Instagram"/>
+            <column name="category" value="contact"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SETT0027"/>
+            <column name="key" value="contact.tiktok"/>
+            <column name="value" value=""/>
+            <column name="description" value="URL o usuario de TikTok"/>
+            <column name="category" value="contact"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

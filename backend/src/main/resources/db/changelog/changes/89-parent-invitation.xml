@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="89" author="cabrasky">
+        <comment>Create parent_invitation table for family product parent invitations</comment>
+
+        <createTable tableName="parent_invitation">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="token" type="varchar(64)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="family_product_id" type="varchar(8)">
+                <constraints nullable="false"
+                    foreignKeyName="fk_parent_invitation_family_product"
+                    referencedTableName="family_product"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="email" type="varchar(320)"/>
+            <column name="used_by_user_id" type="varchar(8)">
+                <constraints
+                    foreignKeyName="fk_parent_invitation_used_by"
+                    referencedTableName="user"
+                    referencedColumnNames="id"/>
+            </column>
+            <column name="used_at" type="timestamp"/>
+            <column name="created_by" type="varchar(8)" defaultValueComputed="current_user">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="current_timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp"/>
+        </createTable>
+
+        <createIndex tableName="parent_invitation" indexName="idx_parent_invitation_token">
+            <column name="token"/>
+        </createIndex>
+        <createIndex tableName="parent_invitation" indexName="idx_parent_invitation_family_product">
+            <column name="family_product_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

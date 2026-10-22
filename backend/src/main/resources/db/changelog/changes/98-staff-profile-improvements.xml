@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="98-01-staff-profile-improvements" author="yambo">
+        <addColumn tableName="staff">
+            <!-- When the staff member opted in to appear on the public site -->
+            <column name="public_visible_at" type="TIMESTAMP"/>
+            <!-- When the user stopped being staff; old inactive rows are purged -->
+            <column name="inactive_since" type="TIMESTAMP"/>
+            <column name="instagram_url" type="VARCHAR(300)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="98-02-backfill-staff-dates" author="yambo">
+        <sql>UPDATE staff SET public_visible_at = NOW() WHERE public_visible = true</sql>
+        <sql>
+            UPDATE staff s SET inactive_since = NOW()
+            WHERE s.manual = false
+              AND NOT EXISTS (
+                  SELECT 1 FROM user_project_group upg
+                  WHERE upg.user_id = s.user_id AND upg.role IN ('MONITOR', 'COORDINATOR')
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

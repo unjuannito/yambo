@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Step 1: Rename nominative invitation tables (invitations → nominative_invitations) -->
+    <changeSet id="53-1" author="yambo">
+        <renameTable oldTableName="invitations" newTableName="nominative_invitations"/>
+    </changeSet>
+
+    <changeSet id="53-2" author="yambo">
+        <renameTable oldTableName="invitation_profile" newTableName="nominative_invitation_profile"/>
+    </changeSet>
+
+    <changeSet id="53-3" author="yambo">
+        <renameColumn tableName="nominative_invitation_profile"
+                      oldColumnName="invitation_id"
+                      newColumnName="nominative_invitation_id"
+                      columnDataType="bigint"/>
+    </changeSet>
+
+    <!-- Step 2: Rename promotion invitation tables (promotion_invitation → invitations) -->
+    <changeSet id="53-4" author="yambo">
+        <renameTable oldTableName="promotion_invitation" newTableName="invitations"/>
+    </changeSet>
+
+    <changeSet id="53-5" author="yambo">
+        <renameTable oldTableName="promotion_invitation_profile" newTableName="invitation_profile"/>
+    </changeSet>
+
+    <changeSet id="53-6" author="yambo">
+        <renameColumn tableName="invitation_profile"
+                      oldColumnName="promotion_invitation_id"
+                      newColumnName="invitation_id"
+                      columnDataType="bigint"/>
+    </changeSet>
+
+    <changeSet id="53-7" author="yambo">
+        <renameTable oldTableName="promotion_invitation_registration" newTableName="invitation_registration"/>
+    </changeSet>
+
+    <changeSet id="53-8" author="yambo">
+        <renameColumn tableName="invitation_registration"
+                      oldColumnName="promotion_invitation_id"
+                      newColumnName="invitation_id"
+                      columnDataType="bigint"/>
+    </changeSet>
+
+</databaseChangeLog>

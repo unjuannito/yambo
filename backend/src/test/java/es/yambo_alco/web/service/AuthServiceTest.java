@@ -2,8 +2,9 @@ package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.exception.UnauthorizedException;
 import es.yambo_alco.web.jwt.JwtService;
-import es.yambo_alco.web.model.Role;
+import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
+import es.yambo_alco.web.repository.UserLoginHistoryRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private UserLoginHistoryRepository userLoginHistoryRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
@@ -51,23 +55,22 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         testUser = User.builder()
-                .username(TEST_USERNAME)
+                .email(TEST_USERNAME)
                 .password(ENCODED_PASSWORD)
-                .email("test@yambo-alco.es")
-                .roles(Set.of(
-                        Role.builder().id("ADMIN").build(),
-                        Role.builder().id("USER").build()))
+        .profiles(Set.of(
+            Profile.builder().id("ADMIN").build(),
+            Profile.builder().id("USER").build()))
                 .enabled(true)
                 .build();
     }
 
     @Test
-    void loadUserByUsername_WithValidUsername_ShouldReturnUser() {
+    void loadUserByEmail_WithValidEmail_ShouldReturnUser() {
         // Given
-        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(testUser));
 
         // When
-        UserDetails user = authService.loadUserByUsername(TEST_USERNAME);
+        UserDetails user = authService.loadUserByEmail(TEST_USERNAME);
 
         // Then
         assertNotNull(user);
@@ -75,19 +78,19 @@ class AuthServiceTest {
     }
 
     @Test
-    void loadUserByUsername_WithInvalidUsername_ShouldThrowException() {
+    void loadUserByEmail_WithInvalidEmail_ShouldThrowException() {
         // Given
-        when(userRepository.findByUsername("invalid")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("invalid")).thenReturn(Optional.empty());
 
         // Then
         assertThrows(UsernameNotFoundException.class,
-                () -> authService.loadUserByUsername("invalid"));
+                () -> authService.loadUserByEmail("invalid"));
     }
 
     @Test
     void authenticate_WithValidCredentials_ShouldReturnToken() {
         // Given
-        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
         when(jwtService.generateToken(any(UserDetails.class))).thenReturn(TEST_TOKEN);
 
@@ -102,12 +105,42 @@ class AuthServiceTest {
     @Test
     void authenticate_WithInvalidPassword_ShouldThrowException() {
         // Given
-        when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongpass", ENCODED_PASSWORD)).thenReturn(false);
 
         // Then
         assertThrows(BadCredentialsException.class,
                 () -> authService.authenticate(TEST_USERNAME, "wrongpass"));
+    }
+
+    @Test
+    void authenticate_WithUpperCaseEmail_ShouldMatchCaseInsensitive() {
+        // Given — user stored with lowercase "testuser", login with "TESTUSER"
+        when(userRepository.findByEmail("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn(TEST_TOKEN);
+
+        // When
+        String token = authService.authenticate("TESTUSER", TEST_PASSWORD);
+
+        // Then
+        assertNotNull(token);
+        assertEquals(TEST_TOKEN, token);
+    }
+
+    @Test
+    void authenticate_WithMixedCaseEmail_ShouldMatchCaseInsensitive() {
+        // Given — user stored with lowercase "testuser", login with "TestUser"
+        when(userRepository.findByEmail("testuser")).thenReturn(Optional.of(testUser));
+        when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+        when(jwtService.generateToken(any(UserDetails.class))).thenReturn(TEST_TOKEN);
+
+        // When
+        String token = authService.authenticate("TestUser", TEST_PASSWORD);
+
+        // Then
+        assertNotNull(token);
+        assertEquals(TEST_TOKEN, token);
     }
 
     @Test
@@ -181,5 +214,17 @@ class AuthServiceTest {
         // Then
         assertThrows(UnauthorizedException.class,
                 () -> authService.reload());
+    }
+
+    @Test
+    void authenticate_ForSomeoneAddedWithoutAnAccount_ShouldBeRejected() {
+        // Given — even if the password somehow matched, there is no account yet
+        User pending = User.builder().email(TEST_USERNAME).password(ENCODED_PASSWORD).hasAccount(false).build();
+        when(userRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(pending));
+        org.mockito.Mockito.lenient().when(passwordEncoder.matches(TEST_PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
+
+        // Then
+        assertThrows(BadCredentialsException.class,
+                () -> authService.authenticate(TEST_USERNAME, TEST_PASSWORD));
     }
 }

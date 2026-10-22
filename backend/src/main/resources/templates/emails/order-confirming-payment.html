@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Justificante de Pago Recibido</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header(${headerColor}, ${headerIcon}, 'Justificante de Pago Recibido')}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    Hemos recibido tu justificante de pago. Estamos verificándolo y te avisaremos cuando se confirme.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: orderDetails(${orderId}, ${orderDate}, ${statusLabel}, ${statusColor})}"/>
+                <th:block th:replace="~{emails/fragments/layout :: productTable(${products}, ${totalPrice})}"/>
+
+                <!-- Confirmation Info -->
+                <div style="background-color: #fef3e2; border-left: 4px solid #e67e22; padding: 20px; margin: 20px 0;">
+                    <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">&#128336; Verificación en curso</h3>
+                    <p style="margin: 0 0 10px 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                        Nuestro equipo está revisando tu justificante de pago. Este proceso puede tardar unos días laborables.
+                    </p>
+                    <p style="margin: 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                        Recibirás un correo de confirmación una vez que hayamos verificado tu pago y el pedido comience a procesarse.
+                    </p>
+                </div>
+
+                <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                    Si tienes alguna duda sobre el proceso, no dudes en contactarnos.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${orderUrl}, 'Ver mi pedido', '#8B5CF6')}"/>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

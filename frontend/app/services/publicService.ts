@@ -1,0 +1,120 @@
+import { ApiService } from './apiService';
+import type { ElephantAvatarConfig } from '~/components/ElephantAvatar';
+import type { Activity } from '~/types/activity';
+
+export interface HomeSettings {
+    [key: string]: string;
+}
+
+export interface FeaturedProject {
+    id: string;
+    slug?: string | null;
+    name: string;
+    description: string;
+    image: string;
+    signatureColor?: string | null;
+    coordinationEmail?: string | null;
+}
+
+export interface StaffGroup {
+    id: string;
+    name: string | null;
+    projectName: string;
+    role: 'MONITOR' | 'COORDINATOR';
+}
+
+export interface StaffMember {
+    id: string;
+    name: string;
+    nickname?: string | null;
+    photo: string;
+    bio: string;
+    funFact: string;
+    instagramUrl?: string | null;
+    avatar?: ElephantAvatarConfig | null;
+    role: 'MONITOR' | 'COORDINATOR' | 'BOTH';
+    groups: StaffGroup[];
+}
+
+export interface ActiveProject {
+    id: string;
+    slug?: string | null;
+    name: string;
+    season: string | null;
+    description: string | null;
+    image: string | null;
+    featured: boolean;
+    signatureColor?: string | null;
+    coordinationEmail?: string | null;
+}
+
+export interface ProjectGroupDetail {
+    id: string;
+    name: string | null;
+}
+
+export interface SeoMetadata {
+    metaDescription: string | null;
+    keywords: string[];
+    ogDescription: string | null;
+    slug: string | null;
+}
+
+export interface ProjectDetail {
+    id: string;
+    slug?: string | null;
+    name: string;
+    active: boolean;
+    season: string | null;
+    description: string | null;
+    image: string | null;
+    signatureColor?: string | null;
+    coordinationEmail?: string | null;
+    groups: ProjectGroupDetail[];
+    staff: StaffMember[];
+    seo: SeoMetadata | null;
+}
+
+export interface ContactSettings {
+    [key: string]: string;
+}
+
+export class PublicService extends ApiService {
+    public async getHomeSettings(): Promise<HomeSettings> {
+        return await this.get('/public/settings/home');
+    }
+
+    public async getContactSettings(): Promise<ContactSettings> {
+        return await this.get('/public/settings/contact');
+    }
+
+    public async getFeaturedProjects(): Promise<FeaturedProject[]> {
+        return await this.get('/public/projects/featured');
+    }
+
+    public async getStaff(): Promise<StaffMember[]> {
+        return await this.get('/public/staff');
+    }
+
+    public async getActiveProjects(): Promise<ActiveProject[]> {
+        return await this.get('/public/projects/active');
+    }
+
+    public async getProjectDetail(id: string): Promise<ProjectDetail> {
+        return await this.get(`/public/projects/${id}`);
+    }
+
+    public async getPublicActivities(): Promise<Activity[]> {
+        return await this.get('/public/activities');
+    }
+
+    public async getPublicActivity(id: string): Promise<Activity> {
+        return await this.get(`/public/activities/${encodeURIComponent(id)}`);
+    }
+
+    public async joinWaitlist(activityId: string, email: string): Promise<void> {
+        await this.post(`/public/activities/${encodeURIComponent(activityId)}/waitlist`, { email });
+    }
+}
+
+export const publicService = new PublicService();

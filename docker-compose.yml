@@ -1,18 +1,21 @@
-version: '3.8'
+# ── Local / integration environment ─────────────────────────────────────────
+# Copy .env.example → .env and fill in your values before running.
+# Usage: docker compose up
 
 services:
   postgres:
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: yambo_db
-      POSTGRES_USER: yambo_user
-      POSTGRES_PASSWORD: yambo_password
+      POSTGRES_USER: ${DB_USER:-yambo_user}
+      POSTGRES_PASSWORD: ${DB_PASS:-yambo_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Bind to localhost only — do not expose to external interfaces
+      - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U yambo_user -d yambo_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-yambo_user} -d yambo_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,10 +26,12 @@ services:
       dockerfile: Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/yambo_db
-      SPRING_DATASOURCE_USERNAME: yambo_user
-      SPRING_DATASOURCE_PASSWORD: yambo_password
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      # Mail Configuration (optional - set these in .env file)
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-yambo_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS:-yambo_password}
+      # validate = refuse to start if schema doesn't match entities (safe)
+      # Use "update" only during local schema iteration, never in CI/prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      # Mail (optional — leave blank to disable)
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -34,22 +39,44 @@ services:
       MAIL_FROM: ${MAIL_FROM:-noreply@yambo-alco.es}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Yambo}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      TZ: Europe/Madrid
     ports:
       - "8080:8080"
+    volumes:
+      - uploads_data:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    environment:
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8080/api}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
+
+  nginx:
+    image: nginx:alpine
     ports:
       - "80:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/http.d/default.conf:ro
     depends_on:
+      - frontend
       - backend
-    environment:
-      - VITE_API_URL=/api
 
 volumes:
   postgres_data:
+  uploads_data:

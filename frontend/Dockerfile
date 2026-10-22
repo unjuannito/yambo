@@ -1,14 +1,50 @@
-# Build stage
+# syntax=docker/dockerfile:1
+# Requiere BuildKit (por defecto en Docker 23+ y en Docker Desktop; en Jenkins se
+# activa con DOCKER_BUILDKIT=1). La caché de npm persiste entre builds, así que un
+# cambio en package.json (cada PR sube la versión) no vuelve a descargarlo todo.
+
+# ── Stage 1: Build ──────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN --mount=type=cache,target=/root/.npm npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund
 COPY . .
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# ── Stage 2: Production (nginx + Node SSR via supervisord) ─────
+FROM node:20-alpine AS production
+WORKDIR /app
+
+# Install nginx, supervisord, and gettext (provides envsubst)
+RUN apk add --no-cache nginx supervisor gettext
+
+# Create a non-root user. Nginx temp paths are redirected to /tmp in
+# nginx-main.conf so no pre-creation of /var/lib/nginx/* is needed.
+RUN addgroup -S app && adduser -S app -G app \
+    && chown -R app:app /app
+
+# Copy built output (server + client bundles)
+COPY --from=builder --chown=app:app /app/build ./build
+COPY --from=builder --chown=app:app /app/package.json ./
+
+# Install production dependencies only (needed by react-router-serve)
+RUN --mount=type=cache,target=/root/.npm npm install --legacy-peer-deps --omit=dev --prefer-offline --no-audit --no-fund \
+    && chown -R app:app /app/node_modules
+
+# Copy nginx and supervisord configs
+COPY nginx-main.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/http.d/default.conf
+COPY supervisord.conf /etc/supervisord.conf
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# BACKEND_INTERNAL_URL must be provided at runtime (docker-compose or K8s env).
+# No default is set here to avoid silently pointing at the wrong backend.
+# See .env.example for the expected value.
+ENV BACKEND_INTERNAL_URL=""
+
+USER app
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

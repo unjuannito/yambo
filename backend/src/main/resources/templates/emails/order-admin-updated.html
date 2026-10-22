@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${headerTitle}">Pedido gestionado por administración</title>
+
+    <style>
+        @media only screen and (max-width: 620px) {
+            .container {
+                width: 100% !important;
+            }
+            .content {
+                padding: 28px 20px !important;
+            }
+            .header {
+                padding: 28px 20px !important;
+            }
+            .product-name {
+                font-size: 14px !important;
+            }
+            .change-table td {
+                padding: 9px 6px !important;
+            }
+        }
+    </style>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: Arial, Helvetica, sans-serif; color: #243447;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6; margin:0; padding:32px 15px;">
+    <tr>
+        <td align="center">
+
+            <table class="container" width="600" cellpadding="0" cellspacing="0" border="0"
+                   style="width:600px; max-width:600px; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+                <!-- HEADER -->
+                <tr>
+                    <td class="header" style="background:#8B5CF6; padding:30px; text-align:center;">
+                        <div style="color:#ffffff; font-size:24px; font-weight:bold; line-height:1.3;">
+                            <span th:utext="${headerIcon}"></span> <span th:text="${headerTitle}">Pedido Modificado</span>
+                        </div>
+                        <div style="margin-top:8px; color:rgba(255,255,255,0.85); font-size:13px;"
+                             th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy · HH:mm')}">
+                            27/08/2026 · 21:49
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- CONTENT -->
+                <tr>
+                    <td class="content" style="padding:38px 30px 32px 30px;">
+
+                        <h1 style="margin:0 0 12px 0; font-size:24px; line-height:1.3; color:#243447;">
+                            ¡Hola <span th:text="${userName}">Carlos García</span>!
+                        </h1>
+
+                        <p th:if="${actionLabel == 'creado'}" style="margin:0 0 28px 0; font-size:16px; line-height:1.6; color:#536273;">
+                            Un administrador ha creado un pedido para ti.
+                        </p>
+                        <p th:if="${actionLabel != 'creado'}" style="margin:0 0 28px 0; font-size:16px; line-height:1.6; color:#536273;">
+                            Un administrador ha realizado cambios en tu pedido.
+                            A continuación puedes consultar exactamente qué se ha modificado.
+                        </p>
+
+                        <!-- MOTIVO -->
+                        <table th:if="${justification != null and !justification.isEmpty()}" width="100%" cellpadding="0" cellspacing="0" border="0"
+                               style="background:#fafafa; border:1px solid #eeeeee; border-left:4px solid #8B5CF6; border-radius:4px; margin-bottom:18px;">
+                            <tr>
+                                <td style="padding:18px 20px;">
+                                    <div style="font-size:13px; font-weight:bold; color:#243447; margin-bottom:7px;">Motivo del cambio</div>
+                                    <div style="font-size:14px; line-height:1.6; color:#536273;" th:text="${justification}"></div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- INCIDENCIA -->
+                        <table th:if="${issueLink != null and !issueLink.isEmpty()}" width="100%" cellpadding="0" cellspacing="0" border="0"
+                               style="background:#fafafa; border:1px solid #eeeeee; border-left:4px solid #8B5CF6; border-radius:4px; margin-bottom:30px;">
+                            <tr>
+                                <td style="padding:18px 20px;">
+                                    <div style="font-size:14px; line-height:1.6; color:#536273;">
+                                        Este cambio está registrado en una incidencia vinculada a tu pedido.
+                                    </div>
+                                    <div style="margin-top:10px;">
+                                        <a th:href="${issueLink}" style="color:#7C3AED; font-size:14px; font-weight:bold; text-decoration:none;">
+                                            Ver la incidencia →
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- DETALLES -->
+                        <div style="font-size:18px; font-weight:bold; color:#243447; margin-bottom:12px;">Resumen del pedido</div>
+
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f7f8; border-radius:7px; margin-bottom:28px;">
+                            <tr>
+                                <td style="padding:18px 20px 8px 20px;">
+                                    <div style="font-size:12px; color:#7a8794; margin-bottom:4px;">ID DEL PEDIDO</div>
+                                    <div style="font-size:14px; font-weight:bold; color:#243447;" th:text="${orderId}"></div>
+                                </td>
+                                <td style="padding:18px 20px 8px 20px;">
+                                    <div style="font-size:12px; color:#7a8794; margin-bottom:4px;">ESTADO</div>
+                                    <div style="font-size:13px; font-weight:bold;" th:style="'color: ' + ${statusColor} + ';'" th:text="${statusLabel}"></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="padding:8px 20px 18px 20px;">
+                                    <div style="font-size:12px; color:#7a8794; margin-bottom:4px;">FECHA DEL PEDIDO</div>
+                                    <div style="font-size:14px; color:#243447;"
+                                         th:text="${#temporals.format(orderDate, 'dd/MM/yyyy')} + ' · ' + ${#temporals.format(orderDate, 'HH:mm')}"></div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- CAMBIOS (modificado) -->
+                        <th:block th:if="${rows != null and !rows.isEmpty()}">
+                            <div style="font-size:18px; font-weight:bold; color:#243447; margin-bottom:12px;">Cambios realizados</div>
+
+                            <table class="change-table" width="100%" cellpadding="0" cellspacing="0" border="0"
+                                   style="border:1px solid #e5e7eb; border-radius:7px; overflow:hidden; border-collapse:separate;">
+                                <tr style="background:#34495e;">
+                                    <td style="padding:11px 12px; color:#ffffff; font-size:12px; font-weight:bold;">PRODUCTO</td>
+                                    <td style="padding:11px 8px; color:#ffffff; font-size:12px; font-weight:bold; text-align:center;">CANT.</td>
+                                    <td style="padding:11px 8px; color:#ffffff; font-size:12px; font-weight:bold;">DETALLE</td>
+                                </tr>
+
+                                <tr th:each="r : ${rows}">
+                                    <!-- PRODUCTO -->
+                                    <td style="padding:14px 12px; border-bottom:1px solid #eeeeee; vertical-align:top;">
+                                        <div class="product-name"
+                                             th:style="${r.type() == 'removed' ? 'font-size:14px; font-weight:bold; color:#7a8794; text-decoration:line-through;' : 'font-size:14px; font-weight:bold; color:#243447;'}">
+                                            <span th:if="${r.type() == 'added'}" style="color:#16a34a; margin-right:6px;">+</span>
+                                            <span th:text="${r.name()}"></span>
+                                        </div>
+                                    </td>
+
+                                    <!-- CANTIDAD -->
+                                    <td style="padding:14px 8px; text-align:center; vertical-align:top; border-bottom:1px solid #eeeeee; font-size:14px; white-space:nowrap;">
+                                        <th:block th:if="${r.quantityChanged()}">
+                                            <span style="color:#9aa4af; text-decoration:line-through;" th:text="${r.oldQuantity()}"></span>
+                                            <span style="color:#9aa4af;"> → </span>
+                                            <strong style="color:#7C3AED;" th:text="${r.newQuantity()}"></strong>
+                                        </th:block>
+                                        <th:block th:if="${!r.quantityChanged()}">
+                                            <span th:if="${r.type() != 'removed'}" style="color:#536273;" th:text="${r.newQuantity()}"></span>
+                                            <span th:if="${r.type() == 'removed'}" style="color:#7a8794; text-decoration:line-through;" th:text="${r.oldQuantity()}"></span>
+                                        </th:block>
+                                    </td>
+
+                                    <!-- DETALLE -->
+                                    <td style="padding:14px 8px; vertical-align:top; border-bottom:1px solid #eeeeee; font-size:13px; line-height:1.6;">
+                                        <th:block th:each="o : ${r.options()}">
+                                            <div th:if="${o.kind() == 'added'}" style="margin-top:2px; color:#7C3AED; font-weight:bold;">
+                                                + <span th:text="${o.label()}"></span>: <span th:text="${o.newText()}"></span>
+                                            </div>
+                                            <div th:if="${o.kind() == 'removed'}" style="color:#7a8794;">
+                                                <span th:text="${o.label()}"></span>:
+                                                <span style="text-decoration:line-through;" th:text="${o.oldText()}"></span>
+                                            </div>
+                                            <div th:if="${o.kind() == 'unchanged'}" style="color:#536273;">
+                                                <span th:text="${o.label()}"></span>: <span th:text="${o.newText()}"></span>
+                                            </div>
+                                            <div th:if="${o.kind() == 'changed'}" style="color:#7a8794;">
+                                                <span th:text="${o.label()}"></span>:
+                                                <span style="text-decoration:line-through;" th:text="${o.oldText()}"></span>
+                                                <span style="color:#9ca3af;"> → </span>
+                                                <strong style="color:#7C3AED;" th:text="${o.newText()}"></strong>
+                                            </div>
+                                        </th:block>
+
+                                        <div th:if="${r.priceChanged()}" style="margin-top:2px;">
+                                            <span style="color:#7a8794; text-decoration:line-through;" th:text="${r.oldPriceText()}"></span>
+                                            <span style="color:#9ca3af;"> → </span>
+                                            <strong style="color:#7C3AED;" th:text="${r.newPriceText()}"></strong>
+                                        </div>
+                                        <div th:if="${!r.priceChanged() and r.type() != 'removed' and !r.newPriceText().isEmpty()}" style="margin-top:2px; color:#536273;" th:text="${r.newPriceText()}"></div>
+                                        <div th:if="${r.type() == 'removed' and !r.oldPriceText().isEmpty()}" style="margin-top:2px; color:#7a8794; text-decoration:line-through;" th:text="${r.oldPriceText()}"></div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- TOTAL -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px; background:#f3f4f6; border-radius:7px;">
+                                <tr>
+                                    <td style="padding:16px 18px; font-size:14px; color:#536273;">Total del pedido</td>
+                                    <td style="padding:16px 18px; text-align:right; white-space:nowrap;">
+                                        <span th:if="${totalChanged}" style="color:#9aa4af; text-decoration:line-through; font-size:14px;" th:text="${oldTotalText}"></span>
+                                        <span th:if="${totalChanged}" style="margin:0 5px; color:#b0b7bf;">→</span>
+                                        <strong style="color:#7C3AED; font-size:20px;" th:text="${newTotalText}"></strong>
+                                    </td>
+                                </tr>
+                            </table>
+                        </th:block>
+
+                        <!-- PRODUCTOS (creado) -->
+                        <th:block th:if="${rows == null or rows.isEmpty()}">
+                            <div style="font-size:18px; font-weight:bold; color:#243447; margin-bottom:12px;">Productos</div>
+
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                                   style="border:1px solid #e5e7eb; border-radius:7px; overflow:hidden; border-collapse:separate;">
+                                <tr style="background:#34495e;">
+                                    <td style="padding:11px 12px; color:#ffffff; font-size:12px; font-weight:bold;">PRODUCTO</td>
+                                    <td style="padding:11px 8px; color:#ffffff; font-size:12px; font-weight:bold; text-align:center;">CANT.</td>
+                                    <td style="padding:11px 8px; color:#ffffff; font-size:12px; font-weight:bold; text-align:right;">PRECIO</td>
+                                </tr>
+                                <tr th:each="p : ${products}">
+                                    <td style="padding:14px 12px; border-bottom:1px solid #eeeeee; vertical-align:top;">
+                                        <div class="product-name" style="font-size:14px; font-weight:bold; color:#243447;" th:text="${p.name()}"></div>
+                                        <div th:if="${p.configuration() != null and !p.configuration().empty}" style="font-size:12px; color:#7a8794; margin-top:3px;" th:text="${p.configuration()}"></div>
+                                    </td>
+                                    <td style="padding:14px 8px; text-align:center; vertical-align:top; border-bottom:1px solid #eeeeee; font-size:14px; color:#536273;" th:text="${p.quantity()}"></td>
+                                    <td style="padding:14px 8px; text-align:right; vertical-align:top; border-bottom:1px solid #eeeeee; font-size:14px; color:#243447;" th:text="${#numbers.formatDecimal(p.price(), 1, 2)} + ' €'"></td>
+                                </tr>
+                            </table>
+
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px; background:#f3f4f6; border-radius:7px;">
+                                <tr>
+                                    <td style="padding:16px 18px; font-size:14px; color:#536273;">Total del pedido</td>
+                                    <td style="padding:16px 18px; text-align:right; white-space:nowrap;">
+                                        <span style="color:#7C3AED; font-size:20px; font-weight:bold;" th:text="${newTotalText}"></span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </th:block>
+
+                        <!-- AVISO -->
+                        <table th:if="${totalChanged}" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:25px;">
+                            <tr>
+                                <td style="padding:15px 16px; background:#fff7ed; border-radius:6px; border:1px solid #fed7aa;">
+                                    <div style="font-size:13px; line-height:1.6; color:#9A3412;">
+                                        <strong>Importante:</strong> el importe de tu pedido ha cambiado.
+                                        Revisa los nuevos detalles antes de realizar el pago.
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- CTA -->
+                        <div style="text-align:center; margin:32px 0 24px 0;">
+                            <a th:href="${orderUrl}" style="display:inline-block; padding:14px 28px; background:#8B5CF6; color:#ffffff; text-decoration:none; border-radius:6px; font-size:15px; font-weight:bold;">
+                                Revisar mi pedido
+                            </a>
+                        </div>
+
+                        <p style="margin:0; text-align:center; color:#7a8794; font-size:13px; line-height:1.6;">
+                            Si tienes alguna duda sobre este cambio, puedes contactar con nosotros.
+                        </p>
+
+                    </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                    <td style="background:#f6f7f8; padding:22px 30px; text-align:center; border-top:1px solid #eeeeee;">
+                        <p style="margin:0; color:#7a8794; font-size:12px; line-height:1.6;">
+                            Este es un correo automático. Por favor, no respondas directamente a este mensaje.
+                        </p>
+                        <p style="margin:8px 0 0 0; color:#9aa4af; font-size:11px;">
+                            © <span th:text="${currentYear}">2026</span> <span th:text="${organizationName}">Yambo</span> · Todos los derechos reservados.
+                        </p>
+                        <p style="margin:8px 0 0 0;">
+                            <a th:href="${preferencesUrl}" style="color:#7C3AED; font-size:11px; text-decoration:none;">
+                                Gestionar preferencias de notificación
+                            </a>
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

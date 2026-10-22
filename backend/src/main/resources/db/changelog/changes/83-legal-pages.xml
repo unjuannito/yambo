@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="83-01-create-legal-page-table" author="yambo">
+        <createTable tableName="legal_page" schemaName="public">
+            <column name="id" type="VARCHAR(20)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="83-02-add-legal-page-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'LEGAL_PAGE'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="permission">
+            <column name="id" value="PLEG_RD"/>
+            <column name="resource" value="LEGAL_PAGE"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PLEG_UPD"/>
+            <column name="resource" value="LEGAL_PAGE"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="83-03-assign-legal-page-permissions-to-admin" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin'</sqlCheck>
+                <sqlCheck expectedResult="2">SELECT COUNT(*) FROM permission WHERE resource = 'LEGAL_PAGE'</sqlCheck>
+            </and>
+        </preConditions>
+        <sql>
+            INSERT INTO profile_permission (profile_id, permission_id)
+            SELECT (SELECT id FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin' LIMIT 1), id
+            FROM permission WHERE resource = 'LEGAL_PAGE'
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+    <changeSet id="83-04-seed-legal-pages" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM legal_page</sqlCheck>
+        </preConditions>
+
+        <!-- ================================================================ -->
+        <!-- AVISO LEGAL                                                        -->
+        <!-- ================================================================ -->
+        <insert tableName="legal_page">
+            <column name="id" value="aviso-legal"/>
+            <column name="type" value="AVISO_LEGAL"/>
+            <column name="title" value="Aviso Legal"/>
+            <column name="published_at" valueDate="NOW()"/>
+            <column name="content" value='&lt;h2&gt;1. Datos Identificativos&lt;/h2&gt;
+&lt;p&gt;En cumplimiento con el artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de los siguientes datos del titular del sitio web:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Denominación social:&lt;/strong&gt; Asociación de Ocio y Tiempo Libre Yambo&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;CIF:&lt;/strong&gt; G83337501&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Domicilio social:&lt;/strong&gt; Calle Cáceres N18, 28100 Alcobendas, Madrid&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Correo electrónico:&lt;/strong&gt; yamboalcobendas@gmail.com&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Finalidad:&lt;/strong&gt; Gestión de actividades de ocio y tiempo libre, venta de merchandising y gestión de socios de la asociación.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;2. Propiedad Intelectual e Industrial&lt;/h2&gt;
+&lt;p&gt;Todos los contenidos del sitio web (textos, imágenes, logotipos, diseño, etc.) son propiedad de la Asociación de Ocio y Tiempo Libre Yambo o cuentan con la correspondiente licencia de uso. Queda prohibida la reproducción, distribución, comunicación pública o transformación de los contenidos sin autorización expresa del titular.&lt;/p&gt;
+
+&lt;h2&gt;3. Condiciones de Uso&lt;/h2&gt;
+&lt;p&gt;El usuario se compromete a hacer un uso adecuado del sitio web y de los servicios ofrecidos, con carácter enunciativo pero no limitativo:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;No incurrir en actividades ilícitas o contrarias a la buena fe y al orden público.&lt;/li&gt;
+    &lt;li&gt;No difundir contenidos o propaganda de carácter racista, xenófobo, pornográfico-ilegal, de apología del terrorismo o atentatorio contra los derechos humanos.&lt;/li&gt;
+    &lt;li&gt;No provocar daños en los sistemas físicos y lógicos de la asociación, de sus proveedores o de terceros.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;4. Exclusión de Responsabilidad&lt;/h2&gt;
+&lt;p&gt;La Asociación de Ocio y Tiempo Libre Yambo no se responsabiliza de los daños o perjuicios que pudieran derivarse de:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Interrupciones del servicio por mantenimiento técnico o causas de fuerza mayor.&lt;/li&gt;
+    &lt;li&gt;La existencia de virus o programas maliciosos en los contenidos.&lt;/li&gt;
+    &lt;li&gt;El uso que terceros puedan hacer de la información publicada.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;5. Legislación Aplicable y Jurisdicción&lt;/h2&gt;
+&lt;p&gt;Las presentes condiciones se rigen por la legislación española. Para cualquier controversia que pudiera derivarse del acceso o uso del sitio web, las partes se someten a los juzgados y tribunales de Alcobendas (Madrid), renunciando expresamente a cualquier otro fuero que pudiera corresponderles.&lt;/p&gt;
+'/>
+        </insert>
+
+        <!-- ================================================================ -->
+        <!-- POLÍTICA DE PRIVACIDAD (RGPD)                                      -->
+        <!-- ================================================================ -->
+        <insert tableName="legal_page">
+            <column name="id" value="privacidad"/>
+            <column name="type" value="PRIVACIDAD"/>
+            <column name="title" value="Política de Privacidad"/>
+            <column name="published_at" valueDate="NOW()"/>
+            <column name="content" value='&lt;h2&gt;1. Responsable del Tratamiento&lt;/h2&gt;
+&lt;p&gt;De conformidad con el Reglamento General de Protección de Datos (RGPD) y la Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), se informa de que los datos personales recogidos a través de este sitio web serán tratados por:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Responsable:&lt;/strong&gt; Asociación de Ocio y Tiempo Libre Yambo&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;CIF:&lt;/strong&gt; G83337501&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Domicilio:&lt;/strong&gt; Calle Cáceres N18, 28100 Alcobendas, Madrid&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Correo electrónico:&lt;/strong&gt; yamboalcobendas@gmail.com&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;2. Datos Recogidos y Finalidades del Tratamiento&lt;/h2&gt;
+&lt;h3&gt;2.1. Datos de registro&lt;/h3&gt;
+&lt;p&gt;Al crear una cuenta en nuestra plataforma, recogemos:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Nombre y apellidos&lt;/li&gt;
+    &lt;li&gt;Dirección de correo electrónico&lt;/li&gt;
+    &lt;li&gt;Contraseña (almacenada de forma encriptada)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Finalidad:&lt;/strong&gt; Gestionar el acceso a la plataforma, permitir la participación en actividades y la compra de merchandising.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Base legal:&lt;/strong&gt; Ejecución de la relación contractual (registro como socio/usuario).&lt;/p&gt;
+
+&lt;h3&gt;2.2. Datos de compra&lt;/h3&gt;
+&lt;p&gt;Al realizar un pedido de merchandising, tratamos los datos necesarios para la gestión del pedido. Los pagos se realizan mediante transferencia bancaria, no almacenamos datos bancarios ni de tarjetas de crédito. El usuario sube el justificante de pago voluntariamente.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Finalidad:&lt;/strong&gt; Gestión y tramitación de pedidos de merchandising.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Base legal:&lt;/strong&gt; Ejecución de un contrato.&lt;/p&gt;
+
+&lt;h3&gt;2.3. Datos de navegación&lt;/h3&gt;
+&lt;p&gt;Podemos recoger datos de navegación a través de cookies estrictamente necesarias para el funcionamiento del sitio web. Consulte nuestra &lt;a href="/cookies"&gt;Política de Cookies&lt;/a&gt; para más información.&lt;/p&gt;
+
+&lt;h2&gt;3. Conservación de los Datos&lt;/h2&gt;
+&lt;p&gt;Los datos personales se conservarán:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Mientras se mantenga la relación como usuario registrado.&lt;/li&gt;
+    &lt;li&gt;Durante el plazo necesario para cumplir con las obligaciones legales (especialmente fiscales y contables).&lt;/li&gt;
+    &lt;li&gt;Una vez finalizada la relación, se bloquearán durante los plazos de prescripción legales (generalmente 5 años).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;4. Cesión de Datos a Terceros&lt;/h2&gt;
+&lt;p&gt;No se ceden datos personales a terceros, salvo obligación legal. No realizamos transferencias internacionales de datos fuera del Espacio Económico Europeo.&lt;/p&gt;
+
+&lt;h2&gt;5. Derechos del Usuario (ARSULIPO)&lt;/h2&gt;
+&lt;p&gt;El usuario puede ejercer en cualquier momento sus derechos de:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Acceso:&lt;/strong&gt; Saber qué datos personales tratamos.&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Rectificación:&lt;/strong&gt; Solicitar la corrección de datos inexactos.&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Supresión:&lt;/strong&gt; Solicitar la eliminación de sus datos cuando ya no sean necesarios.&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Limitación:&lt;/strong&gt; Solicitar la suspensión del tratamiento de sus datos.&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Oposición:&lt;/strong&gt; Oponerse al tratamiento de sus datos.&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Portabilidad:&lt;/strong&gt; Recibir sus datos en un formato estructurado.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Para ejercer estos derechos, puede enviar un correo electrónico a &lt;a href="mailto:yamboalcobendas@gmail.com"&gt;yamboalcobendas@gmail.com&lt;/a&gt; indicando el derecho que desea ejercer. También puede presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD) si considera que no hemos tratado sus datos adecuadamente.&lt;/p&gt;
+
+&lt;h2&gt;6. Medidas de Seguridad&lt;/h2&gt;
+&lt;p&gt;Aplicamos las medidas técnicas y organizativas adecuadas para garantizar la seguridad de los datos personales y evitar su alteración, pérdida, tratamiento o acceso no autorizado, teniendo en cuenta el estado de la tecnología y los riesgos del tratamiento.&lt;/p&gt;
+'/>
+        </insert>
+
+        <!-- ================================================================ -->
+        <!-- POLÍTICA DE COOKIES                                                -->
+        <!-- ================================================================ -->
+        <insert tableName="legal_page">
+            <column name="id" value="cookies"/>
+            <column name="type" value="COOKIES"/>
+            <column name="title" value="Política de Cookies"/>
+            <column name="published_at" valueDate="NOW()"/>
+            <column name="content" value='&lt;h2&gt;1. ¿Qué son las Cookies?&lt;/h2&gt;
+&lt;p&gt;Las cookies son pequeños archivos de texto que se almacenan en el navegador del usuario cuando visita un sitio web. Permiten recordar información sobre la visita, como el idioma preferido o las credenciales de inicio de sesión, para facilitar la navegación.&lt;/p&gt;
+
+&lt;h2&gt;2. Cookies Utilizadas en este Sitio Web&lt;/h2&gt;
+&lt;p&gt;En la Asociación de Ocio y Tiempo Libre Yambo utilizamos exclusivamente cookies técnicas o estrictamente necesarias para el funcionamiento del sitio web. No utilizamos cookies de terceros, cookies de análisis ni cookies de publicidad comportamental.&lt;/p&gt;
+&lt;table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:800px;"&gt;
+    &lt;thead&gt;
+        &lt;tr style="background-color:#f3f4f6;"&gt;
+            &lt;th&gt;Cookie&lt;/th&gt;
+            &lt;th&gt;Tipo&lt;/th&gt;
+            &lt;th&gt;Finalidad&lt;/th&gt;
+            &lt;th&gt;Duración&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+        &lt;tr&gt;
+            &lt;td&gt;JSESSIONID&lt;/td&gt;
+            &lt;td&gt;Técnica necesaria&lt;/td&gt;
+            &lt;td&gt;Mantiene la sesión del usuario autenticado&lt;/td&gt;
+            &lt;td&gt;Sesión&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;XSRF-TOKEN&lt;/td&gt;
+            &lt;td&gt;Técnica necesaria&lt;/td&gt;
+            &lt;td&gt;Protección contra ataques CSRF&lt;/td&gt;
+            &lt;td&gt;Sesión&lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;Nota importante:&lt;/strong&gt; No utilizamos Google Analytics ni ninguna otra herramienta de rastreo de terceros. No recopilamos datos de navegación con fines de marketing o publicidad.&lt;/p&gt;
+
+&lt;h2&gt;3. Base Legal&lt;/h2&gt;
+&lt;p&gt;Las cookies técnicas están exentas del consentimiento informado según el artículo 22.2 de la Ley de Servicios de la Sociedad de la Información (LSSI), ya que son estrictamente necesarias para la prestación del servicio.&lt;/p&gt;
+
+&lt;h2&gt;4. Cómo Gestionar las Cookies&lt;/h2&gt;
+&lt;p&gt;Puede configurar su navegador para aceptar o rechazar todas las cookies, o para recibir un aviso antes de que se almacene una cookie. A continuación se indican las instrucciones para los navegadores más comunes:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Google Chrome:&lt;/strong&gt; Configuración → Privacidad y seguridad → Cookies y otros datos de sitios&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Mozilla Firefox:&lt;/strong&gt; Opciones → Privacidad y seguridad → Cookies y datos del sitio&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Safari:&lt;/strong&gt; Preferencias → Privacidad → Cookies&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Microsoft Edge:&lt;/strong&gt; Configuración → Cookies y permisos de sitios → Cookies&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Si bloquea las cookies técnicas, es posible que el sitio web no funcione correctamente y no pueda acceder a su cuenta.&lt;/p&gt;
+
+&lt;h2&gt;5. Actualización de la Política de Cookies&lt;/h2&gt;
+&lt;p&gt;Esta política puede ser actualizada periódicamente. Le recomendamos revisarla cada vez que acceda al sitio web para estar informado de posibles cambios.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Última actualización: julio de 2026&lt;/em&gt;&lt;/p&gt;
+'/>
+        </insert>
+
+        <!-- ================================================================ -->
+        <!-- TÉRMINOS Y CONDICIONES                                             -->
+        <!-- ================================================================ -->
+        <insert tableName="legal_page">
+            <column name="id" value="terminos"/>
+            <column name="type" value="TERMINOS"/>
+            <column name="title" value="Términos y Condiciones"/>
+            <column name="published_at" valueDate="NOW()"/>
+            <column name="content" value='&lt;h2&gt;1. Aceptación de los Términos&lt;/h2&gt;
+&lt;p&gt;Al registrarse y utilizar la plataforma de la Asociación de Ocio y Tiempo Libre Yambo, el usuario acepta los presentes Términos y Condiciones. Si no está de acuerdo con ellos, no debe utilizar el sitio web ni registrarse como usuario.&lt;/p&gt;
+
+&lt;h2&gt;2. Registro de Usuarios&lt;/h2&gt;
+&lt;p&gt;Para acceder a determinados servicios de la plataforma, es necesario registrarse creando una cuenta. El usuario se compromete a:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Proporcionar información veraz y actualizada.&lt;/li&gt;
+    &lt;li&gt;Mantener la confidencialidad de su contraseña.&lt;/li&gt;
+    &lt;li&gt;No compartir su cuenta con terceros.&lt;/li&gt;
+    &lt;li&gt;Notificar cualquier uso no autorizado de su cuenta.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;La asociación se reserva el derecho de cancelar cuentas que incumplan estos términos.&lt;/p&gt;
+
+&lt;h2&gt;3. Compra de Merchandising&lt;/h2&gt;
+&lt;h3&gt;3.1. Precios&lt;/h3&gt;
+&lt;p&gt;Los productos de merchandising se venden a precio de coste, sin ánimo de lucro. La asociación no obtiene beneficio económico por la venta de estos productos.&lt;/p&gt;
+
+&lt;h3&gt;3.2. Proceso de Compra&lt;/h3&gt;
+&lt;ol&gt;
+    &lt;li&gt;El usuario selecciona los productos deseados y realiza el pedido a través de la plataforma.&lt;/li&gt;
+    &lt;li&gt;Se genera un pedido con el importe total a pagar.&lt;/li&gt;
+    &lt;li&gt;El usuario realiza una transferencia bancaria a la cuenta indicada.&lt;/li&gt;
+    &lt;li&gt;El usuario sube el justificante de pago a través de la plataforma.&lt;/li&gt;
+    &lt;li&gt;Una vez verificado el pago, se tramita el pedido para su entrega.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3&gt;3.3. Política de Devoluciones&lt;/h3&gt;
+&lt;p&gt;Al tratarse de productos vendidos a precio de coste sin ánimo de lucro, las devoluciones se gestionarán caso por caso. Para solicitar una devolución, el usuario debe contactar a través del correo electrónico &lt;a href="mailto:yamboalcobendas@gmail.com"&gt;yamboalcobendas@gmail.com&lt;/a&gt; dentro de los 14 días siguientes a la recepción del pedido.&lt;/p&gt;
+
+&lt;h2&gt;4. Participación en Actividades&lt;/h2&gt;
+&lt;p&gt;La plataforma permite a los usuarios inscribirse en actividades organizadas por la asociación. La inscripción está sujeta a la disponibilidad de plazas y a los requisitos específicos de cada actividad. La asociación se reserva el derecho de cancelar o modificar actividades por causas organizativas o de fuerza mayor.&lt;/p&gt;
+
+&lt;h2&gt;5. Responsabilidad&lt;/h2&gt;
+&lt;p&gt;La Asociación de Ocio y Tiempo Libre Yambo no será responsable por:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Daños derivados del uso indebido de la plataforma por parte del usuario.&lt;/li&gt;
+    &lt;li&gt;Interrupciones del servicio por mantenimiento o causas ajenas a la asociación.&lt;/li&gt;
+    &lt;li&gt;Contenidos o servicios de terceros enlazados desde el sitio web.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;6. Modificaciones&lt;/h2&gt;
+&lt;p&gt;La asociación se reserva el derecho de modificar estos Términos y Condiciones en cualquier momento. Los cambios serán comunicados a los usuarios a través de la plataforma o por correo electrónico. El uso continuado de la plataforma después de dichos cambios implica la aceptación de los mismos.&lt;/p&gt;
+'/>
+        </insert>
+
+        <!-- ================================================================ -->
+        <!-- PROTECCIÓN DE DATOS                                                -->
+        <!-- ================================================================ -->
+        <insert tableName="legal_page">
+            <column name="id" value="proteccion-datos"/>
+            <column name="type" value="PROTECCION_DATOS"/>
+            <column name="title" value="Protección de Datos"/>
+            <column name="published_at" valueDate="NOW()"/>
+            <column name="content" value='&lt;h2&gt;Información sobre Protección de Datos&lt;/h2&gt;
+&lt;p&gt;En cumplimiento del Reglamento (UE) 2016/679 del Parlamento Europeo y del Consejo (RGPD) y de la Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), ponemos a su disposición la siguiente información adicional sobre el tratamiento de sus datos personales.&lt;/p&gt;
+
+&lt;h2&gt;1. Responsable del Tratamiento&lt;/h2&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Entidad:&lt;/strong&gt; Asociación de Ocio y Tiempo Libre Yambo&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;CIF:&lt;/strong&gt; G83337501&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Dirección:&lt;/strong&gt; Calle Cáceres N18, 28100 Alcobendas, Madrid&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Correo electrónico:&lt;/strong&gt; yamboalcobendas@gmail.com&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;2. Delegado de Protección de Datos (DPO)&lt;/h2&gt;
+&lt;p&gt;La Asociación de Ocio y Tiempo Libre Yambo no está obligada a designar un Delegado de Protección de Datos según el artículo 37 del RGPD. No obstante, cualquier consulta relacionada con el tratamiento de datos personales puede dirigirse a &lt;a href="mailto:yamboalcobendas@gmail.com"&gt;yamboalcobendas@gmail.com&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2&gt;3. Ejercicio de Derechos ARSULIPO&lt;/h2&gt;
+&lt;p&gt;Puede ejercer sus derechos de Acceso, Rectificación, Supresión, Limitación, Oposición, Portabilidad y a no ser objeto de decisiones automatizadas (ARSULIPO) mediante:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Correo electrónico:&lt;/strong&gt; &lt;a href="mailto:yamboalcobendas@gmail.com"&gt;yamboalcobendas@gmail.com&lt;/a&gt;, indicando el derecho que desea ejercer.&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Correo postal:&lt;/strong&gt; Calle Cáceres N18, 28100 Alcobendas, Madrid.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Deberá adjuntar una copia de su documento de identidad (DNI/NIE) para verificar su identidad. Le responderemos en el plazo máximo de un mes desde la recepción de la solicitud.&lt;/p&gt;
+
+&lt;h2&gt;4. Reclamación ante la AEPD&lt;/h2&gt;
+&lt;p&gt;Si considera que no hemos tratado sus datos personales de acuerdo con la normativa, puede presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD):&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;&lt;strong&gt;Sede electrónica:&lt;/strong&gt; &lt;a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer"&gt;www.aepd.es&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;strong&gt;Dirección:&lt;/strong&gt; C/ Jorge Juan, 6, 28001 Madrid&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;5. Medidas de Seguridad Aplicadas&lt;/h2&gt;
+&lt;p&gt;Aplicamos las siguientes medidas para proteger sus datos:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Cifrado de contraseñas mediante algoritmos seguros (bcrypt).&lt;/li&gt;
+    &lt;li&gt;Conexión segura mediante HTTPS/SSL.&lt;/li&gt;
+    &lt;li&gt;Protección contra ataques CSRF mediante tokens.&lt;/li&gt;
+    &lt;li&gt;Acceso restringido a los datos según el principio de mínimo privilegio.&lt;/li&gt;
+    &lt;li&gt;Registro de accesos y operaciones realizadas sobre los datos.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2&gt;6. Actualización de la Información&lt;/h2&gt;
+&lt;p&gt;Nos reservamos el derecho de actualizar esta información de protección de datos en cualquier momento. Le recomendamos revisar periódicamente esta sección.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Última actualización: julio de 2026&lt;/em&gt;&lt;/p&gt;
+'/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

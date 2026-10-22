@@ -1,0 +1,9 @@
+- op: replace
+  path: /spec/replicas
+  value: 1
+# Las previews no deben salir en buscadores
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: SEO_INDEXABLE
+    value: "false"

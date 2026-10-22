@@ -1,66 +1,81 @@
-const projects = [
-  {
-    title: "Club Infantil Barrio",
-    description:
-      "Realizado en el Colegio Bachiller Alonso López (Alcobendas), este proyecto educativo basado en educación no formal está destinado a niños/as de 4-12 años. Las sesiones son los viernes de 18:00 a 19:30 (puede variar).",
-    image: "/proyectos/club-infantil.jpg",
-    link: "/proyectos/club-infantil"
-  },
-  {
-    title: "Club Juvenil Jamboloko",
-    description:
-      "Realizado en el Centro Cultural Miguel Delibes (Alcobendas), este proyecto educativo está destinado a adolescentes de 13 a 18 años. Se imparte los viernes de 18:00 a 19:30 (puede variar según la actividad).",
-    image: "/proyectos/club-jamboloko.jpg",
-    link: "/proyectos/club-jamboloko"
-  },
-  {
-    title: "Cohesión",
-    description:
-      "Realizado con Yambo y visitantes, este proyecto ludico esta destinado a socios y visitantes. Actividades diversas para mejorar la cohesion en Yambo.",
-    image: "/proyectos/cohesion.jpg",
-    link: "/proyectos/club-jamboloko"
-  },
-];
+import { useTranslation } from "react-i18next";
+import type { FeaturedProject } from "~/services/publicService";
+import { projectColor } from "~/utils/projectColor";
+import SectionWrapper from "~/components/home/SectionWrapper";
+import { projectPath } from "~/utils/publicPaths";
+import { ResponsiveImage } from "~/components/common/ResponsiveImage";
 
-export default function FeaturedProjects() {
-  return (
-    <section className="w-full bg-gray-50 py-16">
-      <div className="max-w-[1400px] mx-auto px-4">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">
-          Proyectos Destacados
-        </h2>
-        <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory px-4 scrollbar-hide">
-          {projects.map((project, idx) => (
-            <div
-              key={idx}
-              className="min-w-[300px] md:min-w-[400px] snap-start bg-white shadow-lg rounded-xl overflow-hidden"
-            >
-              <div className="relative">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-56 object-cover"
-                />
-                <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white to-transparent" />
-              </div>
-              <div className="p-4">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {project.title}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                  {project.description}
-                </p>
-                <a
-                  href={project.link}
-                  className="text-blue-600 hover:underline text-sm font-medium"
-                >
-                  Ver proyecto →
-                </a>
-              </div>
+interface FeaturedProjectsProps {
+    projects: FeaturedProject[];
+    title?: string;
+    sectionIndex: number;
+}
+
+export default function FeaturedProjects({ projects, title, sectionIndex }: FeaturedProjectsProps) {
+    const { t } = useTranslation();
+
+    return (
+        <SectionWrapper
+            sectionIndex={sectionIndex}
+            title={title}
+            subtitle={t("public.projectsDescription")}
+            blobs={[
+                { color: "green", position: "top-10 -left-20", opacity: "opacity-40" },
+                { color: "purple", position: "-bottom-10 right-10", opacity: "opacity-30" },
+            ]}
+        >
+            <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory px-4 pb-4 scrollbar-hide">
+                {projects.map((project, idx) => {
+                    const pc = projectColor(project.id, project.signatureColor);
+                    return (
+                        <div
+                            key={project.id}
+                            className="min-w-[300px] md:min-w-[380px] snap-start group fade-up"
+                            style={{
+                                animationDelay: `${idx * 100}ms`,
+                                "--pc-text": pc.text,
+                                "--pc-text-hover": pc.textHover,
+                            } as React.CSSProperties}
+                        >
+                            <div
+                                className="rounded-2xl p-[2px]"
+                                style={{
+                                    background: project.signatureColor
+                                        ? `linear-gradient(135deg, ${project.signatureColor}, ${project.signatureColor}66)`
+                                        : "linear-gradient(135deg, var(--color-yambo-green-400), var(--color-yambo-purple-400))",
+                                }}
+                            >
+                                <div className="bg-white rounded-[calc(1rem-2px)] overflow-hidden">
+                                    <div className="relative overflow-hidden">
+                                        <ResponsiveImage
+                                            src={project.image}
+                                            alt={project.name}
+                                            className="w-full h-56 object-contain group-hover:scale-105 transition-transform duration-500"
+                                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                                            maxWidth={1200}
+                                        />
+                                        <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white to-transparent" />
+                                    </div>
+                                    <div className="p-5">
+                                        <h3 className="text-xl font-bold text-yambo-black mb-2 transition-colors group-hover:[color:var(--pc-text-hover)]">
+                                            {project.name}
+                                        </h3>
+                                        <p className="text-gray-500 text-sm mb-4 line-clamp-3">
+                                            {project.description}
+                                        </p>
+                                        <a
+                                            href={projectPath(project)}
+                                            className="inline-flex items-center gap-1 text-sm font-semibold transition-colors [color:var(--pc-text)] hover:[color:var(--pc-text-hover)]"
+                                        >
+                                            {t("public.projectsView")}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+        </SectionWrapper>
+    );
 }

@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: yambo-frontend-pdb
+  namespace: yambo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: yambo-frontend

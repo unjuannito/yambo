@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yambo-backend
+  namespace: yambo
+  labels:
+    app: yambo-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: yambo-backend
+  template:
+    metadata:
+      labels:
+        app: yambo-backend
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: yambo-backend
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: backend
+          image: 192.168.1.11:5000/yambo-web-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            # CORS configuration
+            - name: CORS_ALLOWED_ORIGINS
+              value: "http://__DOMAIN__,https://__DOMAIN__"
+            # Database configuration
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://db:5432/yambo_db"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: DB_PASS
+            # JWT configuration
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: JWT_SECRET
+            # Mail configuration
+            - name: MAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_HOST
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_USERNAME
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_PASSWORD
+            - name: MAIL_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: yambo-secrets
+                  key: MAIL_FROM
+            - name: UPLOAD_DIR
+              value: "/data/uploads"
+            - name: TZ
+              value: "Europe/Madrid"
+          volumeMounts:
+            - name: uploads-storage
+              mountPath: /data/uploads
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 15
+      volumes:
+        - name: uploads-storage
+          persistentVolumeClaim:
+            claimName: uploads-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: yambo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yambo-backend-service
+  namespace: yambo
+spec:
+  selector:
+    app: yambo-backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

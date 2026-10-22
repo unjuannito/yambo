@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Staff: 1:1 extension of user holding the data of monitors and coordinators -->
+    <changeSet id="96-01-create-staff" author="yambo">
+        <createTable tableName="staff">
+            <column name="user_id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="photo" type="VARCHAR(500)"/>
+            <column name="bio" type="TEXT"/>
+            <column name="fun_fact" type="VARCHAR(100)"/>
+            <column name="manual" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint
+            baseTableName="staff"
+            baseColumnNames="user_id"
+            constraintName="fk_staff_user"
+            referencedTableName="user"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- Move the staff data of current monitors/coordinators (and any leftover data) -->
+    <changeSet id="96-02-migrate-user-staff-data" author="yambo">
+        <sql>
+            INSERT INTO staff (user_id, photo, bio, fun_fact)
+            SELECT u.id, u.photo, u.bio, u.fun_fact
+            FROM "user" u
+            WHERE u.photo IS NOT NULL
+               OR u.bio IS NOT NULL
+               OR u.fun_fact IS NOT NULL
+               OR EXISTS (
+                   SELECT 1 FROM user_project_group upg
+                   WHERE upg.user_id = u.id AND upg.role IN ('MONITOR', 'COORDINATOR')
+               );
+        </sql>
+        <rollback>
+            <sql>
+                UPDATE "user" u
+                SET photo = s.photo, bio = s.bio, fun_fact = s.fun_fact
+                FROM staff s WHERE s.user_id = u.id;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="96-03-drop-user-staff-columns" author="yambo">
+        <dropColumn tableName="user">
+            <column name="photo"/>
+            <column name="bio"/>
+            <column name="fun_fact"/>
+        </dropColumn>
+        <rollback>
+            <addColumn tableName="user">
+                <column name="photo" type="VARCHAR(500)"/>
+                <column name="bio" type="TEXT"/>
+                <column name="fun_fact" type="VARCHAR(100)"/>
+            </addColumn>
+        </rollback>
+    </changeSet>
+
+    <!-- The home section "monitors" is now "staff" -->
+    <changeSet id="96-04-rename-home-section-staff" author="yambo">
+        <sql>
+            UPDATE settings
+            SET value = REPLACE(value, '"id":"monitors"', '"id":"staff"')
+            WHERE key = 'home.sections.config';
+        </sql>
+        <rollback>
+            <sql>
+                UPDATE settings
+                SET value = REPLACE(value, '"id":"staff"', '"id":"monitors"')
+                WHERE key = 'home.sections.config';
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

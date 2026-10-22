@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed MONITOR profile if it does not exist -->
+    <changeSet id="43-1" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sqlCheck expectedResult="1">
+                    SELECT COUNT(*) FROM profile WHERE name = 'Monitor'
+                </sqlCheck>
+            </not>
+        </preConditions>
+        <insert tableName="profile">
+            <column name="id" value="P0000004"/>
+            <column name="name" value="Monitor"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

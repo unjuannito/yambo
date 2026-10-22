@@ -1,68 +1,169 @@
 package es.yambo_alco.web.model;
 
+import es.yambo_alco.web.model.enums.UserProjectGroupRole;
+import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(of = "id")
+@ToString(exclude = {"password", "profiles", "groupRoles", "staff"})
 @Entity
-@Table(name = "users")
+@Table(name = "user", schema = "public")
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String username;
+    @CustomId
+    private String id;
 
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, unique = true)
+    /** Null only for people added before they have an account (see {@link #hasAccount}). */
+    @Column(unique = true)
     private String email;
 
     @Column(nullable = false)
     private String name;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "user_roles",
+        name = "user_profile",
         joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+        inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
-    private Set<Role> roles;
+    private Set<Profile> profiles;
 
     private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
 
     @Builder.Default
     private boolean enabled = true;
 
+    /**
+     * False for staff added by an admin before they have an account: they cannot log in until
+     * they are given access or register with the same email.
+     */
+    @Builder.Default
+    @Column(name = "has_account", nullable = false)
+    private boolean hasAccount = true;
+
+    @Builder.Default
+    @Column(name = "system", nullable = false)
+    private boolean system = false;
+
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    @Column(name = "notification_preferences", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private NotificationPreferences notificationPreferences;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<UserProjectGroup> groupRoles = new HashSet<>();
+
+    /** Staff-only data; may exist while the user is not (or no longer) staff. */
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private Staff staff;
+
+    /** Turns a person added without an account into a real one, with the password they chose. */
+    public void activateAccount(String encodedPassword) {
+        this.password = encodedPassword;
+        this.hasAccount = true;
+    }
+
+    public Set<ProjectGroup> getGroups() {
+        return groupRoles.stream()
+                .map(UserProjectGroup::getProjectGroup)
+                .collect(Collectors.toSet());
+    }
+
+    public Set<ProjectGroup> getMonitorGroups() {
+        return groupRoles.stream()
+                .filter(gr -> gr.getRole() == UserProjectGroupRole.MONITOR)
+                .map(UserProjectGroup::getProjectGroup)
+                .collect(Collectors.toSet());
+    }
+
+    public Set<ProjectGroup> getCoordinatorGroups() {
+        return groupRoles.stream()
+                .filter(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR)
+                .map(UserProjectGroup::getProjectGroup)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * A user is staff when marked manually or while holding a MONITOR/COORDINATOR group role.
+     */
+    public boolean isStaff() {
+        if (staff != null && staff.isManual()) {
+            return true;
+        }
+        return groupRoles.stream().anyMatch(gr -> gr.getRole().isStaff());
+    }
+
+    /**
+     * Staff shown on the public site, i.e. currently part of the team: added by hand, or
+     * holding a MONITOR/COORDINATOR role in an active project. The card is public for all of them.
+     */
+    public boolean isPublicStaff() {
+        return (staff != null && staff.isManual()) || groupRoles.stream().anyMatch(User::isActiveStaffRole);
+    }
+
+    /** The staff photo, only when its owner consented to showing it publicly. */
+    public String getPublicStaffPhoto() {
+        return staff != null && staff.isPhotoConsent() && isPublicStaff() ? staff.getPhoto() : null;
+    }
+
+    /** A MONITOR/COORDINATOR role in a project that is still active. */
+    public static boolean isActiveStaffRole(UserProjectGroup groupRole) {
+        return groupRole.getRole().isStaff() && groupRole.getProjectGroup().getProject().isActive();
+    }
+
+    /** Staff photo, or null when the user is not currently staff. */
+    public String getStaffPhoto() {
+        return staff != null && isStaff() ? staff.getPhoto() : null;
+    }
+
+    public boolean hasRoleInProject(UserProjectGroupRole role, String projectId) {
+        return groupRoles.stream()
+                .anyMatch(gr -> gr.getRole() == role
+                        && gr.getProjectGroup().getProject().getId().equals(projectId));
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<SimpleGrantedAuthority> authorities = new HashSet<>();
-        for (Role role : roles) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getId()));
-            for (Permission permission : role.getPermissions()) {
+        for (Profile profile : profiles) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + profile.getId()));
+            for (Permission permission : profile.getPermissions()) {
                 authorities.add(new SimpleGrantedAuthority(permission.getId()));
             }
         }
         return authorities;
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
     }
 
     @Override

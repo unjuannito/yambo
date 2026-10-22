@@ -1,0 +1,34 @@
+@startuml order-flow
+!theme plain
+skinparam backgroundColor transparent
+skinparam defaultFontName "Segoe UI, Arial, sans-serif"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 10
+
+skinparam state {
+  BackgroundColor #CCE5FF
+  BorderColor #0D6EFD
+  FontColor #212529
+}
+
+title Flujo de estados — Pedidos
+
+[*] --> PENDING_PAYMENT : Pedido creado
+
+PENDING_PAYMENT --> CONFIRMING_PAYMENT : Usuario sube\njustificante
+CONFIRMING_PAYMENT --> PAYMENT_CONFIRMED : Admin confirma\npago
+PAYMENT_CONFIRMED --> PENDING_PRODUCTS : Productos\nen preparación
+PENDING_PRODUCTS --> CLOSED : Entregado
+
+PENDING_PAYMENT --> CANCELED : Cancelado
+CONFIRMING_PAYMENT --> CANCELED : Cancelado
+PAYMENT_CONFIRMED --> CANCELED : Cancelado
+
+CLOSED --> [*]
+CANCELED --> [*]
+
+state CLOSED #D4EDDA
+state CANCELED #F8D7DA
+
+@enduml

@@ -1,6 +1,8 @@
 package es.yambo_alco.web.jwt;
 
 import es.yambo_alco.web.service.AuthService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,11 +10,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+
 import java.io.IOException;
 import static org.mockito.Mockito.*;
 
@@ -26,6 +29,9 @@ class JwtAuthenticationFilterTest {
     private AuthService authService;
 
     @Mock
+    private HandlerExceptionResolver exceptionResolver;
+
+    @Mock
     private HttpServletRequest request;
 
     @Mock
@@ -37,12 +43,12 @@ class JwtAuthenticationFilterTest {
     @Mock
     private UserDetails userDetails;
 
-    @InjectMocks
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
+        jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtService, authService, exceptionResolver);
     }
 
     @Test
@@ -95,5 +101,31 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
         verify(jwtService).validateToken(token, userDetails);
         verify(authService).loadUserByUsername(username);
+    }
+
+    @Test
+    void doFilterInternal_ExpiredToken_ShouldDelegateToExceptionResolver() throws ServletException, IOException {
+        String token = "expired.jwt.token";
+        ExpiredJwtException expiredException = new ExpiredJwtException(null, null, "Token expired");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtService.extractUsername(token)).thenThrow(expiredException);
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        verify(exceptionResolver).resolveException(request, response, null, expiredException);
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_MalformedToken_ShouldDelegateToExceptionResolver() throws ServletException, IOException {
+        String token = "malformed.jwt.token";
+        JwtException jwtException = new JwtException("Malformed token");
+        when(request.getHeader("Authorization")).thenReturn("Bearer " + token);
+        when(jwtService.extractUsername(token)).thenThrow(jwtException);
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        verify(exceptionResolver).resolveException(request, response, null, jwtException);
+        verify(filterChain, never()).doFilter(request, response);
     }
 }

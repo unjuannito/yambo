@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="25-01-promotion-invitations-profiles" author="yambo">
+        <createTable tableName="promotion_invitation_profile">
+            <column name="promotion_invitation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profile_id" type="char(8)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="promotion_invitation_profile"
+                       columnNames="promotion_invitation_id, profile_id"
+                       constraintName="pk_promotion_invitation_profile"/>
+        <addForeignKeyConstraint
+            baseTableName="promotion_invitation_profile"
+            baseColumnNames="promotion_invitation_id"
+            referencedTableName="promotion_invitation"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_invitation_profile_inv"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="promotion_invitation_profile"
+            baseColumnNames="profile_id"
+            referencedTableName="profile"
+            referencedColumnNames="id"
+            constraintName="fk_promotion_invitation_profile_profile"
+            onDelete="CASCADE"/>
+
+        <sql>
+            INSERT INTO promotion_invitation_profile (promotion_invitation_id, profile_id)
+            SELECT DISTINCT pifp.promotion_invitation_id, fp.profile_id
+            FROM promotion_invitation_family_product pifp
+            JOIN family_product fp ON fp.id = pifp.family_product_id
+            WHERE fp.profile_id IS NOT NULL
+        </sql>
+
+        <dropTable tableName="promotion_invitation_family_product"/>
+    </changeSet>
+
+</databaseChangeLog>

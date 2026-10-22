@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="56-01-seed-ollama-settings" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM settings WHERE key = 'ai.ollama_api_url'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="settings">
+            <column name="id" value="SET00020"/>
+            <column name="key" value="ai.ollama_api_url"/>
+            <column name="value" value="http://localhost:11434"/>
+            <column name="description" value="URL de la API de Ollama"/>
+            <column name="category" value="ai"/>
+        </insert>
+        <insert tableName="settings">
+            <column name="id" value="SET00021"/>
+            <column name="key" value="ai.ollama_model"/>
+            <column name="value" value="phi3:mini"/>
+            <column name="description" value="Modelo de Ollama a utilizar"/>
+            <column name="category" value="ai"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

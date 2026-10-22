@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="35-issue-permissions" author="yambo">
+        <comment>Add permissions for issue management</comment>
+        
+        <!-- Insert ISSUE permissions -->
+        <insert tableName="permission">
+            <column name="id" value="ISSU_CRE"/>
+            <column name="resource" value="ISSUE"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        
+        <insert tableName="permission">
+            <column name="id" value="ISSU_REA"/>
+            <column name="resource" value="ISSUE"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        
+        <insert tableName="permission">
+            <column name="id" value="ISSU_UPD"/>
+            <column name="resource" value="ISSUE"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        
+        <insert tableName="permission">
+            <column name="id" value="ISSU_DEL"/>
+            <column name="resource" value="ISSUE"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        
+        <insert tableName="permission">
+            <column name="id" value="ISSU_COM"/>
+            <column name="resource" value="ISSUE"/>
+            <column name="action" value="COMMENT"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        
+        <!-- Assign issue permissions to roles -->
+        <!-- All authenticated users can create, read, and comment on issues for their orders -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="USER"/>
+            <column name="permission_id" value="ISSU_CRE"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="USER"/>
+            <column name="permission_id" value="ISSU_REA"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="USER"/>
+            <column name="permission_id" value="ISSU_COM"/>
+        </insert>
+        
+        <!-- MERCH_MG can do everything with issues -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="ISSU_CRE"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="ISSU_REA"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="ISSU_UPD"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="ISSU_DEL"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="MERCH_MG"/>
+            <column name="permission_id" value="ISSU_COM"/>
+        </insert>
+        
+        <!-- ADMIN can do everything with issues -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="ISSU_CRE"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="ISSU_REA"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="ISSU_UPD"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="ISSU_DEL"/>
+        </insert>
+        
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="ISSU_COM"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="85-google-oauth-settings" author="cabrasky">
+        <comment>Add OAuth settings for Google login configuration</comment>
+
+        <insert tableName="settings">
+            <column name="id" value="OAUTH001"/>
+            <column name="key" value="oauth.google.enabled"/>
+            <column name="value" value="false"/>
+            <column name="description" value="Enable or disable Google OAuth login"/>
+            <column name="category" value="oauth"/>
+        </insert>
+
+        <insert tableName="settings">
+            <column name="id" value="OAUTH002"/>
+            <column name="key" value="oauth.google.client_id"/>
+            <column name="value" value=""/>
+            <column name="description" value="Google OAuth Client ID"/>
+            <column name="category" value="oauth"/>
+        </insert>
+
+        <insert tableName="settings">
+            <column name="id" value="OAUTH003"/>
+            <column name="key" value="oauth.google.client_secret"/>
+            <column name="value" value=""/>
+            <column name="description" value="Google OAuth Client Secret"/>
+            <column name="category" value="oauth"/>
+        </insert>
+
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,30 @@
+# NOTE: This file is NOT referenced by kustomization.yaml.
+# Patches are defined inline in kustomization.yaml using the correct
+# patch + target format. This file is kept for reference only.
+#
+# TLS is terminated by the external nginx reverse proxy; no TLS config
+# is managed here or in the ingress.
+
+# Patch 1: backend CORS
+- op: replace
+  path: /spec/template/spec/containers/0/env/0/value
+  value: "https://yambo.cabrasky.net"
+  target:
+    kind: Deployment
+    name: yambo-backend
+
+# Patch 2: frontend FRONTEND_URL
+- op: replace
+  path: /spec/template/spec/containers/0/env/1/value
+  value: "https://yambo.cabrasky.net"
+  target:
+    kind: Deployment
+    name: yambo-frontend
+
+# Patch 3: ingress host
+- op: replace
+  path: /spec/rules/0/host
+  value: yambo.cabrasky.net
+  target:
+    kind: Ingress
+    name: yambo-ingress

@@ -21,28 +21,27 @@ public class Invitation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String email;
-
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String token;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean used = false;
-
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "start_tms", nullable = false)
+    private LocalDateTime startTms;
+
+    @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    private Long invitedBy;
+    @Column(name = "invited_by")
+    private String invitedBy;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "invitation_roles",
+        name = "invitation_profile",
         joinColumns = @JoinColumn(name = "invitation_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+        inverseJoinColumns = @JoinColumn(name = "profile_id")
     )
     @Builder.Default
-    private Set<Role> roles = Set.of();
+    private Set<Profile> profiles = Set.of();
 }

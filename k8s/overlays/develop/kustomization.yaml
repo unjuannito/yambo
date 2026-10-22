@@ -1,0 +1,114 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# ── Overlay DESARROLLO: k3s local (.22), acceso público vía nginx .21 ────
+# Aplicado por Jenkinsfile (rama develop) con KUBECONFIG local.
+# El Secret placeholder del base se FILTRA en el pipeline; los reales los
+# crea el pipeline con credenciales Jenkins.
+
+namespace: yambo-develop
+
+resources:
+  - ../../base
+
+# Imágenes → registry.cabrasky.net. Los newTag los reescribe Jenkins
+# (stage 'Update Image Tag (GitOps)') con el tag recién construido; Argo CD
+# sincroniza ese commit. No reordenar name → newName → newTag.
+images:
+  - name: yambo-web-frontend
+    newName: registry.cabrasky.net/yambo-web-frontend
+    newTag: "branch-develop-fb94ecb"
+  - name: yambo-web-backend
+    newName: registry.cabrasky.net/yambo-web-backend
+    newTag: "branch-develop-fb94ecb"
+
+# ── DOMINIO ──────────────────────────────────────────────────────────────
+# Único sitio donde se escribe el dominio de este entorno. Para cambiarlo basta
+# con esta línea; los `replacements` de abajo lo llevan al Ingress, al CORS del
+# backend y al FRONTEND_URL (canonical, sitemap, Open Graph). Ver README,
+# «Cambiar de dominio», para el resto de pasos (DNS, OAuth, Search Console).
+configMapGenerator:
+  - name: yambo-domain
+    literals:
+      - host=dev.yambo.cabrasky.net
+    options:
+      disableNameSuffixHash: true
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: yambo-domain
+      fieldPath: data.host
+    targets:
+      - select:
+          kind: Ingress
+          name: yambo-ingress
+        fieldPaths:
+          - spec.rules.0.host
+      - select:
+          kind: Deployment
+          name: yambo-backend
+        fieldPaths:
+          - spec.template.spec.containers.0.env.0.value
+        options:
+          delimiter: "//"
+          index: 1
+      - select:
+          kind: Deployment
+          name: yambo-frontend
+        fieldPaths:
+          - spec.template.spec.containers.0.env.1.value
+        options:
+          delimiter: "//"
+          index: 1
+
+patches:
+  # Dominio (público vía nginx .21 → k3s .22): DOMAIN se sustituye por el de `yambo-domain` (arriba)
+  - patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: DOMAIN
+    target:
+      kind: Ingress
+      name: yambo-ingress
+  # CORS backend → dominio dev
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "https://DOMAIN"
+    target:
+      kind: Deployment
+      name: yambo-backend
+  # FRONTEND_URL → dominio dev
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "https://DOMAIN"
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  # Develop no debe salir en buscadores (contenido duplicado de producción)
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: SEO_INDEXABLE
+          value: "false"
+    target:
+      kind: Deployment
+      name: yambo-frontend
+  # Replicas mínimas en desarrollo
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: yambo-backend
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+    target:
+      kind: Deployment
+      name: yambo-frontend

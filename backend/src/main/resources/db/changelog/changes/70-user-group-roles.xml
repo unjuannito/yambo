@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- 1. Add role column to user_project_group -->
+    <changeSet id="70-01-add-role-to-user-project-group" author="yambo">
+        <addColumn tableName="user_project_group">
+            <column name="role" type="VARCHAR(20)" defaultValue="MONITOR">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- 2. Drop old composite PK and recreate with role -->
+    <changeSet id="70-02-recreate-pk-with-role" author="yambo">
+        <dropPrimaryKey tableName="user_project_group"/>
+        <addPrimaryKey tableName="user_project_group"
+                       columnNames="user_id, project_group_id, role"
+                       constraintName="pk_user_project_group"/>
+    </changeSet>
+
+    <!-- 3. Drop coordinator_project table if it exists (migration 51 was never included) -->
+    <changeSet id="70-03-drop-coordinator-project-if-exists" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="coordinator_project"/>
+        </preConditions>
+        <dropTable tableName="coordinator_project"/>
+    </changeSet>
+
+    <!-- 4. Ensure Coordinador profile exists -->
+    <changeSet id="70-04-ensure-coordinator-profile" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sqlCheck expectedResult="1">
+                    SELECT COUNT(*) FROM profile WHERE id = 'P0000005'
+                </sqlCheck>
+            </not>
+        </preConditions>
+        <insert tableName="profile">
+            <column name="id" value="P0000005"/>
+            <column name="name" value="Coordinador"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- 5. Assign permissions to Coordinador profile -->
+    <changeSet id="70-05-assign-coordinator-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sqlCheck expectedResult="1">
+                    SELECT COUNT(*) FROM profile_permission
+                    WHERE profile_id = 'P0000005' AND permission_id = 'PPRJ_RD'
+                </sqlCheck>
+            </not>
+        </preConditions>
+        <!-- Project: read + update -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PPRJ_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PPRJ_UPD"/>
+        </insert>
+        <!-- Activity: full CRUD -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PACT_DEL"/>
+        </insert>
+        <!-- User: read -->
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="P0000005"/>
+            <column name="permission_id" value="PUSR_RD"/>
+        </insert>
+    </changeSet>
+
+    <!-- 6. Mark Monitor and Coordinador profiles as system -->
+    <changeSet id="70-06-mark-profiles-system" author="yambo">
+        <update tableName="profile">
+            <column name="system" valueBoolean="true"/>
+            <where>id IN ('P0000004', 'P0000005')</where>
+        </update>
+    </changeSet>
+
+    <!-- 7. Auto-create project-level groups (name=null) for existing projects that don't have one -->
+    <changeSet id="70-07-create-project-level-groups" author="yambo">
+        <sql>
+            INSERT INTO project_group (id, name, project_id)
+            SELECT
+                substr(md5(random()::text || p.id), 1, 8),
+                NULL,
+                p.id
+            FROM project p
+            WHERE NOT EXISTS (
+                SELECT 1 FROM project_group pg
+                WHERE pg.project_id = p.id AND pg.name IS NULL
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 8. Remove Monitor/Coordinador from user_profile (auto-synced from now on) -->
+    <changeSet id="70-08-remove-role-profiles-from-users" author="yambo">
+        <sql>
+            DELETE FROM user_profile WHERE profile_id IN ('P0000004', 'P0000005');
+        </sql>
+    </changeSet>
+
+    <!-- 9. Re-add Monitor profile to users who have MONITOR role assignments -->
+    <changeSet id="70-09-sync-monitor-profiles" author="yambo">
+        <sql>
+            INSERT INTO user_profile (user_id, profile_id)
+            SELECT DISTINCT upg.user_id, 'P0000004'
+            FROM user_project_group upg
+            WHERE upg.role = 'MONITOR'
+            AND NOT EXISTS (
+                SELECT 1 FROM user_profile up
+                WHERE up.user_id = upg.user_id AND up.profile_id = 'P0000004'
+            );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

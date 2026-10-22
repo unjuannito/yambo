@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido Entregado</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <th:block th:replace="~{emails/fragments/layout :: header(${headerColor}, ${headerIcon}, 'Pedido Entregado')}"/>
+
+            <tr><td style="padding: 40px 30px;">
+                <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+                <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                    ¡Buenas noticias! Tu pedido ha sido <strong>entregado</strong> exitosamente.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: orderDetails(${orderId}, ${orderDate}, ${statusLabel}, ${statusColor})}"/>
+                <th:block th:replace="~{emails/fragments/layout :: productTable(${products}, ${totalPrice})}"/>
+
+                <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
+                    ¡Gracias por tu compra! Esperamos que disfrutes tus productos.
+                </p>
+
+                <th:block th:replace="~{emails/fragments/layout :: ctaButton(${orderUrl}, 'Ver mi pedido', '#8B5CF6')}"/>
+            </td></tr>
+
+            <th:block th:replace="~{emails/fragments/layout :: footer}"/>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

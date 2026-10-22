@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: yambo-develop
+  namespace: argocd
+spec:
+  project: default
+  # El tag de imagen lo fija Jenkins en el kustomization.yaml del overlay
+  # (commit a la rama develop tras cada build) → Argo CD despliega ese tag exacto.
+  source:
+    repoURL: https://github.com/cabrasky/yambo
+    targetRevision: develop
+    path: k8s/overlays/develop
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: yambo-develop
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

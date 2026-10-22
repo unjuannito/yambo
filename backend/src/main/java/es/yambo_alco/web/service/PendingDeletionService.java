@@ -36,15 +36,14 @@ public class PendingDeletionService {
     }
 
     private void disableObject(DeletionObjectType objectType, String objectId) {
-        Long id = Long.parseLong(objectId);
         switch (objectType) {
             case USER:
-                disableUser(id);
+                disableUser(objectId);
                 break;
         }
     }
 
-    private void disableUser(Long userId) {
+    private void disableUser(String userId) {
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isPresent()) {
             User user = userOpt.get();

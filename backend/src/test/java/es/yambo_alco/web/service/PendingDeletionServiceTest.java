@@ -36,11 +36,11 @@ public class PendingDeletionServiceTest {
     public void scheduleDeletion_user_success() {
         // Given
         DeletionObjectType objectType = DeletionObjectType.USER;
-        String objectId = "1";
+        String objectId = "U0000001";
         LocalDateTime scheduledAt = LocalDateTime.now().plusDays(7);
-        User user = User.builder().id(1L).enabled(true).build();
+        User user = User.builder().id("U0000001").enabled(true).build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findById("U0000001")).thenReturn(Optional.of(user));
         when(pendingDeletionRepository.save(any(PendingDeletion.class))).thenAnswer(i -> i.getArgument(0));
 
         // When
@@ -68,7 +68,7 @@ public class PendingDeletionServiceTest {
         String objectId = "1";
         LocalDateTime scheduledAt = LocalDateTime.now().plusDays(7);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findById("U0000001")).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> pendingDeletionService.scheduleDeletion(objectType, objectId, scheduledAt))

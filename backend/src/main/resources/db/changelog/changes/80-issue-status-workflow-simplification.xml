@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="80-issue-status-workflow-simplification" author="yambo">
+        <comment>
+            Simplify issue workflow to OPEN, IN_PROGRESS, CLOSED.
+            Migrate legacy values: RESOLVED(2) -> CLOSED(2), CLOSED(3) -> CLOSED(2), REOPENED(4) -> OPEN(0).
+        </comment>
+
+        <sql>
+            UPDATE issue
+            SET status = CASE
+                WHEN status = 4 THEN 0
+                WHEN status = 3 THEN 2
+                ELSE status
+            END
+            WHERE status IN (3, 4);
+        </sql>
+
+        <sql>
+            UPDATE issue_comment
+            SET status = CASE
+                WHEN status = 4 THEN 0
+                WHEN status = 3 THEN 2
+                ELSE status
+            END
+            WHERE status IN (3, 4);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
