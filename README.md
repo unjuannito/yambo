@@ -230,7 +230,7 @@ Variables opcionales del frontend relacionadas con buscadores:
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/cabrasky/yambo.git
+git clone https://github.com/unjuannito/yambo.git
 cd yambo
 
 # (Opcional) Configurar variables de entorno para email
