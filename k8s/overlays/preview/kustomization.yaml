@@ -70,8 +70,3 @@ patches:
     target:
       kind: Deployment
       name: yambo-frontend
-  # Disable mail in preview environments via secrets patch
-  - path: patches/preview-secrets.yaml
-    target:
-      kind: Secret
-      name: yambo-secrets
