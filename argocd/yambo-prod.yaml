@@ -8,7 +8,7 @@ spec:
   # El tag de imagen lo fija Jenkins en el kustomization.yaml del overlay
   # (commit a la rama main tras cada build) → Argo CD despliega ese tag exacto.
   source:
-    repoURL: https://github.com/cabrasky/yambo
+    repoURL: https://github.com/unjuannito/yambo
     targetRevision: main
     path: k8s/overlays/hetzner
   destination:
