@@ -80,26 +80,6 @@ spec:
                 secretKeyRef:
                   name: yambo-secrets
                   key: JWT_SECRET
-            - name: MAIL_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: yambo-secrets
-                  key: MAIL_HOST
-            - name: MAIL_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: yambo-secrets
-                  key: MAIL_USERNAME
-            - name: MAIL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: yambo-secrets
-                  key: MAIL_PASSWORD
-            - name: MAIL_FROM
-              valueFrom:
-                secretKeyRef:
-                  name: yambo-secrets
-                  key: MAIL_FROM
             - name: UPLOAD_DIR
               value: "/data/uploads"
             - name: TZ
