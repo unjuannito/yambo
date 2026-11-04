@@ -20,7 +20,7 @@ images:
     newTag: "1.19.1"
   - name: yambo-web-backend
     newName: registry.cabrasky.net/yambo-web-backend
-    newTag: "1.19.1"
+    newTag: "1.19.2"
 
 # ── DOMINIO ──────────────────────────────────────────────────────────────
 # Único sitio donde se escribe el dominio de este entorno. Para cambiarlo basta

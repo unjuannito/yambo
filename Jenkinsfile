@@ -384,7 +384,20 @@ pipeline {
                                 git diff -- "$KUSTOMIZATION"
                                 git -c user.name="Jenkins CI" -c user.email="jenkins@cabrasky.net" \\
                                     commit -q -m "chore(cd): desplegar imágenes del build #$BUILD_NUMBER en $BRANCH_NAME [skip ci]" -- "$KUSTOMIZATION"
-                                git push origin "HEAD:refs/heads/$BRANCH_NAME"
+
+                                # Reintentos: GitHub a veces responde 500 al push, y la rama puede
+                                # haber avanzado durante el build → rebase sobre la punta y reintenta.
+                                for intento in 1 2 3; do
+                                    if git push origin "HEAD:refs/heads/$BRANCH_NAME"; then
+                                        exit 0
+                                    fi
+                                    echo "Push fallido (intento $intento/3); reintentando..."
+                                    sleep $((intento * 15))
+                                    git fetch -q origin "$BRANCH_NAME"
+                                    git -c user.name="Jenkins CI" -c user.email="jenkins@cabrasky.net" rebase -q FETCH_HEAD
+                                done
+                                echo "No se pudo hacer push a $BRANCH_NAME tras 3 intentos." >&2
+                                exit 1
                             '''
                         }
                     }
