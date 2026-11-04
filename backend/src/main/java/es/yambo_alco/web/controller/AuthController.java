@@ -6,6 +6,7 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.NominativeInvitationService;
 import es.yambo_alco.web.service.PasswordResetService;
+import es.yambo_alco.web.service.SettingsService;
 import es.yambo_alco.web.service.oauth.OAuthProvider;
 import es.yambo_alco.web.service.oauth.OAuthProviderRegistry;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +39,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final OAuthProviderRegistry oauthProviderRegistry;
     private final JwtService jwtService;
+    private final SettingsService settingsService;
 
     @Value("${server.servlet.context-path:}")
     private String contextPath;
@@ -79,7 +81,7 @@ public class AuthController {
             throw new BadRequestException("OAuth provider '" + provider + "' is not enabled");
         }
 
-        String redirectUri = buildRedirectUri(request, provider);
+        String redirectUri = buildRedirectUri(provider);
         String authUrl = oauthProvider.buildAuthUrl(redirectUri);
         response.sendRedirect(authUrl);
     }
@@ -97,7 +99,7 @@ public class AuthController {
             OAuthProvider oauthProvider = oauthProviderRegistry.getProvider(provider)
                     .orElseThrow(() -> new BadRequestException("OAuth provider '" + provider + "' not found"));
 
-            String redirectUri = buildRedirectUri(request, provider);
+            String redirectUri = buildRedirectUri(provider);
             User user = oauthProvider.processCallback(code, redirectUri);
             String jwt = jwtService.generateToken(user);
 
@@ -111,11 +113,15 @@ public class AuthController {
 
     /**
      * Build the callback redirect URI for a given provider.
+     * Uses the configured application domain (Settings → "Dominio de la Aplicación"):
+     * TLS ends at the external nginx, so the request scheme seen here is always http.
      */
-    private String buildRedirectUri(HttpServletRequest request, String provider) {
-        return request.getScheme() + "://" + request.getServerName()
-            + (request.getServerPort() != 80 && request.getServerPort() != 443 ? ":" + request.getServerPort() : "")
-            + contextPath + "/auth/" + provider + "/callback";
+    private String buildRedirectUri(String provider) {
+        String domain = settingsService.getDomain().trim();
+        if (domain.endsWith("/")) {
+            domain = domain.substring(0, domain.length() - 1);
+        }
+        return domain + contextPath + "/auth/" + provider + "/callback";
     }
 
     // ── Backward-compatible Google routes (delegate to generic) ─────────
