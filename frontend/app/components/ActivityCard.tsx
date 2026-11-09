@@ -12,6 +12,7 @@ import {
 import { formatDateRange, stripMarkdown, getImageSrc } from "~/utils/activity-helpers";
 import { activityPath } from "~/utils/publicPaths";
 import { ResponsiveImage } from "~/components/common/ResponsiveImage";
+import ElephantAvatar from "~/components/ElephantAvatar";
 
 interface ActivityCardProps {
     activity: Activity;
@@ -254,24 +255,29 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                 )}
 
                 {/* Spacer + Footer */}
-                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                <div className="mt-auto flex items-center gap-2 pt-2">
                     {activity.manager ? (
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
                             {activity.manager.photo ? (
                                 <ResponsiveImage
                                     src={activity.manager.photo}
                                     alt={activity.manager.name}
-                                    className="h-7 w-7 rounded-full object-cover ring-2 ring-yambo-green-100 shadow-sm shrink-0"
-                                    sizes="28px"
+                                    className="h-9 w-9 shrink-0 rounded-full object-cover object-[50%_30%] ring-2 ring-yambo-green-100 shadow-sm"
+                                    sizes="36px"
                                     maxWidth={160}
                                 />
                             ) : (
-                                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-yambo-green-200 to-yambo-purple-200 flex items-center justify-center text-[10px] font-bold text-yambo-black ring-2 ring-white shadow-sm shrink-0">
-                                    {activity.manager.name.charAt(0)}
+                                // Sin foto: mismo elefante de Yambo que en StaffCard (no el disco de inicial)
+                                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-yambo-green-100 shadow-sm">
+                                    <ElephantAvatar
+                                        seed={activity.manager.id}
+                                        title={activity.manager.name}
+                                        className="h-full w-full"
+                                    />
                                 </div>
                             )}
 
-                            <span className="text-xs text-gray-500 truncate">
+                            <span className="min-w-0 truncate text-xs text-gray-500">
                                 {activity.manager.name}
                             </span>
                         </div>
