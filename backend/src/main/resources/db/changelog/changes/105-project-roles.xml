@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        issue #126: roles de proyecto configurables.
+
+        Crea la tabla project_role (clave, nombre y marca "es equipo")
+        y siembra los tres roles actuales del enum UserProjectGroupRole para
+        poder migrar sin tocar código. La clave se mantiene igual al nombre del
+        enum (MONITOR/COORDINATOR/PARENT) porque esas tablas ya almacenan ese
+        valor como varchar (EnumType.STRING); al ser la clave parte de la PK de
+        user_project_group, no hace falta migrar valores, solo añadir una
+        columna is_team desnormalizada para detectar "es equipo" sin join.
+    -->
+
+    <changeSet id="105-01-create-project-role" author="yambo">
+        <createTable tableName="project_role">
+            <column name="key" type="varchar(40)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_project_role_name"/>
+            </column>
+            <column name="is_team" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="105-02-seed-default-roles" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not><sqlCheck expectedResult="1">SELECT COUNT(*) FROM project_role WHERE key = 'MONITOR'</sqlCheck></not>
+        </preConditions>
+        <insert tableName="project_role">
+            <column name="key" value="MONITOR"/>
+            <column name="name" value="Monitor"/>
+            <column name="is_team" valueBoolean="true"/>
+        </insert>
+        <insert tableName="project_role">
+            <column name="key" value="COORDINATOR"/>
+            <column name="name" value="Coordinador"/>
+            <column name="is_team" valueBoolean="true"/>
+        </insert>
+        <insert tableName="project_role">
+            <column name="key" value="PARENT"/>
+            <column name="name" value="Padre/Madre"/>
+            <column name="is_team" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!-- is_team desnormalizado en la pertenencia para detectar equipo sin join -->
+    <changeSet id="105-03-add-is-team-to-user-project-group" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="user_project_group" columnName="is_team"/></not>
+        </preConditions>
+        <addColumn tableName="user_project_group">
+            <column name="is_team" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            UPDATE user_project_group
+            SET is_team = CASE WHEN role IN ('MONITOR', 'COORDINATOR') THEN TRUE ELSE FALSE END
+        </sql>
+    </changeSet>
+
+    <!-- Widen role columns to 40 to allow custom (longer) role keys -->
+    <changeSet id="105-05-widen-role-columns" author="yambo">
+        <modifyDataType tableName="user_project_group" columnName="role" newDataType="VARCHAR(40)"/>
+        <modifyDataType tableName="family_product_role_access" columnName="role" newDataType="VARCHAR(40)"/>
+        <modifyDataType tableName="access_grant" columnName="role" newDataType="VARCHAR(40)"/>
+        <modifyDataType tableName="project_role_invitation" columnName="role" newDataType="VARCHAR(40)"/>
+    </changeSet>
+
+</databaseChangeLog>

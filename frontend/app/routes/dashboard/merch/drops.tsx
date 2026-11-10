@@ -14,7 +14,7 @@ import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import ListPageShell from "~/components/common/ListPageShell";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
-import { familyProductService, type FamilyProduct } from "~/services/familyProductService";
+import { familyProductService, type FamilyProduct, type RoleAccess } from "~/services/familyProductService";
 import { projectService, type Project } from "~/services/projectService";
 import { getErrorMessage } from "~/types/error";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -35,7 +35,7 @@ type DropForm = {
     startTms: string;
     endTms: string;
     projectIds: string[];
-    roleAccess: { projectId: string; role: 'MONITOR' | 'COORDINATOR' | 'PARENT' }[];
+    roleAccess: RoleAccess[];
 };
 
 const EMPTY_FORM: DropForm = {

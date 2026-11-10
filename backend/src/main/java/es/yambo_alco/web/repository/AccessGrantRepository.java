@@ -26,10 +26,14 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, Long> 
     List<AccessGrant> findByUserIdAndGrantTypeAndProfileIdAndRevokedAtIsNull(
             String userId, es.yambo_alco.web.model.enums.GrantType grantType, String profileId);
 
+    /** Número de grants vigentes de un rol (cualquier grupo), para el guard de borrado (issue #126). */
+    long countByGrantTypeAndRoleAndRevokedAtIsNull(
+            es.yambo_alco.web.model.enums.GrantType grantType, String role);
+
     /** Grants vigentes de un rol de grupo concreto. */
     List<AccessGrant> findByUserIdAndGrantTypeAndProjectGroupIdAndRoleAndRevokedAtIsNull(
             String userId, es.yambo_alco.web.model.enums.GrantType grantType,
-            String projectGroupId, es.yambo_alco.web.model.enums.UserProjectGroupRole role);
+            String projectGroupId, String role);
 
     Optional<AccessGrant> findFirstByUserIdAndGrantTypeAndProfileIdAndSourceAndInvitationTypeAndInvitationIdAndRevokedAtIsNull(
             String userId, es.yambo_alco.web.model.enums.GrantType grantType, String profileId,
@@ -37,7 +41,7 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, Long> 
 
     Optional<AccessGrant> findFirstByUserIdAndGrantTypeAndProjectGroupIdAndRoleAndSourceAndInvitationTypeAndInvitationIdAndRevokedAtIsNull(
             String userId, es.yambo_alco.web.model.enums.GrantType grantType, String projectGroupId,
-            es.yambo_alco.web.model.enums.UserProjectGroupRole role,
+            String role,
             es.yambo_alco.web.model.enums.GrantSource source, InvitationType invitationType, Long invitationId);
 
     /** Revoca (marca revoked_at) todos los grants vigentes de un perfil de un usuario. */
@@ -53,6 +57,6 @@ public interface AccessGrantRepository extends JpaRepository<AccessGrant, Long> 
             + "WHERE ag.userId = :userId AND ag.grantType = 'GROUP_ROLE' "
             + "AND ag.projectGroupId = :projectGroupId AND ag.role = :role AND ag.revokedAt IS NULL")
     int revokeActiveGroupRoleGrants(@Param("userId") String userId, @Param("projectGroupId") String projectGroupId,
-                                    @Param("role") es.yambo_alco.web.model.enums.UserProjectGroupRole role,
+                                    @Param("role") String role,
                                     @Param("now") LocalDateTime now);
 }

@@ -11,7 +11,6 @@ import es.yambo_alco.web.model.ProductOption;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.repository.spec.ProductSpecifications;
@@ -77,7 +76,7 @@ public class ProductService {
             spec = spec.and(ProductSpecifications.activeEquals(active));
         } else {
             Set<String> projectIds = FamilyProductRoleAccess.projectIds(user);
-            Set<UserProjectGroupRole> roles = FamilyProductRoleAccess.roles(user);
+            Set<String> roles = FamilyProductRoleAccess.roles(user);
             spec = spec.and(ProductSpecifications.activeEquals(active != null ? active : true));
             spec = spec.and(ProductSpecifications.userHasAccess(projectIds, roles));
             spec = spec.and(ProductSpecifications.familyProductActive());

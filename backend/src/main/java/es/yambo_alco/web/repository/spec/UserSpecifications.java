@@ -5,7 +5,6 @@ import es.yambo_alco.web.model.Permission;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserProjectGroup;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
@@ -70,21 +69,19 @@ public final class UserSpecifications {
             if ("ANY".equalsIgnoreCase(role)) {
                 return grJoin.get("role").isNotNull();
             }
-            UserProjectGroupRole enumRole = UserProjectGroupRole.valueOf(role.toUpperCase());
-            return cb.equal(grJoin.get("role"), enumRole);
+            return cb.equal(grJoin.get("role"), role.toUpperCase());
         };
     }
 
-    /** Mirrors {@link User#isStaff()}: marked manually or holding a MONITOR/COORDINATOR role. */
+    /** Mirrors {@link User#isStaff()}: marked manually or holding a team role. */
     public static Specification<User> isStaff() {
         return (root, query, cb) -> {
             Join<User, UserProjectGroup> grJoin = root.join("groupRoles", JoinType.LEFT);
             Join<User, Staff> staffJoin = root.join("staff", JoinType.LEFT);
             query.distinct(true);
-            Predicate monitor = cb.equal(grJoin.get("role"), UserProjectGroupRole.MONITOR);
-            Predicate coordinator = cb.equal(grJoin.get("role"), UserProjectGroupRole.COORDINATOR);
+            Predicate team = cb.isTrue(grJoin.get("isTeam"));
             Predicate manual = cb.isTrue(staffJoin.get("manual"));
-            return cb.or(monitor, coordinator, manual);
+            return cb.or(team, manual);
         };
     }
 }

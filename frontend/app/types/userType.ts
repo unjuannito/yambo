@@ -69,6 +69,8 @@ export type UserGroupRole = {
     projectId: string;
     projectName: string;
     role: GroupRole;
+    /** true si el rol es de equipo (issue #126): decide si el usuario es staff. */
+    isTeam?: boolean;
 }
 
 export type Profile = {

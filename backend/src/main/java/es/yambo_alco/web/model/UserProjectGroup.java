@@ -1,6 +1,5 @@
 package es.yambo_alco.web.model;
 
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,9 +32,17 @@ public class UserProjectGroup {
     private ProjectGroup projectGroup;
 
     @Id
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 20)
-    private UserProjectGroupRole role;
+    @Column(name = "role", nullable = false, length = 40)
+    private String role;
+
+    /**
+     * Desnormalizado de la marca "es equipo" del rol, para poder filtrar el
+     * equipo sin un join a project_role (issue #126). Se rellena al crear la
+     * pertenencia a partir de {@code ProjectRole.isTeam}.
+     */
+    @Column(name = "is_team", nullable = false)
+    @Builder.Default
+    private boolean isTeam = false;
 
     @Data
     @NoArgsConstructor
@@ -43,6 +50,6 @@ public class UserProjectGroup {
     public static class UserProjectGroupId implements Serializable {
         private String user;
         private String projectGroup;
-        private UserProjectGroupRole role;
+        private String role;
     }
 }

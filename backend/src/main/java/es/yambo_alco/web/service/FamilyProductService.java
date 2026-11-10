@@ -7,7 +7,6 @@ import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.OrderService.PendingOrderEmail;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -107,7 +106,7 @@ public class FamilyProductService {
 
         // Filtrar por proyectos y roles del usuario
         Set<String> userProjectIds = FamilyProductRoleAccess.projectIds(user);
-        Set<UserProjectGroupRole> userRoles = FamilyProductRoleAccess.roles(user);
+        Set<String> userRoles = FamilyProductRoleAccess.roles(user);
 
         if (!userProjectIds.isEmpty() && !userRoles.isEmpty()) {
             spec = spec.and(FamilyProductSpecifications.hasRoleAccess(userProjectIds, userRoles));

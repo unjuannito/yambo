@@ -1,6 +1,5 @@
 package es.yambo_alco.web.model;
 
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,9 +26,8 @@ public class ProjectRoleInvitation {
     @Column(name = "project_id", nullable = false, length = 8)
     private String projectId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private UserProjectGroupRole role;
+    @Column(nullable = false, length = 40)
+    private String role;
 
     @Column(length = 320)
     private String email;

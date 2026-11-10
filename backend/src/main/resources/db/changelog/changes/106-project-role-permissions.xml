@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog-latest.xsd">
+
+    <!--
+        issue #126: permisos del CRUD de roles de proyecto.
+        Sigue el patrón de 15-new-permissions.xml: crea los permisos del recurso
+        PROJECT_ROLE y los asigna al perfil ADMIN para que la nueva página de
+        Administración esté disponible de serie.
+    -->
+    <changeSet id="106-01-add-project-role-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'PROJECT_ROLE'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="permission">
+            <column name="id" value="PPR_RD"/>
+            <column name="resource" value="PROJECT_ROLE"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPR_CRT"/>
+            <column name="resource" value="PROJECT_ROLE"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPR_UPD"/>
+            <column name="resource" value="PROJECT_ROLE"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PPR_DEL"/>
+            <column name="resource" value="PROJECT_ROLE"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="106-02-assign-admin-project-role-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'ADMIN'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM profile_permission WHERE profile_id = 'ADMIN' AND permission_id LIKE 'PPR_%'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPR_RD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPR_CRT"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPR_UPD"/>
+        </insert>
+        <insert tableName="profile_permission">
+            <column name="profile_id" value="ADMIN"/>
+            <column name="permission_id" value="PPR_DEL"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

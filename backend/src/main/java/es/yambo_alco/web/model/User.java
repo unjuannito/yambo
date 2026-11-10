@@ -1,6 +1,5 @@
 package es.yambo_alco.web.model;
 
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.util.CustomId;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -96,33 +95,20 @@ public class User implements UserDetails {
                 .collect(Collectors.toSet());
     }
 
-    public Set<ProjectGroup> getMonitorGroups() {
-        return groupRoles.stream()
-                .filter(gr -> gr.getRole() == UserProjectGroupRole.MONITOR)
-                .map(UserProjectGroup::getProjectGroup)
-                .collect(Collectors.toSet());
-    }
-
-    public Set<ProjectGroup> getCoordinatorGroups() {
-        return groupRoles.stream()
-                .filter(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR)
-                .map(UserProjectGroup::getProjectGroup)
-                .collect(Collectors.toSet());
-    }
-
     /**
-     * A user is staff when marked manually or while holding a MONITOR/COORDINATOR group role.
+     * A user is staff when marked manually or while holding a team role
+     * (issue #126: "es equipo" is now a data-driven flag on the role).
      */
     public boolean isStaff() {
         if (staff != null && staff.isManual()) {
             return true;
         }
-        return groupRoles.stream().anyMatch(gr -> gr.getRole().isStaff());
+        return groupRoles.stream().anyMatch(UserProjectGroup::isTeam);
     }
 
     /**
      * Staff shown on the public site, i.e. currently part of the team: added by hand, or
-     * holding a MONITOR/COORDINATOR role in an active project. The card is public for all of them.
+     * holding a team role in an active project. The card is public for all of them.
      */
     public boolean isPublicStaff() {
         return (staff != null && staff.isManual()) || groupRoles.stream().anyMatch(User::isActiveStaffRole);
@@ -133,9 +119,9 @@ public class User implements UserDetails {
         return staff != null && staff.isPhotoConsent() && isPublicStaff() ? staff.getPhoto() : null;
     }
 
-    /** A MONITOR/COORDINATOR role in a project that is still active. */
+    /** A team role in a project that is still active. */
     public static boolean isActiveStaffRole(UserProjectGroup groupRole) {
-        return groupRole.getRole().isStaff() && groupRole.getProjectGroup().getProject().isActive();
+        return groupRole.isTeam() && groupRole.getProjectGroup().getProject().isActive();
     }
 
     /** Staff photo, or null when the user is not currently staff. */
@@ -143,9 +129,9 @@ public class User implements UserDetails {
         return staff != null && isStaff() ? staff.getPhoto() : null;
     }
 
-    public boolean hasRoleInProject(UserProjectGroupRole role, String projectId) {
+    public boolean hasRoleInProject(String role, String projectId) {
         return groupRoles.stream()
-                .anyMatch(gr -> gr.getRole() == role
+                .anyMatch(gr -> role.equals(gr.getRole())
                         && gr.getProjectGroup().getProject().getId().equals(projectId));
     }
 

@@ -64,6 +64,8 @@ export interface GroupRoleResponse {
     projectId: string;
     projectName: string;
     role: GroupRole;
+    /** true si el rol es de equipo (issue #126). */
+    isTeam?: boolean;
 }
 
 export class AdminUserService extends ApiService {

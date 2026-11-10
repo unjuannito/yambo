@@ -4,7 +4,6 @@ import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.ProjectRoleInvitation;
 import es.yambo_alco.web.model.ProjectRoleInvitationUsage;
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.ProjectRoleInvitationService;
 import es.yambo_alco.web.service.SettingsService;
@@ -173,7 +172,7 @@ public class ProjectRoleInvitationController {
                 .anyMatch(perm -> "family_product".equals(perm.getResource().getValue())
                         && "update".equals(perm.getAction().getValue()));
         boolean isCoordinator = currentUser.getGroupRoles().stream()
-                .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR
+                .anyMatch(gr -> "COORDINATOR".equals(gr.getRole())
                         && gr.getProjectGroup().getProject().getId().equals(projectId));
 
         if (!canManage && !isCoordinator) {
@@ -209,7 +208,7 @@ public class ProjectRoleInvitationController {
         @NotNull
         private String projectId;
         @NotNull
-        private UserProjectGroupRole role;
+        private String role;
         @Email
         private String email;
         private LocalDateTime expiresAt;
@@ -247,7 +246,7 @@ public class ProjectRoleInvitationController {
         private Long id;
         private String token;
         private String projectId;
-        private UserProjectGroupRole role;
+        private String role;
         private String email;
         private String createdBy;
         private LocalDateTime createdAt;
@@ -268,7 +267,7 @@ public class ProjectRoleInvitationController {
         private Long id;
         private String projectId;
         private String projectName;
-        private UserProjectGroupRole role;
+        private String role;
         private boolean used;
         private boolean expired;
         private boolean disabled;

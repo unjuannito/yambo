@@ -5,7 +5,6 @@ import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.Product;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.Join;
@@ -74,7 +73,7 @@ public final class ProductSpecifications {
      * Permite productos sin drop asociado, o cuyo drop tenga un roleAccess que
      * coincida con alguno de los proyectos+roles del usuario.
      */
-    public static Specification<Product> userHasAccess(Set<String> projectIds, Set<UserProjectGroupRole> roles) {
+    public static Specification<Product> userHasAccess(Set<String> projectIds, Set<String> roles) {
         return (root, query, cb) -> {
             Join<Product, FamilyProduct> familyJoin = root.join("familyProduct", JoinType.LEFT);
             if (projectIds == null || projectIds.isEmpty() || roles == null || roles.isEmpty()) {

@@ -8,11 +8,12 @@ import es.yambo_alco.web.model.StaffPhotoEdit;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
+import es.yambo_alco.web.model.ProjectRole;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
+import es.yambo_alco.web.repository.ProjectRoleRepository;
 import es.yambo_alco.web.repository.StaffRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
@@ -51,6 +52,7 @@ public class UserServiceTest {
         private UploadedFileService uploadedFileService;
     private ProjectGroupRepository projectGroupRepository;
     private UserProjectGroupRepository userProjectGroupRepository;
+    private ProjectRoleRepository projectRoleRepository;
     private PendingDeletionService pendingDeletionService;
     private AccessGrantService accessGrantService;
 
@@ -61,11 +63,12 @@ public class UserServiceTest {
         profileRepository = Mockito.mock(ProfileRepository.class);
         projectGroupRepository = Mockito.mock(ProjectGroupRepository.class);
         userProjectGroupRepository = Mockito.mock(UserProjectGroupRepository.class);
+        projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
         pendingDeletionService = Mockito.mock(PendingDeletionService.class);
         accessGrantService = Mockito.mock(AccessGrantService.class);
         staffRepository = Mockito.mock(StaffRepository.class);
         uploadedFileService = Mockito.mock(UploadedFileService.class);
-        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, pendingDeletionService, accessGrantService, staffRepository, uploadedFileService);
+        userService = new UserService(userRepository, passwordEncoder, profileRepository, projectGroupRepository, userProjectGroupRepository, projectRoleRepository, pendingDeletionService, accessGrantService, staffRepository, uploadedFileService);
     }
 
     @Test
@@ -612,7 +615,8 @@ public class UserServiceTest {
     void updateStaff_WithPhotoBioFunFact_ShouldUpdateStaffData() {
         // Given
         UserProjectGroup monitorRole = UserProjectGroup.builder()
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
+                .isTeam(true)
                 .build();
         User existingUser = User.builder()
                 .id("U0000001")
@@ -1039,7 +1043,8 @@ public class UserServiceTest {
         UserProjectGroup upg = UserProjectGroup.builder()
                 .user(User.builder().id(userId).build())
                 .projectGroup(group)
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
+                .isTeam(true)
                 .build();
         User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>())
                 .staff(Staff.builder().photoConsent(true).bio("Bio").build())
@@ -1049,7 +1054,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+        User result = userService.removeGroupRole(userId, groupId, "MONITOR");
 
         // Then — hidden, but the data is kept (and its retention period starts)
         assertThat(result.isStaff()).isFalse();
@@ -1187,11 +1192,12 @@ public class UserServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(projectRoleRepository.findById("MONITOR")).thenReturn(Optional.of(ProjectRole.builder().key("MONITOR").name("Monitor").isTeam(true).build()));
         when(profileRepository.findById("P0000004")).thenReturn(Optional.of(monitorProfile));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR);
+        User result = userService.assignGroupRole(userId, groupId, "MONITOR");
 
         // Then
         assertThat(result.getStaff()).isNotNull();
@@ -1209,10 +1215,11 @@ public class UserServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(projectRoleRepository.findById("PARENT")).thenReturn(Optional.of(ProjectRole.builder().key("PARENT").name("Padre-Madre").isTeam(false).build()));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+        User result = userService.assignGroupRole(userId, groupId, "PARENT");
 
         // Then
         assertThat(result.getStaff()).isNull();
@@ -1229,15 +1236,16 @@ public class UserServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(projectRoleRepository.findById("PARENT")).thenReturn(Optional.of(ProjectRole.builder().key("PARENT").name("Padre-Madre").isTeam(false).build()));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+        User result = userService.assignGroupRole(userId, groupId, "PARENT");
 
         // Then
         assertThat(result.getGroupRoles()).hasSize(1);
         UserProjectGroup upg = result.getGroupRoles().iterator().next();
-        assertThat(upg.getRole()).isEqualTo(UserProjectGroupRole.PARENT);
+        assertThat(upg.getRole()).isEqualTo("PARENT");
         verify(userRepository).save(user);
     }
 
@@ -1251,9 +1259,10 @@ public class UserServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(projectRoleRepository.findById("PARENT")).thenReturn(Optional.of(ProjectRole.builder().key("PARENT").name("Padre-Madre").isTeam(false).build()));
 
         // When & Then
-        assertThatThrownBy(() -> userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT))
+        assertThatThrownBy(() -> userService.assignGroupRole(userId, groupId, "PARENT"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Parents must be assigned to the project-level group");
 
@@ -1269,15 +1278,16 @@ public class UserServiceTest {
         UserProjectGroup existing = UserProjectGroup.builder()
                 .user(User.builder().id(userId).build())
                 .projectGroup(group)
-                .role(UserProjectGroupRole.PARENT)
+                .role("PARENT")
                 .build();
         User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(existing))).profiles(new HashSet<>()).build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(projectGroupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(projectRoleRepository.findById("PARENT")).thenReturn(Optional.of(ProjectRole.builder().key("PARENT").name("Padre-Madre").isTeam(false).build()));
 
         // When
-        User result = userService.assignGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+        User result = userService.assignGroupRole(userId, groupId, "PARENT");
 
         // Then
         assertThat(result.getGroupRoles()).hasSize(1);
@@ -1293,7 +1303,7 @@ public class UserServiceTest {
         UserProjectGroup upg = UserProjectGroup.builder()
                 .user(User.builder().id(userId).build())
                 .projectGroup(group)
-                .role(UserProjectGroupRole.PARENT)
+                .role("PARENT")
                 .build();
         User user = User.builder().id(userId).groupRoles(new HashSet<>(Set.of(upg))).profiles(new HashSet<>()).build();
 
@@ -1301,7 +1311,7 @@ public class UserServiceTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // When
-        User result = userService.removeGroupRole(userId, groupId, UserProjectGroupRole.PARENT);
+        User result = userService.removeGroupRole(userId, groupId, "PARENT");
 
         // Then
         assertThat(result.getGroupRoles()).isEmpty();
@@ -1357,11 +1367,12 @@ public class UserServiceTest {
             return saved;
         });
         when(projectGroupRepository.findById("PG000001")).thenReturn(Optional.of(group));
+        when(projectRoleRepository.findById("MONITOR")).thenReturn(Optional.of(ProjectRole.builder().key("MONITOR").name("Monitor").isTeam(true).build()));
         when(profileRepository.findById("P0000004")).thenReturn(Optional.of(monitorProfile));
 
         // When
         User result = userService.createStaffWithoutAccount("Juan", "juan@example.com", null,
-                "PG000001", UserProjectGroupRole.MONITOR, "A0000001");
+                "PG000001", "MONITOR", "A0000001");
 
         // Then — staff through the role, not by hand
         assertThat(result.isHasAccount()).isFalse();
@@ -1373,8 +1384,9 @@ public class UserServiceTest {
 
     @Test
     void createStaffWithoutAccount_WithAGroupButAParentRole_ShouldThrow() {
+        when(projectRoleRepository.findById("PARENT")).thenReturn(Optional.of(ProjectRole.builder().key("PARENT").name("Padre-Madre").isTeam(false).build()));
         assertThatThrownBy(() -> userService.createStaffWithoutAccount("Juan", null, null,
-                "PG000001", UserProjectGroupRole.PARENT, "A0000001"))
+                "PG000001", "PARENT", "A0000001"))
                 .isInstanceOf(BadRequestException.class);
         verify(userRepository, never()).save(any());
     }

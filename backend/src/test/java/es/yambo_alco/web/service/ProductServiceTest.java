@@ -15,7 +15,6 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.PermissionAction;
 import es.yambo_alco.web.model.enums.PermissionResource;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.FamilyProductRepository;
 import es.yambo_alco.web.repository.ProductRepository;
 import es.yambo_alco.web.util.PermissionCheckService;
@@ -102,7 +101,7 @@ class ProductServiceTest {
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
                 .roleAccess(Set.of(FamilyProductRoleAccess.builder()
-                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                        .projectId("PRJ001").role("MONITOR").build()))
                 .build();
 
         Product product = Product.builder()
@@ -147,7 +146,7 @@ class ProductServiceTest {
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
                 .roleAccess(Set.of(FamilyProductRoleAccess.builder()
-                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                        .projectId("PRJ001").role("MONITOR").build()))
                 .build();
 
         Product product = Product.builder()
@@ -161,7 +160,7 @@ class ProductServiceTest {
         ProjectGroup projectGroup = ProjectGroup.builder().id("PG001").project(project).build();
         UserProjectGroup groupRole = UserProjectGroup.builder()
                 .projectGroup(projectGroup)
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
                 .build();
         User user = User.builder()
                 .id("U001")
@@ -189,7 +188,7 @@ class ProductServiceTest {
         FamilyProduct familyProduct = FamilyProduct.builder()
                 .id("F001")
                 .roleAccess(Set.of(FamilyProductRoleAccess.builder()
-                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                        .projectId("PRJ001").role("MONITOR").build()))
                 .build();
 
         Product product = Product.builder()
@@ -203,7 +202,7 @@ class ProductServiceTest {
         ProjectGroup otherProjectGroup = ProjectGroup.builder().id("PG002").project(otherProject).build();
         UserProjectGroup groupRole = UserProjectGroup.builder()
                 .projectGroup(otherProjectGroup)
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
                 .build();
         User user = User.builder()
                 .id("U001")

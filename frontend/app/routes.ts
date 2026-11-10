@@ -33,6 +33,7 @@ export default [
             route("historial", "routes/dashboard/users/$userId/historial.tsx"),
         ]),
         route("mi-espacio/admin/perfiles", "routes/dashboard/profiles/index.tsx"),
+        route("mi-espacio/admin/roles", "routes/dashboard/roles/index.tsx"),
         route(
             "mi-espacio/admin/invitaciones-nominativas",
             "routes/dashboard/nominative-invitations.tsx",
