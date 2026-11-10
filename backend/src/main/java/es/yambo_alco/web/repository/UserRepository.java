@@ -75,4 +75,19 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project", "staff"})
     @Query("SELECT DISTINCT u FROM User u JOIN u.groupRoles gr WHERE gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.MONITOR AND u.enabled = true AND gr.projectGroup.id = :groupId")
     List<User> findMonitorsByGroupId(@Param("groupId") String groupId);
+
+    /** Every member that can receive a campaign: enabled, with an email. */
+    @Query("SELECT u FROM User u WHERE u.enabled = true AND u.hasAccount = true AND u.email IS NOT NULL AND u.email <> ''")
+    List<User> findEnabledWithEmail();
+
+    /** Members of a project group (any role) that can receive a campaign. */
+    @Query("SELECT DISTINCT u FROM User u JOIN u.groupRoles gr WHERE gr.projectGroup.id = :groupId AND u.enabled = true AND u.hasAccount = true AND u.email IS NOT NULL AND u.email <> ''")
+    List<User> findGroupMembersWithEmail(@Param("groupId") String groupId);
+
+    /** Members of a profile that can receive a campaign. */
+    @Query("SELECT DISTINCT u FROM User u JOIN u.profiles p WHERE p.id = :profileId AND u.enabled = true AND u.hasAccount = true AND u.email IS NOT NULL AND u.email <> ''")
+    List<User> findProfileMembersWithEmail(@Param("profileId") String profileId);
+
+    /** Loads a set of users by id (USERS audience); missing ids are skipped. */
+    List<User> findByIdIn(Iterable<String> ids);
 }
