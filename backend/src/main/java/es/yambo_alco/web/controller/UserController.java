@@ -177,13 +177,15 @@ public class UserController {
         private String projectId;
         private String projectName;
         private String role;
+        private boolean isTeam;
 
         public GroupRoleResponse(UserProjectGroup upg) {
             this.groupId = upg.getProjectGroup().getId();
             this.groupName = upg.getProjectGroup().getName();
             this.projectId = upg.getProjectGroup().getProject().getId();
             this.projectName = upg.getProjectGroup().getProject().getName();
-            this.role = upg.getRole().name();
+            this.role = upg.getRole();
+            this.isTeam = upg.isTeam();
         }
     }
 

@@ -10,7 +10,6 @@ import es.yambo_alco.web.model.Settings;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.enums.SeoEntityType;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -208,9 +207,9 @@ public class PublicController {
 
             // Determine primary role from the public roles
             boolean isCoordinator = publicRoles.stream()
-                    .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.COORDINATOR);
+                    .anyMatch(gr -> "COORDINATOR".equals(gr.getRole()));
             boolean isMonitor = publicRoles.stream()
-                    .anyMatch(gr -> gr.getRole() == UserProjectGroupRole.MONITOR);
+                    .anyMatch(gr -> "MONITOR".equals(gr.getRole()));
             if (isCoordinator && isMonitor) {
                 this.role = "BOTH";
             } else if (isCoordinator) {
@@ -236,7 +235,7 @@ public class PublicController {
             this.id = upg.getProjectGroup().getId();
             this.name = upg.getProjectGroup().getName();
             this.projectName = upg.getProjectGroup().getProject().getName();
-            this.role = upg.getRole().name();
+            this.role = upg.getRole();
         }
     }
 

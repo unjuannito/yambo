@@ -3,7 +3,6 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,13 +77,13 @@ class ProjectRoleInvitationServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         ProjectRoleInvitation result = projectRoleInvitationService.createInvitation(
-                PROJECT_ID, UserProjectGroupRole.PARENT, USER_ID, null, null, null);
+                PROJECT_ID, "PARENT", USER_ID, null, null, null);
 
         assertThat(result).isNotNull();
         assertThat(result.getToken()).hasSize(20);
         assertThat(result.getToken()).matches("[A-Za-z0-9]{20}");
         assertThat(result.getProjectId()).isEqualTo(PROJECT_ID);
-        assertThat(result.getRole()).isEqualTo(UserProjectGroupRole.PARENT);
+        assertThat(result.getRole()).isEqualTo("PARENT");
         assertThat(result.getCreatedBy()).isEqualTo(USER_ID);
         assertThat(result.getEmail()).isNull();
         assertThat(result.isUsed()).isFalse();
@@ -106,7 +105,7 @@ class ProjectRoleInvitationServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         ProjectRoleInvitation result = projectRoleInvitationService.createInvitation(
-                PROJECT_ID, UserProjectGroupRole.COORDINATOR, USER_ID, email, null, null);
+                PROJECT_ID, "COORDINATOR", USER_ID, email, null, null);
 
         assertThat(result.getEmail()).isEqualTo("test@example.com");
     }
@@ -120,7 +119,7 @@ class ProjectRoleInvitationServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         ProjectRoleInvitation result = projectRoleInvitationService.createInvitation(
-                PROJECT_ID, UserProjectGroupRole.MONITOR, USER_ID, null, expiresAt, null);
+                PROJECT_ID, "MONITOR", USER_ID, null, expiresAt, null);
 
         assertThat(result.getExpiresAt()).isEqualTo(expiresAt);
     }
@@ -133,7 +132,7 @@ class ProjectRoleInvitationServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         ProjectRoleInvitation result = projectRoleInvitationService.createInvitation(
-                PROJECT_ID, UserProjectGroupRole.MONITOR, USER_ID, null, null, 5);
+                PROJECT_ID, "MONITOR", USER_ID, null, null, 5);
 
         assertThat(result.getMaxUses()).isEqualTo(5);
     }
@@ -144,7 +143,7 @@ class ProjectRoleInvitationServiceTest {
                 .thenReturn(Optional.of(Project.builder().id(PROJECT_ID).build()));
 
         assertThatThrownBy(() -> projectRoleInvitationService.createInvitation(
-                PROJECT_ID, UserProjectGroupRole.PARENT, USER_ID, null, null, 0))
+                PROJECT_ID, "PARENT", USER_ID, null, null, 0))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Max uses must be at least 1");
 
@@ -156,7 +155,7 @@ class ProjectRoleInvitationServiceTest {
         when(projectRepository.findById("INVALID")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> projectRoleInvitationService.createInvitation(
-                "INVALID", UserProjectGroupRole.PARENT, USER_ID, null, null, null))
+                "INVALID", "PARENT", USER_ID, null, null, null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Project not found");
 
@@ -173,7 +172,7 @@ class ProjectRoleInvitationServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         ProjectRoleInvitation result = projectRoleInvitationService.createInvitation(
-                PROJECT_ID, UserProjectGroupRole.PARENT, USER_ID, null, null, null);
+                PROJECT_ID, "PARENT", USER_ID, null, null, null);
 
         assertThat(result.getToken()).hasSize(20);
         verify(projectRoleInvitationRepository, atLeastOnce()).findByToken(anyString());
@@ -190,7 +189,7 @@ class ProjectRoleInvitationServiceTest {
                 .id(1L)
                 .token(token)
                 .projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.PARENT)
+                .role("PARENT")
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -202,7 +201,7 @@ class ProjectRoleInvitationServiceTest {
 
         projectRoleInvitationService.acceptInvitation(token, currentUser);
 
-        verify(userService).assignGroupRole(USER_ID, PROJECT_GROUP_ID, UserProjectGroupRole.PARENT);
+        verify(userService).assignGroupRole(USER_ID, PROJECT_GROUP_ID, "PARENT");
         assertThat(invitation.getUsedByUserId()).isEqualTo(USER_ID);
         assertThat(invitation.getUsedAt()).isNotNull();
         assertThat(invitation.getUsageCount()).isEqualTo(1);
@@ -219,7 +218,7 @@ class ProjectRoleInvitationServiceTest {
                 .id(1L)
                 .token(token)
                 .projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.PARENT)
+                .role("PARENT")
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -248,7 +247,7 @@ class ProjectRoleInvitationServiceTest {
         ProjectRoleInvitation invitation = ProjectRoleInvitation.builder()
                 .token(token)
                 .projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.COORDINATOR)
+                .role("COORDINATOR")
                 .build();
 
         ProjectGroup projectGroup = ProjectGroup.builder().id(PROJECT_GROUP_ID).build();
@@ -259,7 +258,7 @@ class ProjectRoleInvitationServiceTest {
 
         projectRoleInvitationService.acceptInvitation(token, currentUser);
 
-        verify(userService).assignGroupRole(USER_ID, PROJECT_GROUP_ID, UserProjectGroupRole.COORDINATOR);
+        verify(userService).assignGroupRole(USER_ID, PROJECT_GROUP_ID, "COORDINATOR");
     }
 
     @Test
@@ -270,7 +269,7 @@ class ProjectRoleInvitationServiceTest {
         ProjectRoleInvitation invitation = ProjectRoleInvitation.builder()
                 .token(token)
                 .projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
                 .build();
 
         Project project = Project.builder().id(PROJECT_ID).build();
@@ -285,7 +284,7 @@ class ProjectRoleInvitationServiceTest {
         projectRoleInvitationService.acceptInvitation(token, currentUser);
 
         verify(projectGroupRepository).save(any(ProjectGroup.class));
-        verify(userService).assignGroupRole(USER_ID, PROJECT_GROUP_ID, UserProjectGroupRole.MONITOR);
+        verify(userService).assignGroupRole(USER_ID, PROJECT_GROUP_ID, "MONITOR");
     }
 
     @Test
@@ -361,7 +360,7 @@ class ProjectRoleInvitationServiceTest {
                 .id(1L)
                 .token(token)
                 .projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.PARENT)
+                .role("PARENT")
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -387,7 +386,7 @@ class ProjectRoleInvitationServiceTest {
                         && user.getName().equals("New Parent")
                         && user.isEnabled()
                         && user.getProfiles().contains(userProfile)));
-        verify(userService).assignGroupRole("U0000099", PROJECT_GROUP_ID, UserProjectGroupRole.PARENT);
+        verify(userService).assignGroupRole("U0000099", PROJECT_GROUP_ID, "PARENT");
         assertThat(invitation.getUsedByUserId()).isEqualTo("U0000099");
         assertThat(invitation.getUsageCount()).isEqualTo(1);
         verify(projectRoleInvitationUsageRepository).save(argThat(usage ->
@@ -402,7 +401,7 @@ class ProjectRoleInvitationServiceTest {
         when(projectRoleInvitationRepository.findByToken(token))
                 .thenReturn(Optional.of(ProjectRoleInvitation.builder()
                         .token(token).projectId(PROJECT_ID)
-                        .role(UserProjectGroupRole.PARENT).build()));
+                        .role("PARENT").build()));
         when(userRepository.existsByEmail("existing@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> projectRoleInvitationService.registerAndAccept(
@@ -419,7 +418,7 @@ class ProjectRoleInvitationServiceTest {
     void updateInvitation_ShouldUpdateLimits() {
         ProjectRoleInvitation invitation = ProjectRoleInvitation.builder()
                 .id(1L).token("updateToken123").projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.MONITOR).build();
+                .role("MONITOR").build();
 
         when(projectRoleInvitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
         when(projectRoleInvitationRepository.save(any(ProjectRoleInvitation.class)))
@@ -438,7 +437,7 @@ class ProjectRoleInvitationServiceTest {
     void updateInvitation_ShouldOnlyUpdateProvidedFields() {
         ProjectRoleInvitation invitation = ProjectRoleInvitation.builder()
                 .id(1L).token("partialToken").projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.MONITOR).build();
+                .role("MONITOR").build();
 
         when(projectRoleInvitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
         when(projectRoleInvitationRepository.save(any(ProjectRoleInvitation.class)))
@@ -455,7 +454,7 @@ class ProjectRoleInvitationServiceTest {
     void updateInvitation_WithInvalidMaxUses_ShouldThrow() {
         ProjectRoleInvitation invitation = ProjectRoleInvitation.builder()
                 .id(1L).token("invalidMaxToken").projectId(PROJECT_ID)
-                .role(UserProjectGroupRole.MONITOR).build();
+                .role("MONITOR").build();
 
         when(projectRoleInvitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
 
@@ -497,7 +496,7 @@ class ProjectRoleInvitationServiceTest {
         when(projectGroupRepository.findByProjectIdAndNameIsNull(PROJECT_ID))
                 .thenReturn(Optional.of(projectGroup));
         when(userProjectGroupRepository.findByProjectGroupIdAndRole(
-                PROJECT_GROUP_ID, UserProjectGroupRole.PARENT))
+                PROJECT_GROUP_ID, "PARENT"))
                 .thenReturn(parents);
 
         int count = projectRoleInvitationService.revokeAllParentRolesByProject(PROJECT_ID);
@@ -513,7 +512,7 @@ class ProjectRoleInvitationServiceTest {
         when(projectGroupRepository.findByProjectIdAndNameIsNull(PROJECT_ID))
                 .thenReturn(Optional.of(projectGroup));
         when(userProjectGroupRepository.findByProjectGroupIdAndRole(
-                PROJECT_GROUP_ID, UserProjectGroupRole.PARENT))
+                PROJECT_GROUP_ID, "PARENT"))
                 .thenReturn(List.of());
 
         int count = projectRoleInvitationService.revokeAllParentRolesByProject(PROJECT_ID);

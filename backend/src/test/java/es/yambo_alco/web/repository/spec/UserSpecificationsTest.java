@@ -1,7 +1,6 @@
 package es.yambo_alco.web.repository.spec;
 
 import es.yambo_alco.web.model.User;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -470,14 +469,14 @@ class UserSpecificationsTest {
 
         when(root.join("groupRoles", JoinType.INNER)).thenReturn(groupRoleJoin);
         when(groupRoleJoin.get("role")).thenReturn((Path) groupRolePath);
-        when(cb.equal(groupRolePath, UserProjectGroupRole.MONITOR)).thenReturn(roleEqualPred);
+        when(cb.equal(groupRolePath, "MONITOR")).thenReturn(roleEqualPred);
 
         Specification<User> spec = UserSpecifications.hasGroupRole("MONITOR");
         Predicate result = spec.toPredicate(root, query, cb);
 
         assertSame(roleEqualPred, result);
         verify(query).distinct(true);
-        verify(cb).equal(groupRolePath, UserProjectGroupRole.MONITOR);
+        verify(cb).equal(groupRolePath, "MONITOR");
     }
 
     @SuppressWarnings("unchecked")
@@ -487,14 +486,14 @@ class UserSpecificationsTest {
 
         when(root.join("groupRoles", JoinType.INNER)).thenReturn(groupRoleJoin);
         when(groupRoleJoin.get("role")).thenReturn((Path) groupRolePath);
-        when(cb.equal(groupRolePath, UserProjectGroupRole.COORDINATOR)).thenReturn(roleEqualPred);
+        when(cb.equal(groupRolePath, "COORDINATOR")).thenReturn(roleEqualPred);
 
         Specification<User> spec = UserSpecifications.hasGroupRole("COORDINATOR");
         Predicate result = spec.toPredicate(root, query, cb);
 
         assertSame(roleEqualPred, result);
         verify(query).distinct(true);
-        verify(cb).equal(groupRolePath, UserProjectGroupRole.COORDINATOR);
+        verify(cb).equal(groupRolePath, "COORDINATOR");
     }
 
     @SuppressWarnings("unchecked")
@@ -504,13 +503,13 @@ class UserSpecificationsTest {
 
         when(root.join("groupRoles", JoinType.INNER)).thenReturn(groupRoleJoin);
         when(groupRoleJoin.get("role")).thenReturn((Path) groupRolePath);
-        when(cb.equal(groupRolePath, UserProjectGroupRole.MONITOR)).thenReturn(roleEqualPred);
+        when(cb.equal(groupRolePath, "MONITOR")).thenReturn(roleEqualPred);
 
         Specification<User> spec = UserSpecifications.hasGroupRole("monitor");
         Predicate result = spec.toPredicate(root, query, cb);
 
         assertSame(roleEqualPred, result);
-        verify(cb).equal(groupRolePath, UserProjectGroupRole.MONITOR);
+        verify(cb).equal(groupRolePath, "MONITOR");
     }
 
     // ================================================================

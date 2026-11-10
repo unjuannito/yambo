@@ -7,7 +7,6 @@ import es.yambo_alco.web.model.ProjectGroup;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.GrantType;
 import es.yambo_alco.web.model.enums.InvitationType;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.AccessGrantRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
@@ -127,7 +126,7 @@ class AccessGrantServiceTest {
                 .userId("U0000001")
                 .grantType(GrantType.GROUP_ROLE)
                 .projectGroupId("PG000001")
-                .role(UserProjectGroupRole.COORDINATOR)
+                .role("COORDINATOR")
                 .source(es.yambo_alco.web.model.enums.GrantSource.INVITATION)
                 .invitationType(InvitationType.PROJECT_ROLE)
                 .invitationId(7L)
@@ -158,9 +157,9 @@ class AccessGrantServiceTest {
 
     @Test
     void revokeGroupRoleGrants_ShouldDelegateToRepository() {
-        accessGrantService.revokeGroupRoleGrants("U0000001", "PG000001", UserProjectGroupRole.MONITOR);
+        accessGrantService.revokeGroupRoleGrants("U0000001", "PG000001", "MONITOR");
 
         verify(accessGrantRepository).revokeActiveGroupRoleGrants(
-                eq("U0000001"), eq("PG000001"), eq(UserProjectGroupRole.MONITOR), any(LocalDateTime.class));
+                eq("U0000001"), eq("PG000001"), eq("MONITOR"), any(LocalDateTime.class));
     }
 }

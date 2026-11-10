@@ -55,6 +55,12 @@ const LINKS_MAP: Link[] = [
         need: { obj: "profile", action: "read" },
     },
     {
+        name: "projectRoles",
+        href: "/mi-espacio/admin/roles",
+        label: "Roles",
+        need: { obj: "project_role", action: "read" },
+    },
+    {
         name: "nominativeInvitations",
         href: "/mi-espacio/admin/invitaciones",
         label: "Invitaciones Nominativas",

@@ -8,12 +8,13 @@ import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.NotificationPreferences;
 import es.yambo_alco.web.model.Profile;
 import es.yambo_alco.web.model.ProjectGroup;
+import es.yambo_alco.web.model.ProjectRole;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
+import es.yambo_alco.web.repository.ProjectRoleRepository;
 import es.yambo_alco.web.repository.StaffRepository;
 import es.yambo_alco.web.repository.UserProjectGroupRepository;
 import es.yambo_alco.web.repository.UserRepository;
@@ -45,6 +46,7 @@ public class UserService {
 	private final ProfileRepository profileRepository;
 	private final ProjectGroupRepository projectGroupRepository;
 	private final UserProjectGroupRepository userProjectGroupRepository;
+	private final ProjectRoleRepository projectRoleRepository;
 	private final PendingDeletionService pendingDeletionService;
 	private final AccessGrantService accessGrantService;
 	private final StaffRepository staffRepository;
@@ -153,15 +155,15 @@ public class UserService {
 	 */
 	@Transactional
 	public User createStaffWithoutAccount(@NonNull String name, String email, String nickname,
-			String groupId, UserProjectGroupRole role, String createdBy) {
-		String normalizedEmail = email != null && !email.isBlank() ? email.toLowerCase().trim() : null;
-		if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
-			throw new BadRequestException("Email already in use");
-		}
-		boolean joinsGroup = groupId != null && !groupId.isBlank();
-		if (joinsGroup && (role == null || !role.isStaff())) {
-			throw new BadRequestException("A MONITOR or COORDINATOR role is needed to add staff to a group");
-		}
+			String groupId, String role, String createdBy) {
+			String normalizedEmail = email != null && !email.isBlank() ? email.toLowerCase().trim() : null;
+			if (normalizedEmail != null && userRepository.existsByEmail(normalizedEmail)) {
+				throw new BadRequestException("Email already in use");
+			}
+			boolean joinsGroup = groupId != null && !groupId.isBlank();
+			if (joinsGroup && (role == null || role.isBlank() || !resolveRole(role).isTeam())) {
+				throw new BadRequestException("A team role is needed to add staff to a group");
+			}
 
 		User user = User.builder()
 				.name(name.trim())
@@ -374,29 +376,32 @@ public class UserService {
 
 	@Transactional
 	public User assignGroupRole(@NonNull String userId, @NonNull String groupId,
-			@NonNull UserProjectGroupRole role) {
+			@NonNull String role) {
 		// Sin grantedBy: usado por invitaciones (registran su propio grant INVITATION)
 		return assignGroupRole(userId, groupId, role, null);
 	}
 
 	@Transactional
 	public User assignGroupRole(@NonNull String userId, @NonNull String groupId,
-			@NonNull UserProjectGroupRole role, String grantedBy) {
+			@NonNull String role, String grantedBy) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 		ProjectGroup group = projectGroupRepository.findById(groupId)
 				.orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+		ProjectRole projectRole = resolveRole(role);
 
 		// Coordinators and Parents must be assigned to project-level groups (name=null)
-		if ((role == UserProjectGroupRole.COORDINATOR || role == UserProjectGroupRole.PARENT)
-				&& group.getName() != null) {
-			throw new BadRequestException(
-					role == UserProjectGroupRole.COORDINATOR ? "Coordinators" : "Parents"
-							+ " must be assigned to the project-level group");
+		if ("COORDINATOR".equals(role) || "PARENT".equals(role)) {
+			if (group.getName() != null) {
+				throw new BadRequestException(
+						"COORDINATOR".equals(role) ? "Coordinators" : "Parents"
+								+ " must be assigned to the project-level group");
+			}
 		}
 
 		boolean alreadyExists = user.getGroupRoles().stream()
-				.anyMatch(gr -> gr.getProjectGroup().getId().equals(groupId) && gr.getRole() == role);
+				.anyMatch(gr -> gr.getProjectGroup().getId().equals(groupId)
+						&& role.equals(gr.getRole()));
 		if (alreadyExists) {
 			return user;
 		}
@@ -405,12 +410,13 @@ public class UserService {
 				.user(user)
 				.projectGroup(group)
 				.role(role)
+				.isTeam(projectRole.isTeam())
 				.build();
 		user.getGroupRoles().add(upg);
 
 		syncRoleProfile(user, role, true);
-		// Getting a MONITOR/COORDINATOR role promotes the user to staff
-		if (role.isStaff()) {
+		// Getting a team role promotes the user to staff
+		if (projectRole.isTeam()) {
 			ensureStaff(user).setInactiveSince(null);
 		}
 
@@ -426,16 +432,16 @@ public class UserService {
 
 	@Transactional
 	public User removeGroupRole(@NonNull String userId, @NonNull String groupId,
-			@NonNull UserProjectGroupRole role) {
+			@NonNull String role) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
 		user.getGroupRoles().removeIf(
-				gr -> gr.getProjectGroup().getId().equals(groupId) && gr.getRole() == role);
+				gr -> gr.getProjectGroup().getId().equals(groupId) && role.equals(gr.getRole()));
 
 		// If no remaining assignments for this role, remove the profile
 		boolean hasRemainingRole = user.getGroupRoles().stream()
-				.anyMatch(gr -> gr.getRole() == role);
+				.anyMatch(gr -> role.equals(gr.getRole()));
 		if (!hasRemainingRole) {
 			syncRoleProfile(user, role, false);
 		}
@@ -456,12 +462,12 @@ public class UserService {
 		return userProjectGroupRepository.findByUserId(userId);
 	}
 
-	private void syncRoleProfile(User user, UserProjectGroupRole role, boolean shouldHave) {
+	private void syncRoleProfile(User user, String role, boolean shouldHave) {
 		// Parents don't have a synced profile
-		if (role == UserProjectGroupRole.PARENT) {
+		if ("PARENT".equals(role)) {
 			return;
 		}
-		String profileId = role == UserProjectGroupRole.MONITOR ? MONITOR_PROFILE_ID : COORDINATOR_PROFILE_ID;
+		String profileId = "MONITOR".equals(role) ? MONITOR_PROFILE_ID : COORDINATOR_PROFILE_ID;
 		boolean hasProfile = user.getProfiles().stream()
 				.anyMatch(p -> p.getId().equals(profileId));
 
@@ -472,6 +478,12 @@ public class UserService {
 		} else if (!shouldHave && hasProfile) {
 			user.getProfiles().removeIf(p -> p.getId().equals(profileId));
 		}
+	}
+
+	/** Carga el rol configurado por clave (issue #126). */
+	private ProjectRole resolveRole(String role) {
+		return projectRoleRepository.findById(role)
+				.orElseThrow(() -> new BadRequestException("Unknown project role: " + role));
 	}
 
 	public void changePassword(@NonNull String userId, String oldPassword, String newPassword) {

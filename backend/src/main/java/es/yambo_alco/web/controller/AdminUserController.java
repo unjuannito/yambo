@@ -6,7 +6,6 @@ import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.UserFilter;
 import es.yambo_alco.web.model.UserProjectGroup;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AccessGrantService;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.PasswordResetService;
@@ -181,10 +180,10 @@ public class AdminUserController {
             @PathVariable @NonNull String userId,
             @Valid @RequestBody UpdateGroupsRequest request) {
         // Legacy endpoint — kept for backward compatibility but now role-based
-        // Assigns all provided groups as MONITOR role
+        // Assigns all provided groups as the MONITOR role
         User admin = authService.getCurrentUser(true);
         for (String groupId : request.getGroupIds()) {
-            userService.assignGroupRole(userId, groupId, UserProjectGroupRole.MONITOR, admin.getId());
+            userService.assignGroupRole(userId, groupId, "MONITOR", admin.getId());
         }
         User user = userService.getUserById(userId);
         return ResponseEntity.ok(new AdminUserResponse(user));
@@ -205,7 +204,7 @@ public class AdminUserController {
     public ResponseEntity<AdminUserResponse> removeGroupRole(
             @PathVariable @NonNull String userId,
             @PathVariable @NonNull String groupId,
-            @PathVariable @NonNull UserProjectGroupRole role) {
+            @PathVariable @NonNull String role) {
         User updatedUser = userService.removeGroupRole(userId, groupId, role);
         return ResponseEntity.ok(new AdminUserResponse(updatedUser));
     }
@@ -271,7 +270,7 @@ public class AdminUserController {
 
         private String groupId;
 
-        private UserProjectGroupRole role;
+        private String role;
     }
 
     @Data
@@ -298,7 +297,7 @@ public class AdminUserController {
         private String groupId;
 
         @jakarta.validation.constraints.NotNull(message = "Role is required")
-        private UserProjectGroupRole role;
+        private String role;
     }
 
     @Data
@@ -377,13 +376,15 @@ public class AdminUserController {
         private String projectId;
         private String projectName;
         private String role;
+        private boolean isTeam;
 
         public GroupRoleResponse(UserProjectGroup upg) {
             this.groupId = upg.getProjectGroup().getId();
             this.groupName = upg.getProjectGroup().getName();
             this.projectId = upg.getProjectGroup().getProject().getId();
             this.projectName = upg.getProjectGroup().getProject().getName();
-            this.role = upg.getRole().name();
+            this.role = upg.getRole();
+            this.isTeam = upg.isTeam();
         }
     }
 

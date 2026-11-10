@@ -3,7 +3,6 @@ package es.yambo_alco.web.model;
 import es.yambo_alco.web.model.enums.GrantSource;
 import es.yambo_alco.web.model.enums.GrantType;
 import es.yambo_alco.web.model.enums.InvitationType;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -47,10 +46,9 @@ public class AccessGrant {
     @Column(name = "project_group_id", length = 8)
     private String projectGroupId;
 
-    /** Solo cuando grantType = GROUP_ROLE. */
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private UserProjectGroupRole role;
+    /** Solo cuando grantType = GROUP_ROLE. Clave del rol (issue #126). */
+    @Column(length = 40)
+    private String role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

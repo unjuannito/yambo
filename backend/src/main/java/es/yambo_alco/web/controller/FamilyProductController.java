@@ -4,7 +4,6 @@ import es.yambo_alco.web.model.FamilyProduct;
 import es.yambo_alco.web.model.FamilyProductRoleAccess;
 import es.yambo_alco.web.model.FamilyProductWatcher;
 import es.yambo_alco.web.model.enums.FamilyProductStatus;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.BatchEmailService;
 import es.yambo_alco.web.service.FamilyProductService;
@@ -223,7 +222,7 @@ public class FamilyProductController {
     @AllArgsConstructor
     public static class RoleAccessResponse {
         private String projectId;
-        private UserProjectGroupRole role;
+        private String role;
     }
 
     // ─── Watcher endpoints ────────────────────────────────────────────────────

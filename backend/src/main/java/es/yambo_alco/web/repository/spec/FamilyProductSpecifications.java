@@ -1,7 +1,6 @@
 package es.yambo_alco.web.repository.spec;
 
 import es.yambo_alco.web.model.FamilyProduct;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.JoinType;
@@ -55,7 +54,7 @@ public final class FamilyProductSpecifications {
      * Filtra los drops accesibles segun los proyectos y roles del usuario.
      * Reemplaza el filtro por perfil auto-creado.
      */
-    public static Specification<FamilyProduct> hasRoleAccess(Set<String> projectIds, Set<UserProjectGroupRole> roles) {
+    public static Specification<FamilyProduct> hasRoleAccess(Set<String> projectIds, Set<String> roles) {
         return (root, query, cb) -> {
             if (projectIds == null || projectIds.isEmpty() || roles == null || roles.isEmpty()) {
                 return null;

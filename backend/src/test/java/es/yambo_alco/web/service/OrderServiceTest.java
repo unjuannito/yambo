@@ -6,7 +6,6 @@ import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.OrderFilter;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.IssueRepository;
 import es.yambo_alco.web.repository.OrderProductRepository;
 import es.yambo_alco.web.repository.OrderRepository;
@@ -236,7 +235,7 @@ class OrderServiceTest {
         ProjectGroup otherProjectGroup = ProjectGroup.builder().id("PG002").project(otherProject).build();
         UserProjectGroup groupRole = UserProjectGroup.builder()
                 .projectGroup(otherProjectGroup)
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
                 .build();
 
         User user = User.builder()
@@ -251,7 +250,7 @@ class OrderServiceTest {
                 .startTms(LocalDateTime.now().minusDays(1))
                 .endTms(LocalDateTime.now().plusDays(10))
                 .roleAccess(Set.of(FamilyProductRoleAccess.builder()
-                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                        .projectId("PRJ001").role("MONITOR").build()))
                 .build();
 
         Product product = Product.builder()
@@ -281,7 +280,7 @@ class OrderServiceTest {
         ProjectGroup projectGroup = ProjectGroup.builder().id("PG001").project(project).build();
         UserProjectGroup groupRole = UserProjectGroup.builder()
                 .projectGroup(projectGroup)
-                .role(UserProjectGroupRole.MONITOR)
+                .role("MONITOR")
                 .build();
 
         User user = User.builder()
@@ -296,7 +295,7 @@ class OrderServiceTest {
                 .startTms(LocalDateTime.now().minusDays(1))
                 .endTms(LocalDateTime.now().plusDays(10))
                 .roleAccess(Set.of(FamilyProductRoleAccess.builder()
-                        .projectId("PRJ001").role(UserProjectGroupRole.MONITOR).build()))
+                        .projectId("PRJ001").role("MONITOR").build()))
                 .build();
 
         Product product = Product.builder()

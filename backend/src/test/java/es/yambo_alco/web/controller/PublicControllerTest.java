@@ -10,7 +10,6 @@ import es.yambo_alco.web.model.SeoMetadata;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.model.enums.SeoEntityType;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.ActivityRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
@@ -600,12 +599,12 @@ class PublicControllerTest {
         Project finished = Project.builder().id("PRJ002").name("Antiguo").active(false).build();
         User current = User.builder().id("U0001").name("Actual").email("a@example.com").password("pass")
                 .staff(Staff.builder().photoConsent(true).build()).build();
-        current.getGroupRoles().add(groupRole(current, "G1", active, UserProjectGroupRole.MONITOR));
-        current.getGroupRoles().add(groupRole(current, "G2", finished, UserProjectGroupRole.COORDINATOR));
-        current.getGroupRoles().add(groupRole(current, "G3", active, UserProjectGroupRole.PARENT));
+        current.getGroupRoles().add(groupRole(current, "G1", active, "MONITOR"));
+        current.getGroupRoles().add(groupRole(current, "G2", finished, "COORDINATOR"));
+        current.getGroupRoles().add(groupRole(current, "G3", active, "PARENT"));
         User former = User.builder().id("U0002").name("Antiguo").email("o@example.com").password("pass")
                 .staff(Staff.builder().photoConsent(true).build()).build();
-        former.getGroupRoles().add(groupRole(former, "G2", finished, UserProjectGroupRole.MONITOR));
+        former.getGroupRoles().add(groupRole(former, "G2", finished, "MONITOR"));
 
         when(userRepository.findPublicStaff()).thenReturn(List.of(current, former));
 
@@ -624,10 +623,10 @@ class PublicControllerTest {
     void getStaff_ShouldReturnCoordinationFirstThenByDisplayName() throws Exception {
         // Given
         Project project = Project.builder().id("PRJ001").name("Barrio").build();
-        User zoe = publicStaff("U0001", "Zoe", null, project, UserProjectGroupRole.MONITOR);
-        User alex = publicStaff("U0002", "Álex", null, project, UserProjectGroupRole.MONITOR);
-        User marta = publicStaff("U0003", "Marta", null, project, UserProjectGroupRole.COORDINATOR);
-        User bea = publicStaff("U0004", "Xiomara", "Bea", project, UserProjectGroupRole.MONITOR);
+        User zoe = publicStaff("U0001", "Zoe", null, project, "MONITOR");
+        User alex = publicStaff("U0002", "Álex", null, project, "MONITOR");
+        User marta = publicStaff("U0003", "Marta", null, project, "COORDINATOR");
+        User bea = publicStaff("U0004", "Xiomara", "Bea", project, "MONITOR");
 
         when(userRepository.findPublicStaff()).thenReturn(List.of(zoe, alex, marta, bea));
 
@@ -640,18 +639,19 @@ class PublicControllerTest {
                 .andExpect(jsonPath("$[3].id").value("U0001"));
     }
 
-    private static User publicStaff(String id, String name, String nickname, Project project, UserProjectGroupRole role) {
+    private static User publicStaff(String id, String name, String nickname, Project project, String role) {
         User user = User.builder().id(id).name(name).email(id + "@example.com").password("pass")
                 .staff(Staff.builder().photoConsent(true).nickname(nickname).build()).build();
         user.getGroupRoles().add(groupRole(user, "G-" + id, project, role));
         return user;
     }
 
-    private static UserProjectGroup groupRole(User user, String groupId, Project project, UserProjectGroupRole role) {
+    private static UserProjectGroup groupRole(User user, String groupId, Project project, String role) {
         return UserProjectGroup.builder()
                 .user(user)
                 .projectGroup(ProjectGroup.builder().id(groupId).project(project).build())
                 .role(role)
+                .isTeam("MONITOR".equals(role) || "COORDINATOR".equals(role))
                 .build();
     }
 }

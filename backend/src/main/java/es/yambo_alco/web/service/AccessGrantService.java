@@ -6,7 +6,6 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.GrantSource;
 import es.yambo_alco.web.model.enums.GrantType;
 import es.yambo_alco.web.model.enums.InvitationType;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.AccessGrantRepository;
 import es.yambo_alco.web.repository.ProfileRepository;
 import es.yambo_alco.web.repository.ProjectGroupRepository;
@@ -51,7 +50,7 @@ public class AccessGrantService {
     /** Asignación manual de un rol de grupo por una persona. */
     @Transactional
     public void recordManualGroupRoleGrant(String userId, String projectGroupId,
-                                           UserProjectGroupRole role, String grantedBy) {
+                                           String role, String grantedBy) {
         AccessGrant grant = AccessGrant.builder()
                 .userId(userId)
                 .grantType(GrantType.GROUP_ROLE)
@@ -94,7 +93,7 @@ public class AccessGrantService {
     /** Rol de grupo obtenido a través de una invitación (PROJECT_ROLE). */
     @Transactional
     public void recordInvitationGroupRoleGrant(String userId, Long invitationId, InvitationType invitationType,
-                                               String projectGroupId, UserProjectGroupRole role, String grantedBy) {
+                                               String projectGroupId, String role, String grantedBy) {
         boolean exists = accessGrantRepository
                 .findFirstByUserIdAndGrantTypeAndProjectGroupIdAndRoleAndSourceAndInvitationTypeAndInvitationIdAndRevokedAtIsNull(
                         userId, GrantType.GROUP_ROLE, projectGroupId, role,
@@ -124,7 +123,7 @@ public class AccessGrantService {
 
     /** Retira la concesión de un rol de grupo. */
     @Transactional
-    public void revokeGroupRoleGrants(String userId, String projectGroupId, UserProjectGroupRole role) {
+    public void revokeGroupRoleGrants(String userId, String projectGroupId, String role) {
         accessGrantRepository.revokeActiveGroupRoleGrants(userId, projectGroupId, role, LocalDateTime.now());
     }
 
@@ -202,7 +201,7 @@ public class AccessGrantService {
             this.projectGroupId = g.getProjectGroupId();
             this.groupName = groupName;
             this.projectName = projectName;
-            this.role = g.getRole() != null ? g.getRole().name() : null;
+            this.role = g.getRole();
             this.source = g.getSource() != null ? g.getSource().name() : null;
             this.invitationType = g.getInvitationType() != null ? g.getInvitationType().name() : null;
             this.invitationId = g.getInvitationId();

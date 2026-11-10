@@ -112,4 +112,6 @@
     <include file="db/changelog/changes/101-staff-photo-edit.xml"/>
     <include file="db/changelog/changes/102-public-slugs.xml"/>
     <include file="db/changelog/changes/103-home-share-card.xml"/>
+    <include file="db/changelog/changes/105-project-roles.xml"/>
+    <include file="db/changelog/changes/106-project-role-permissions.xml"/>
 </databaseChangeLog>

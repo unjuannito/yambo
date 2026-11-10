@@ -27,6 +27,7 @@ import type { Profile } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import { PageHeader } from "~/components/common/PageHeader";
 import toast from "react-hot-toast";
+import { projectRoleService, type ProjectRole } from "~/services/projectRoleService";
 import type { GroupRole } from "~/types/role";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faLinkSlash, faCheck, faUsers, faShieldHalved, faCalendarDays, faEnvelopesBulk, faEnvelope } from "@fortawesome/free-solid-svg-icons";
@@ -57,6 +58,7 @@ function InvitationsGeneral({
     const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState("");
     const [selectedRole, setSelectedRole] = useState<GroupRole>("MONITOR");
+    const [roles, setRoles] = useState<ProjectRole[]>([]);
     const [invitationType, setInvitationType] = useState<"profile" | "role">("profile");
     const [startTms, setStartTms] = useState("");
     const [endTms, setEndTms] = useState("");
@@ -112,16 +114,18 @@ function InvitationsGeneral({
         try {
             setLoading(true);
             setError(null);
-            const [profilesResponse, invitationsResponse, projectsData, roleLinks] = await Promise.all([
+            const [profilesResponse, invitationsResponse, projectsData, roleLinks, rolesData] = await Promise.all([
                 profileService.getAllProfiles(),
                 invitationService.listInvitations(),
                 projectService.listProjects(0, 200),
                 projectRoleInvitationService.getInvitations(),
+                projectRoleService.listRoles().catch(() => [] as ProjectRole[]),
             ]);
             setProfiles(profilesResponse);
             setInvitations(invitationsResponse);
             setProjects(projectsData.content || []);
             setRoleInvitations(roleLinks);
+            setRoles(rolesData);
             // Cargar beneficiarios de cada link de rol (quién lo usó y cuándo)
             const usagesMap: Record<string, InvitationUsage[]> = {};
             await Promise.all(
@@ -168,11 +172,27 @@ function InvitationsGeneral({
         [projects],
     );
 
-    const roleOptions = [
-        { value: "MONITOR", label: t("invitations.roleMonitor") },
-        { value: "COORDINATOR", label: t("invitations.roleCoordinator") },
-        { value: "PARENT", label: t("invitations.roleParent") },
-    ];
+    // Roles configurables (issue #126): se cargan de BD. Si no llegan, se
+    // degradan a los tres por defecto para que el selector nunca quede vacío.
+    const roleOptions =
+        roles.length > 0
+            ? roles.map((r) => ({ value: r.key, label: r.name }))
+            : [
+                  { value: "MONITOR", label: t("invitations.roleMonitor") },
+                  { value: "COORDINATOR", label: t("invitations.roleCoordinator") },
+                  { value: "PARENT", label: t("invitations.roleParent") },
+              ];
+
+    /** Nombre de mostrar de una clave de rol: el que se haya configurado, o la etiqueta i18n de los tres por defecto. */
+    const roleName = (key: string) =>
+        roles.find((r) => r.key === key)?.name ??
+        (key === "COORDINATOR"
+            ? t("invitations.roleCoordinator")
+            : key === "MONITOR"
+              ? t("invitations.roleMonitor")
+              : key === "PARENT"
+                ? t("invitations.roleParent")
+                : key);
 
     const invitationLink = useMemo(() => {
         if (!lastInvitation) return "";
@@ -248,7 +268,7 @@ function InvitationsGeneral({
                 setLastRoleInvitation(invitation);
                 setLastInvitation(null);
                 setSelectedProjectId("");
-                setSelectedRole("MONITOR");
+                setSelectedRole(roleOptions[0]?.value ?? "MONITOR");
                 setRoleMaxUses("");
                 setIsModalOpen(false);
                 toast.success(t("invitations.createdSuccess"));
@@ -618,7 +638,7 @@ function InvitationsGeneral({
                                     const status = roleLinkStatus(inv);
                                     const project = projects.find(p => p.id === inv.projectId);
                                     const usageCount = (roleUsages[inv.id] ?? []).length;
-                                    const roleLabel = inv.role === "COORDINATOR" ? t("invitations.roleCoordinator") : inv.role === "MONITOR" ? t("invitations.roleMonitor") : t("invitations.roleParent");
+                                    const roleLabel = roleName(inv.role);
                                     return (
                                         <div key={inv.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
                                             <div className="flex items-start justify-between gap-2">
@@ -711,7 +731,7 @@ function InvitationsGeneral({
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <span className="px-2 py-0.5 text-xs rounded-full bg-yambo-green-50 text-yambo-green-700">
-                                                            {inv.role === "COORDINATOR" ? t("invitations.roleCoordinator") : inv.role === "MONITOR" ? t("invitations.roleMonitor") : t("invitations.roleParent")}
+                                                            {roleName(inv.role)}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-500">
@@ -930,7 +950,7 @@ function InvitationsGeneral({
                         setIsModalOpen(false);
                         setSelectedProfiles([]);
                         setSelectedProjectId("");
-                        setSelectedRole("MONITOR");
+                        setSelectedRole(roleOptions[0]?.value ?? "MONITOR");
                         setInvitationType("profile");
                         setStartTms("");
                         setEndTms("");
@@ -945,7 +965,7 @@ function InvitationsGeneral({
                                     setIsModalOpen(false);
                                     setSelectedProfiles([]);
                                     setSelectedProjectId("");
-                                    setSelectedRole("MONITOR");
+                                    setSelectedRole(roleOptions[0]?.value ?? "MONITOR");
                                     setInvitationType("profile");
                                     setStartTms("");
                                     setEndTms("");

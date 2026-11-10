@@ -4,7 +4,6 @@ import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.*;
 import es.yambo_alco.web.model.enums.InvitationType;
-import es.yambo_alco.web.model.enums.UserProjectGroupRole;
 import es.yambo_alco.web.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,7 +36,7 @@ public class ProjectRoleInvitationService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
-    public ProjectRoleInvitation createInvitation(String projectId, UserProjectGroupRole role,
+    public ProjectRoleInvitation createInvitation(String projectId, String role,
                                                    String createdBy, String email,
                                                    LocalDateTime expiresAt, Integer maxUses) {
         Project project = projectRepository.findById(projectId)
@@ -273,7 +272,7 @@ public class ProjectRoleInvitationService {
 
         List<es.yambo_alco.web.model.UserProjectGroup> parents =
                 userProjectGroupRepository.findByProjectGroupIdAndRole(
-                        projectGroup.getId(), UserProjectGroupRole.PARENT);
+                        projectGroup.getId(), "PARENT");
 
         if (!parents.isEmpty()) {
             userProjectGroupRepository.deleteAll(parents);
@@ -315,7 +314,7 @@ public class ProjectRoleInvitationService {
         } else {
             // Monitor/Coordinator: only their projects
             accessibleProjectIds = currentUser.getGroupRoles().stream()
-                    .filter(gr -> gr.getRole().isStaff())
+                    .filter(UserProjectGroup::isTeam)
                     .map(gr -> gr.getProjectGroup().getProject().getId())
                     .collect(Collectors.toSet());
         }
@@ -328,7 +327,7 @@ public class ProjectRoleInvitationService {
 
             ProjectGroup projectGroup = projectGroupOpt.get();
             List<UserProjectGroup> parentRoles = userProjectGroupRepository
-                    .findByProjectGroupIdAndRole(projectGroup.getId(), UserProjectGroupRole.PARENT);
+                    .findByProjectGroupIdAndRole(projectGroup.getId(), "PARENT");
 
             if (parentRoles.isEmpty()) continue;
 
@@ -357,6 +356,6 @@ public class ProjectRoleInvitationService {
                         "Project-level group not found for project: " + projectId));
 
         userProjectGroupRepository.deleteByUserIdAndProjectGroupIdAndRole(
-                userId, projectGroup.getId(), UserProjectGroupRole.PARENT);
+                userId, projectGroup.getId(), "PARENT");
     }
 }
