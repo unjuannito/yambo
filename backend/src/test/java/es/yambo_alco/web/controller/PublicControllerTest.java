@@ -2,6 +2,7 @@ package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.config.TestSecurityConfig;
 import es.yambo_alco.web.model.Activity;
+import es.yambo_alco.web.model.Notice;
 import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.UserProjectGroup;
 import es.yambo_alco.web.model.ProjectGroup;
@@ -16,6 +17,7 @@ import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.ActivityWaitlistService;
+import es.yambo_alco.web.service.NoticeService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
 import org.junit.jupiter.api.Test;
@@ -65,6 +67,9 @@ class PublicControllerTest {
 
     @MockitoBean
     private ActivityWaitlistService activityWaitlistService;
+
+    @MockitoBean
+    private NoticeService noticeService;
 
     @Test
     @WithAnonymousUser
@@ -638,6 +643,45 @@ class PublicControllerTest {
                 .andExpect(jsonPath("$[1].id").value("U0002"))
                 .andExpect(jsonPath("$[2].id").value("U0004"))
                 .andExpect(jsonPath("$[3].id").value("U0001"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicNotices_ShouldReturnActivePublicNotices() throws Exception {
+        Notice notice = Notice.builder()
+                .id("NOTI0001")
+                .title("Nuevo horario")
+                .content("<p>A partir de enero...</p>")
+                .slug("aviso-nuevo-horario")
+                .pinned(true)
+                .isPublic(true)
+                .publishedAt(LocalDateTime.of(2026, 1, 1, 10, 0))
+                .build();
+        when(noticeService.getActivePublic()).thenReturn(List.of(notice));
+
+        mockMvc.perform(get("/public/notices"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value("NOTI0001"))
+                .andExpect(jsonPath("$[0].slug").value("aviso-nuevo-horario"))
+                .andExpect(jsonPath("$[0].pinned").value(true));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void getPublicNotice_BySlug_ShouldReturnDetail() throws Exception {
+        Notice notice = Notice.builder()
+                .id("NOTI0001")
+                .title("Nuevo horario")
+                .content("<p>A partir de enero...</p>")
+                .slug("aviso-nuevo-horario")
+                .publishedAt(LocalDateTime.of(2026, 1, 1, 10, 0))
+                .build();
+        when(noticeService.getActivePublicByIdOrSlug("aviso-nuevo-horario")).thenReturn(notice);
+
+        mockMvc.perform(get("/public/notices/aviso-nuevo-horario"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Nuevo horario"));
     }
 
     private static User publicStaff(String id, String name, String nickname, Project project, UserProjectGroupRole role) {

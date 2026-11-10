@@ -1,6 +1,7 @@
 package es.yambo_alco.web.controller;
 
 import es.yambo_alco.web.model.Activity;
+import es.yambo_alco.web.model.Notice;
 import es.yambo_alco.web.model.Staff;
 import es.yambo_alco.web.model.StaffAvatar;
 import es.yambo_alco.web.model.Project;
@@ -16,6 +17,7 @@ import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.ActivityWaitlistService;
+import es.yambo_alco.web.service.NoticeService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
 import jakarta.validation.Valid;
@@ -46,6 +48,7 @@ public class PublicController {
     private final ActivityRepository activityRepository;
     private final SeoMetadataService seoMetadataService;
     private final ActivityWaitlistService activityWaitlistService;
+    private final NoticeService noticeService;
 
     @GetMapping("/settings/home")
     public ResponseEntity<Map<String, String>> getHomeSettings() {
@@ -124,6 +127,22 @@ public class PublicController {
         @NotBlank(message = "El email es obligatorio")
         @Email(message = "Email no válido")
         private String email;
+    }
+
+    /** Tablón de anuncios público (issue #133): activos y marcados como públicos. */
+    @GetMapping("/notices")
+    public ResponseEntity<List<PublicNoticeResponse>> getPublicNotices() {
+        List<PublicNoticeResponse> response = noticeService.getActivePublic().stream()
+                .map(PublicNoticeResponse::new)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    /** {@code idOrSlug}: el slug de la URL pública, o el id para enlaces antiguos. */
+    @GetMapping("/notices/{idOrSlug}")
+    public ResponseEntity<PublicNoticeResponse> getPublicNotice(@PathVariable String idOrSlug) {
+        Notice notice = noticeService.getActivePublicByIdOrSlug(idOrSlug);
+        return ResponseEntity.ok(new PublicNoticeResponse(notice));
     }
 
     /** {@code idOrSlug}: the slug of the public URL, or the id that older links carry. */
@@ -395,6 +414,25 @@ public class PublicController {
             }
             this.manager = ActivityManagerSummary.ofPublic(activity.getManager());
             this.seo = seo != null ? new SeoMetadataResponse(seo) : null;
+        }
+    }
+
+    @Data
+    public static class PublicNoticeResponse {
+        private String id;
+        private String slug;
+        private String title;
+        private String content;
+        private boolean pinned;
+        private java.time.LocalDateTime publishedAt;
+
+        public PublicNoticeResponse(Notice notice) {
+            this.id = notice.getId();
+            this.slug = notice.getSlug();
+            this.title = notice.getTitle();
+            this.content = notice.getContent();
+            this.pinned = notice.isPinned();
+            this.publishedAt = notice.getPublishedAt();
         }
     }
 
