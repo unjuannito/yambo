@@ -15,6 +15,7 @@ import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
+import Icon from "~/components/common/Icon";
 
 export function meta() {
     return [
@@ -302,7 +303,7 @@ export default function ProductPage() {
                             className="absolute top-6 right-6 z-10 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
                             aria-label={t("merch.closeImage")}
                         >
-                            ✕
+                            <Icon name="close" className="h-5 w-5" />
                         </button>
                         <img
                             src={product.images[selectedImageIndex]}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        The "home.about.bullets" setting stores the icon of each bullet as a raw emoji so it
+        was rendered as text. From now on the icon is a name from the frontend icon registry
+        (see frontend/app/components/common/Icon.tsx). This converts the seeded emoji values
+        to icon names. Associations that never customized the bullets keep the defaults.
+    -->
+    <changeSet id="104-01-about-bullets-icon-names" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM settings WHERE key = 'home.about.bullets' AND value LIKE '%🎓%'
+            </sqlCheck>
+        </preConditions>
+        <update tableName="settings">
+            <column name="value" value='[{"icon":"graduation-cap","title":"Formación y talleres","description":"Accede a experiencias educativas únicas para potenciar tus habilidades.","link":"/formacion"},{"icon":"hand-heart","title":"Voluntariado y comunidad","description":"Contribuye a un impacto social positivo junto a otros jóvenes comprometidos.","link":"/voluntariado"},{"icon":"star","title":"Eventos y excursiones","description":"Participa en salidas, campamentos y actividades culturales inolvidables.","link":"/eventos"},{"icon":"book","title":"Apoyo académico y mentoría","description":"Recibe ayuda con tus estudios y orientación personalizada.","link":"/apoyo"}]'/>
+            <where>key = 'home.about.bullets' AND value LIKE '%🎓%'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

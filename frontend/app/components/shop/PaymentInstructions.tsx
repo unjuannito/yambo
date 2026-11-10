@@ -5,6 +5,7 @@ import { settingsService } from "~/services/settingsService";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import Icon from "~/components/common/Icon";
 
 interface PaymentInstructionsProps {
     orderId: string;
@@ -182,21 +183,29 @@ export default function PaymentInstructions({
                     {/* Info post-pago + contacto */}
                     <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-2">
                         <div className="flex items-start gap-2">
-                            <span className="text-sm shrink-0 mt-0.5">✅</span>
+                            <span className="shrink-0 mt-0.5 text-yambo-green-600">
+                                <Icon name="circle-check" className="h-4 w-4" />
+                            </span>
                             <p className="text-sm text-gray-600">Procesaremos el pedido al confirmar el pago</p>
                         </div>
                         <div className="flex items-start gap-2">
-                            <span className="text-sm shrink-0 mt-0.5">📧</span>
+                            <span className="shrink-0 mt-0.5 text-yambo-green-600">
+                                <Icon name="envelope" className="h-4 w-4" />
+                            </span>
                             <p className="text-sm text-gray-600">Te avisaremos por email</p>
                         </div>
                         <div className="flex items-start gap-2">
-                            <span className="text-sm shrink-0 mt-0.5">📎</span>
+                            <span className="shrink-0 mt-0.5 text-yambo-green-600">
+                                <Icon name="paperclip" className="h-4 w-4" />
+                            </span>
                             <p className="text-sm text-gray-600">
                                 Sube el justificante desde <strong>"Mis Pedidos"</strong> para validarlo
                             </p>
                         </div>
                         <div className="flex items-start gap-2">
-                            <span className="text-sm shrink-0 mt-0.5">❓</span>
+                            <span className="shrink-0 mt-0.5 text-yambo-green-600">
+                                <Icon name="circle-question" className="h-4 w-4" />
+                            </span>
                             <p className="text-sm text-gray-600">
                                 Dudas:{" "}
                                 {onOpenTicket ? (
@@ -227,7 +236,8 @@ export default function PaymentInstructions({
                         onClick={onClose}
                         className="w-full"
                     >
-                        {t('orders.goToMyOrders') || "✓ Hecho, volver a Mis Pedidos"}
+                        <Icon name="check" className="h-4 w-4" />
+                        <span className="ml-1.5">{t('orders.goToMyOrders') || "Ir a Mis Pedidos"}</span>
                     </ButtonComponent>
                 </div>
             </div>

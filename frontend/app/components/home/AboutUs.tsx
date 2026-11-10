@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { fireConfetti } from "~/utils/confetti";
 import SectionWrapper from "~/components/home/SectionWrapper";
 import { ResponsiveImage } from "~/components/common/ResponsiveImage";
+import Icon, { ICON_NAMES } from "~/components/common/Icon";
+import type { IconName } from "~/components/common/Icon";
 
 interface AboutBullet {
     icon: string;
@@ -21,11 +23,15 @@ interface AboutUsProps {
 
 function getDefaultBullets(t: (key: string) => string): AboutBullet[] {
     return [
-        { icon: "✎", title: t("about.bullet1Title"), description: t("about.bullet1Desc"), link: "/formacion" },
-        { icon: "✦", title: t("about.bullet2Title"), description: t("about.bullet2Desc"), link: "/voluntariado" },
-        { icon: "★", title: t("about.bullet3Title"), description: t("about.bullet3Desc"), link: "/eventos" },
-        { icon: "✿", title: t("about.bullet4Title"), description: t("about.bullet4Desc"), link: "/apoyo" },
+        { icon: "pen", title: t("about.bullet1Title"), description: t("about.bullet1Desc"), link: "/formacion" },
+        { icon: "star", title: t("about.bullet2Title"), description: t("about.bullet2Desc"), link: "/voluntariado" },
+        { icon: "bolt", title: t("about.bullet3Title"), description: t("about.bullet3Desc"), link: "/eventos" },
+        { icon: "hand-heart", title: t("about.bullet4Title"), description: t("about.bullet4Desc"), link: "/apoyo" },
     ];
+}
+
+function isIconName(value: string): value is IconName {
+    return (ICON_NAMES as string[]).includes(value);
 }
 
 const DEFAULT_IMAGE = "/gallery-preview.jpg";
@@ -111,7 +117,11 @@ export default function AboutUs({ title, intro, bulletsJson, image, sectionIndex
                                         role="button"
                                         tabIndex={0}
                                     >
-                                        {item.icon}
+                                        {isIconName(item.icon) ? (
+                                            <Icon name={item.icon} className="h-6 w-6" />
+                                        ) : (
+                                            item.icon
+                                        )}
                                     </div>
                                     <div>
                                         <strong className="block text-lg font-semibold text-yambo-black">

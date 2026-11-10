@@ -112,4 +112,5 @@
     <include file="db/changelog/changes/101-staff-photo-edit.xml"/>
     <include file="db/changelog/changes/102-public-slugs.xml"/>
     <include file="db/changelog/changes/103-home-share-card.xml"/>
+    <include file="db/changelog/changes/104-about-bullets-icon-names.xml"/>
 </databaseChangeLog>

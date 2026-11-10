@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronUp, faChevronDown, faXmark, faGripVertical, faEye, faEyeSlash, faHouse } from "@fortawesome/free-solid-svg-icons";
 import FileUploader from "~/components/common/FileUploader";
 import { PageContainer } from "~/components/common/PageContainer";
+import Icon, { ICON_NAMES } from "~/components/common/Icon";
 import { HOME_SHARE_DEFAULTS } from "~/utils/shareCards";
 
 export function meta() {
@@ -30,7 +31,33 @@ interface BulletItem {
     link: string;
 }
 
-const EMPTY_BULLET: BulletItem = { icon: "\u25CE", title: "", description: "", link: "" };
+const EMPTY_BULLET: BulletItem = { icon: "", title: "", description: "", link: "" };
+
+/** Mapeo de emojis heredados (guardados en BD antes de la migración) a nombres de icono. */
+const LEGACY_ICON_NAMES: Record<string, string> = {
+    "🎓": "graduation-cap",
+    "🤝": "hand-heart",
+    "🎉": "star",
+    "📚": "book",
+    "✎": "pen",
+    "✏": "pen",
+    "✏️": "pen",
+    "✦": "star",
+    "★": "star",
+    "✿": "heart",
+    "💛": "heart",
+    "🌟": "star",
+    "✅": "circle-check",
+    "📧": "envelope",
+    "📎": "paperclip",
+    "❓": "circle-question",
+};
+
+/** Normaliza un valor de icono a un nombre conocido; devuelve "" si no se reconoce. */
+function normalizeIconName(value: string): string {
+    if ((ICON_NAMES as string[]).includes(value)) return value;
+    return LEGACY_ICON_NAMES[value] ?? "";
+}
 
 interface SectionConfig {
     id: string;
@@ -115,7 +142,8 @@ export default function MainPageEditor() {
             if (bulletsRaw) {
                 try {
                     const parsed = JSON.parse(bulletsRaw) as BulletItem[];
-                    setAboutBullets(parsed.length > 0 ? parsed : [{ ...EMPTY_BULLET }]);
+                    const normalized = parsed.map(b => ({ ...b, icon: normalizeIconName(b.icon) }));
+                    setAboutBullets(normalized.length > 0 ? normalized : [{ ...EMPTY_BULLET }]);
                 } catch {
                     setAboutBullets([{ ...EMPTY_BULLET }]);
                 }
@@ -595,13 +623,25 @@ export default function MainPageEditor() {
                                         <div className="grid grid-cols-1 md:grid-cols-[4rem_1fr] gap-3">
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Icono</label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full border border-gray-100 rounded-xl px-2 py-2 text-center text-xl focus:outline-none focus:border-yambo-green-500 focus:ring-1 focus:ring-yambo-green-500/50"
-                                                    value={bullet.icon}
-                                                    maxLength={4}
-                                                    onChange={(e) => updateBullet(index, "icon", e.target.value)}
-                                                />
+                                                <div className="w-full border border-gray-100 rounded-xl px-2 py-1.5 flex items-center gap-2">
+                                                    <span className="flex-1 flex items-center justify-center text-yambo-green-600">
+                                                        {bullet.icon ? (
+                                                            <Icon name={bullet.icon} className="h-5 w-5" />
+                                                        ) : (
+                                                            <span className="text-gray-300 text-xs">—</span>
+                                                        )}
+                                                    </span>
+                                                    <select
+                                                        className="flex-1 text-xs text-gray-500 bg-transparent focus:outline-none cursor-pointer"
+                                                        value={bullet.icon}
+                                                        onChange={(e) => updateBullet(index, "icon", e.target.value)}
+                                                    >
+                                                        <option value="">Elegir…</option>
+                                                        {ICON_NAMES.map((name) => (
+                                                            <option key={name} value={name}>{name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Título</label>

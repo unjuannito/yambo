@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "~/components/common/Modal";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
+import Icon from "~/components/common/Icon";
 import { orderService, type CreateOrderProduct } from "~/services/orderService";
 import { issueService } from "~/services/issueService";
 import { adminUserService, type UserFilters } from "~/services/adminUserService";
@@ -396,8 +397,9 @@ export function OrderEditorModal({ order, isOpen, onClose, onSaved, initialUserI
                         )}
                     </div>
                     {userId && (
-                        <p className="mt-1 text-xs text-yambo-green-700">
-                            ✓ {t("orders.editor.memberSelected")}
+                        <p className="mt-1 flex items-center gap-1 text-xs text-yambo-green-700">
+                            <Icon name="check" className="h-3 w-3" />
+                            {t("orders.editor.memberSelected")}
                         </p>
                     )}
                 </div>
