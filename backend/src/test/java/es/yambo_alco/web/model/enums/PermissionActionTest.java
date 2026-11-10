@@ -15,6 +15,7 @@ class PermissionActionTest {
         assertEquals("update", PermissionAction.UPDATE.getValue());
         assertEquals("delete", PermissionAction.DELETE.getValue());
         assertEquals("comment", PermissionAction.COMMENT.getValue());
+        assertEquals("send", PermissionAction.SEND.getValue());
     }
 
     @Test
@@ -24,6 +25,7 @@ class PermissionActionTest {
         assertEquals(PermissionAction.UPDATE, PermissionAction.fromValue("update"));
         assertEquals(PermissionAction.DELETE, PermissionAction.fromValue("delete"));
         assertEquals(PermissionAction.COMMENT, PermissionAction.fromValue("comment"));
+        assertEquals(PermissionAction.SEND, PermissionAction.fromValue("send"));
     }
 
     @Test
@@ -63,19 +65,21 @@ class PermissionActionTest {
         assertEquals("update", PermissionAction.UPDATE.toString());
         assertEquals("delete", PermissionAction.DELETE.toString());
         assertEquals("comment", PermissionAction.COMMENT.toString());
+        assertEquals("send", PermissionAction.SEND.toString());
     }
 
     @Test
     void values_ShouldContainAllActions() {
         PermissionAction[] actions = PermissionAction.values();
-        assertEquals(5, actions.length);
+        assertEquals(6, actions.length);
         assertArrayEquals(
             new PermissionAction[]{
                 PermissionAction.CREATE,
                 PermissionAction.READ,
                 PermissionAction.UPDATE,
                 PermissionAction.DELETE,
-                PermissionAction.COMMENT
+                PermissionAction.COMMENT,
+                PermissionAction.SEND
             },
                 actions
         );
