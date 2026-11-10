@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.model.Activity;
 import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.repository.ActivityRepository;
+import es.yambo_alco.web.repository.NoticeRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.util.Slugs;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 import java.util.function.Predicate;
 
 /**
- * Slugs for the public URLs of projects and activities ({@code /proyectos/jambo}).
+ * Slugs for the public URLs of projects, activities and notices ({@code /proyectos/jambo}).
  * A slug is assigned once and never follows a rename, so published links keep working.
  */
 @Service
@@ -27,6 +28,7 @@ public class SlugService {
 
     private final ProjectRepository projectRepository;
     private final ActivityRepository activityRepository;
+    private final NoticeRepository noticeRepository;
 
     public String forProject(String name) {
         return unique(Slugs.slugify(name, "proyecto"), projectRepository::existsBySlug);
@@ -45,6 +47,10 @@ public class SlugService {
             }
         }
         return unique(base, activityRepository::existsBySlug);
+    }
+
+    public String forNotice(String title) {
+        return unique(Slugs.slugify(title, "aviso"), noticeRepository::existsBySlug);
     }
 
     private String unique(String base, Predicate<String> taken) {

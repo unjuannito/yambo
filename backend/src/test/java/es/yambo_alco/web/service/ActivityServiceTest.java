@@ -7,6 +7,7 @@ import es.yambo_alco.web.model.Project;
 import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.model.enums.ActivityStatus;
 import es.yambo_alco.web.repository.ActivityRepository;
+import es.yambo_alco.web.repository.NoticeRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +47,7 @@ public class ActivityServiceTest {
         userRepository = Mockito.mock(UserRepository.class);
         activityWaitlistService = Mockito.mock(ActivityWaitlistService.class);
         activityService = new ActivityService(activityRepository, projectRepository, userRepository, activityWaitlistService,
-                new SlugService(projectRepository, activityRepository));
+                new SlugService(projectRepository, activityRepository, Mockito.mock(NoticeRepository.class)));
 
         testProject = Project.builder()
                 .id("PRJ00001")
