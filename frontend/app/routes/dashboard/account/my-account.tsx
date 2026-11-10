@@ -76,6 +76,7 @@ export default function MyAccount() {
     issueCreated: true,
     issueComments: true,
     issueStatus: true,
+    receiveCampaigns: true,
   });
 
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -551,6 +552,12 @@ export default function MyAccount() {
               description={t('myAccount.notifIssueStatusChangesDesc')}
               checked={notifPrefs.issueStatus}
               onChange={(v) => setNotifPrefs((p) => ({ ...p, issueStatus: v }))}
+            />
+            <NotifToggle
+              label={t('myAccount.notifCampaigns')}
+              description={t('myAccount.notifCampaignsDesc')}
+              checked={notifPrefs.receiveCampaigns ?? true}
+              onChange={(v) => setNotifPrefs((p) => ({ ...p, receiveCampaigns: v }))}
             />
             <div className="flex justify-end pt-2">
               <ButtonComponent

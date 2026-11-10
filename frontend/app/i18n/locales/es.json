@@ -1398,6 +1398,8 @@
     "notifIssueCommentsDesc": "Recibe un correo cuando alguien comente en tu incidencia",
     "notifIssueStatusChanges": "Cambios de estado de incidencias",
     "notifIssueStatusChangesDesc": "Recibe un correo cuando cambie el estado de tu incidencia",
+    "notifCampaigns": "Comunicados de la asociación",
+    "notifCampaignsDesc": "Recibe los comunicados y avisos generales que publique la asociación",
     "savePreferences": "Guardar preferencias",
     "dangerZone": "Zona de peligro",
     "dangerZoneDesc": "Acciones irreversibles",

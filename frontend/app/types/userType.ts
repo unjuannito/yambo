@@ -7,6 +7,8 @@ export type NotificationPreferences = {
     issueCreated: boolean;
     issueComments: boolean;
     issueStatus: boolean;
+    /** Opt-out de los comunicados de la asociación (issue #123). */
+    receiveCampaigns?: boolean;
 };
 
 /**
