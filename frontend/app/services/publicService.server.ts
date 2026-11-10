@@ -17,6 +17,7 @@ import type {
 } from "./publicService";
 import type { Activity } from "~/types/activity";
 import type { LegalPage } from "./legalPageService";
+import type { Notice } from "./noticeService";
 import type { ProjectRoleInvitationInfo } from "./projectRoleInvitationService";
 
 const BACKEND_URL =
@@ -79,4 +80,12 @@ export async function getPublishedLegalPages(): Promise<LegalPage[]> {
 
 export async function getPublishedLegalPage(id: string): Promise<LegalPage> {
     return fetchJson(`/public/legal/${encodeURIComponent(id)}`);
+}
+
+export async function getPublicNotices(): Promise<Notice[]> {
+    return fetchJson("/public/notices");
+}
+
+export async function getPublicNotice(idOrSlug: string): Promise<Notice> {
+    return fetchJson(`/public/notices/${encodeURIComponent(idOrSlug)}`);
 }
