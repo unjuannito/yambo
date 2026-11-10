@@ -1,13 +1,16 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.config.MailConfig;
+import es.yambo_alco.web.model.EmailTemplate;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.EmailTemplateRepository;
 import es.yambo_alco.web.util.EmailIcons;
+import es.yambo_alco.web.util.EmailTemplateCatalog;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -24,7 +27,6 @@ import java.util.Map;
 
 @Service
 @Primary
-@RequiredArgsConstructor
 public class HtmlMailService implements MailService {
 
     private static final Logger log = LoggerFactory.getLogger(HtmlMailService.class);
@@ -33,6 +35,27 @@ public class HtmlMailService implements MailService {
     private final TemplateEngine templateEngine;
     private final SettingsService settingsService;
     private final MarkdownService markdownService;
+
+    /** Optional override store + renderer (issue #123). Injected via the explicit constructor. */
+    private final EmailTemplateRepository emailTemplateRepository;
+    private final EmailRenderer emailRenderer;
+
+    public HtmlMailService(MailConfig mailConfig, TemplateEngine templateEngine,
+            SettingsService settingsService, MarkdownService markdownService) {
+        this(mailConfig, templateEngine, settingsService, markdownService, null, null);
+    }
+
+    @Autowired
+    public HtmlMailService(MailConfig mailConfig, TemplateEngine templateEngine,
+            SettingsService settingsService, MarkdownService markdownService,
+            EmailTemplateRepository emailTemplateRepository, EmailRenderer emailRenderer) {
+        this.mailConfig = mailConfig;
+        this.templateEngine = templateEngine;
+        this.settingsService = settingsService;
+        this.markdownService = markdownService;
+        this.emailTemplateRepository = emailTemplateRepository;
+        this.emailRenderer = emailRenderer;
+    }
 
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
@@ -65,15 +88,29 @@ public class HtmlMailService implements MailService {
 
             helper.setFrom(fromEmail, fromName);
             helper.setTo(to);
-            helper.setSubject(subject);
 
-            Context context = new Context();
-            context.setVariable("currentYear", java.time.Year.now().getValue());
-            context.setVariable("organizationName", settingsService.getOrganizationName());
-            context.setVariable("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
-            variables.forEach(context::setVariable);
+            // Issue #123: a saved override replaces the built-in template. The override
+            // body is plain HTML with {{token}} placeholders (never Thymeleaf); it is
+            // resolved with this email's real variables, sanitized and inlined.
+            String key = templateName.startsWith("emails/") ? templateName.substring("emails/".length()) : templateName;
+            EmailTemplate override = emailTemplateRepository != null
+                    ? emailTemplateRepository.findByKey(key).orElse(null) : null;
 
-            String htmlContent = templateEngine.process(templateName, context);
+            String htmlContent;
+            if (override != null && override.getBody() != null && !override.getBody().isBlank()
+                    && emailRenderer != null) {
+                helper.setSubject(override.getSubject() != null && !override.getSubject().isBlank()
+                        ? emailRenderer.renderSubject(key, override.getSubject(), variables) : subject);
+                htmlContent = emailRenderer.envelope(emailRenderer.renderBody(key, override.getBody(), variables));
+            } else {
+                helper.setSubject(subject);
+                Context context = new Context();
+                context.setVariable("currentYear", java.time.Year.now().getValue());
+                context.setVariable("organizationName", settingsService.getOrganizationName());
+                context.setVariable("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
+                variables.forEach(context::setVariable);
+                htmlContent = templateEngine.process(templateName, context);
+            }
 
             String preferencesUrl = settingsService.getDomain() + "/mi-espacio/cuenta";
             String fullPlainText = plainText
@@ -86,6 +123,47 @@ public class HtmlMailService implements MailService {
         } catch (Exception e) {
             log.error("Failed to send email [{}] to: {}", subject, to, e);
             throw new RuntimeException("Failed to send email: " + subject, e);
+        }
+    }
+
+    // ── Raw composed HTML (campaigns, issue #123) ───────────────────────
+
+    /**
+     * Envía un correo cuyo cuerpo ya está renderizado como documento HTML
+     * completo (comunicados, issue #123). A diferencia de los correos
+     * automáticos no hay plantilla Thymeleaf: el documento se entrega tal cual,
+     * con su texto plano de respaldo derivado del propio HTML.
+     * <p>
+     * Es <b>síncrono</b>: el llamador (el envío de un comunicado) decide cuándo
+     * se envuelve en un {@code @Async} — un comunicado entero es una única tarea
+     * asíncrona que envía los destinatarios en secuencia, sin desbordar la
+     * cola del executor de correo.
+     *
+     * @param htmlBody documento HTML completo (ya envuelto en el layout de marca)
+     */
+    @Override
+    public void sendRaw(String to, String subject, String htmlBody) {
+        if (to == null || to.isBlank()) {
+            log.info("Campaign email skipped: no recipient address ({})", subject);
+            return;
+        }
+        if (!mailConfig.isConfigured()) {
+            log.info("[CONSOLE MODE] Campaign email [{}] to {}: {}", subject, to, htmlBody);
+            return;
+        }
+        try {
+            JavaMailSender mailSender = mailConfig.getMailSender();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(settingsService.getEmailFrom(), settingsService.getEmailFromName());
+            helper.setTo(to);
+            helper.setSubject(subject);
+            String plain = org.jsoup.Jsoup.parse(htmlBody).text();
+            helper.setText(plain, htmlBody);
+            mailSender.send(message);
+            log.info("Campaign email sent [{}] to: {}", subject, to);
+        } catch (Exception e) {
+            log.error("Failed to send campaign email [{}] to: {}", subject, to, e);
         }
     }
 
