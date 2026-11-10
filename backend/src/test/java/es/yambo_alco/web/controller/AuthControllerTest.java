@@ -13,9 +13,11 @@ import es.yambo_alco.web.model.User;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.NominativeInvitationService;
 import es.yambo_alco.web.service.PasswordResetService;
+import es.yambo_alco.web.service.SettingsService;
 import es.yambo_alco.web.service.oauth.OAuthProvider;
 import es.yambo_alco.web.service.oauth.OAuthProviderRegistry;
 import es.yambo_alco.web.jwt.JwtService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -68,6 +70,15 @@ class AuthControllerTest {
 
         @MockitoBean
         private OAuthProvider googleProvider;
+
+        @MockitoBean
+        private SettingsService settingsService;
+
+        @BeforeEach
+        void setUpDomain() {
+                // TLS ends at the external proxy: the redirect_uri must come from the configured domain
+                when(settingsService.getDomain()).thenReturn("https://yambo.cabrasky.net/");
+        }
 
         @Test
         void login_WithValidCredentials_ShouldReturnToken() throws Exception {
@@ -244,6 +255,9 @@ class AuthControllerTest {
                 mockMvc.perform(get("/auth/oauth2/google"))
                                 .andExpect(status().is3xxRedirection())
                                 .andExpect(header().string("Location", "https://accounts.google.com/o/oauth2/auth?client_id=test"));
+
+                // context-path is empty in the test slice; in prod it adds /api
+                verify(googleProvider).buildAuthUrl("https://yambo.cabrasky.net/auth/google/callback");
         }
 
         @Test
