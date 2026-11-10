@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { Link } from "~/data/links";
+import NotificationBell from "~/components/dashboard/NotificationBell";
 
 interface HeaderProps {
   links: Link[];
@@ -27,6 +28,7 @@ export default function Header({ links: _links }: HeaderProps) {
           >
             {t('dashboard.publicPage')}
           </a>
+          <NotificationBell />
         </div>
       </div>
     </header>
