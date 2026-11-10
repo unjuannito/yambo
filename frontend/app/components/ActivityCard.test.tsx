@@ -23,7 +23,9 @@ const base: Activity = {
     status: { value: "OPEN_REGISTRATION", label: "Abierta para apuntarse", color: "#33a35e" },
     public: true,
     project: { id: "E1917cwQ", name: "Concurrencia" },
-    manager: { id: "yv95zbB9", name: "Paula Neira", photo: null },
+    // La API pública devuelve manager.id = null (el tipo lo declara string); el cast simula el runtime real.
+    // La semilla del elefante cae al nombre -> no crash (regresión #118).
+    manager: { id: null as unknown as string, name: "Paula Neira", photo: null },
     waitlistCount: 0,
 };
 

@@ -45,17 +45,18 @@ export function hairHiddenBy(top: AvatarTop, hair: AvatarHair): boolean {
     return COVERING_TOPS.includes(top) && !HAIR_UNDER_HATS.includes(hair);
 }
 
-function hash(seed: string): number {
+function hash(seed?: string): number {
+    const s = seed ?? "";
     let h = 2166136261;
-    for (let i = 0; i < seed.length; i++) {
-        h ^= seed.charCodeAt(i);
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
         h = Math.imul(h, 16777619);
     }
     return h >>> 0;
 }
 
 /** El elefante que le toca a una semilla cuando la persona no ha personalizado el suyo. */
-export function avatarFromSeed(seed: string): ElephantAvatarConfig {
+export function avatarFromSeed(seed?: string): ElephantAvatarConfig {
     const h = hash(seed);
     const top = AVATAR_TOPS[(h >>> 9) % AVATAR_TOPS.length];
     let hair = AVATAR_HAIR[(h >>> 16) % AVATAR_HAIR.length];
@@ -84,7 +85,7 @@ function pick<T extends string>(list: readonly T[], value: unknown): T | undefin
  */
 export function normalizeAvatar(
     raw: Partial<Record<keyof ElephantAvatarConfig, unknown>> | null | undefined,
-    seed: string,
+    seed?: string,
 ): ElephantAvatarConfig {
     const base = avatarFromSeed(seed);
     if (!raw) return base;
@@ -455,8 +456,8 @@ function Top({ top }: { top: AvatarTop }) {
 }
 
 interface ElephantAvatarProps {
-    /** Cualquier valor estable de la persona (su id): la misma semilla da siempre el mismo elefante. */
-    seed: string;
+    /** Semilla estable de la persona (id o nombre): la misma semilla da siempre el mismo elefante. Si falta, el hash usa "" (elefante por defecto, sin crash). */
+    seed?: string;
     /** Elefante personalizado (tal cual llega del backend); si falta, se usa el de la semilla. */
     config?: Partial<ElephantAvatarConfig> | null;
     className?: string;

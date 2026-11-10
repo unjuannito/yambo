@@ -270,7 +270,7 @@ export default function ActivityCard({ activity, expanded, onToggle, compact }: 
                                 // Sin foto: mismo elefante de Yambo que en StaffCard (no el disco de inicial)
                                 <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-yambo-green-100 shadow-sm">
                                     <ElephantAvatar
-                                        seed={activity.manager.id}
+                                        seed={activity.manager.id ?? activity.manager.name ?? activity.id}
                                         title={activity.manager.name}
                                         className="h-full w-full"
                                     />
