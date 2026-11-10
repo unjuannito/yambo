@@ -44,6 +44,7 @@ export default [
         route("mi-espacio/admin/pedidos", "routes/dashboard/orders/index.tsx"),
         route("mi-espacio/admin/configuracion", "routes/dashboard/settings/index.tsx"),
         route("mi-espacio/admin/pagina-principal", "routes/dashboard/settings/main-page.tsx"),
+        route("mi-espacio/admin/apariencia", "routes/dashboard/settings/appearance.tsx"),
         route("mi-espacio/admin/seo", "routes/dashboard/seo/index.tsx"),
         route("mi-espacio/admin/legal", "routes/dashboard/legal/index.tsx"),
         route("mi-espacio/admin/informes", "routes/dashboard/reports/index.tsx"),

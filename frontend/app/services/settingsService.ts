@@ -81,6 +81,15 @@ export class SettingsService extends ApiService {
         return await this.put<string, Record<string, string>>("/admin/settings/bulk", settings);
     }
 
+    /** Apariencia configurable (issue #125). */
+    public async getAppearance(): Promise<Record<string, string>> {
+        return await this.get<Record<string, string>>("/admin/settings/appearance");
+    }
+
+    public async saveAppearance(appearance: Record<string, string>): Promise<string> {
+        return await this.put<string, Record<string, string>>("/admin/settings/appearance", appearance);
+    }
+
     public async deleteSetting(key: string): Promise<string> {
         return await this.delete<string>(`/admin/settings/key/${key}`);
     }

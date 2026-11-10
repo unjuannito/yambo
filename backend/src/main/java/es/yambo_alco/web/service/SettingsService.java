@@ -100,6 +100,30 @@ public class SettingsService {
                 });
     }
 
+    /**
+     * Upsert que garantiza un valor de {@code category}. Se usa para las
+     * categorías que el frontend lee a través de {@code getSettingsByCategory}
+     * (p. ej. "appearance"): el /bulk genérico crea la fila sin categoría y el
+     * endpoint público no la encontraría.
+     */
+    @CacheEvict(value = "settings", allEntries = true)
+    public Settings upsertCategorizedSetting(@NonNull String key, String value, @NonNull String category) {
+        return settingsRepository.findByKey(key)
+                .map(setting -> {
+                    setting.setValue(value);
+                    setting.setCategory(category);
+                    return settingsRepository.save(setting);
+                })
+                .orElseGet(() -> {
+                    Settings setting = Settings.builder()
+                            .key(key)
+                            .value(value)
+                            .category(category)
+                            .build();
+                    return settingsRepository.save(setting);
+                });
+    }
+
     @CacheEvict(value = "settings", allEntries = true)
     public void deleteSetting(@NonNull String key) {
         Settings setting = settingsRepository.findByKey(key)

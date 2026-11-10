@@ -63,6 +63,20 @@ public class PublicController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * Apariencia configurable (issue #125). Devuelve la apariencia guardada
+     * (colores, esquinas, tipografía, degradados, animaciones, logo/portada)
+     * para que el frontend la aplique en todo el sitio (web + panel).
+     * Vacío si no se ha personalizado → el cliente usa los valores por defecto.
+     */
+    @GetMapping("/settings/appearance")
+    public ResponseEntity<Map<String, String>> getAppearanceSettings() {
+        List<Settings> settings = settingsService.getSettingsByCategory("appearance");
+        Map<String, String> result = settings.stream()
+                .collect(Collectors.toMap(Settings::getKey, Settings::getValue));
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/projects/featured")
     public ResponseEntity<List<FeaturedProjectResponse>> getFeaturedProjects() {
         List<Project> projects = projectRepository.findByActiveTrueAndFeaturedTrue();

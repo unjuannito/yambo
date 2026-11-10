@@ -45,6 +45,10 @@ export async function getContactSettings(): Promise<ContactSettings> {
     return fetchJson("/public/settings/contact");
 }
 
+export async function getAppearanceSettings(): Promise<Record<string, string>> {
+    return fetchJson("/public/settings/appearance");
+}
+
 export async function getFeaturedProjects(): Promise<FeaturedProject[]> {
     return fetchJson("/public/projects/featured");
 }
