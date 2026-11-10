@@ -21,12 +21,20 @@ import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/root";
 import "./app.css";
 import { isSiteIndexable } from "./utils/env.server";
+import { getAppearanceSettings } from "./services/publicService.server";
+import { normalizeAppearance, themeStyleObject, themeDataAttrs } from "./lib/theme";
+import type { Appearance } from "./lib/theme";
 
 export function loader() {
     return {
         indexable: isSiteIndexable(),
         // Código de Search Console para verificar la propiedad por «prefijo de URL»
         googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || null,
+        // Apariencia configurable (issue #125): se aplica a <html> en SSR.
+        // Si el backend no está disponible o no hay personalización → default.
+        appearance: getAppearanceSettings()
+            .then(a => normalizeAppearance(a))
+            .catch(() => normalizeAppearance(null)),
     };
 }
 
@@ -59,8 +67,12 @@ export default function Document() {
     const rootData = useRouteLoaderData<typeof loader>("root");
     const indexable = rootData?.indexable ?? true;
     const googleSiteVerification = rootData?.googleSiteVerification;
+    // Apariencia configurable (issue #125). Con default no aporta nada.
+    const appearance = rootData?.appearance as Appearance | undefined;
+    const themeStyle = appearance ? themeStyleObject(appearance) : {};
+    const themeData = appearance ? themeDataAttrs(appearance) : {};
     return (
-        <html lang="es">
+        <html lang="es" style={themeStyle} {...themeData}>
             <head>
                 <meta charSet="utf-8" />
                 <meta

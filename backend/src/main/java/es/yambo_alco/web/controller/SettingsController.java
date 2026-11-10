@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin/settings")
@@ -81,6 +82,28 @@ public class SettingsController {
             settingsService.upsertSetting(entry.getKey(), entry.getValue());
         }
         return ResponseEntity.ok("Settings updated successfully");
+    }
+
+    /**
+     * Apariencia configurable (issue #125). Se guarda bajo la categoría
+     * "appearance" para que el endpoint público /public/settings/appearance la
+     * sirva. (El /bulk genérico crea filas sin categoría y no serviría.)
+     */
+    @GetMapping("/appearance")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'read')")
+    public ResponseEntity<Map<String, String>> getAppearance() {
+        Map<String, String> result = settingsService.getSettingsByCategory("appearance").stream()
+                .collect(Collectors.toMap(Settings::getKey, Settings::getValue));
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/appearance")
+    @PreAuthorize("@permissionCheck.hasPermission('settings', 'update')")
+    public ResponseEntity<String> updateAppearance(@RequestBody Map<String, String> appearance) {
+        for (Map.Entry<String, String> entry : appearance.entrySet()) {
+            settingsService.upsertCategorizedSetting(entry.getKey(), entry.getValue(), "appearance");
+        }
+        return ResponseEntity.ok("Appearance updated successfully");
     }
 
     @DeleteMapping("/key/{key}")

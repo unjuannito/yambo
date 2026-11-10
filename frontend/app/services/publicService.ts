@@ -88,6 +88,11 @@ export class PublicService extends ApiService {
         return await this.get('/public/settings/contact');
     }
 
+    /** Apariencia configurable (issue #125). Vacío si no hay personalización. */
+    public async getAppearance(): Promise<Record<string, string>> {
+        return await this.get('/public/settings/appearance');
+    }
+
     public async getFeaturedProjects(): Promise<FeaturedProject[]> {
         return await this.get('/public/projects/featured');
     }

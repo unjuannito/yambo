@@ -56,6 +56,59 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Apariencia configurable (issue #125) — overrides en runtime
+   Colores/radios/tipografía llegan como variables inline en <html>
+   (ver lib/theme.ts). Aquí solo viven los conmutadores booleanos,
+   que se activan con los atributos data-* puestos también en <html>.
+   Sin estos atributos nada de esto se aplica → la app luce como hoy.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Degradados OFF: texto degradado → color sólido de marca; borde
+   degradado → borde sólido; decorativos (blobs) se ocultan. */
+[data-gradients="off"] .gradient-text {
+  background: none;
+  -webkit-text-fill-color: var(--color-yambo-green-500);
+}
+[data-gradients="off"] .gradient-border {
+  background: var(--color-yambo-green-500);
+}
+[data-gradients="off"] .blob-green,
+[data-gradients="off"] .blob-purple {
+  display: none;
+}
+
+/* Animaciones OFF: neutraliza las animaciones de entrada/éxito y las
+   micro-interacciones de hover (respeta además prefers-reduced-motion). */
+[data-motion="off"] .bounce-in,
+[data-motion="off"] .sheet-in,
+[data-motion="off"] .fade-up,
+[data-motion="off"] .fade-down,
+[data-motion="off"] .wiggle,
+[data-motion="off"] .pulse-glow,
+[data-motion="off"] .float,
+[data-motion="off"] .hover-lift,
+[data-motion="off"] .hover-pop,
+[data-motion="off"] .ee-spin,
+[data-motion="off"] .ee-wobble,
+[data-motion="off"] .ee-bounce-scale,
+[data-motion="off"] .ee-slide-down {
+  animation: none !important;
+  transition: none !important;
+}
+[data-motion="off"] .hover-lift:hover,
+[data-motion="off"] .hover-pop:hover {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bounce-in, .sheet-in, .fade-up, .fade-down, .wiggle,
+  .pulse-glow, .float, .ee-spin, .ee-wobble, .ee-bounce-scale,
+  .ee-slide-down {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
    Global Defaults
    ═══════════════════════════════════════════════════════════ */
 
@@ -192,9 +245,15 @@ body {
    Playful UI Utilities
    ═══════════════════════════════════════════════════════════ */
 
+/* Ángulo de los degradados de marca (issue #125). Default 135deg; una
+   apariencia guardada lo redefine inline sobre <html> (var(--grad-angle)). */
+:root {
+  --grad-angle: 135deg;
+}
+
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-yambo-green-500), var(--color-yambo-purple-500));
+  background: linear-gradient(var(--grad-angle), var(--color-yambo-green-500), var(--color-yambo-purple-500));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -205,7 +264,7 @@ body {
   position: relative;
   border-radius: 1rem;
   padding: 2px;
-  background: linear-gradient(135deg, var(--color-yambo-green-400), var(--color-yambo-purple-400));
+  background: linear-gradient(var(--grad-angle), var(--color-yambo-green-400), var(--color-yambo-purple-400));
 }
 .gradient-border > * {
   border-radius: calc(1rem - 2px);
