@@ -66,6 +66,7 @@ public class OrderService {
     private final ProductService productService;
     private final IssueService issueService;
     private final OrderChangeService orderChangeService;
+    private final NotificationService notificationService;
 
     @Transactional
     public Order createOrder(@NonNull String customerId, @NonNull List<OrderProduct> orderProducts) {
@@ -418,6 +419,16 @@ public class OrderService {
                 rows,
                 oldTotalPrice,
                 order.getStatus());
+
+        try {
+            notificationService.notify(user, "ORDER_STATUS",
+                    "Pedido " + (action != null && action.equalsIgnoreCase("creado") ? "creado" : "modificado") + " por el equipo de Yambo",
+                    "Tu pedido " + order.getId() + " "
+                            + (action != null && action.equalsIgnoreCase("creado") ? "ha sido creado" : "ha sido modificado") + ".",
+                    "/mi-espacio/mis-pedidos");
+        } catch (Exception e) {
+            log.debug("No pudo emitir aviso de administración para el pedido {}", order.getId(), e);
+        }
     }
 
     /**
@@ -710,6 +721,15 @@ public class OrderService {
                 computeTotalPrice(orderProducts));
 
         log.info("Order status update email sent for order: {} to user: {}", order.getId(), user.getEmail());
+
+        try {
+            notificationService.notify(user, "ORDER_STATUS",
+                    "Pedido actualizado: " + newStatus.getLabel(),
+                    newStatus.getEmailIntro(),
+                    "/mi-espacio/mis-pedidos");
+        } catch (Exception e) {
+            log.debug("No pudo emitir aviso de estado para el pedido {}", order.getId(), e);
+        }
     }
 
     private void sendOrderCancelEmail(Order order, boolean canceledByAdmin) {
@@ -738,6 +758,16 @@ public class OrderService {
 
         log.info("Order cancellation email sent for order: {} to user: {} (canceledByAdmin: {})",
                 order.getId(), user.getEmail(), canceledByAdmin);
+
+        try {
+            notificationService.notify(user, "ORDER_CANCEL",
+                    canceledByAdmin ? "Tu pedido ha sido cancelado" : "Has cancelado tu pedido",
+                    "Pedido " + order.getId() + ": "
+                            + (canceledByAdmin ? "ha sido cancelado por nuestro equipo." : "estado cancelado."),
+                    "/mi-espacio/mis-pedidos");
+        } catch (Exception e) {
+            log.debug("No pudo emitir aviso de cancelación para el pedido {}", order.getId(), e);
+        }
     }
 
     private Optional<User> resolveEmailRecipient(Order order) {

@@ -49,6 +49,7 @@ public class IssueService {
     private final UserService userService;
     private final IssueWatcherRepository issueWatcherRepository;
     private final FamilyProductWatcherRepository familyProductWatcherRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Issue createIssue(List<UUID> orderedProductIds, String title, String description, String createdBy) {
@@ -131,6 +132,14 @@ public class IssueService {
                         creator.getName(),
                         savedIssue.getCreatedAt(),
                         savedIssue.getDescription());
+                try {
+                    notificationService.notify(customer, "ISSUE_CREATED",
+                            "Se ha creado una incidencia en tu pedido",
+                            "Título: " + savedIssue.getTitle(),
+                            "/mi-espacio/incidencias/" + savedIssue.getId());
+                } catch (Exception e) {
+                    log.debug("No pudo emitir aviso de incidencia creada {}", savedIssue.getId(), e);
+                }
             }
             Set<String> notifiedEmails = new HashSet<>();
             notifiedEmails.add(customer.getEmail().toLowerCase());
@@ -283,6 +292,15 @@ public class IssueService {
                             savedComment.getCreatedAt(),
                             hasStatusChange ? previousStatus : null,
                             hasStatusChange ? status : null);
+                    try {
+                        notificationService.notify(customer, "ISSUE_COMMENT",
+                                hasStatusChange ? "Nueva respuesta y cambio de estado en tu incidencia"
+                                               : "Nueva respuesta en tu incidencia",
+                                (user.getName() != null ? user.getName() + ": " : "") + savedComment.getText(),
+                                "/mi-espacio/incidencias/" + issue.getId());
+                    } catch (Exception e) {
+                        log.debug("No pudo emitir aviso de comentario para la incidencia {}", issueId, e);
+                    }
                 }
             }
 

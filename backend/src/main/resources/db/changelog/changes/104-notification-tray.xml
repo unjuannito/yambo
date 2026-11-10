@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        issue #124: bandeja de avisos persistente por socio. Cada aviso guarda
+        categoría, título, texto, enlace y estado leído/no leído; además se empuja
+        en tiempo real por el canal WebSocket ya montado.
+    -->
+    <changeSet id="104-01-create-notification-table" author="yambo">
+        <createTable tableName="notification">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="recipient_id" type="char(8)">
+                <constraints nullable="false" foreignKeyName="fk_notification_recipient" references="user(id)"/>
+            </column>
+            <column name="type" type="varchar(40)"/>
+            <column name="title" type="varchar(300)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body" type="text"/>
+            <column name="link" type="varchar(300)"/>
+            <column name="is_read" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="read_at" type="timestamp"/>
+            <column name="created_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="104-02-index-notification-recipient" author="yambo">
+        <createIndex tableName="notification" indexName="idx_notification_recipient">
+            <column name="recipient_id"/>
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="notification" indexName="idx_notification_unread">
+            <column name="recipient_id"/>
+            <column name="is_read"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
