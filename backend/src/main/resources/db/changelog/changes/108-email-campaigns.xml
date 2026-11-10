@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Campaigns / broadcast emails (issue #123).
+        A campaign is a composed email (subject + inlined HTML body) plus an
+        audience descriptor. audience_type is one of ALL, PROFILE, PROJECT,
+        GROUP or USERS; audience_ref holds the id for PROFILE/PROJECT/GROUP and
+        audience_users holds a JSON array of user ids for USERS.
+    -->
+    <changeSet id="108-01-create-email-campaign" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="email_campaign"/>
+            </not>
+        </preConditions>
+        <createTable tableName="email_campaign">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="subject" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body" type="text"/>
+            <column name="audience_type" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="audience_ref" type="varchar(8)"/>
+            <column name="audience_users" type="text"/>
+            <column name="recipient_count" type="int" defaultValueNumeric="0"/>
+            <column name="status" type="varchar(20)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_by" type="varchar(80)"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="now()"/>
+            <column name="sent_at" type="timestamp"/>
+        </createTable>
+    </changeSet>
+
+    <!--
+        Permissions: EMAIL_TEMPLATE (read/update) and CAMPAIGN
+        (read/create/update/delete/send), granted to the admin profile.
+    -->
+    <changeSet id="108-02-seed-campaign-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'EMAIL_TEMPLATE'</sqlCheck>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'CAMPAIGN'</sqlCheck>
+            </and>
+        </preConditions>
+
+        <insert tableName="permission">
+            <column name="id" value="PETL_RD"/>
+            <column name="resource" value="EMAIL_TEMPLATE"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PETL_UPD"/>
+            <column name="resource" value="EMAIL_TEMPLATE"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PCMP_RD"/>
+            <column name="resource" value="CAMPAIGN"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PCMP_CRT"/>
+            <column name="resource" value="CAMPAIGN"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PCMP_UPD"/>
+            <column name="resource" value="CAMPAIGN"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PCMP_DEL"/>
+            <column name="resource" value="CAMPAIGN"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PCMP_SND"/>
+            <column name="resource" value="CAMPAIGN"/>
+            <column name="action" value="SEND"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="108-03-add-campaign-permissions-to-admin" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin'</sqlCheck>
+                <sqlCheck expectedResult="7">SELECT COUNT(*) FROM permission WHERE resource IN ('EMAIL_TEMPLATE','CAMPAIGN')</sqlCheck>
+            </and>
+        </preConditions>
+        <sql>
+            INSERT INTO profile_permission (profile_id, permission_id)
+            SELECT
+                (SELECT id FROM profile WHERE id = 'PROF0001' OR LOWER(name) = 'admin' LIMIT 1),
+                id
+            FROM permission
+            WHERE resource IN ('EMAIL_TEMPLATE','CAMPAIGN')
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

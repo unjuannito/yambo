@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Email template overrides (issue #123).
+        One optional row per automatic email (keyed by template key, e.g.
+        "invitation"). A non-null body/subject overrides the built-in
+        Thymeleaf template; null means "use the built-in default".
+        Body/subject are markdown with {{token}} placeholders
+        ({{nombre}}, {{boton}} ...), never Thymeleaf, so they cannot break
+        the template engine or be used for template injection.
+    -->
+    <changeSet id="107-01-create-email-template" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="email_template"/>
+            </not>
+        </preConditions>
+        <createTable tableName="email_template">
+            <column name="key" type="varchar(80)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="subject" type="text"/>
+            <column name="body" type="text"/>
+            <column name="updated_by" type="varchar(80)"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="now()"/>
+            <column name="updated_at" type="timestamp" defaultValueComputed="now()"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
