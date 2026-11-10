@@ -17,7 +17,8 @@ public enum PermissionResource {
     ACTIVITY("activity"),
     SEO_METADATA("seo_metadata"),
     REPORT("report"),
-    LEGAL_PAGE("legal_page");
+    LEGAL_PAGE("legal_page"),
+    NOTICE("notice");
 
     private final String value;
 
