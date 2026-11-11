@@ -59,8 +59,11 @@ class ThymeleafEmailEngineTest {
 
     @Test
     void renderOrFallback_ResolvesTheWhitelistedSharedFragment() {
+        // header/footer se movieron a emails/layout/base-email (issue #123, Part
+        // 2: layout:decorate); ctaButton sigue siendo un fragmento parametrizado
+        // normal en emails/fragments/layout, así que sirve igual para este test.
         String body = "<table>"
-                + "<th:block th:replace=\"~{emails/fragments/layout :: header('#2563eb', '', 'Hola')}\"/>"
+                + "<th:block th:replace=\"~{emails/fragments/layout :: ctaButton('https://x', 'Hola', '#2563eb')}\"/>"
                 + "</table>";
 
         String result = engine.renderOrFallback(body, Map.of());

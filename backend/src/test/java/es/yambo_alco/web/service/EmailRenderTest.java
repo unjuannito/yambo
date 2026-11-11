@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
@@ -76,6 +77,9 @@ class EmailRenderTest {
 
         engine = new SpringTemplateEngine();
         engine.setTemplateResolver(resolver);
+        // Mismo dialecto que ThymeleafLayoutConfig registra en la app real: los 15
+        // built-in heredan de emails/layout/base-email (issue #123, Part 2).
+        engine.addDialect(new LayoutDialect());
 
         Files.createDirectories(OUTPUT_DIR);
     }
@@ -89,6 +93,8 @@ class EmailRenderTest {
                 FRONTEND_URL + "/register?invitation=abc123-token-xyz789");
         ctx.setVariable("expirationHours", 72L);
         ctx.setVariable("headerIcon", EmailIcons.get("envelope"));
+        ctx.setVariable("headerColor", "#2c3e50");
+        ctx.setVariable("headerTitle", "Invitación");
 
         String html = engine.process("emails/invitation", ctx);
 
@@ -114,6 +120,7 @@ class EmailRenderTest {
         ctx.setVariable("statusLabel",    status.getLabel());
         ctx.setVariable("statusColor",    status.getColor());
         ctx.setVariable("headerColor",    status.getColor());
+        ctx.setVariable("headerTitle",    status.getEmailHeaderTitle());
         ctx.setVariable("headerIcon",     EmailIcons.get(status.getIcon()));
         ctx.setVariable("clipboardIcon",  EmailIcons.get("clipboard"));
         ctx.setVariable("iban",           IBAN);
@@ -166,6 +173,7 @@ class EmailRenderTest {
         ctx.setVariable("statusLabel",    OrderStatus.CANCELED.getLabel());
         ctx.setVariable("statusColor",    OrderStatus.CANCELED.getColor());
         ctx.setVariable("headerColor",    OrderStatus.CANCELED.getColor());
+        ctx.setVariable("headerTitle",    OrderStatus.CANCELED.getEmailHeaderTitle());
         ctx.setVariable("headerIcon",     EmailIcons.get(OrderStatus.CANCELED.getIcon()));
         ctx.setVariable("canceledByAdmin", byAdmin);
 
@@ -185,6 +193,7 @@ class EmailRenderTest {
         ctx.setVariable("createdBy",    "maria_perez");
         ctx.setVariable("createdAt",    LocalDateTime.of(2026, 2, 18, 9, 15));
         ctx.setVariable("headerColor",  IssueStatus.OPEN.getColor());
+        ctx.setVariable("headerTitle",  "Nueva Incidencia Reportada");
         ctx.setVariable("headerIcon",   EmailIcons.get(IssueStatus.OPEN.getIcon()));
         ctx.setVariable("issueLink",    FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
 
@@ -218,6 +227,7 @@ class EmailRenderTest {
         ctx.setVariable("newStatusText",  IssueStatus.IN_PROGRESS.getLabel());
         ctx.setVariable("statusColor",    IssueStatus.IN_PROGRESS.getColor());
         ctx.setVariable("headerColor",    "#3498db");
+        ctx.setVariable("headerTitle",    "Nuevo Comentario");
         ctx.setVariable("headerIcon",     EmailIcons.get("comments"));
         ctx.setVariable("issueLink",      FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
 
@@ -248,6 +258,7 @@ class EmailRenderTest {
         ctx.setVariable("newStatusText",  "");
         ctx.setVariable("statusColor",    IssueStatus.IN_PROGRESS.getColor());
         ctx.setVariable("headerColor",    "#3498db");
+        ctx.setVariable("headerTitle",    "Nuevo Comentario");
         ctx.setVariable("headerIcon",     EmailIcons.get("comments"));
         ctx.setVariable("issueLink",      FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
 
@@ -274,6 +285,7 @@ class EmailRenderTest {
                 + "<p><strong>admin_juan</strong> (19/02/2026 11:45): Hemos verificado el error y procederemos a enviarte la talla correcta.</p>");
         ctx.setVariable("sentAt",      LocalDateTime.of(2026, 2, 20, 10, 0));
         ctx.setVariable("headerColor", "#2563eb");
+        ctx.setVariable("headerTitle", "Nuevo Seguidor");
         ctx.setVariable("headerIcon",  EmailIcons.get("comments"));
         ctx.setVariable("issueLink",   FRONTEND_URL + "/mi-espacio/incidencias/" + ISSUE_ID);
 
@@ -304,6 +316,7 @@ class EmailRenderTest {
         ctx.setVariable("newStatusText",  newStatus.getLabel());
         ctx.setVariable("statusColor",    newStatus.getColor());
         ctx.setVariable("headerColor",    newStatus.getColor());
+        ctx.setVariable("headerTitle",    "Estado Actualizado");
         ctx.setVariable("headerIcon",     EmailIcons.get(newStatus.getIcon()));
         ctx.setVariable("changedBy",      "admin_juan");
         ctx.setVariable("changedAt",      LocalDateTime.of(2026, 2, 20, 10, 0));
@@ -331,6 +344,7 @@ class EmailRenderTest {
         ctx.setVariable("newStatusText", "Reabierto");
         ctx.setVariable("statusColor", IssueStatus.OPEN.getColor());
         ctx.setVariable("headerColor", IssueStatus.OPEN.getColor());
+        ctx.setVariable("headerTitle", "Estado Actualizado");
         ctx.setVariable("headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon()));
         ctx.setVariable("changedBy", "admin_juan");
         ctx.setVariable("changedAt", LocalDateTime.of(2026, 2, 20, 10, 0));
@@ -355,6 +369,8 @@ class EmailRenderTest {
                 FRONTEND_URL + "/restablecer?token=reset-token-abc123");
         ctx.setVariable("expirationHours", 24L);
         ctx.setVariable("headerIcon", EmailIcons.get("key"));
+        ctx.setVariable("headerColor", "#e67e22");
+        ctx.setVariable("headerTitle", "Restablecer contraseña");
 
         String html = engine.process("emails/password-reset", ctx);
 
@@ -374,6 +390,8 @@ class EmailRenderTest {
         ctx.setVariable("activityName", "Campamento de Verano 2026");
         ctx.setVariable("activityUrl", FRONTEND_URL + "/actividades/campamento-2026");
         ctx.setVariable("headerIcon", EmailIcons.get("circle-check"));
+        ctx.setVariable("headerColor", "#22c55e");
+        ctx.setVariable("headerTitle", "¡Inscripciones abiertas!");
 
         String html = engine.process("emails/activity-open-registration", ctx);
 

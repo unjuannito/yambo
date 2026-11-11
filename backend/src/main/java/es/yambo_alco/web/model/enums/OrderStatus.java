@@ -6,22 +6,28 @@ import lombok.Getter;
 public enum OrderStatus {
     PENDING_PAYMENT(0, "PENDIENTE DE PAGO", "#f39c12", "hourglass",
             "Pedido Pendiente de Pago", "emails/order-pending-payment",
-            "Hemos recibido tu pedido. Para completar el proceso, realiza el pago."),
+            "Hemos recibido tu pedido. Para completar el proceso, realiza el pago.",
+            "Pedido Pendiente de Pago"),
     PAYMENT_CONFIRMED(1, "PAGO CONFIRMADO", "#27ae60", "circle-check",
             "Pago Confirmado", "emails/order-confirmed",
-            "Tu pago ha sido confirmado y tu pedido será procesado en breve."),
+            "Tu pago ha sido confirmado y tu pedido será procesado en breve.",
+            "Pedido Confirmado"),
     CANCELED(2, "CANCELADO", "#e74c3c", "circle-xmark",
             "Pedido Cancelado", "emails/order-cancelled",
-            "Tu pedido ha sido cancelado."),
+            "Tu pedido ha sido cancelado.",
+            "Pedido Cancelado"),
     PENDING_PRODUCTS(3, "PENDIENTE DE PRODUCTOS", "#3498db", "gear",
             "Pedido en Preparación", "emails/order-in-progress",
-            "Tu pedido está ahora en preparación. Nuestro equipo está trabajando en él."),
+            "Tu pedido está ahora en preparación. Nuestro equipo está trabajando en él.",
+            "Pedido en Preparación"),
     CLOSED(4, "COMPLETADO", "#16a085", "box-archive",
             "Pedido Completado", "emails/order-delivered",
-            "¡Buenas noticias! Tu pedido ha sido entregado exitosamente."),
+            "¡Buenas noticias! Tu pedido ha sido entregado exitosamente.",
+            "Pedido Entregado"),
     CONFIRMING_PAYMENT(5, "CONFIRMANDO PAGO", "#e67e22", "clock",
             "Justificante de Pago Recibido", "emails/order-confirming-payment",
-            "Hemos recibido tu justificante de pago. Estamos verificándolo.");
+            "Hemos recibido tu justificante de pago. Estamos verificándolo.",
+            "Justificante de Pago Recibido");
 
     private final int value;
     private final String label;
@@ -30,9 +36,11 @@ public enum OrderStatus {
     private final String emailSubject;
     private final String emailTemplate;
     private final String emailIntro;
+    /** Título de la cabecera del correo (issue #123, Part 2: layout:decorate; antes vivía como literal en cada .html). */
+    private final String emailHeaderTitle;
 
     OrderStatus(int value, String label, String color, String icon,
-                String emailSubject, String emailTemplate, String emailIntro) {
+                String emailSubject, String emailTemplate, String emailIntro, String emailHeaderTitle) {
         this.value = value;
         this.label = label;
         this.color = color;
@@ -40,6 +48,7 @@ public enum OrderStatus {
         this.emailSubject = emailSubject;
         this.emailTemplate = emailTemplate;
         this.emailIntro = emailIntro;
+        this.emailHeaderTitle = emailHeaderTitle;
     }
 
     public static OrderStatus fromValue(int value) {

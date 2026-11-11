@@ -176,7 +176,9 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "invitationLink", extractInvitationLink(body),
                         "expirationHours", expirationHours,
-                        "headerIcon", EmailIcons.get("envelope")),
+                        "headerIcon", EmailIcons.get("envelope"),
+                        "headerColor", "#2c3e50",
+                        "headerTitle", "Invitación"),
                 body);
     }
 
@@ -210,6 +212,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusLabel", newStatus.getLabel()),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
+                        Map.entry("headerTitle", newStatus.getEmailHeaderTitle()),
                         Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
                         Map.entry("clipboardIcon", EmailIcons.get("clipboard")),
                         Map.entry("iban", settingsService.getIban()),
@@ -238,6 +241,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusLabel", OrderStatus.CANCELED.getLabel()),
                         Map.entry("statusColor", OrderStatus.CANCELED.getColor()),
                         Map.entry("headerColor", OrderStatus.CANCELED.getColor()),
+                        Map.entry("headerTitle", OrderStatus.CANCELED.getEmailHeaderTitle()),
                         Map.entry("headerIcon", EmailIcons.get(OrderStatus.CANCELED.getIcon())),
                         Map.entry("canceledByAdmin", canceledByAdmin),
                         Map.entry("orderUrl", buildOrderLink(orderId))),
@@ -266,6 +270,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("createdAt", createdAt),
                         Map.entry("descriptionHtml", descriptionHtml),
                         Map.entry("headerColor", IssueStatus.OPEN.getColor()),
+                        Map.entry("headerTitle", "Nueva Incidencia Reportada"),
                         Map.entry("headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon())),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt,
@@ -299,6 +304,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("newStatusText", toIssueEmailStatusText(oldStatus, newStatus)),
                         Map.entry("statusColor", newStatus != null ? newStatus.getColor() : "#3498db"),
                         Map.entry("headerColor", "#3498db"),
+                        Map.entry("headerTitle", "Nuevo Comentario"),
                         Map.entry("headerIcon", EmailIcons.get("comments")),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildCommentPlainText(userName, issueId, issueTitle, commentAuthor, commentText,
@@ -323,6 +329,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("newStatusText", toIssueEmailStatusText(oldStatus, newStatus)),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
+                        Map.entry("headerTitle", "Estado Actualizado"),
                         Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
                         Map.entry("changedBy", changedBy),
                         Map.entry("changedAt", changedAt),
@@ -348,6 +355,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("threadHtml", threadHtml),
                         Map.entry("sentAt", sentAt),
                         Map.entry("headerColor", "#2563eb"),
+                        Map.entry("headerTitle", "Nuevo Seguidor"),
                         Map.entry("headerIcon", EmailIcons.get("comments")),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildWatcherAddedPlainText(userName, issueId, issueTitle, threadMarkdown, sentAt));
@@ -371,7 +379,9 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "resetLink", resetLink,
                         "expirationHours", expirationHours,
-                        "headerIcon", EmailIcons.get("key")),
+                        "headerIcon", EmailIcons.get("key"),
+                        "headerColor", "#e67e22",
+                        "headerTitle", "Restablecer contraseña"),
                 plainText);
     }
 
@@ -392,7 +402,9 @@ public class HtmlMailService implements MailService {
                         "userName", userName,
                         "accessLink", accessLink,
                         "expirationDays", expirationDays,
-                        "headerIcon", EmailIcons.get("key")),
+                        "headerIcon", EmailIcons.get("key"),
+                        "headerColor", "#33a35e",
+                        "headerTitle", "Tu cuenta"),
                 plainText);
     }
 
@@ -416,7 +428,9 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "activityName", activityName,
                         "activityUrl", activityUrl,
-                        "headerIcon", EmailIcons.get("circle-check")),
+                        "headerIcon", EmailIcons.get("circle-check"),
+                        "headerColor", "#22c55e",
+                        "headerTitle", "¡Inscripciones abiertas!"),
                 plainText);
     }
 
