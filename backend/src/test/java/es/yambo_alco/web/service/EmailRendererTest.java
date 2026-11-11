@@ -134,6 +134,30 @@ class EmailRendererTest {
     }
 
     @Test
+    void renderBody_ShouldKeepAndAbsolutizeUploadedImages() {
+        String html = renderer.renderBody("order-confirmed",
+                "<p>Hola</p><img src=\"/uploads/foto.jpg\" alt=\"foto\">", Map.of());
+
+        assertTrue(html.contains("src=\"https://yambo.example/uploads/foto.jpg\""),
+                "la imagen subida se mantiene con URL absoluta (el correo no tiene el origen de la app): " + html);
+    }
+
+    @Test
+    void sanitizeAndInline_ShouldKeepAndAbsolutizeUploadedImages() {
+        String out = renderer.sanitizeAndInline("<p>Hola</p><img src=\"/uploads/foto.jpg\" alt=\"foto\">");
+
+        assertTrue(out.contains("src=\"https://yambo.example/uploads/foto.jpg\""),
+                "mismo comportamiento para comunicados: " + out);
+    }
+
+    @Test
+    void sanitizeAndInline_ShouldStillDropUnsafeRelativeImageSrcs() {
+        String out = renderer.sanitizeAndInline("<img src=\"/etc/passwd\" alt=\"x\">");
+
+        assertFalse(out.contains("src="), "solo /uploads/... se admite como ruta relativa: " + out);
+    }
+
+    @Test
     void sanitizeAndInline_ShouldKeepTokensForLaterResolution() {
         String out = renderer.sanitizeAndInline("<p>Hola {{nombre}}, saluda a {{organizacion}}</p>");
 

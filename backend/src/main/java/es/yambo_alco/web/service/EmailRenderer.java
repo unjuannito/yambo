@@ -62,8 +62,10 @@ public class EmailRenderer {
     public String renderBody(String key, String bodyHtml, Map<String, Object> varNameValues) {
         EmailTemplateCatalog.TemplateDef def = EmailTemplateCatalog.byKey(key);
 
-        // 1) saneado del HTML del editor (lista blanca de correo)
+        // 1) saneado del HTML del editor (lista blanca de correo) + fotos subidas a /uploads
+        //    con URL absoluta (el correo se abre sin el origen de la app)
         String html = EmailHtmlSanitizer.sanitize(bodyHtml);
+        html = EmailHtmlSanitizer.absolutizeUploadSrcs(html, settingsService.getDomain());
 
         // 2) botón {{boton}} → CTA con el enlace principal (se inserta tras el
         //    saneado: el CTA es HTML generado, no del usuario)
@@ -104,7 +106,8 @@ public class EmailRenderer {
      * @return HTML saneado «a pelo»
      */
     public String sanitizeAndInline(String bodyHtml) {
-        return EmailHtmlSanitizer.sanitize(bodyHtml);
+        String html = EmailHtmlSanitizer.sanitize(bodyHtml);
+        return EmailHtmlSanitizer.absolutizeUploadSrcs(html, settingsService.getDomain());
     }
 
     /**

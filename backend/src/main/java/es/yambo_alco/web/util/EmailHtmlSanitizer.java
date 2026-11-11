@@ -85,6 +85,10 @@ public final class EmailHtmlSanitizer {
         base.addAttributes("figcaption", "style");
         base.addAttributes("a", "style");
         base.addAttributes("img", "style");
+        // relaxed() restricts img src to absolute http(s) only, which would silently drop
+        // the relative /uploads/... paths our own upload flow produces before enforce()
+        // below even gets a chance to apply its own (upload-aware) URL check.
+        base.removeProtocols("img", "src", "http", "https");
         return base;
     }
 
@@ -101,21 +105,48 @@ public final class EmailHtmlSanitizer {
                 el.removeAttr(a.getKey());
             }
             String href = el.attr("href");
-            if (!href.isEmpty() && !isSafeUrl(href)) {
+            if (!href.isEmpty() && !isSafeUrl(href, false)) {
                 el.removeAttr("href");
             }
             String src = el.attr("src");
-            if (!src.isEmpty() && !isSafeUrl(src)) {
+            if (!src.isEmpty() && !isSafeUrl(src, el.tagName().equals("img"))) {
                 el.removeAttr("src");
             }
         }
     }
 
-    private static boolean isSafeUrl(String url) {
+    /**
+     * Un {@code /uploads/...} relativo (lo que produce nuestra propia subida de
+     * ficheros) solo resuelve dentro de la propia app — en el correo, que se abre
+     * sin ese origen, hay que convertirlo a absoluto contra el dominio público.
+     * Se aplica tras {@link #sanitize}, ya con el HTML saneado.
+     */
+    public static String absolutizeUploadSrcs(String html, String domain) {
+        if (html == null || html.isBlank() || domain == null || domain.isBlank()) {
+            return html;
+        }
+        Document doc = Jsoup.parseBodyFragment(html);
+        for (Element img : doc.select("img[src^=/uploads/]")) {
+            img.attr("src", domain + img.attr("src"));
+        }
+        return doc.body().html();
+    }
+
+    /**
+     * {@code href} needs an absolute, safe scheme (links go out to the real
+     * destination). {@code src} on {@code <img>} is also allowed as a relative
+     * {@code /uploads/...} path — our own upload endpoint, which is what the
+     * editor's image button and the {@code img} TipTap extension produce — so a
+     * photo inserted into a template/campaign body isn't silently stripped.
+     */
+    private static boolean isSafeUrl(String url, boolean allowRelativeUpload) {
         if (url == null || url.isBlank()) {
             return false;
         }
         String u = url.trim().toLowerCase();
-        return u.startsWith("http://") || u.startsWith("https://") || u.startsWith("mailto:");
+        if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("mailto:")) {
+            return true;
+        }
+        return allowRelativeUpload && u.startsWith("/uploads/");
     }
 }
