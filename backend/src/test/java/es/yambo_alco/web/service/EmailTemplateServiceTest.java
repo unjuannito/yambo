@@ -10,8 +10,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.IContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,6 +38,9 @@ class EmailTemplateServiceTest {
 
     @Mock
     private MailService mailService;
+
+    @Mock
+    private TemplateEngine templateEngine;
 
     @InjectMocks
     private EmailTemplateService service;
@@ -127,9 +133,11 @@ class EmailTemplateServiceTest {
 
     @Test
     void preview_WithBody_ShouldUseRenderer() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
         when(emailRenderer.renderBody(eq("invitation"), anyString(), any()))
                 .thenReturn("<p>rendered</p>");
-        when(emailRenderer.envelope("<p>rendered</p>")).thenReturn("<html><body><p>rendered</p></body></html>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html><body><p>rendered</p></body></html>");
 
         String html = service.preview("invitation", "Hola {{nombre}}");
 
@@ -138,7 +146,9 @@ class EmailTemplateServiceTest {
 
     @Test
     void preview_WithBlankBody_ShouldReturnDefaultNote() {
-        when(emailRenderer.envelope(anyString())).thenReturn("<html>default</html>");
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html>default</html>");
 
         String html = service.preview("invitation", "");
 
@@ -148,9 +158,11 @@ class EmailTemplateServiceTest {
 
     @Test
     void sendTest_WithBody_ShouldSendRawWithRenderedContent() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
         when(emailRenderer.renderBody(eq("invitation"), anyString(), any()))
                 .thenReturn("<p>rendered</p>");
-        when(emailRenderer.envelope("<p>rendered</p>")).thenReturn("<html>full</html>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html>full</html>");
 
         service.sendTest("invitation", null, "Hola {{nombre}}", "test@example.com");
 
@@ -163,9 +175,11 @@ class EmailTemplateServiceTest {
 
     @Test
     void sendTest_WithCustomSubject_ShouldUseRenderedSubject() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
         when(emailRenderer.renderBody(eq("invitation"), anyString(), any()))
                 .thenReturn("<p>rendered</p>");
-        when(emailRenderer.envelope("<p>rendered</p>")).thenReturn("<html>full</html>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html>full</html>");
         when(emailRenderer.renderSubject(anyString(), anyString(), any()))
                 .thenReturn("Hola {{nombre}}");
 

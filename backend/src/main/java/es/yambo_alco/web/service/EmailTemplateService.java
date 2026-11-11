@@ -10,7 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +38,7 @@ public class EmailTemplateService {
     private final EmailTemplateRepository templateRepository;
     private final EmailRenderer emailRenderer;
     private final MailService mailService;
+    private final TemplateEngine templateEngine;
 
     /** Vista de una plantilla para el admin: metadatos del catálogo + estado del override. */
     @Data
@@ -124,14 +128,7 @@ public class EmailTemplateService {
         if (def == null) {
             throw new BadRequestException("Plantilla desconocida: " + key);
         }
-        if (body == null || body.isBlank()) {
-            // Sin personalización: la vista previa mostraría la plantilla integrada,
-            // que renderiza Thymeleaf (fuera del render de tokens); se informa al admin.
-            return emailRenderer.envelope("<p style=\"padding:8px;\">(plantilla por defecto; "
-                    + "escribe el cuerpo para previsualizar la personalización)</p>");
-        }
-        String rendered = emailRenderer.renderBody(key, body, def.sampleVariables());
-        return emailRenderer.envelope(rendered);
+        return renderPreviewDocument(key, def, body);
     }
 
     /**
@@ -151,25 +148,45 @@ public class EmailTemplateService {
         String trimmedSubject = subject == null ? null : subject.trim();
         boolean hasCustomSubject = trimmedSubject != null && !trimmedSubject.isBlank();
         String trimmedBody = body == null ? null : body.trim();
-        String html;
-        String subjectOut;
-        if (trimmedBody == null || trimmedBody.isBlank()) {
-            // Envía la plantilla integrada tal cual (Thymeleaf) con los valores de ejemplo.
-            html = emailRenderer.envelope("<p>(vista previa de la plantilla por defecto)</p>");
-            subjectOut = hasCustomSubject
-                    ? emailRenderer.renderSubject(key, trimmedSubject, def.sampleVariables())
-                    : "[Prueba] " + def.displayName();
-        } else {
-            html = emailRenderer.envelope(emailRenderer.renderBody(key, trimmedBody, def.sampleVariables()));
-            subjectOut = hasCustomSubject
-                    ? emailRenderer.renderSubject(key, trimmedSubject, def.sampleVariables())
-                    : "[" + def.displayName() + "]";
-        }
+        String html = renderPreviewDocument(key, def, trimmedBody);
+        String subjectOut = hasCustomSubject
+                ? emailRenderer.renderSubject(key, trimmedSubject, def.sampleVariables())
+                : (trimmedBody == null || trimmedBody.isBlank()
+                        ? "[Prueba] " + def.displayName()
+                        : "[" + def.displayName() + "]");
         mailService.sendRaw(to, subjectOut, html);
         log.info("Test email sent for template [{}] to {}", key, to);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────
+
+    /**
+     * Renderiza el documento completo de vista previa / correo de prueba: mismo
+     * {@code emails/layout/base-email} y variables headerColor/headerTitle/
+     * headerIcon que usa el envío real (issue #123, Part 2), para que
+     * previsualizar una personalización no muestre una cabecera distinta de la
+     * que vería el socio.
+     */
+    private String renderPreviewDocument(String key, TemplateDef def, String body) {
+        Map<String, Object> vars = new HashMap<>(def.sampleVariables());
+        vars.putAll(emailRenderer.brandVariables());
+
+        String content;
+        if (body == null || body.isBlank()) {
+            content = "<p style=\"padding:8px;\">(plantilla por defecto; escribe el cuerpo "
+                    + "para previsualizar la personalización)</p>";
+        } else {
+            String rendered = emailRenderer.renderBody(key, body, vars);
+            content = rendered != null ? rendered
+                    : "<p style=\"padding:8px;color:#e74c3c;\">(el HTML no se pudo renderizar; "
+                            + "revisa la sintaxis Thymeleaf del cuerpo)</p>";
+        }
+
+        Context ctx = new Context();
+        vars.forEach(ctx::setVariable);
+        ctx.setVariable("contentHtml", content);
+        return templateEngine.process("emails/layout/base-email", ctx);
+    }
 
     private EmailTemplate loadOverride(String key) {
         return templateRepository.findByKey(key).orElse(null);

@@ -149,14 +149,16 @@ class EmailRendererTest {
     }
 
     @Test
-    void renderBody_ThymeleafMode_FallsBackToPlainWhenEngineFails() {
+    void renderBody_ThymeleafMode_ReturnsNullWhenEngineFails() {
+        // issue #123, Part 2: nunca se envía una personalización rota "a medias"
+        // (p. ej. un restablecimiento de contraseña sin enlace) — HtmlMailService
+        // usa este null como señal para caer a la plantilla del classpath.
         when(thymeleafEmailEngine.renderOrFallback(anyString(), anyMap())).thenReturn(null);
 
         String html = renderer.renderBody("order-confirmed",
                 "<p th:text=\"${nombre}\">placeholder</p>", Map.of("nombre", "Ana"));
 
-        assertFalse(html.contains("th:text"), "los atributos th:* se quitan en el degradado: " + html);
-        assertTrue(html.contains("placeholder"), "se conserva el contenido tal cual, sin resolver: " + html);
+        assertNull(html, "sin contenido seguro que enviar, el llamador debe usar el classpath");
     }
 
     @Test

@@ -22,6 +22,7 @@ import org.thymeleaf.context.Context;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,26 +90,45 @@ public class HtmlMailService implements MailService {
             helper.setFrom(fromEmail, fromName);
             helper.setTo(to);
 
-            // Issue #123: a saved override replaces the built-in template. The override
-            // body is plain HTML with {{token}} placeholders (never Thymeleaf); it is
-            // resolved with this email's real variables, sanitized and inlined.
+            // Issue #123: a saved override replaces the built-in template's content.
+            // Both the override and the default render through the exact same
+            // emails/layout/base-email (headerColor/headerTitle/headerIcon already in
+            // `variables`), so personalizing a built-in never changes its brand header.
             String key = templateName.startsWith("emails/") ? templateName.substring("emails/".length()) : templateName;
             EmailTemplate override = emailTemplateRepository != null
                     ? emailTemplateRepository.findByKey(key).orElse(null) : null;
 
+            Map<String, Object> allVars = new HashMap<>(variables);
+            allVars.put("currentYear", java.time.Year.now().getValue());
+            allVars.put("organizationName", settingsService.getOrganizationName());
+            allVars.put("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
+
+            boolean hasOverride = override != null && override.getBody() != null
+                    && !override.getBody().isBlank() && emailRenderer != null;
+            String renderedContent = hasOverride
+                    ? emailRenderer.renderBody(key, override.getBody(), allVars)
+                    : null;
+            if (hasOverride && renderedContent == null) {
+                log.warn("Personalización de [{}] no se pudo renderizar (Thymeleaf falló/agotó el tiempo); "
+                        + "se usa la plantilla por defecto para este envío", key);
+            }
+
             String htmlContent;
-            if (override != null && override.getBody() != null && !override.getBody().isBlank()
-                    && emailRenderer != null) {
+            if (renderedContent != null) {
+                // Override rendered fine (Thymeleaf succeeded, or it never used it).
                 helper.setSubject(override.getSubject() != null && !override.getSubject().isBlank()
-                        ? emailRenderer.renderSubject(key, override.getSubject(), variables) : subject);
-                htmlContent = emailRenderer.envelope(emailRenderer.renderBody(key, override.getBody(), variables));
+                        ? emailRenderer.renderSubject(key, override.getSubject(), allVars) : subject);
+                Context baseContext = new Context();
+                allVars.forEach(baseContext::setVariable);
+                baseContext.setVariable("contentHtml", renderedContent);
+                htmlContent = templateEngine.process("emails/layout/base-email", baseContext);
             } else {
+                // No override, or its Thymeleaf body failed/timed out: never send a
+                // personalization that rendered half-broken (e.g. a password reset
+                // with no link) — fall back to the known-good built-in template.
                 helper.setSubject(subject);
                 Context context = new Context();
-                context.setVariable("currentYear", java.time.Year.now().getValue());
-                context.setVariable("organizationName", settingsService.getOrganizationName());
-                context.setVariable("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
-                variables.forEach(context::setVariable);
+                allVars.forEach(context::setVariable);
                 htmlContent = templateEngine.process(templateName, context);
             }
 

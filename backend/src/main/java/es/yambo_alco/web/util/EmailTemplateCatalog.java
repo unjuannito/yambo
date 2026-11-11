@@ -1,5 +1,7 @@
 package es.yambo_alco.web.util;
 
+import es.yambo_alco.web.model.enums.IssueStatus;
+import es.yambo_alco.web.model.enums.OrderStatus;
 import es.yambo_alco.web.service.MailService.OrderProductInfo;
 
 import java.math.BigDecimal;
@@ -43,15 +45,53 @@ public final class EmailTemplateCatalog {
             List<TokenDef> tokens,
             String primaryLinkToken) {
 
-        /** Mapa varName→valor de ejemplo para renderizar la vista previa. */
+        /**
+         * Mapa varName→valor de ejemplo para renderizar la vista previa: los tokens
+         * del catálogo más headerColor/headerTitle/headerIcon (issue #123, Part 2),
+         * las mismas variables que {@code HtmlMailService} pasa en el envío real,
+         * para que la vista previa de una personalización use la misma cabecera de
+         * marca que el correo por defecto de esta plantilla.
+         */
         public Map<String, Object> sampleVariables() {
             Map<String, Object> map = new LinkedHashMap<>();
             for (TokenDef t : tokens) {
                 map.put(t.varName(), t.sample());
             }
+            String[] header = HEADER_SAMPLES.get(key);
+            if (header != null) {
+                map.put("headerColor", header[0]);
+                map.put("headerTitle", header[1]);
+                map.put("headerIcon", EmailIcons.get(header[2]));
+            }
             return map;
         }
     }
+
+    /** key → {headerColor, headerTitle, headerIconName}: mismos valores que HtmlMailService usa al enviar. */
+    private static final Map<String, String[]> HEADER_SAMPLES = Map.ofEntries(
+            Map.entry("invitation", new String[]{"#2c3e50", "Invitación", "envelope"}),
+            Map.entry("order-pending-payment", new String[]{OrderStatus.PENDING_PAYMENT.getColor(),
+                    OrderStatus.PENDING_PAYMENT.getEmailHeaderTitle(), OrderStatus.PENDING_PAYMENT.getIcon()}),
+            Map.entry("order-confirmed", new String[]{OrderStatus.PAYMENT_CONFIRMED.getColor(),
+                    OrderStatus.PAYMENT_CONFIRMED.getEmailHeaderTitle(), OrderStatus.PAYMENT_CONFIRMED.getIcon()}),
+            Map.entry("order-in-progress", new String[]{OrderStatus.PENDING_PRODUCTS.getColor(),
+                    OrderStatus.PENDING_PRODUCTS.getEmailHeaderTitle(), OrderStatus.PENDING_PRODUCTS.getIcon()}),
+            Map.entry("order-delivered", new String[]{OrderStatus.CLOSED.getColor(),
+                    OrderStatus.CLOSED.getEmailHeaderTitle(), OrderStatus.CLOSED.getIcon()}),
+            Map.entry("order-confirming-payment", new String[]{OrderStatus.CONFIRMING_PAYMENT.getColor(),
+                    OrderStatus.CONFIRMING_PAYMENT.getEmailHeaderTitle(), OrderStatus.CONFIRMING_PAYMENT.getIcon()}),
+            Map.entry("order-cancelled", new String[]{OrderStatus.CANCELED.getColor(),
+                    OrderStatus.CANCELED.getEmailHeaderTitle(), OrderStatus.CANCELED.getIcon()}),
+            Map.entry("order-admin-updated", new String[]{"#8B5CF6", "Pedido Gestionado por Administración", "gear"}),
+            Map.entry("issue-created", new String[]{IssueStatus.OPEN.getColor(),
+                    "Nueva Incidencia Reportada", IssueStatus.OPEN.getIcon()}),
+            Map.entry("issue-comment-added", new String[]{"#3498db", "Nuevo Comentario", "comments"}),
+            Map.entry("issue-status-changed", new String[]{IssueStatus.IN_PROGRESS.getColor(),
+                    "Estado Actualizado", IssueStatus.IN_PROGRESS.getIcon()}),
+            Map.entry("issue-watcher-added", new String[]{"#2563eb", "Nuevo Seguidor", "comments"}),
+            Map.entry("password-reset", new String[]{"#e67e22", "Restablecer contraseña", "key"}),
+            Map.entry("account-access", new String[]{"#33a35e", "Tu cuenta", "key"}),
+            Map.entry("activity-open-registration", new String[]{"#22c55e", "¡Inscripciones abiertas!", "circle-check"}));
 
     public static final String BOTON_TOKEN = "boton";
 

@@ -8,6 +8,12 @@
     layout:fragment="content" y las variables headerColor/headerIcon/
     headerTitle (vía el mapa de variables de HtmlMailService, no como
     parámetro de fragmento: así layout:decorate no necesita argumentos).
+
+    También se procesa DIRECTAMENTE (sin layout:decorate) para el cuerpo ya
+    renderizado de una personalización de admin: HtmlMailService pasa el HTML
+    resultante en la variable contentHtml, que th:utext escribe en el mismo
+    hueco — layout:fragment queda inerte cuando no hay decorador, así que no
+    hace falta otra plantilla para ese caso.
 -->
 <head>
     <meta charset="UTF-8">
@@ -31,7 +37,7 @@
             </tr>
 
             <tr><td style="padding: 40px 30px;" layout:fragment="content">
-                Contenido del correo.
+                <th:block th:utext="${contentHtml}">Contenido del correo.</th:block>
             </td></tr>
 
             <tr>

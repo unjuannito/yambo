@@ -27,8 +27,14 @@ import java.util.Map;
  * {@link ThymeleafEmailEngine#isThymeleafMode}). En el momento de renderizar:
  * <ol>
  *   <li><em>(solo modo Thymeleaf)</em> el cuerpo se procesa con
- *       {@link ThymeleafEmailEngine}, con límite de tiempo; si falla o agota el
- *       tiempo, se degrada a plano ({@link EmailHtmlSanitizer#stripThymeleafAttributes});</li>
+ *       {@link ThymeleafEmailEngine}, con límite de tiempo; para los 15 correos
+ *       automáticos conocidos, si falla o agota el tiempo {@link #renderBody}
+ *       devuelve {@code null} y el llamador ({@code HtmlMailService}) usa la
+ *       plantilla del classpath en su lugar — nunca se envía una personalización
+ *       rota «a medias» (p. ej. un restablecimiento de contraseña sin enlace);
+ *       los comunicados ({@link #sanitizeAndInline}) no tienen plantilla de
+ *       respaldo, así que ahí sí se degrada a plano
+ *       ({@link EmailHtmlSanitizer#stripThymeleafAttributes});</li>
  *   <li>el HTML (el de siempre, o ya el resultado de Thymeleaf) se sanea contra
  *       la lista blanca de correo ({@link EmailHtmlSanitizer}): se conservan
  *       estilos en línea y se eliminan scripts, iframes, eventos y URLs
@@ -37,16 +43,20 @@ import java.util.Map;
  *       enlaza al enlace principal del correo;</li>
  *   <li>el resto de {@code {{token}}} se resuelven a su valor real (los valores
  *       complejos — productos, fechas, importes — se convierten a HTML/texto);
- *       conviven con el modo Thymeleaf por si el cuerpo mezcla ambas sintaxis;</li>
- *   <li>el resultado se envuelve en el documento de marca (cabecera con el nombre
- *       de la asociación y pie de preferencias).</li>
+ *       conviven con el modo Thymeleaf por si el cuerpo mezcla ambas sintaxis.</li>
  * </ol>
- * El mismo render sirve para el envío real (variables del correo) y para la vista
- * previa del admin (valores de ejemplo del {@link EmailTemplateCatalog}).
+ * El resultado de {@link #renderBody} es el contenido «a pelo» (sin envoltorio):
+ * {@code HtmlMailService} lo mete en {@code layout:fragment="content"} del mismo
+ * {@code emails/layout/base-email} que usan las plantillas por defecto, con las
+ * mismas variables headerColor/headerTitle/headerIcon — así personalizar un correo
+ * no le cambia la cabecera de marca. El mismo render sirve para el envío real
+ * (variables del correo) y para la vista previa del admin (valores de ejemplo del
+ * {@link EmailTemplateCatalog}).
  * <p>
  * En comunicados, el modo Thymeleaf solo tiene variables a nivel de organización
  * (sin datos por destinatario todavía: el envío hoy renderiza el cuerpo una vez
- * para toda la campaña, ver {@link CampaignSender}).
+ * para toda la campaña, ver {@link CampaignSender}); esos sí se envuelven con
+ * {@link #envelope}, el único sitio que lo usa ahora.
  */
 @Service
 @RequiredArgsConstructor
@@ -67,18 +77,25 @@ public class EmailRenderer {
      * @param bodyHtml el cuerpo HTML del editor (con {@code {{token}}})
      * @param varNameValues mapa varName→valor: las variables Thymeleaf del correo en
      *                      producción, o los valores de ejemplo del catálogo en la vista previa
-     * @return el cuerpo HTML saneado («a pelo», sin envoltorio)
+     * @return el cuerpo HTML saneado («a pelo», sin envoltorio), o {@code null} si el
+     *         cuerpo usa modo Thymeleaf y el motor falló o agotó el tiempo — en ese caso
+     *         el llamador (siempre un correo automático conocido) debe usar la plantilla
+     *         del classpath en su lugar, nunca enviar el correo con la personalización
+     *         rota «a medias» (p. ej. un restablecimiento de contraseña sin enlace)
      */
     public String renderBody(String key, String bodyHtml, Map<String, Object> varNameValues) {
         EmailTemplateCatalog.TemplateDef def = EmailTemplateCatalog.byKey(key);
 
         // 0) modo Thymeleaf (issue #123, Part 2): si el admin escribió th:each/th:if/
         //    ${variable}, se procesa con el motor aislado antes de sanear; si falla o
-        //    agota el tiempo, se degrada a plano en vez de romper el envío.
+        //    agota el tiempo, no hay nada seguro que enviar de esta personalización.
         String body = bodyHtml;
         if (ThymeleafEmailEngine.isThymeleafMode(body)) {
             String rendered = thymeleafEmailEngine.renderOrFallback(body, varNameValues);
-            body = rendered != null ? rendered : EmailHtmlSanitizer.stripThymeleafAttributes(body);
+            if (rendered == null) {
+                return null;
+            }
+            body = rendered;
         }
 
         // 1) saneado del HTML (lista blanca de correo) + fotos subidas a /uploads
@@ -150,6 +167,21 @@ public class EmailRenderer {
     public String envelope(String sanitizedBody) {
         return envelope(sanitizedBody, settingsService.getOrganizationName(),
                 settingsService.getDomain() + "/mi-espacio/cuenta");
+    }
+
+    /**
+     * Variables de marca (issue #123, Part 2): currentYear/organizationName/
+     * preferencesUrl, las mismas que {@code HtmlMailService} añade antes de
+     * procesar {@code emails/layout/base-email}. Para quien necesite renderizar
+     * ese layout directamente (vista previa de personalización en
+     * {@code EmailTemplateService}) sin duplicar el acceso a {@link SettingsService}.
+     */
+    public Map<String, Object> brandVariables() {
+        Map<String, Object> vars = new LinkedHashMap<>();
+        vars.put("currentYear", java.time.Year.now().getValue());
+        vars.put("organizationName", settingsService.getOrganizationName());
+        vars.put("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
+        return vars;
     }
 
     /**
