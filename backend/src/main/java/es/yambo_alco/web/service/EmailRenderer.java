@@ -19,25 +19,34 @@ import java.util.Map;
 /**
  * Renderiza los cuerpos de correo compuestos (issue #123).
  * <p>
- * Un cuerpo de personalización o un comunicado se guardan como <b>HTML</b>
+ * Un cuerpo de personalización o un comunicado se guarda como <b>HTML</b>
  * escrito con el editor de texto enriquecido del admin, con placeholders
- * {@code {{token}}} amigables dentro del texto. En el momento de renderizar:
+ * {@code {{token}}} amigables dentro del texto — o, si el admin ha escrito
+ * algún atributo {@code th:*} (bucles, condicionales, {@code ${variable}}),
+ * en modo <b>Thymeleaf</b> (issue #123, Part 2; detección automática, ver
+ * {@link ThymeleafEmailEngine#isThymeleafMode}). En el momento de renderizar:
  * <ol>
- *   <li>el HTML se sanea contra la lista blanca de correo
- *       ({@link EmailHtmlSanitizer}): se conservan estilos en línea y se
- *       eliminan scripts, iframes, eventos y URLs peligrosas;</li>
+ *   <li><em>(solo modo Thymeleaf)</em> el cuerpo se procesa con
+ *       {@link ThymeleafEmailEngine}, con límite de tiempo; si falla o agota el
+ *       tiempo, se degrada a plano ({@link EmailHtmlSanitizer#stripThymeleafAttributes});</li>
+ *   <li>el HTML (el de siempre, o ya el resultado de Thymeleaf) se sanea contra
+ *       la lista blanca de correo ({@link EmailHtmlSanitizer}): se conservan
+ *       estilos en línea y se eliminan scripts, iframes, eventos y URLs
+ *       peligrosas;</li>
  *   <li>el token implícito {@code {{boton}}} se sustituye por un botón CTA que
  *       enlaza al enlace principal del correo;</li>
  *   <li>el resto de {@code {{token}}} se resuelven a su valor real (los valores
- *       complejos — productos, fechas, importes — se convierten a HTML/texto);</li>
+ *       complejos — productos, fechas, importes — se convierten a HTML/texto);
+ *       conviven con el modo Thymeleaf por si el cuerpo mezcla ambas sintaxis;</li>
  *   <li>el resultado se envuelve en el documento de marca (cabecera con el nombre
  *       de la asociación y pie de preferencias).</li>
  * </ol>
  * El mismo render sirve para el envío real (variables del correo) y para la vista
  * previa del admin (valores de ejemplo del {@link EmailTemplateCatalog}).
  * <p>
- * El HTML <b>no</b> se interpreta como Thymeleaf, por lo que no se puede romper el
- * motor ni inyectar plantillado.
+ * En comunicados, el modo Thymeleaf solo tiene variables a nivel de organización
+ * (sin datos por destinatario todavía: el envío hoy renderiza el cuerpo una vez
+ * para toda la campaña, ver {@link CampaignSender}).
  */
 @Service
 @RequiredArgsConstructor
@@ -47,6 +56,7 @@ public class EmailRenderer {
             DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", new Locale("es"));
 
     private final SettingsService settingsService;
+    private final ThymeleafEmailEngine thymeleafEmailEngine;
 
     // ── Personalización de correos automáticos ───────────────────────────
 
@@ -62,9 +72,18 @@ public class EmailRenderer {
     public String renderBody(String key, String bodyHtml, Map<String, Object> varNameValues) {
         EmailTemplateCatalog.TemplateDef def = EmailTemplateCatalog.byKey(key);
 
-        // 1) saneado del HTML del editor (lista blanca de correo) + fotos subidas a /uploads
+        // 0) modo Thymeleaf (issue #123, Part 2): si el admin escribió th:each/th:if/
+        //    ${variable}, se procesa con el motor aislado antes de sanear; si falla o
+        //    agota el tiempo, se degrada a plano en vez de romper el envío.
+        String body = bodyHtml;
+        if (ThymeleafEmailEngine.isThymeleafMode(body)) {
+            String rendered = thymeleafEmailEngine.renderOrFallback(body, varNameValues);
+            body = rendered != null ? rendered : EmailHtmlSanitizer.stripThymeleafAttributes(body);
+        }
+
+        // 1) saneado del HTML (lista blanca de correo) + fotos subidas a /uploads
         //    con URL absoluta (el correo se abre sin el origen de la app)
-        String html = EmailHtmlSanitizer.sanitize(bodyHtml);
+        String html = EmailHtmlSanitizer.sanitize(body);
         html = EmailHtmlSanitizer.absolutizeUploadSrcs(html, settingsService.getDomain());
 
         // 2) botón {{boton}} → CTA con el enlace principal (se inserta tras el
@@ -106,7 +125,17 @@ public class EmailRenderer {
      * @return HTML saneado «a pelo»
      */
     public String sanitizeAndInline(String bodyHtml) {
-        String html = EmailHtmlSanitizer.sanitize(bodyHtml);
+        String body = bodyHtml;
+        if (ThymeleafEmailEngine.isThymeleafMode(body)) {
+            // Solo variables de organización: un comunicado hoy se renderiza una
+            // única vez para toda la audiencia (sin datos por destinatario aún).
+            Map<String, Object> orgVars = Map.of(
+                    "organizacion", settingsService.getOrganizationName(),
+                    "dominio", settingsService.getDomain());
+            String rendered = thymeleafEmailEngine.renderOrFallback(body, orgVars);
+            body = rendered != null ? rendered : EmailHtmlSanitizer.stripThymeleafAttributes(body);
+        }
+        String html = EmailHtmlSanitizer.sanitize(body);
         return EmailHtmlSanitizer.absolutizeUploadSrcs(html, settingsService.getDomain());
     }
 

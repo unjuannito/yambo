@@ -4,6 +4,7 @@ import es.yambo_alco.web.service.MailService.OrderProductInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -24,6 +25,9 @@ class EmailRendererTest {
 
     @Mock
     private SettingsService settingsService;
+
+    @Mock
+    private ThymeleafEmailEngine thymeleafEmailEngine;
 
     @InjectMocks
     private EmailRenderer renderer;
@@ -131,6 +135,48 @@ class EmailRendererTest {
         assertFalse(out.contains("<iframe"), "los iframes se eliminan: " + out);
         assertFalse(out.contains("javascript:"), "las URLs javascript: se eliminan: " + out);
         assertTrue(out.contains("<p>ok</p>"));
+    }
+
+    @Test
+    void renderBody_ThymeleafMode_UsesEngineResultWhenRenderSucceeds() {
+        when(thymeleafEmailEngine.renderOrFallback(eq("<p th:text=\"${nombre}\"></p>"), anyMap()))
+                .thenReturn("<p>Ana</p>");
+
+        String html = renderer.renderBody("order-confirmed", "<p th:text=\"${nombre}\"></p>", Map.of("nombre", "Ana"));
+
+        assertTrue(html.contains("Ana"), "usa el resultado del motor Thymeleaf: " + html);
+        verify(thymeleafEmailEngine).renderOrFallback(anyString(), anyMap());
+    }
+
+    @Test
+    void renderBody_ThymeleafMode_FallsBackToPlainWhenEngineFails() {
+        when(thymeleafEmailEngine.renderOrFallback(anyString(), anyMap())).thenReturn(null);
+
+        String html = renderer.renderBody("order-confirmed",
+                "<p th:text=\"${nombre}\">placeholder</p>", Map.of("nombre", "Ana"));
+
+        assertFalse(html.contains("th:text"), "los atributos th:* se quitan en el degradado: " + html);
+        assertTrue(html.contains("placeholder"), "se conserva el contenido tal cual, sin resolver: " + html);
+    }
+
+    @Test
+    void sanitizeAndInline_ThymeleafMode_OnlyPassesOrganizationLevelVariables() {
+        when(settingsService.getOrganizationName()).thenReturn("Asociación Prueba");
+        when(thymeleafEmailEngine.renderOrFallback(anyString(), anyMap())).thenReturn("<p>ok</p>");
+
+        renderer.sanitizeAndInline("<p th:text=\"${organizacion}\"></p>");
+
+        ArgumentCaptor<Map<String, Object>> varsCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(thymeleafEmailEngine).renderOrFallback(anyString(), varsCaptor.capture());
+        assertEquals("Asociación Prueba", varsCaptor.getValue().get("organizacion"));
+        assertEquals("https://yambo.example", varsCaptor.getValue().get("dominio"));
+    }
+
+    @Test
+    void renderBody_PlainMode_NeverCallsTheThymeleafEngine() {
+        renderer.renderBody("order-confirmed", "<p>Hola {{nombre}}</p>", Map.of("userName", "Ana"));
+
+        verifyNoInteractions(thymeleafEmailEngine);
     }
 
     @Test

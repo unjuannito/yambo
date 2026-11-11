@@ -32,6 +32,34 @@ public final class EmailHtmlSanitizer {
     private EmailHtmlSanitizer() {
     }
 
+    /**
+     * Degradado seguro cuando el render Thymeleaf de un cuerpo falla o agota el
+     * tiempo (issue #123, Part 2): se quitan los atributos {@code th:*} (y se
+     * desenvuelve {@code <th:block>}, que es solo agrupación) para que el texto
+     * siga siendo HTML válido — queda «tal cual» (p. ej. {@code ${userName}}
+     * visible en vez de resuelto), pero el correo se envía igualmente en vez de
+     * fallar. El resultado pasa después por {@link #sanitize} como cualquier
+     * otro cuerpo.
+     */
+    public static String stripThymeleafAttributes(String html) {
+        if (html == null || html.isBlank()) {
+            return html;
+        }
+        Document doc = Jsoup.parseBodyFragment(html);
+        for (Element el : doc.getAllElements()) {
+            List<Attribute> thAttrs = el.attributes().asList().stream()
+                    .filter(a -> a.getKey().toLowerCase().startsWith("th:"))
+                    .toList();
+            for (Attribute a : thAttrs) {
+                el.removeAttr(a.getKey());
+            }
+        }
+        for (Element block : doc.select("th\\:block")) {
+            block.unwrap();
+        }
+        return doc.body().html();
+    }
+
     /** Sanea un fragmento HTML de cuerpo de correo y devuelve el HTML seguro «a pelo». */
     public static String sanitize(String html) {
         if (html == null || html.isBlank()) {
