@@ -380,7 +380,34 @@ body {
 .prose img { @apply max-w-full rounded-2xl shadow my-2; }
 [data-radix-portal] { z-index: 100; }
 
+/* Editor visual (RichTextEditor, TipTap): guarda HTML real, no Markdown. */
+.rte-content { @apply text-[15px] leading-relaxed text-gray-700; }
+.rte-content > * + * { @apply mt-3; }
+.rte-content h2 { @apply font-display text-xl font-bold text-yambo-black; }
+.rte-content h3 { @apply font-display text-lg font-semibold text-yambo-black; }
+.rte-content ul { @apply list-disc pl-6; }
+.rte-content ol { @apply list-decimal pl-6; }
+.rte-content li > p { @apply m-0; }
+.rte-content blockquote { @apply rounded-r-lg border-l-4 border-yambo-purple-300 bg-gray-50 px-4 py-2 text-gray-700; }
+.rte-content a { @apply text-yambo-green-700 underline underline-offset-2; }
+.rte-content hr { @apply my-5 border-gray-200; }
+.rte-content img { @apply max-w-full rounded-lg; }
+.rte-content img.ProseMirror-selectednode { @apply ring-4 ring-yambo-green-200; }
+.rte-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none float-left h-0 text-gray-400;
+}
+
 /* MDXEditor dialog z-index overrides (must sit above modals z-50) */
+/*
+ * The dialog/overlay z-index alone isn't enough: MDXEditor portals them into
+ * a `.mdxeditor-popup-container` div it appends to <body>, and that container
+ * itself is `position: relative; z-index: 2` (its own stacking context), so
+ * raising the dialog's z-index only reorders things *inside* that context —
+ * the whole container still renders behind anything above z-index 2 outside
+ * it, like our Modal (z-[60]). The container's own z-index has to win first.
+ */
+.mdxeditor-popup-container { z-index: 70 !important; }
 [class*="_dialogOverlay_"] { z-index: 200 !important; }
 [class*="_dialogContent_"],
 [class*="_largeDialogContent_"] { z-index: 201 !important; }

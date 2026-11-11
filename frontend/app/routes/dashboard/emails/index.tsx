@@ -8,7 +8,7 @@ import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
-import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
+import RichTextEditor from "~/components/common/forms/RichTextEditor";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { useAuth } from "~/hooks/useAuth";
 import {
@@ -743,9 +743,10 @@ function TemplatesTab(p: TemplatesTabProps) {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t("emails.body")}
                     </label>
-                    <MarkdownEditor
+                    <RichTextEditor
                       value={p.tplForm.body}
                       onChange={(v) => p.setTplForm((f) => ({ ...f, body: v }))}
+                      minHeight={256}
                       className="h-64"
                     />
                   </div>
@@ -1209,9 +1210,10 @@ function CampaignEditor(p: CampaignEditorProps) {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t("emails.body")}
           </label>
-          <MarkdownEditor
+          <RichTextEditor
             value={f.body}
             onChange={(v) => set((s) => ({ ...s, body: v }))}
+            minHeight={256}
             className="h-64"
           />
         </div>
