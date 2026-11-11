@@ -72,8 +72,8 @@ export default function CheckboxComponent({
     left: `order-first ${variantType === "checkbox" ? "w-4 h-4" : "w-10 h-6"} text-yambo-green-500 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yambo-green-500/50 flex-shrink-0`,
     top: "",
     bottom: "",
-    "right-with-description": "self-center mx-2 order-last",
-    "left-with-description": "self-top my-1 order-first",
+    "right-with-description": "self-center mx-2 order-last flex-shrink-0",
+    "left-with-description": "self-top my-1 order-first flex-shrink-0",
     "left-with-inline-description": "",
     "right-with-inline-description": "",
   };
@@ -94,21 +94,25 @@ export default function CheckboxComponent({
     left: "",
     top: "",
     bottom: "",
-    "left-with-description":
-      "inline-flex text-sm px-2 h-[42px] items-center text-ellipsis",
-    "right-with-description":
-      "inline-flex text-sm px-2 h-[42px] items-center text-ellipsis",
+    "left-with-description": "text-sm px-2 text-gray-500",
+    "right-with-description": "text-sm px-2 text-gray-500",
     "left-with-inline-description": "",
     "right-with-inline-description": "",
   };
 
+  const hasDescription = description && variant.includes("description");
+
   return (
-    <label className={twMerge(`truncate ${labelClass[variant]}`)}>
-      <div className="flex flex-col gap-1 text-ellipsis">
+    <label
+      className={twMerge(
+        `${hasDescription ? "" : "truncate"} ${labelClass[variant]}`
+      )}
+    >
+      <div className="flex flex-col gap-1 min-w-0 flex-1 text-ellipsis">
         <span className={twMerge(`text-ellipsis ${titleClass[variant]}`)}>
           {label}
         </span>
-        {description && variant.includes("description") && (
+        {hasDescription && (
           <span className={descClass[variant]}>{effectiveDescription}</span>
         )}
       </div>

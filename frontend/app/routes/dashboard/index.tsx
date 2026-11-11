@@ -7,6 +7,7 @@ import { ErrorMessage } from "~/components/common/ErrorMessage";
 import SummaryCards from "~/components/dashboard/home/SummaryCards";
 import RecentOrdersList from "~/components/dashboard/home/RecentOrdersList";
 import AdminStatsSection from "~/components/dashboard/home/AdminStatsSection";
+import LatestNoticesList from "~/components/dashboard/home/LatestNoticesList";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHand } from "@fortawesome/free-solid-svg-icons";
 
@@ -52,6 +53,8 @@ export default function AreaSociosIndex() {
                 <ErrorMessage message={error} onRetry={refetch} />
             ) : (
                 <div className="space-y-3">
+
+                    <LatestNoticesList />
 
                     <SummaryCards
                         cards={PERSONAL_CARDS}

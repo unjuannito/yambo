@@ -16,6 +16,7 @@ export default function Header() {
     { label: t('nav.projects'), href: "/proyectos" },
     { label: t('nav.activities'), href: "/actividades" },
     { label: t('nav.staff'), href: "/equipo" },
+    { label: t('nav.notices'), href: "/anuncios" },
     { label: t('nav.contact'), href: "/contacto" },
   ];
 

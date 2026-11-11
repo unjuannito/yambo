@@ -1,6 +1,7 @@
 import { getActiveProjects } from "~/services/publicService.server";
 import { getPublicActivities } from "~/services/publicService.server";
 import { getPublishedLegalPages } from "~/services/publicService.server";
+import { getPublicNotices } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
 import { isIndexableActivity } from "~/utils/seo";
 import { activityPath, projectPath } from "~/utils/publicPaths";
@@ -21,6 +22,7 @@ export async function loader() {
         { loc: "/actividades", changefreq: "weekly",  priority: "0.8" },
         { loc: "/equipo",      changefreq: "monthly", priority: "0.7" },
         { loc: "/contacto",    changefreq: "monthly", priority: "0.5" },
+        { loc: "/anuncios",    changefreq: "weekly",  priority: "0.5" },
     ];
 
     // ── Dynamic legal pages ────────────────────────────────────────────
@@ -37,6 +39,22 @@ export async function loader() {
         );
     } catch {
         // Backend unreachable → skip legal entries
+    }
+
+    // ── Dynamic notice pages (issue #133) ───────────────────────────────
+    let noticeEntries: string[] = [];
+    try {
+        const notices = await getPublicNotices();
+        noticeEntries = notices.map(
+            (n) => `
+  <url>
+    <loc>${escapeXml(siteUrl)}/anuncios/${escapeXml(n.slug ?? n.id)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>`,
+        );
+    } catch {
+        // Backend unreachable → skip notice entries
     }
 
     // ── Dynamic project pages ───────────────────────────────────────────
@@ -85,6 +103,7 @@ ${staticPages
     )
     .join("\n")}
 ${legalEntries.join("\n")}
+${noticeEntries.join("\n")}
 ${projectEntries.join("\n")}
 ${activityEntries.join("\n")}
 </urlset>`;

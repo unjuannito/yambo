@@ -91,6 +91,12 @@ const LINKS_MAP: Link[] = [
         need: { obj: "legal_page", action: "read" },
     },
     {
+        name: "notices",
+        href: "/mi-espacio/admin/anuncios",
+        label: "Anuncios",
+        need: { obj: "notice", action: "read" },
+    },
+    {
         name: "reports",
         href: "/mi-espacio/admin/informes",
         label: "Informes",

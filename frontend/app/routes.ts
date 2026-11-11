@@ -15,6 +15,8 @@ export default [
         route("proyectos", "routes/public/proyectos.tsx"),
         route("proyectos/:projectId", "routes/public/proyecto.tsx"),
         route("legal/:id", "routes/public/legal.$id.tsx"),
+        route("anuncios", "routes/public/anuncios.tsx"),
+        route("anuncios/:id", "routes/public/anuncio.$id.tsx"),
     ]),
     route("monitores", "routes/public/monitores.tsx"),
     layout("routes/dashboard/_layout.tsx", [
@@ -46,6 +48,7 @@ export default [
         route("mi-espacio/admin/pagina-principal", "routes/dashboard/settings/main-page.tsx"),
         route("mi-espacio/admin/seo", "routes/dashboard/seo/index.tsx"),
         route("mi-espacio/admin/legal", "routes/dashboard/legal/index.tsx"),
+        route("mi-espacio/admin/anuncios", "routes/dashboard/notices/index.tsx"),
         route("mi-espacio/admin/informes", "routes/dashboard/reports/index.tsx"),
         route("mi-espacio/admin/guias", "routes/dashboard/guides/_layout.tsx", [
             index("routes/dashboard/guides/index.tsx"),
@@ -116,5 +119,6 @@ export default [
     route("og/invitacion", "routes/og/invitacion.tsx"),
     route("og/invitacion/:token", "routes/og/invitacion.$token.tsx"),
     route("og/legal/:id", "routes/og/legal.$id.tsx"),
+    route("og/anuncios/:id", "routes/og/anuncio.$id.tsx"),
     route("og/:page", "routes/og/pagina.tsx"),
 ] satisfies RouteConfig;

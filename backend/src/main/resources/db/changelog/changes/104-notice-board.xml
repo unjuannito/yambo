@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Tablón de anuncios (issue #132) + página pública (issue #133).
+        Un anuncio es título + contenido (Markdown/HTML), opcionalmente fijado
+        arriba del listado y opcionalmente con fecha de caducidad. Los marcados
+        como públicos (is_public) se muestran también en /anuncios sin login.
+    -->
+    <changeSet id="104-01-create-notice-table" author="yambo">
+        <createTable tableName="notice" schemaName="public">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="slug" type="VARCHAR(100)">
+                <constraints unique="true"/>
+            </column>
+            <column name="pinned" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_public" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="published_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(80)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="104-02-index-notice-listing" author="yambo">
+        <createIndex tableName="notice" indexName="idx_notice_pinned_published">
+            <column name="pinned"/>
+            <column name="published_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="104-03-add-notice-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'NOTICE'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="permission">
+            <column name="id" value="PNOT_CRT"/>
+            <column name="resource" value="NOTICE"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PNOT_RD"/>
+            <column name="resource" value="NOTICE"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PNOT_UPD"/>
+            <column name="resource" value="NOTICE"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PNOT_DEL"/>
+            <column name="resource" value="NOTICE"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <!--
+        Grants against the real seeded admin profile (id = 'ADMIN', see
+        13-seed-permissions-data.xml) — several other changelogs in this repo
+        check `id = 'PROF0001' OR LOWER(name) = 'admin'` instead, which never
+        matches that row and silently no-ops (MARK_RAN). Written correctly here.
+    -->
+    <changeSet id="104-04-assign-notice-permissions-to-admin" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id = 'ADMIN'</sqlCheck>
+                <sqlCheck expectedResult="4">SELECT COUNT(*) FROM permission WHERE resource = 'NOTICE'</sqlCheck>
+            </and>
+        </preConditions>
+        <sql>
+            INSERT INTO profile_permission (profile_id, permission_id)
+            SELECT 'ADMIN', id FROM permission WHERE resource = 'NOTICE'
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+    <!-- Imagen de portada opcional del anuncio (se sube como cualquier otro fichero, vía /files). -->
+    <changeSet id="104-05-add-notice-image" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="notice" schemaName="public" columnName="image"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="notice" schemaName="public">
+            <column name="image" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

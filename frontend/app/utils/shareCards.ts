@@ -35,6 +35,7 @@ export const shareImagePaths = {
     /** Páginas fijas; la versión sale de la propia tarjeta (`cardVersion(card)`). */
     page: (page: SharePage, card: ShareCard) => `/og/${page}?v=${cardVersion(card)}`,
     legal: (page: { id: string }, card: ShareCard) => `/og/legal/${encodeURIComponent(page.id)}?v=${cardVersion(card)}`,
+    notice: (notice: { id: string }, card: ShareCard) => `/og/anuncios/${encodeURIComponent(notice.id)}?v=${cardVersion(card)}`,
 };
 
 /**
@@ -274,4 +275,8 @@ export function contactCard(settings: Record<string, string | undefined>): Share
 
 export function legalCard(page: { title: string }): ShareCard {
     return { eyebrow: "Información legal", title: page.title };
+}
+
+export function noticeCard(notice: { title: string }): ShareCard {
+    return { eyebrow: "Anuncio", title: notice.title };
 }

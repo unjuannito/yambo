@@ -35,6 +35,7 @@ export default function Layout() {
                 { label: t('public.footerProjects'), href: "/proyectos" },
                 { label: t('public.footerActivities'), href: "/actividades" },
                 { label: t('public.footerStaff'), href: "/equipo" },
+                { label: t('public.footerNotices'), href: "/anuncios" },
                 { label: t('public.footerContact'), href: "/contacto" },
               ].map(link => (
                 <a
