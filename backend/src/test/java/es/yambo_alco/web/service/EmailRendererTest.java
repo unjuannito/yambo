@@ -13,18 +13,14 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests de {@link EmailRenderer}: el pipeline markdown → HTML saneado →
- * tokens → envoltorio de marca.
+ * Tests de {@link EmailRenderer}: el pipeline HTML del editor → saneado
+ * (lista blanca de correo) → tokens → envoltorio de marca.
  */
 @ExtendWith(MockitoExtension.class)
 class EmailRendererTest {
-
-    @Mock
-    private MarkdownService markdownService;
 
     @Mock
     private SettingsService settingsService;
@@ -34,10 +30,6 @@ class EmailRendererTest {
 
     @BeforeEach
     void setUp() {
-        // El mock devuelve el markdown «saneado» tal cual: el saneado real es
-        // responsabilidad de MarkdownService (ya testado). El renderer se
-        // limita a componer HTML.
-        lenient().when(markdownService.toSafeHtml(anyString())).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(settingsService.getOrganizationName()).thenReturn("Asociación Prueba");
         lenient().when(settingsService.getDomain()).thenReturn("https://yambo.example");
     }
@@ -51,7 +43,7 @@ class EmailRendererTest {
                 "orderUrl", "https://yambo.example/pedido/999");
 
         String html = renderer.renderBody("order-confirmed",
-                "Hola {{nombre}}, tu pedido {{pedido}} está {{estado}}. {{boton}}", vars);
+                "<p>Hola {{nombre}}, tu pedido {{pedido}} está {{estado}}. {{boton}}</p>", vars);
 
         assertTrue(html.contains("Ana"), "el token de nombre se resuelve: " + html);
         assertTrue(html.contains("999"), "el token de pedido se resuelve");
@@ -67,7 +59,8 @@ class EmailRendererTest {
     void renderBody_WithoutLink_ShouldDropTheButton() {
         Map<String, Object> vars = Map.of("userName", "Ana");
 
-        String html = renderer.renderBody("order-confirmed", "Hola {{nombre}}. {{boton}}", vars);
+        String html = renderer.renderBody("order-confirmed",
+                "<p>Hola {{nombre}}. {{boton}}</p>", vars);
 
         assertFalse(html.contains("{{boton}}"));
         assertTrue(html.contains("Ana"));
@@ -89,6 +82,18 @@ class EmailRendererTest {
     }
 
     @Test
+    void renderBody_ShouldStripScriptsFromEditorHtml() {
+        String html = renderer.renderBody("order-confirmed",
+                "<p>Hola</p><script>alert('xss')</script><p onclick=\"steal()\">{{nombre}}</p>",
+                Map.of("userName", "Ana"));
+
+        assertFalse(html.contains("<script"), "los scripts se eliminan: " + html);
+        assertFalse(html.contains("alert"), "no queda el payload: " + html);
+        assertFalse(html.contains("onclick"), "los manejadores de evento se eliminan: " + html);
+        assertTrue(html.contains("Ana"), "el contenido legítimo se conserva");
+    }
+
+    @Test
     void renderSubject_ShouldResolveTokens() {
         String subject = renderer.renderSubject("order-confirmed",
                 "Tu pedido {{pedido}} está pagado", Map.of("orderId", "999"));
@@ -103,19 +108,37 @@ class EmailRendererTest {
 
     @Test
     void renderCampaignBody_ShouldReturnFullBrandedDocument() {
-        String doc = renderer.renderCampaignBody("Hola socios, **novedad**.");
+        String doc = renderer.renderCampaignBody("<h2>Hola socios</h2><p>Novedad.</p>");
 
         assertTrue(doc.startsWith("<!DOCTYPE html>"), "documento completo: " + doc.substring(0, 40));
         assertTrue(doc.contains("Asociación Prueba"), "cabecera con el nombre de la asociación");
         assertTrue(doc.contains("Gestionar preferencias"), "pie con el enlace de preferencias");
         assertTrue(doc.contains("https://yambo.example/mi-espacio/cuenta"), "el pie enlaza a la cuenta");
+        assertTrue(doc.contains("<h2>Hola socios</h2>"), "el HTML del editor se conserva: " + doc);
     }
 
     @Test
-    void sanitizeAndInline_ShouldDelegateToMarkdownService() {
-        when(markdownService.toSafeHtml("**hola**")).thenReturn("<p><strong>hola</strong></p>");
+    void sanitizeAndInline_ShouldApplyTheEmailSafelist() {
+        assertEquals("<p><strong>hola</strong></p>", renderer.sanitizeAndInline("<p><strong>hola</strong></p>"));
+    }
 
-        assertEquals("<p><strong>hola</strong></p>", renderer.sanitizeAndInline("**hola**"));
+    @Test
+    void sanitizeAndInline_ShouldDropDangerousContent() {
+        String out = renderer.sanitizeAndInline(
+                "<p>ok</p><iframe src=\"https://evil.example\"></iframe>"
+                        + "<a href=\"javascript:alert(1)\">peligro</a>");
+
+        assertFalse(out.contains("<iframe"), "los iframes se eliminan: " + out);
+        assertFalse(out.contains("javascript:"), "las URLs javascript: se eliminan: " + out);
+        assertTrue(out.contains("<p>ok</p>"));
+    }
+
+    @Test
+    void sanitizeAndInline_ShouldKeepTokensForLaterResolution() {
+        String out = renderer.sanitizeAndInline("<p>Hola {{nombre}}, saluda a {{organizacion}}</p>");
+
+        assertTrue(out.contains("{{nombre}}"), "los tokens de texto sobreviven al saneado: " + out);
+        assertTrue(out.contains("{{organizacion}}"));
     }
 
     @Test

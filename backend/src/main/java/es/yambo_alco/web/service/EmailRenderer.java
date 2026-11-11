@@ -1,6 +1,7 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.service.MailService.OrderProductInfo;
+import es.yambo_alco.web.util.EmailHtmlSanitizer;
 import es.yambo_alco.web.util.EmailTemplateCatalog;
 import es.yambo_alco.web.util.HtmlInliner;
 import lombok.RequiredArgsConstructor;
@@ -18,14 +19,13 @@ import java.util.Map;
 /**
  * Renderiza los cuerpos de correo compuestos (issue #123).
  * <p>
- * Un cuerpo de personalización o un comunicado se guardan como <b>markdown</b>
- * escrito con placeholders {@code {{token}}} amigables. En el momento de
- * renderizar:
+ * Un cuerpo de personalización o un comunicado se guardan como <b>HTML</b>
+ * escrito con el editor de texto enriquecido del admin, con placeholders
+ * {@code {{token}}} amigables dentro del texto. En el momento de renderizar:
  * <ol>
- *   <li>el markdown se convierte a HTML saneado con estilos en línea (reutiliza
- *       {@link MarkdownService#toSafeHtml}, el mismo camino que usan los
- *       comentarios/ediciones de la app — una sola lista blanca para todo el
- *       HTML enviado por correo);</li>
+ *   <li>el HTML se sanea contra la lista blanca de correo
+ *       ({@link EmailHtmlSanitizer}): se conservan estilos en línea y se
+ *       eliminan scripts, iframes, eventos y URLs peligrosas;</li>
  *   <li>el token implícito {@code {{boton}}} se sustituye por un botón CTA que
  *       enlaza al enlace principal del correo;</li>
  *   <li>el resto de {@code {{token}}} se resuelven a su valor real (los valores
@@ -46,7 +46,6 @@ public class EmailRenderer {
     private static final DateTimeFormatter DATE =
             DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", new Locale("es"));
 
-    private final MarkdownService markdownService;
     private final SettingsService settingsService;
 
     // ── Personalización de correos automáticos ───────────────────────────
@@ -54,17 +53,17 @@ public class EmailRenderer {
     /**
      * Renderiza un cuerpo de personalización.
      *
-     * @param key           clave de la plantilla (p. ej. {@code invitation}); debe ser conocida
-     * @param bodyMarkdown  el cuerpo markdown escrito con {@code {{token}}}
+     * @param key      clave de la plantilla (p. ej. {@code invitation}); debe ser conocida
+     * @param bodyHtml el cuerpo HTML del editor (con {@code {{token}}})
      * @param varNameValues mapa varName→valor: las variables Thymeleaf del correo en
      *                      producción, o los valores de ejemplo del catálogo en la vista previa
      * @return el cuerpo HTML saneado («a pelo», sin envoltorio)
      */
-    public String renderBody(String key, String bodyMarkdown, Map<String, Object> varNameValues) {
+    public String renderBody(String key, String bodyHtml, Map<String, Object> varNameValues) {
         EmailTemplateCatalog.TemplateDef def = EmailTemplateCatalog.byKey(key);
 
-        // 1) markdown → HTML saneado con estilos en línea
-        String html = markdownService.toSafeHtml(bodyMarkdown);
+        // 1) saneado del HTML del editor (lista blanca de correo)
+        String html = EmailHtmlSanitizer.sanitize(bodyHtml);
 
         // 2) botón {{boton}} → CTA con el enlace principal (se inserta tras el
         //    saneado: el CTA es HTML generado, no del usuario)
@@ -97,15 +96,15 @@ public class EmailRenderer {
     // ── Sanitización compartida (comunicados) ─────────────────────────────
 
     /**
-     * Sanea un cuerpo markdown para correo: lo convierte a HTML con estilos en
-     * línea. Punto de entrada único para todo el HTML compuesto que se envía
-     * (personalización y comunicados).
+     * Sanea un cuerpo HTML de correo: aplica la lista blanca de correo y deja el
+     * HTML «a pelo». Punto de entrada único para todo el HTML compuesto que se
+     * envía (personalización y comunicados).
      *
-     * @param bodyMarkdown cuerpo markdown (con o sin {@code {{token}}})
+     * @param bodyHtml cuerpo HTML del editor (con o sin {@code {{token}}})
      * @return HTML saneado «a pelo»
      */
-    public String sanitizeAndInline(String bodyMarkdown) {
-        return markdownService.toSafeHtml(bodyMarkdown);
+    public String sanitizeAndInline(String bodyHtml) {
+        return EmailHtmlSanitizer.sanitize(bodyHtml);
     }
 
     /**
@@ -122,14 +121,14 @@ public class EmailRenderer {
     }
 
     /**
-     * Renderiza el cuerpo de un comunicado (issue #123): convierte el markdown a
-     * HTML saneado con estilos en línea y lo envuelve en el documento de marca.
+     * Renderiza el cuerpo de un comunicado (issue #123): sanea el HTML del
+     * editor (lista blanca de correo) y lo envuelve en el documento de marca.
      *
-     * @param bodyMarkdown cuerpo markdown del comunicado
+     * @param bodyHtml cuerpo HTML del comunicado
      * @return documento HTML completo, listo para enviar
      */
-    public String renderCampaignBody(String bodyMarkdown) {
-        return envelope(sanitizeAndInline(bodyMarkdown));
+    public String renderCampaignBody(String bodyHtml) {
+        return envelope(sanitizeAndInline(bodyHtml));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────
