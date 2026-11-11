@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 /**
  * Motor Thymeleaf para cuerpos de correo escritos por el admin (issue #123,
@@ -82,9 +83,13 @@ public class ThymeleafEmailEngine {
         return engine;
     }
 
-    /** Detección automática de modo (issue #123, Part 2, D3): basta con que aparezca "th:". */
+    // Atributo th:xxx real, no "width:"/"max-width:" (CSS en línea) ni texto
+    // suelto: exige que "th:" vaya precedido de un límite de atributo/etiqueta.
+    private static final Pattern TH_ATTRIBUTE = Pattern.compile("[\\s<\"']th:[a-zA-Z]");
+
+    /** Detección automática de modo (issue #123, Part 2, D3): basta con un atributo th:* real. */
     public static boolean isThymeleafMode(String body) {
-        return body != null && body.contains("th:");
+        return body != null && TH_ATTRIBUTE.matcher(body).find();
     }
 
     /**
@@ -99,8 +104,9 @@ public class ThymeleafEmailEngine {
         if (variables != null) {
             variables.forEach(context::setVariable);
         }
-        Future<String> future = templateRenderExecutor.submit(() -> engine.process(body, context));
+        Future<String> future = null;
         try {
+            future = templateRenderExecutor.submit(() -> engine.process(body, context));
             return future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             future.cancel(true);

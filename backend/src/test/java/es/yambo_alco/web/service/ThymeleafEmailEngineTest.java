@@ -35,6 +35,14 @@ class ThymeleafEmailEngineTest {
     }
 
     @Test
+    void isThymeleafMode_IgnoresInlineCssWidthDeclarations() {
+        // Regresión: "th:" aparece dentro de "width:"/"max-width:" (CSS en línea de
+        // todos los correos planos), no debe disparar el motor por error.
+        assertFalse(ThymeleafEmailEngine.isThymeleafMode(
+                "<table style=\"width:100%;max-width:600px;\"><tr><td>Hola</td></tr></table>"));
+    }
+
+    @Test
     void renderOrFallback_ResolvesVariablesAndLoops() {
         String body = "<ul><li th:each=\"p : ${products}\" th:text=\"${p}\">x</li></ul>"
                 + "<p th:if=\"${nombre != null}\" th:text=\"'Hola ' + ${nombre}\"></p>";
