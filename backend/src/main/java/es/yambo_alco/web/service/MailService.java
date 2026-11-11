@@ -41,6 +41,10 @@ public interface MailService {
 
     void sendActivityOpenRegistration(String to, String activityName, String activityUrl);
 
+    /** Al publicar un anuncio (issue #132, v2): aviso a los socios con esta notificación activada. */
+    void sendNoticePublished(String to, String userName, String noticeTitle, String noticeContentMarkdown,
+            String noticeImageUrl, String noticeLink);
+
     /**
      * Notifica al socio que un administrador ha creado o modificado su pedido.
      *

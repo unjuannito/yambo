@@ -97,7 +97,7 @@ class NoticeControllerTest {
     @Test
     @WithMockUser
     void create_ShouldReturnCreatedNotice() throws Exception {
-        when(noticeService.create(eq("Nuevo aviso"), eq("<p>Hola</p>"), eq(true), eq(true), any(), eq("System Administrator")))
+        when(noticeService.create(eq("Nuevo aviso"), eq("<p>Hola</p>"), any(), eq(true), eq(true), any(), eq("System Administrator")))
                 .thenReturn(notice("NOTI0003", "Nuevo aviso", true, true));
 
         String requestBody = """
@@ -136,7 +136,7 @@ class NoticeControllerTest {
     @Test
     @WithMockUser
     void update_ShouldReturnUpdatedNotice() throws Exception {
-        when(noticeService.update(eq("NOTI0001"), eq("Título actualizado"), eq("<p>Hola</p>"), eq(false), eq(false), any()))
+        when(noticeService.update(eq("NOTI0001"), eq("Título actualizado"), eq("<p>Hola</p>"), any(), eq(false), eq(false), any()))
                 .thenReturn(notice("NOTI0001", "Título actualizado", false, false));
 
         String requestBody = """

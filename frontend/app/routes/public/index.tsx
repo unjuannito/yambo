@@ -5,12 +5,14 @@ import Hero from "~/components/home/Hero";
 import AboutUs from "~/components/home/AboutUs";
 import FeaturedProjects from "~/components/home/FeaturedProjects";
 import ActivitiesPreview from "~/components/home/ActivitiesPreview";
+import NoticesPreview from "~/components/home/NoticesPreview";
 import StaffGallery from "~/components/home/StaffGallery";
 import {
     getHomeSettings,
     getFeaturedProjects,
     getStaff,
     getPublicActivities,
+    getPublicNotices,
     getContactSettings,
 } from "~/services/publicService.server";
 import { getSiteUrl } from "~/utils/env.server";
@@ -41,14 +43,15 @@ interface SectionConfig {
 }
 
 export async function loader() {
-    const [settings, contactSettings, projects, staff, activities] = await Promise.all([
+    const [settings, contactSettings, projects, staff, activities, notices] = await Promise.all([
         getHomeSettings(),
         getContactSettings(),
         getFeaturedProjects(),
         getStaff(),
         getPublicActivities(),
+        getPublicNotices(),
     ]);
-    return { settings, contactSettings, projects, staff, activities, siteUrl: getSiteUrl() };
+    return { settings, contactSettings, projects, staff, activities, notices, siteUrl: getSiteUrl() };
 }
 
 const SECTION_COMPONENTS: Record<
@@ -60,6 +63,7 @@ const SECTION_COMPONENTS: Record<
         projects: any;
         staff: any;
         activities: any;
+        notices: any;
     }) => React.ReactNode
 > = {
     hero: ({ settings }) => (
@@ -89,11 +93,14 @@ const SECTION_COMPONENTS: Record<
     staff: ({ title, sectionIndex, staff }) => (
         <StaffGallery key="staff" title={title} sectionIndex={sectionIndex} staff={staff} />
     ),
+    notices: ({ title, sectionIndex, notices }) => (
+        <NoticesPreview key="notices" title={title} sectionIndex={sectionIndex} notices={notices} />
+    ),
 };
 
 export default function Index() {
     const { t } = useTranslation();
-    const { settings, projects, staff, activities } = useLoaderData<typeof loader>();
+    const { settings, projects, staff, activities, notices } = useLoaderData<typeof loader>();
 
     const sections = useMemo<SectionConfig[]>(() => {
         const defaults: SectionConfig[] = [
@@ -101,6 +108,7 @@ export default function Index() {
             { id: "about", visible: true, title: t("public.aboutSection") },
             { id: "projects", visible: true, title: t("public.featuredProjects") },
             { id: "activities", visible: true, title: t("public.activitiesTitle") },
+            { id: "notices", visible: true, title: t("public.noticesTitle") },
             { id: "staff", visible: true, title: t("public.ourTeam") },
         ];
 
@@ -108,7 +116,11 @@ export default function Index() {
         if (raw) {
             try {
                 const parsed = JSON.parse(raw) as SectionConfig[];
-                if (parsed.length > 0) return parsed;
+                if (parsed.length > 0) {
+                    // Sites configured before the "notices" section existed don't have it saved yet.
+                    const missing = defaults.filter((d) => !parsed.some((p) => p.id === d.id));
+                    return [...parsed, ...missing];
+                }
             } catch {
                 /* use defaults */
             }
@@ -116,7 +128,7 @@ export default function Index() {
         return defaults;
     }, [settings, t]);
 
-    const sharedProps = { settings, projects, staff, activities };
+    const sharedProps = { settings, projects, staff, activities, notices };
 
     return (
         <>

@@ -245,6 +245,7 @@
     "staff": "Equipo",
     "projects": "Proyectos",
     "activities": "Actividades",
+    "notices": "Anuncios",
     "contact": "Contacto"
   },
   "home": {
@@ -801,6 +802,11 @@
     "titleRequired": "El título es obligatorio",
     "contentLabel": "Contenido",
     "contentRequired": "El contenido es obligatorio",
+    "imageLabel": "Imagen (opcional)",
+    "imageUpload": "Subir imagen",
+    "imageChange": "Cambiar imagen",
+    "imageUploading": "Subiendo...",
+    "imageUploadError": "¡Error al subir la imagen!",
     "pinnedLabel": "Fijar arriba",
     "publicLabel": "Público",
     "publicDescription": "Visible también en la web sin necesidad de iniciar sesión",
@@ -812,6 +818,11 @@
     "deleteError": "¡Error al eliminar el anuncio!",
     "confirmDeleteTitle": "Eliminar anuncio",
     "confirmDelete": "¿Seguro que quieres eliminar este anuncio? Esta acción no se puede deshacer."
+  },
+  "markdownEditor": {
+    "insertImage": "Insertar imagen",
+    "orPasteUrl": "o pega una URL",
+    "insert": "Insertar"
   },
   "seo": {
     "title": "SEO",
@@ -1016,6 +1027,7 @@
     "noticesSubtitle": "Novedades y avisos de la asociación",
     "noticesEmpty": "Todavía no hay anuncios publicados",
     "noticesPinned": "Destacado",
+    "noticesShowAll": "Ver todos los anuncios",
     "staffTitle": "Equipo",
     "projectsTitle": "Proyectos",
     "projectsDescription": "Conoce los proyectos que hacemos realidad.",
@@ -1436,6 +1448,8 @@
     "notifIssueCommentsDesc": "Recibe un correo cuando alguien comente en tu incidencia",
     "notifIssueStatusChanges": "Cambios de estado de incidencias",
     "notifIssueStatusChangesDesc": "Recibe un correo cuando cambie el estado de tu incidencia",
+    "notifNewNotices": "Nuevos anuncios",
+    "notifNewNoticesDesc": "Recibe un correo cuando se publique un anuncio nuevo",
     "savePreferences": "Guardar preferencias",
     "dangerZone": "Zona de peligro",
     "dangerZoneDesc": "Acciones irreversibles",

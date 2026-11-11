@@ -17,6 +17,7 @@ import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.ActivityWaitlistService;
+import es.yambo_alco.web.service.MarkdownService;
 import es.yambo_alco.web.service.NoticeService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
@@ -49,6 +50,7 @@ public class PublicController {
     private final SeoMetadataService seoMetadataService;
     private final ActivityWaitlistService activityWaitlistService;
     private final NoticeService noticeService;
+    private final MarkdownService markdownService;
 
     @GetMapping("/settings/home")
     public ResponseEntity<Map<String, String>> getHomeSettings() {
@@ -133,7 +135,7 @@ public class PublicController {
     @GetMapping("/notices")
     public ResponseEntity<List<PublicNoticeResponse>> getPublicNotices() {
         List<PublicNoticeResponse> response = noticeService.getActivePublic().stream()
-                .map(PublicNoticeResponse::new)
+                .map(this::toPublicNoticeResponse)
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -142,7 +144,17 @@ public class PublicController {
     @GetMapping("/notices/{idOrSlug}")
     public ResponseEntity<PublicNoticeResponse> getPublicNotice(@PathVariable String idOrSlug) {
         Notice notice = noticeService.getActivePublicByIdOrSlug(idOrSlug);
-        return ResponseEntity.ok(new PublicNoticeResponse(notice));
+        return ResponseEntity.ok(toPublicNoticeResponse(notice));
+    }
+
+    /**
+     * {@code content} se guarda como Markdown (lo que produce el editor del panel); aquí se
+     * convierte a HTML saneado para que la web pública pueda insertarlo directamente.
+     */
+    private PublicNoticeResponse toPublicNoticeResponse(Notice notice) {
+        PublicNoticeResponse response = new PublicNoticeResponse(notice);
+        response.setContent(markdownService.toSafeHtml(notice.getContent()));
+        return response;
     }
 
     /** {@code idOrSlug}: the slug of the public URL, or the id that older links carry. */
@@ -423,6 +435,7 @@ public class PublicController {
         private String slug;
         private String title;
         private String content;
+        private String image;
         private boolean pinned;
         private java.time.LocalDateTime publishedAt;
 
@@ -431,6 +444,7 @@ public class PublicController {
             this.slug = notice.getSlug();
             this.title = notice.getTitle();
             this.content = notice.getContent();
+            this.image = notice.getImage();
             this.pinned = notice.isPinned();
             this.publishedAt = notice.getPublishedAt();
         }

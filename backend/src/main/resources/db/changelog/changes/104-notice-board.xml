@@ -103,4 +103,16 @@
         </sql>
     </changeSet>
 
+    <!-- Imagen de portada opcional del anuncio (se sube como cualquier otro fichero, vía /files). -->
+    <changeSet id="104-05-add-notice-image" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="notice" schemaName="public" columnName="image"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="notice" schemaName="public">
+            <column name="image" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

@@ -35,6 +35,9 @@ public class Notice {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(length = 500)
+    private String image;
+
     @Column(length = 100, unique = true)
     private String slug;
 

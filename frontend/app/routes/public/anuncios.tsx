@@ -2,7 +2,13 @@ import { useLoaderData, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBullhorn, faThumbtack } from "@fortawesome/free-solid-svg-icons";
+import type { Notice } from "~/services/noticeService";
 import { getPublicNotices } from "~/services/publicService.server";
+
+function getImageSrc(notice: Notice): string | null {
+    if (!notice.image) return null;
+    return notice.image.startsWith("/") ? `/api${notice.image}` : notice.image;
+}
 import { getSiteUrl } from "~/utils/env.server";
 import { collectionPageJsonLd, breadcrumbJsonLd, itemListJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
@@ -64,26 +70,37 @@ export default function PublicNotices() {
                             <Link
                                 key={notice.id}
                                 to={`/anuncios/${notice.slug ?? notice.id}`}
-                                className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md hover:border-yambo-green-200 transition-all fade-up"
+                                className="flex flex-col sm:flex-row gap-5 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-md hover:border-yambo-green-200 transition-all fade-up"
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    {notice.pinned && (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">
-                                            <FontAwesomeIcon icon={faThumbtack} className="w-3 h-3" />
-                                            {t("public.noticesPinned")}
+                                {getImageSrc(notice) && (
+                                    <div className="shrink-0 sm:w-48 overflow-hidden rounded-xl bg-gray-50">
+                                        <img
+                                            src={getImageSrc(notice)!}
+                                            alt={notice.title}
+                                            className="w-full h-32 sm:h-full object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        {notice.pinned && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">
+                                                <FontAwesomeIcon icon={faThumbtack} className="w-3 h-3" />
+                                                {t("public.noticesPinned")}
+                                            </span>
+                                        )}
+                                        <span className="text-xs text-gray-400">
+                                            {new Date(notice.publishedAt).toLocaleDateString("es-ES", {
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                            })}
                                         </span>
-                                    )}
-                                    <span className="text-xs text-gray-400">
-                                        {new Date(notice.publishedAt).toLocaleDateString("es-ES", {
-                                            year: "numeric",
-                                            month: "long",
-                                            day: "numeric",
-                                        })}
-                                    </span>
+                                    </div>
+                                    <h2 className="text-xl font-bold text-yambo-black font-display">
+                                        {notice.title}
+                                    </h2>
                                 </div>
-                                <h2 className="text-xl font-bold text-yambo-black font-display">
-                                    {notice.title}
-                                </h2>
                             </Link>
                         ))}
                     </div>

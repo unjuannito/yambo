@@ -43,6 +43,7 @@ const SECTION_LABELS: Record<string, string> = {
     about: "Sobre Nosotros",
     projects: "Proyectos Destacados",
     activities: "Actividades",
+    notices: "Anuncios",
     staff: "Equipo",
 };
 
@@ -51,6 +52,7 @@ const DEFAULT_SECTIONS: SectionConfig[] = [
     { id: "about", visible: true, title: "¿Qué es Yambo?" },
     { id: "projects", visible: true, title: "Proyectos Destacados" },
     { id: "activities", visible: true, title: "Actividades" },
+    { id: "notices", visible: true, title: "Anuncios" },
     { id: "staff", visible: true, title: "Equipo" },
 ];
 
@@ -105,7 +107,12 @@ export default function MainPageEditor() {
                 try {
                     const parsed = JSON.parse(sectionsRaw) as SectionConfig[];
                     // "monitors" is the former id of the staff section
-                    if (parsed.length > 0) setSections(parsed.map(s => s.id === "monitors" ? { ...s, id: "staff" } : s));
+                    if (parsed.length > 0) {
+                        const renamed = parsed.map(s => s.id === "monitors" ? { ...s, id: "staff" } : s);
+                        // Sites configured before a new section existed (e.g. "notices") don't have it saved yet.
+                        const missing = DEFAULT_SECTIONS.filter(d => !renamed.some(s => s.id === d.id));
+                        setSections([...renamed, ...missing]);
+                    }
                 } catch {
                     // keep defaults
                 }

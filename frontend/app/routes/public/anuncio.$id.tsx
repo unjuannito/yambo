@@ -6,6 +6,11 @@ import { webPageJsonLd } from "~/utils/jsonld";
 import { buildMeta } from "~/utils/seo";
 import { noticeCard, shareImagePaths } from "~/utils/shareCards";
 
+function getImageSrc(notice: Notice): string | null {
+    if (!notice.image) return null;
+    return notice.image.startsWith("/") ? `/api${notice.image}` : notice.image;
+}
+
 export async function loader({ params }: { params: { id: string } }) {
     const siteUrl = getSiteUrl();
     try {
@@ -64,8 +69,15 @@ export default function NoticeDetailView() {
         );
     }
 
+    const imageSrc = getImageSrc(notice);
+
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
+            {imageSrc && (
+                <div className="mb-8 overflow-hidden rounded-2xl shadow-sm">
+                    <img src={imageSrc} alt={notice.title} className="w-full max-h-96 object-cover" />
+                </div>
+            )}
             <p className="text-sm text-gray-400 mb-2">
                 {new Date(notice.publishedAt).toLocaleDateString("es-ES", {
                     year: "numeric",

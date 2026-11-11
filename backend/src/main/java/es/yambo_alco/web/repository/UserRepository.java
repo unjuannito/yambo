@@ -75,4 +75,7 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     @EntityGraph(attributePaths = {"profiles", "groupRoles", "groupRoles.projectGroup", "groupRoles.projectGroup.project", "staff"})
     @Query("SELECT DISTINCT u FROM User u JOIN u.groupRoles gr WHERE gr.role = es.yambo_alco.web.model.enums.UserProjectGroupRole.MONITOR AND u.enabled = true AND gr.projectGroup.id = :groupId")
     List<User> findMonitorsByGroupId(@Param("groupId") String groupId);
+
+    /** Real, active member accounts — who a broadcast (e.g. a new notice) should reach. */
+    List<User> findByEnabledTrueAndHasAccountTrueAndSystemFalse();
 }

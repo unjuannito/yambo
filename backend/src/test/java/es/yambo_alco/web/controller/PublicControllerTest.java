@@ -17,6 +17,7 @@ import es.yambo_alco.web.repository.ProjectGroupRepository;
 import es.yambo_alco.web.repository.ProjectRepository;
 import es.yambo_alco.web.repository.UserRepository;
 import es.yambo_alco.web.service.ActivityWaitlistService;
+import es.yambo_alco.web.service.MarkdownService;
 import es.yambo_alco.web.service.NoticeService;
 import es.yambo_alco.web.service.SeoMetadataService;
 import es.yambo_alco.web.service.SettingsService;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -70,6 +72,9 @@ class PublicControllerTest {
 
     @MockitoBean
     private NoticeService noticeService;
+
+    @MockitoBean
+    private MarkdownService markdownService;
 
     @Test
     @WithAnonymousUser
@@ -658,6 +663,7 @@ class PublicControllerTest {
                 .publishedAt(LocalDateTime.of(2026, 1, 1, 10, 0))
                 .build();
         when(noticeService.getActivePublic()).thenReturn(List.of(notice));
+        when(markdownService.toSafeHtml(any())).thenAnswer(inv -> inv.getArgument(0));
 
         mockMvc.perform(get("/public/notices"))
                 .andExpect(status().isOk())
@@ -678,6 +684,7 @@ class PublicControllerTest {
                 .publishedAt(LocalDateTime.of(2026, 1, 1, 10, 0))
                 .build();
         when(noticeService.getActivePublicByIdOrSlug("aviso-nuevo-horario")).thenReturn(notice);
+        when(markdownService.toSafeHtml(any())).thenAnswer(inv -> inv.getArgument(0));
 
         mockMvc.perform(get("/public/notices/aviso-nuevo-horario"))
                 .andExpect(status().isOk())

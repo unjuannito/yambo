@@ -38,7 +38,13 @@ public class MarkdownService {
     private final Safelist safelist = Safelist.relaxed()
             // images
             .addAttributes("img", "src", "alt", "title", "width", "height", "style")
-            .addProtocols("img", "src", "http", "https")
+            // `relaxed()` restricts img src to absolute http(s) URLs, which silently drops
+            // the relative "/uploads/xxx" paths our own upload flow (and the editor's inline
+            // image button) produce — Jsoup has no "relative URL" protocol to allow instead,
+            // so the only way to keep them is to drop the restriction entirely. Low risk here:
+            // only notice:create/update holders write this content, and <img src> can't
+            // execute script even with a javascript:/data: URI.
+            .removeProtocols("img", "src", "http", "https")
             // tables (relaxed already allows table/thead/tbody/tr/td/th but
             // we ensure style is whitelisted for inline CSS)
             .addTags("table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col")

@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCloudUploadAlt, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import type { Route } from "./+types/index";
 import { RequirePermission } from "~/components/common/RequirePermission";
 import type { FilterableColumn } from "~/components/common/FilterableTable";
@@ -11,6 +13,7 @@ import InputComponent from "~/components/common/forms/InputComponent";
 import CheckboxComponent from "~/components/common/forms/CheckboxComponent";
 import MarkdownEditor from "~/components/common/forms/MarkdownEditor";
 import { noticeService, type Notice, type NoticeRequest } from "~/services/noticeService";
+import { fileService } from "~/services/fileService";
 import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
@@ -26,6 +29,7 @@ export function meta({}: Route.MetaArgs) {
 interface NoticeForm {
     title: string;
     content: string;
+    image: string;
     pinned: boolean;
     isPublic: boolean;
     expiresAt: string;
@@ -34,10 +38,16 @@ interface NoticeForm {
 const EMPTY_FORM: NoticeForm = {
     title: "",
     content: "",
+    image: "",
     pinned: false,
     isPublic: false,
     expiresAt: "",
 };
+
+function resolveImageSrc(value: string): string {
+    if (!value) return "";
+    return value.startsWith("/") ? `/api${value}` : value;
+}
 
 export default function Notices() {
     const { t } = useTranslation();
@@ -48,6 +58,8 @@ export default function Notices() {
     const [editing, setEditing] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const imageInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         loadNotices();
@@ -74,6 +86,7 @@ export default function Notices() {
         setForm({
             title: notice.title,
             content: notice.content,
+            image: notice.image || "",
             pinned: notice.pinned,
             isPublic: notice.public,
             expiresAt: notice.expiresAt ? notice.expiresAt.slice(0, 16) : "",
@@ -86,6 +99,21 @@ export default function Notices() {
         setForm({ ...EMPTY_FORM });
         setEditing(null);
         setIsModalOpen(false);
+    };
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            setUploadingImage(true);
+            const uploaded = await fileService.upload(file);
+            setForm((prev) => ({ ...prev, image: uploaded.url }));
+        } catch (err) {
+            toast.error(getErrorMessage(err, t("notices.imageUploadError")));
+        } finally {
+            setUploadingImage(false);
+            if (imageInputRef.current) imageInputRef.current.value = "";
+        }
     };
 
     const handleSave = async () => {
@@ -101,6 +129,7 @@ export default function Notices() {
         const payload: NoticeRequest = {
             title: form.title,
             content: form.content,
+            image: form.image || null,
             pinned: form.pinned,
             isPublic: form.isPublic,
             expiresAt: form.expiresAt || null,
@@ -270,6 +299,56 @@ export default function Notices() {
                             value={form.content}
                             onChange={(value) => setForm({ ...form, content: value })}
                             className="min-h-[200px] border border-gray-200 rounded-xl"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        {form.image ? (
+                            <img
+                                src={resolveImageSrc(form.image)}
+                                alt={t("dashboard.preview")}
+                                className="w-20 h-20 shrink-0 rounded-2xl object-cover border-2 border-yambo-green-100"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 shrink-0 rounded-2xl bg-yambo-green-50 border-2 border-dashed border-yambo-green-200 flex items-center justify-center">
+                                <FontAwesomeIcon icon={faCloudUploadAlt} className="text-yambo-green-300" />
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-2 min-w-0">
+                            <span className="text-sm font-semibold text-gray-700">{t("notices.imageLabel")}</span>
+                            <div className="flex flex-wrap gap-2">
+                                <ButtonComponent
+                                    type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => imageInputRef.current?.click()}
+                                    disabled={uploadingImage}
+                                >
+                                    {uploadingImage ? (
+                                        <><FontAwesomeIcon icon={faSpinner} spin className="mr-1" /> {t("notices.imageUploading")}</>
+                                    ) : (
+                                        form.image ? t("notices.imageChange") : t("notices.imageUpload")
+                                    )}
+                                </ButtonComponent>
+                                {form.image && (
+                                    <ButtonComponent
+                                        type="button"
+                                        variant="danger-text"
+                                        size="sm"
+                                        onClick={() => setForm({ ...form, image: "" })}
+                                        disabled={uploadingImage}
+                                    >
+                                        {t("dashboard.removeImage")}
+                                    </ButtonComponent>
+                                )}
+                            </div>
+                        </div>
+                        <input
+                            ref={imageInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
                         />
                     </div>
 

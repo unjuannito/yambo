@@ -7,6 +7,7 @@ export type NotificationPreferences = {
     issueCreated: boolean;
     issueComments: boolean;
     issueStatus: boolean;
+    noticePublished: boolean;
 };
 
 /**

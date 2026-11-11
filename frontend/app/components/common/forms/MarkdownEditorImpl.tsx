@@ -10,7 +10,6 @@ import {
     BlockTypeSelect,
     ListsToggle,
     CreateLink,
-    InsertImage,
     codeBlockPlugin,
     codeMirrorPlugin,
     frontmatterPlugin,
@@ -24,6 +23,7 @@ import {
 } from "@mdxeditor/editor";
 
 import { fileService } from "~/services/fileService";
+import MarkdownInsertImageButton from "./MarkdownInsertImageButton";
 
 async function handleImageUpload(file: File): Promise<string> {
     const uploaded = await fileService.upload(file);
@@ -102,7 +102,7 @@ export default function MarkdownEditorImpl({
                               <CreateLink />
                           ) : null}
                           {toolbarOptions.includes("image") ? (
-                              <InsertImage />
+                              <MarkdownInsertImageButton />
                           ) : null}
                           {toolbarOptions.includes("table") ? (
                               <InsertTable />
@@ -127,6 +127,11 @@ export default function MarkdownEditorImpl({
         imagePlugin({
             imageUploadHandler: handleImageUpload,
             allowSetImageDimensions: true,
+            // The settings/edit dialog on an already-inserted image is the same
+            // unstyled native dialog our own toolbar button replaces above, and
+            // isn't exposed as a swappable component — simplest to just hide it;
+            // delete + re-insert covers the same ground.
+            disableImageSettingsButton: true,
         }),
         sandpackPlugin(),
         directivesPlugin(),

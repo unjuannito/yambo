@@ -342,6 +342,28 @@ public class HtmlMailService implements MailService {
                 plainText);
     }
 
+    // ── Notice published (issue #132, v2) ────────────────────────────────
+
+    @Async("mailExecutor")
+    @Override
+    public void sendNoticePublished(String to, String userName, String noticeTitle, String noticeContentMarkdown,
+            String noticeImageUrl, String noticeLink) {
+        String orgName = settingsService.getOrganizationName();
+        String subject = "Nuevo anuncio: " + noticeTitle + " - " + orgName;
+        String contentHtml = markdownService.toSafeHtml(noticeContentMarkdown);
+
+        send(to, subject, "emails/notice-published",
+                Map.of(
+                        "userName", userName,
+                        "noticeTitle", noticeTitle,
+                        "contentHtml", contentHtml,
+                        "noticeImageUrl", noticeImageUrl == null ? "" : noticeImageUrl,
+                        "noticeLink", noticeLink,
+                        "headerColor", "#906bac",
+                        "headerIcon", EmailIcons.get("envelope")),
+                buildNoticePublishedPlainText(userName, noticeTitle, noticeContentMarkdown, noticeLink));
+    }
+
     // ── Order admin update (create / edit) ──────────────────────────────
 
     @Async("mailExecutor")
@@ -609,5 +631,14 @@ public class HtmlMailService implements MailService {
                 + markdownService.toPlainText(threadMarkdown) + "\n\n"
                 + "Ver incidencia: " + buildIssueLink(issueId) + "\n\n"
                 + "¡Gracias!\n";
+    }
+
+    private String buildNoticePublishedPlainText(String userName, String noticeTitle,
+            String noticeContentMarkdown, String noticeLink) {
+        return "Hola " + userName + ",\n\n"
+                + "Se ha publicado un nuevo anuncio:\n\n"
+                + noticeTitle + "\n\n"
+                + markdownService.toPlainText(noticeContentMarkdown) + "\n\n"
+                + "Ver anuncio: " + noticeLink + "\n";
     }
 }

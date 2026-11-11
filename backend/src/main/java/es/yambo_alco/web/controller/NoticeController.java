@@ -53,7 +53,7 @@ public class NoticeController {
     public ResponseEntity<NoticeResponse> create(@Valid @RequestBody NoticeRequest request) {
         String createdBy = authService.getCurrentUser(true).getName();
         Notice notice = noticeService.create(
-                request.getTitle(), request.getContent(), request.isPinned(), request.isPublic(),
+                request.getTitle(), request.getContent(), request.getImage(), request.isPinned(), request.isPublic(),
                 request.getExpiresAt(), createdBy);
         return ResponseEntity.status(201).body(new NoticeResponse(notice));
     }
@@ -62,7 +62,7 @@ public class NoticeController {
     @PreAuthorize("@permissionCheck.hasPermission('notice', 'update')")
     public ResponseEntity<NoticeResponse> update(@PathVariable String id, @Valid @RequestBody NoticeRequest request) {
         Notice notice = noticeService.update(
-                id, request.getTitle(), request.getContent(), request.isPinned(), request.isPublic(),
+                id, request.getTitle(), request.getContent(), request.getImage(), request.isPinned(), request.isPublic(),
                 request.getExpiresAt());
         return ResponseEntity.ok(new NoticeResponse(notice));
     }
@@ -80,6 +80,7 @@ public class NoticeController {
         private String title;
         @NotBlank(message = "El contenido es obligatorio")
         private String content;
+        private String image;
         private boolean pinned;
         @JsonProperty("public")
         @JsonAlias("isPublic")
@@ -92,6 +93,7 @@ public class NoticeController {
         private String id;
         private String title;
         private String content;
+        private String image;
         private String slug;
         private boolean pinned;
         @JsonProperty("public")
@@ -106,6 +108,7 @@ public class NoticeController {
             this.id = notice.getId();
             this.title = notice.getTitle();
             this.content = notice.getContent();
+            this.image = notice.getImage();
             this.slug = notice.getSlug();
             this.pinned = notice.isPinned();
             this.isPublic = notice.isPublic();

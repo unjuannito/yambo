@@ -26,6 +26,9 @@ public class NotificationPreferences {
     @Builder.Default
     private boolean issueStatus = true;
 
+    @Builder.Default
+    private boolean noticePublished = true;
+
     public static NotificationPreferences defaults() {
         return NotificationPreferences.builder().build();
     }

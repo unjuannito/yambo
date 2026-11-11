@@ -4,6 +4,7 @@ export interface Notice {
     id: string;
     title: string;
     content: string;
+    image: string | null;
     slug: string | null;
     pinned: boolean;
     public: boolean;
@@ -17,6 +18,7 @@ export interface Notice {
 export interface NoticeRequest {
     title: string;
     content: string;
+    image?: string | null;
     pinned: boolean;
     isPublic: boolean;
     expiresAt?: string | null;
