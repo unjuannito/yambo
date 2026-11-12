@@ -1,0 +1,17 @@
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+    <p th:if="${canceledByAdmin}" style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Tu pedido ha sido <strong>cancelado por un administrador</strong>.
+        Si tienes alguna pregunta sobre la cancelación, no dudes en contactarnos.
+    </p>
+    <p th:unless="${canceledByAdmin}" style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Has cancelado tu pedido correctamente.
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: orderDetails(${orderId}, ${orderDate}, ${statusLabel}, ${statusColor})}"/>
+    <th:block th:replace="~{emails/fragments/layout :: productTable(${products}, ${totalPrice})}"/>
+
+    <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
+        Si tienes alguna pregunta, no dudes en contactarnos.
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: ctaButton(${orderUrl}, 'Ver mi pedido', '#8B5CF6')}"/>

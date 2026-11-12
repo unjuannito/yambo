@@ -1,0 +1,19 @@
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola, <span th:text="${userName}">nombre</span>!</h2>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Ya formas parte del equipo de <span th:text="${organizationName}">Yambo</span> en la web. Solo te falta crear tu contraseña para entrar a tu cuenta, revisar tu ficha y personalizarla.
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: ctaButton(${accessLink}, 'Crear mi contraseña', '#33a35e')}"/>
+
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 14px; line-height: 1.6;">
+        O copia y pega el siguiente enlace en tu navegador:
+    </p>
+    <p style="margin: 0 0 20px 0; color: #3498db; font-size: 14px; word-break: break-all;">
+        <a th:href="${accessLink}" th:text="${accessLink}" style="color: #3498db;"></a>
+    </p>
+    <p style="margin: 0 0 20px 0; color: #e74c3c; font-size: 14px;">
+        <strong>Importante:</strong> Este enlace expirará en <span th:text="${expirationDays}"></span> días.
+    </p>
+    <p style="margin: 0; color: #555555; font-size: 14px; line-height: 1.6;">
+        Si no esperabas este correo, puedes ignorarlo.
+    </p>

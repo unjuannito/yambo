@@ -19,7 +19,8 @@ public enum PermissionResource {
     REPORT("report"),
     LEGAL_PAGE("legal_page"),
     EMAIL_TEMPLATE("email_template"),
-    CAMPAIGN("campaign");
+    CAMPAIGN("campaign"),
+    EMAIL_COMMON("email_common");
 
     private final String value;
 

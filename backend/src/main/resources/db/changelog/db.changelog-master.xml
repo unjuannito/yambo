@@ -114,4 +114,5 @@
     <include file="db/changelog/changes/103-home-share-card.xml"/>
     <include file="db/changelog/changes/107-email-templates.xml"/>
     <include file="db/changelog/changes/108-email-campaigns.xml"/>
+    <include file="db/changelog/changes/109-email-template-import.xml"/>
 </databaseChangeLog>

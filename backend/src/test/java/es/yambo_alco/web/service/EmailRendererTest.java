@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.repository.EmailCommonElementRepository;
 import es.yambo_alco.web.service.MailService.OrderProductInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class EmailRendererTest {
     @Mock
     private ThymeleafEmailEngine thymeleafEmailEngine;
 
+    @Mock
+    private EmailCommonElementRepository emailCommonElementRepository;
+
     @InjectMocks
     private EmailRenderer renderer;
 
@@ -36,6 +40,7 @@ class EmailRendererTest {
     void setUp() {
         lenient().when(settingsService.getOrganizationName()).thenReturn("Asociación Prueba");
         lenient().when(settingsService.getDomain()).thenReturn("https://yambo.example");
+        lenient().when(emailCommonElementRepository.findByKey(anyString())).thenReturn(java.util.Optional.empty());
     }
 
     @Test

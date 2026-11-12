@@ -1,0 +1,31 @@
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Se ha añadido un nuevo comentario a una incidencia de tu pedido.
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: issueDetails(${issueId}, ${issueTitle}, ${productName})}"/>
+
+    <!-- Comment -->
+    <div style="background-color: #e8f4f8; border-left: 4px solid #3498db; padding: 15px 20px; margin: 20px 0;">
+        <p style="margin: 0 0 10px 0; color: #555555; font-size: 14px;">
+            <strong style="color: #2c3e50;">Comentario de <span th:text="${commentAuthor}"></span></strong>
+        </p>
+        <p style="margin: 0 0 10px 0; color: #555555; font-size: 13px;">
+            <em th:text="${#temporals.format(commentDate, 'dd/MM/yyyy HH:mm')}"></em>
+        </p>
+        <p th:if="${statusChanged}" style="margin: 0 0 10px 0; color: #555555; font-size: 14px;">
+            <strong>Estado:</strong>
+            <span th:text="${oldStatusText}" style="text-decoration: line-through;">Abierto</span>
+            <span style="margin: 0 8px;">➜</span>
+            <span th:text="${newStatusText}" th:style="'color: ' + ${statusColor} + '; font-weight: bold;'">En Progreso</span>
+        </p>
+        <div style="margin: 0; color: #2c3e50; font-size: 15px; line-height: 1.5;" th:utext="${commentHtml}">
+            Texto del comentario
+        </div>
+    </div>
+
+    <p style="margin: 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Puedes responder y ver toda la conversación desde tu panel de control.
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: ctaButton(${issueLink}, 'Ver Conversación', '#3498db')}"/>

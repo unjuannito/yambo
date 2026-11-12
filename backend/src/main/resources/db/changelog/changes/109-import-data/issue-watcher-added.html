@@ -1,0 +1,20 @@
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span th:text="${userName}"></span>!</h2>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Has sido añadido como seguidor de una incidencia. Te compartimos el hilo completo para que tengas contexto desde el principio.
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: issueDetails(${issueId}, ${issueTitle}, ${productName})}"/>
+
+    <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 15px 20px; margin: 20px 0;">
+        <p style="margin: 0 0 10px 0; color: #555555; font-size: 14px;">
+            <strong style="color: #2c3e50;">Hilo completo de la incidencia</strong>
+        </p>
+        <p style="margin: 0 0 10px 0; color: #555555; font-size: 13px;">
+            <em th:text="${#temporals.format(sentAt, 'dd/MM/yyyy HH:mm')}"></em>
+        </p>
+        <div style="margin: 0; color: #2c3e50; font-size: 14px; line-height: 1.5;" th:utext="${threadHtml}">
+            Resumen del hilo
+        </div>
+    </div>
+
+    <th:block th:replace="~{emails/fragments/layout :: ctaButton(${issueLink}, 'Ver Incidencia', '#2563eb')}"/>

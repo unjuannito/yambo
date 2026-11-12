@@ -1,0 +1,19 @@
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Has sido invitado!</h2>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Has sido invitado a registrarte en <span th:text="${organizationName}">Yambo</span>.
+    </p>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Haz clic en el siguiente botón para completar tu registro:
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: ctaButton(${invitationLink}, 'Registrarse Ahora', '#3498db')}"/>
+
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 14px; line-height: 1.6;">
+        O copia y pega el siguiente enlace en tu navegador:
+    </p>
+    <p style="margin: 0 0 20px 0; color: #3498db; font-size: 14px; word-break: break-all;">
+        <a th:href="${invitationLink}" th:text="${invitationLink}" style="color: #3498db;"></a>
+    </p>
+    <p style="margin: 0; color: #e74c3c; font-size: 14px;">
+        <strong>Importante:</strong> Este enlace expirará en <span th:text="${expirationHours}"></span> horas.
+    </p>

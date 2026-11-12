@@ -1,0 +1,15 @@
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">
+        ¡<span th:text="${activityName}">Actividad</span> ya está abierta!
+    </h2>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        La actividad que te interesaba ya tiene las inscripciones abiertas.
+    </p>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        <strong th:text="${activityName}">Nombre de la actividad</strong>
+    </p>
+
+    <th:block th:replace="~{emails/fragments/layout :: ctaButton(${activityUrl}, 'Apuntarme ahora', '#22c55e')}"/>
+
+    <p style="margin: 20px 0 0 0; color: #e74c3c; font-size: 14px; line-height: 1.6;">
+        <strong>¡No esperes demasiado!</strong> Las plazas son limitadas.
+    </p>

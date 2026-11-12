@@ -1,5 +1,6 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.repository.EmailCommonElementRepository;
 import es.yambo_alco.web.service.MailService.OrderProductInfo;
 import es.yambo_alco.web.util.EmailHtmlSanitizer;
 import es.yambo_alco.web.util.EmailTemplateCatalog;
@@ -56,7 +57,10 @@ import java.util.Map;
  * En comunicados, el modo Thymeleaf solo tiene variables a nivel de organización
  * (sin datos por destinatario todavía: el envío hoy renderiza el cuerpo una vez
  * para toda la campaña, ver {@link CampaignSender}); esos sí se envuelven con
- * {@link #envelope}, el único sitio que lo usa ahora.
+ * {@link #envelope}, el único sitio que lo usa ahora — con cabecera/pie editables
+ * por el admin ({@code email_common_element}, issue #123, Part 2), con el HTML
+ * hardcodeado aquí ({@link #DEFAULT_HEADER_HTML}/{@link #DEFAULT_FOOTER_HTML})
+ * como respaldo si no hay fila.
  */
 @Service
 @RequiredArgsConstructor
@@ -65,8 +69,24 @@ public class EmailRenderer {
     private static final DateTimeFormatter DATE =
             DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", new Locale("es"));
 
+    /** HTML por defecto de la cabecera de comunicados (issue #123, Part 2); igual al seed 109-03. */
+    public static final String DEFAULT_HEADER_HTML =
+            "<div style=\"background-color:#2c3e50;padding:16px 30px;\">"
+            + "<span style=\"color:#ffffff;font-size:18px;font-weight:bold;font-family:Arial,sans-serif;\">"
+            + "{{organizacion}}</span></div>";
+
+    /** HTML por defecto del pie de comunicados (issue #123, Part 2); igual al seed 109-03. */
+    public static final String DEFAULT_FOOTER_HTML =
+            "<div style=\"padding:16px 30px;border-top:1px solid #eaeaea;\">"
+            + "<p style=\"margin:0 0 6px 0;color:#999999;font-size:12px;font-family:Arial,sans-serif;\">"
+            + "Has recibido este correo de {{organizacion}}.</p>"
+            + "<p style=\"margin:0;color:#3498db;font-size:12px;font-family:Arial,sans-serif;\">"
+            + "<a href=\"{{enlace_preferencias}}\" style=\"color:#3498db;\">Gestionar preferencias de notificación</a></p>"
+            + "</div>";
+
     private final SettingsService settingsService;
     private final ThymeleafEmailEngine thymeleafEmailEngine;
+    private final EmailCommonElementRepository emailCommonElementRepository;
 
     // ── Personalización de correos automáticos ───────────────────────────
 
@@ -275,15 +295,11 @@ public class EmailRenderer {
     }
 
     private String envelope(String body, String orgName, String prefsUrl) {
-        String header = "<div style=\"background-color:#2c3e50;padding:16px 30px;\">"
-                + "<span style=\"color:#ffffff;font-size:18px;font-weight:bold;font-family:Arial,sans-serif;\">"
-                + escape(orgName) + "</span></div>";
-        String footer = "<div style=\"padding:16px 30px;border-top:1px solid #eaeaea;\">"
-                + "<p style=\"margin:0 0 6px 0;color:#999999;font-size:12px;font-family:Arial,sans-serif;\">"
-                + "Has recibido este correo de " + escape(orgName) + ".</p>"
-                + "<p style=\"margin:0;color:#3498db;font-size:12px;font-family:Arial,sans-serif;\">"
-                + "<a href=\"" + prefsUrl + "\" style=\"color:#3498db;\">Gestionar preferencias de notificación</a></p>"
-                + "</div>";
+        // Issue #123, Part 2: cabecera/pie editables (email_common_element); si no
+        // hay fila (o la BD no está disponible, p. ej. en tests unitarios sin
+        // Spring) se usa el mismo HTML que estaba hardcodeado aquí.
+        String header = resolveCommonTokens(loadCommonElementHtml("header", DEFAULT_HEADER_HTML), orgName, prefsUrl);
+        String footer = resolveCommonTokens(loadCommonElementHtml("footer", DEFAULT_FOOTER_HTML), orgName, prefsUrl);
 
         return "<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"UTF-8\">"
                 + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>"
@@ -303,5 +319,20 @@ public class EmailRenderer {
             return "";
         }
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    private String loadCommonElementHtml(String key, String fallback) {
+        if (emailCommonElementRepository == null) {
+            return fallback;
+        }
+        return emailCommonElementRepository.findByKey(key)
+                .map(es.yambo_alco.web.model.EmailCommonElement::getHtml)
+                .filter(html -> html != null && !html.isBlank())
+                .orElse(fallback);
+    }
+
+    /** Resuelve {{organizacion}}/{{enlace_preferencias}} en la cabecera/pie de comunicados. */
+    private String resolveCommonTokens(String template, String orgName, String prefsUrl) {
+        return template.replace("{{organizacion}}", escape(orgName)).replace("{{enlace_preferencias}}", prefsUrl);
     }
 }
