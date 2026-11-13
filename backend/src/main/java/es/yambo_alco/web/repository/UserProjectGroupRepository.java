@@ -14,6 +14,7 @@ public interface UserProjectGroupRepository
     List<UserProjectGroup> findByUserId(String userId);
 
     List<UserProjectGroup> findByProjectGroupIdAndRole(String projectGroupId, UserProjectGroupRole role);
+    List<UserProjectGroup> findByProjectGroupId(String projectGroupId);
 
     List<UserProjectGroup> findByProjectGroup_ProjectIdAndRole(String projectId, UserProjectGroupRole role);
 

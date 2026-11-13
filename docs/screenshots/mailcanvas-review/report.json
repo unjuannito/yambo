@@ -1,0 +1,25 @@
+{
+  "fixture": "Real order-confirmed.html; API and permissions simulated",
+  "checks": [
+    "shared management tab",
+    "campaign and automatic email sections in the library",
+    "editable header, original six content blocks and editable footer",
+    "product fragment visible",
+    "insert shared block",
+    "edit header title per instance",
+    "preview gallery and search",
+    "enlarged accessible preview",
+    "starter component and variables",
+    "campaign recipient variables",
+    "insert recipient in subject and body",
+    "editable header values on the web",
+    "restore all confirmation",
+    "website campaign starter gallery",
+    "native numeric sample input",
+    "color picker and hexadecimal input",
+    "native datetime input",
+    "component instance color and date controls",
+    "design measurements with units and accessible alignment"
+  ],
+  "errors": []
+}

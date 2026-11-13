@@ -1,0 +1,238 @@
+package es.yambo_alco.web.service;
+
+import es.yambo_alco.web.exception.BadRequestException;
+import es.yambo_alco.web.model.EmailTemplate;
+import es.yambo_alco.web.repository.EmailTemplateRepository;
+import es.yambo_alco.web.util.EmailTemplateCatalog;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.IContext;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+/**
+ * Tests de {@link EmailTemplateService}: CRUD de personalización de correos
+ * automáticos, vista previa y correo de prueba.
+ */
+@ExtendWith(MockitoExtension.class)
+class EmailTemplateServiceTest {
+    @Test
+    void previewCompleteEditableDocumentDoesNotApplyBaseLayoutAgain() {
+        String source = "<div data-yambo-email-document=\"v1\"><h1>Cabecera</h1><p>Contenido</p><footer>Pie</footer></div>";
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(emailRenderer.renderBody(eq("invitation"), eq(source), anyMap())).thenReturn("<h1>Cabecera</h1><p>Contenido</p><footer>Pie</footer>");
+        String html = service.preview("invitation", source);
+        assertTrue(html.startsWith("<!doctype html>"));
+        assertEquals(1, html.split("<h1>Cabecera</h1>", -1).length - 1);
+        verifyNoInteractions(templateEngine);
+    }
+
+
+    @Mock
+    private SettingsService settingsService;
+
+    @Mock
+    private EmailTemplateRepository templateRepository;
+
+    @Mock
+    private EmailRenderer emailRenderer;
+
+    @Mock
+    private MailService mailService;
+
+    @Mock
+    private TemplateEngine templateEngine;
+
+    @InjectMocks
+    private EmailTemplateService service;
+
+    @Test
+    void restoresAllKnownTemplatesAndTheirHeaderVariables() {
+        EmailTemplate row = overrideRow("invitation", "Personalizado", "<p>Cambiado</p>");
+        when(templateRepository.findByKey("invitation")).thenReturn(Optional.of(row));
+        var restored = service.resetAll();
+        assertEquals(EmailTemplateCatalog.all().size(), restored.size());
+        verify(templateRepository).delete(row);
+        for (var definition : EmailTemplateCatalog.all()) {
+            verify(settingsService).saveEmailVariables(definition.key(), Map.of());
+        }
+        verify(templateRepository, never()).deleteAll();
+    }
+
+    @Test
+    void previewUsesDraftHeaderValuesWithoutPersistingThem() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of("emailDate", "Fecha automática"));
+        when(emailRenderer.renderBody(eq("invitation"), eq("<p>Hola</p>"), anyMap())).thenReturn("<p>Hola</p>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class))).thenReturn("preview");
+        service.preview("invitation", "<p>Hola</p>", Map.of("headerTitle", "Sin guardar", "headerColor", "#123456"));
+        var variables = ArgumentCaptor.forClass(Map.class);
+        verify(emailRenderer).renderBody(eq("invitation"), eq("<p>Hola</p>"), variables.capture());
+        assertEquals("Sin guardar", variables.getValue().get("headerTitle"));
+        assertEquals("#123456", variables.getValue().get("headerColor"));
+        assertEquals("Fecha automática", variables.getValue().get("emailDate"));
+        verify(settingsService, never()).saveEmailVariables(anyString(), anyMap());
+    }
+
+    private EmailTemplate overrideRow(String key, String subject, String body) {
+        return EmailTemplate.builder().key(key).subject(subject).body(body).updatedBy("admin").build();
+    }
+
+    @Test
+    void listTemplates_ShouldReturnOneViewPerCatalogEntry() {
+        when(templateRepository.findByKey(anyString())).thenReturn(Optional.empty());
+
+        List<EmailTemplateService.TemplateView> views = service.listTemplates();
+
+        assertEquals(EmailTemplateCatalog.all().size(), views.size());
+        views.forEach(v -> assertFalse(v.isOverridden()));
+    }
+
+    @Test
+    void listTemplates_ShouldFlagOverridden() {
+        String key = "invitation";
+        when(templateRepository.findByKey(anyString()))
+                .thenAnswer(inv -> inv.getArgument(0).equals(key)
+                        ? Optional.of(overrideRow(key, "Sujeto", "Cuerpo"))
+                        : Optional.empty());
+
+        List<EmailTemplateService.TemplateView> views = service.listTemplates();
+        EmailTemplateService.TemplateView invitation =
+                views.stream().filter(v -> v.getKey().equals(key)).findFirst().orElseThrow();
+
+        assertTrue(invitation.isOverridden());
+        assertEquals("Sujeto", invitation.getSubject());
+        assertEquals("Cuerpo", invitation.getBody());
+    }
+
+    @Test
+    void getTemplate_WithUnknownKey_ShouldThrow() {
+        assertThrows(BadRequestException.class, () -> service.getTemplate("no-existe"));
+    }
+
+    @Test
+    void save_WithBody_ShouldPersistAndReturnOverridden() {
+        when(templateRepository.findByKey("invitation")).thenReturn(Optional.empty());
+        when(templateRepository.save(any(EmailTemplate.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        EmailTemplateService.TemplateView view =
+                service.save("invitation", "Hola {{nombre}}", "Bienvenido {{nombre}}", "admin");
+
+        ArgumentCaptor<EmailTemplate> captor = ArgumentCaptor.forClass(EmailTemplate.class);
+        verify(templateRepository).save(captor.capture());
+        EmailTemplate saved = captor.getValue();
+        assertEquals("invitation", saved.getKey());
+        assertEquals("Hola {{nombre}}", saved.getSubject());
+        assertEquals("Bienvenido {{nombre}}", saved.getBody());
+        assertEquals("admin", saved.getUpdatedBy());
+
+        assertTrue(view.isOverridden());
+        assertEquals("Bienvenido {{nombre}}", view.getBody());
+    }
+
+    @Test
+    void save_WithBlankBody_ShouldRemoveExistingOverride() {
+        EmailTemplate existing = overrideRow("invitation", "Sujeto", "Cuerpo");
+        when(templateRepository.findByKey("invitation")).thenReturn(Optional.of(existing));
+
+        EmailTemplateService.TemplateView view = service.save("invitation", "  ", "   ", "admin");
+
+        verify(templateRepository).delete(existing);
+        verify(templateRepository, never()).save(any());
+        assertFalse(view.isOverridden());
+        assertTrue(es.yambo_alco.web.util.EditableEmailDocument.ownsLayout(view.getBody()));
+    }
+
+    @Test
+    void save_WithUnknownKey_ShouldThrow() {
+        assertThrows(BadRequestException.class,
+                () -> service.save("no-existe", "s", "b", "admin"));
+    }
+
+    @Test
+    void reset_ShouldDeleteOverrideAndReturnNotOverridden() {
+        EmailTemplate existing = overrideRow("invitation", "Sujeto", "Cuerpo");
+        when(templateRepository.findByKey("invitation")).thenReturn(Optional.of(existing));
+
+        EmailTemplateService.TemplateView view = service.reset("invitation");
+
+        verify(templateRepository).delete(existing);
+        assertFalse(view.isOverridden());
+    }
+
+    @Test
+    void preview_WithBody_ShouldUseRenderer() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(emailRenderer.renderBody(eq("invitation"), anyString(), any()))
+                .thenReturn("<p>rendered</p>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html><body><p>rendered</p></body></html>");
+
+        String html = service.preview("invitation", "Hola {{nombre}}");
+
+        assertEquals("<html><body><p>rendered</p></body></html>", html);
+    }
+
+    @Test
+    void preview_WithBlankBody_ShouldReturnDefaultNote() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html>default</html>");
+
+        String html = service.preview("invitation", "");
+
+        assertEquals("<html>default</html>", html);
+        verify(emailRenderer, never()).renderBody(anyString(), anyString(), any());
+    }
+
+    @Test
+    void sendTest_WithBody_ShouldSendRawWithRenderedContent() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(emailRenderer.renderBody(eq("invitation"), anyString(), any()))
+                .thenReturn("<p>rendered</p>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html>full</html>");
+
+        service.sendTest("invitation", null, "Hola {{nombre}}", "test@example.com");
+
+        // Sin asunto personalizado → el asunto por defecto usa el nombre de la
+        // plantilla del catálogo.
+        verify(mailService).sendRaw(eq("test@example.com"),
+                eq("[" + EmailTemplateCatalog.byKey("invitation").displayName() + "]"),
+                eq("<html>full</html>"));
+    }
+
+    @Test
+    void sendTest_WithCustomSubject_ShouldUseRenderedSubject() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(emailRenderer.renderBody(eq("invitation"), anyString(), any()))
+                .thenReturn("<p>rendered</p>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class)))
+                .thenReturn("<html>full</html>");
+        when(emailRenderer.renderSubject(anyString(), anyString(), any()))
+                .thenReturn("Hola {{nombre}}");
+
+        service.sendTest("invitation", "Hola {{nombre}}", "Cuerpo", "test@example.com");
+
+        verify(mailService).sendRaw(eq("test@example.com"), eq("Hola {{nombre}}"), anyString());
+    }
+
+    @Test
+    void sendTest_WithInvalidAddress_ShouldThrow() {
+        assertThrows(BadRequestException.class,
+                () -> service.sendTest("invitation", null, "cuerpo", "no-es-un-email"));
+        verifyNoInteractions(mailService);
+    }
+}

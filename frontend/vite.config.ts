@@ -18,7 +18,7 @@ export default defineConfig({
     strictPort: true,
     watch: {
         usePolling: true,
-        interval: 1000,
+        interval: 10000,
     },
   },
 

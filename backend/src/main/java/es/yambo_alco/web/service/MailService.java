@@ -50,6 +50,13 @@ public interface MailService {
             String action, List<OrderProductInfo> products, BigDecimal totalPrice, String justification,
             String issueId, List<OrderProductRow> rows, BigDecimal oldTotalPrice, OrderStatus currentStatus);
 
+    /**
+     * Envía un correo cuyo cuerpo HTML ya está compuesto (comunicados, issue #123).
+     * A diferencia de los correos automáticos, aquí no hay plantilla Thymeleaf:
+     * el cuerpo se envuelve en el documento de marca y se entrega tal cual.
+     */
+    void sendRaw(String to, String subject, String htmlBody);
+
     default String generatePaymentReference(LocalDateTime orderDate, String orderId) {
         return "merch " + orderDate.getYear() + " " + orderId;
     }

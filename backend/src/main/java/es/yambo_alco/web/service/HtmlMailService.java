@@ -1,13 +1,16 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.config.MailConfig;
+import es.yambo_alco.web.model.EmailTemplate;
 import es.yambo_alco.web.model.enums.IssueStatus;
 import es.yambo_alco.web.model.enums.OrderStatus;
+import es.yambo_alco.web.repository.EmailTemplateRepository;
 import es.yambo_alco.web.util.EmailIcons;
+import es.yambo_alco.web.util.EmailTemplateCatalog;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -19,12 +22,12 @@ import org.thymeleaf.context.Context;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 @Primary
-@RequiredArgsConstructor
 public class HtmlMailService implements MailService {
 
     private static final Logger log = LoggerFactory.getLogger(HtmlMailService.class);
@@ -33,6 +36,27 @@ public class HtmlMailService implements MailService {
     private final TemplateEngine templateEngine;
     private final SettingsService settingsService;
     private final MarkdownService markdownService;
+
+    /** Optional override store + renderer (issue #123). Injected via the explicit constructor. */
+    private final EmailTemplateRepository emailTemplateRepository;
+    private final EmailRenderer emailRenderer;
+
+    public HtmlMailService(MailConfig mailConfig, TemplateEngine templateEngine,
+            SettingsService settingsService, MarkdownService markdownService) {
+        this(mailConfig, templateEngine, settingsService, markdownService, null, null);
+    }
+
+    @Autowired
+    public HtmlMailService(MailConfig mailConfig, TemplateEngine templateEngine,
+            SettingsService settingsService, MarkdownService markdownService,
+            EmailTemplateRepository emailTemplateRepository, EmailRenderer emailRenderer) {
+        this.mailConfig = mailConfig;
+        this.templateEngine = templateEngine;
+        this.settingsService = settingsService;
+        this.markdownService = markdownService;
+        this.emailTemplateRepository = emailTemplateRepository;
+        this.emailRenderer = emailRenderer;
+    }
 
     @Value("${invitation.expiration.hours:72}")
     private long expirationHours;
@@ -65,15 +89,53 @@ public class HtmlMailService implements MailService {
 
             helper.setFrom(fromEmail, fromName);
             helper.setTo(to);
-            helper.setSubject(subject);
 
-            Context context = new Context();
-            context.setVariable("currentYear", java.time.Year.now().getValue());
-            context.setVariable("organizationName", settingsService.getOrganizationName());
-            context.setVariable("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
-            variables.forEach(context::setVariable);
+            // Issue #123: a saved override replaces the built-in template's content.
+            // Both the override and the default render through the exact same
+            // emails/layout/base-email (headerColor/headerTitle/headerIcon already in
+            // `variables`), so personalizing a built-in never changes its brand header.
+            String key = templateName.startsWith("emails/") ? templateName.substring("emails/".length()) : templateName;
+            EmailTemplate override = emailTemplateRepository != null
+                    ? emailTemplateRepository.findByKey(key).orElse(null) : null;
 
-            String htmlContent = templateEngine.process(templateName, context);
+            Map<String, Object> allVars = new HashMap<>(variables);
+            allVars.put("currentYear", java.time.Year.now().getValue());
+            allVars.put("emailDate", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            allVars.put("organizationName", settingsService.getOrganizationName());
+            allVars.put("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
+
+            allVars.putAll(settingsService.getEmailVariables(key));
+
+            boolean hasOverride = override != null && override.getBody() != null
+                    && !override.getBody().isBlank() && emailRenderer != null;
+            String renderedContent = hasOverride
+                    ? emailRenderer.renderBody(key, override.getBody(), allVars)
+                    : null;
+            if (hasOverride && renderedContent == null) {
+                log.warn("Personalización de [{}] no se pudo renderizar (Thymeleaf falló/agotó el tiempo); "
+                        + "se usa la plantilla por defecto para este envío", key);
+            }
+
+            String htmlContent;
+            if (renderedContent != null) {
+                // Override rendered fine (Thymeleaf succeeded, or it never used it).
+                helper.setSubject(override.getSubject() != null && !override.getSubject().isBlank()
+                        ? emailRenderer.renderSubject(key, override.getSubject(), allVars) : subject);
+                Context baseContext = new Context();
+                allVars.forEach(baseContext::setVariable);
+                baseContext.setVariable("contentHtml", renderedContent);
+                htmlContent = es.yambo_alco.web.util.EditableEmailDocument.ownsLayout(override.getBody())
+                        ? es.yambo_alco.web.util.EditableEmailDocument.renderedDocument(renderedContent)
+                        : templateEngine.process("emails/layout/base-email", baseContext);
+            } else {
+                // No override, or its Thymeleaf body failed/timed out: never send a
+                // personalization that rendered half-broken (e.g. a password reset
+                // with no link) — fall back to the known-good built-in template.
+                helper.setSubject(subject);
+                Context context = new Context();
+                allVars.forEach(context::setVariable);
+                htmlContent = templateEngine.process(templateName, context);
+            }
 
             String preferencesUrl = settingsService.getDomain() + "/mi-espacio/cuenta";
             String fullPlainText = plainText
@@ -89,6 +151,47 @@ public class HtmlMailService implements MailService {
         }
     }
 
+    // ── Raw composed HTML (campaigns, issue #123) ───────────────────────
+
+    /**
+     * Envía un correo cuyo cuerpo ya está renderizado como documento HTML
+     * completo (comunicados, issue #123). A diferencia de los correos
+     * automáticos no hay plantilla Thymeleaf: el documento se entrega tal cual,
+     * con su texto plano de respaldo derivado del propio HTML.
+     * <p>
+     * Es <b>síncrono</b>: el llamador (el envío de un comunicado) decide cuándo
+     * se envuelve en un {@code @Async} — un comunicado entero es una única tarea
+     * asíncrona que envía los destinatarios en secuencia, sin desbordar la
+     * cola del executor de correo.
+     *
+     * @param htmlBody documento HTML completo (ya envuelto en el layout de marca)
+     */
+    @Override
+    public void sendRaw(String to, String subject, String htmlBody) {
+        if (to == null || to.isBlank()) {
+            log.info("Campaign email skipped: no recipient address ({})", subject);
+            return;
+        }
+        if (!mailConfig.isConfigured()) {
+            log.info("[CONSOLE MODE] Campaign email [{}] to {}: {}", subject, to, htmlBody);
+            return;
+        }
+        try {
+            JavaMailSender mailSender = mailConfig.getMailSender();
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(settingsService.getEmailFrom(), settingsService.getEmailFromName());
+            helper.setTo(to);
+            helper.setSubject(subject);
+            String plain = org.jsoup.Jsoup.parse(htmlBody).text();
+            helper.setText(plain, htmlBody);
+            mailSender.send(message);
+            log.info("Campaign email sent [{}] to: {}", subject, to);
+        } catch (Exception e) {
+            log.error("Failed to send campaign email [{}] to: {}", subject, to, e);
+        }
+    }
+
     // ── Invitation ───────────────────────────────────────────────────────
 
     @Async("mailExecutor")
@@ -98,7 +201,9 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "invitationLink", extractInvitationLink(body),
                         "expirationHours", expirationHours,
-                        "headerIcon", EmailIcons.get("envelope")),
+                        "headerIcon", EmailIcons.get("envelope"),
+                        "headerColor", "#2c3e50",
+                        "headerTitle", "Invitación"),
                 body);
     }
 
@@ -132,6 +237,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusLabel", newStatus.getLabel()),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
+                        Map.entry("headerTitle", newStatus.getEmailHeaderTitle()),
                         Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
                         Map.entry("clipboardIcon", EmailIcons.get("clipboard")),
                         Map.entry("iban", settingsService.getIban()),
@@ -160,6 +266,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("statusLabel", OrderStatus.CANCELED.getLabel()),
                         Map.entry("statusColor", OrderStatus.CANCELED.getColor()),
                         Map.entry("headerColor", OrderStatus.CANCELED.getColor()),
+                        Map.entry("headerTitle", OrderStatus.CANCELED.getEmailHeaderTitle()),
                         Map.entry("headerIcon", EmailIcons.get(OrderStatus.CANCELED.getIcon())),
                         Map.entry("canceledByAdmin", canceledByAdmin),
                         Map.entry("orderUrl", buildOrderLink(orderId))),
@@ -188,6 +295,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("createdAt", createdAt),
                         Map.entry("descriptionHtml", descriptionHtml),
                         Map.entry("headerColor", IssueStatus.OPEN.getColor()),
+                        Map.entry("headerTitle", "Nueva Incidencia Reportada"),
                         Map.entry("headerIcon", EmailIcons.get(IssueStatus.OPEN.getIcon())),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildIssueCreatedPlainText(userName, issueId, issueTitle, productName, orderId, createdBy, createdAt,
@@ -221,6 +329,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("newStatusText", toIssueEmailStatusText(oldStatus, newStatus)),
                         Map.entry("statusColor", newStatus != null ? newStatus.getColor() : "#3498db"),
                         Map.entry("headerColor", "#3498db"),
+                        Map.entry("headerTitle", "Nuevo Comentario"),
                         Map.entry("headerIcon", EmailIcons.get("comments")),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildCommentPlainText(userName, issueId, issueTitle, commentAuthor, commentText,
@@ -245,6 +354,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("newStatusText", toIssueEmailStatusText(oldStatus, newStatus)),
                         Map.entry("statusColor", newStatus.getColor()),
                         Map.entry("headerColor", newStatus.getColor()),
+                        Map.entry("headerTitle", "Estado Actualizado"),
                         Map.entry("headerIcon", EmailIcons.get(newStatus.getIcon())),
                         Map.entry("changedBy", changedBy),
                         Map.entry("changedAt", changedAt),
@@ -270,6 +380,7 @@ public class HtmlMailService implements MailService {
                         Map.entry("threadHtml", threadHtml),
                         Map.entry("sentAt", sentAt),
                         Map.entry("headerColor", "#2563eb"),
+                        Map.entry("headerTitle", "Nuevo Seguidor"),
                         Map.entry("headerIcon", EmailIcons.get("comments")),
                         Map.entry("issueLink", buildIssueLink(issueId))),
                 buildWatcherAddedPlainText(userName, issueId, issueTitle, threadMarkdown, sentAt));
@@ -293,7 +404,9 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "resetLink", resetLink,
                         "expirationHours", expirationHours,
-                        "headerIcon", EmailIcons.get("key")),
+                        "headerIcon", EmailIcons.get("key"),
+                        "headerColor", "#e67e22",
+                        "headerTitle", "Restablecer contraseña"),
                 plainText);
     }
 
@@ -314,7 +427,9 @@ public class HtmlMailService implements MailService {
                         "userName", userName,
                         "accessLink", accessLink,
                         "expirationDays", expirationDays,
-                        "headerIcon", EmailIcons.get("key")),
+                        "headerIcon", EmailIcons.get("key"),
+                        "headerColor", "#33a35e",
+                        "headerTitle", "Tu cuenta"),
                 plainText);
     }
 
@@ -338,7 +453,9 @@ public class HtmlMailService implements MailService {
                 Map.of(
                         "activityName", activityName,
                         "activityUrl", activityUrl,
-                        "headerIcon", EmailIcons.get("circle-check")),
+                        "headerIcon", EmailIcons.get("circle-check"),
+                        "headerColor", "#22c55e",
+                        "headerTitle", "¡Inscripciones abiertas!"),
                 plainText);
     }
 

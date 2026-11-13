@@ -9,7 +9,8 @@ public enum PermissionAction {
     READ("read"),
     UPDATE("update"),
     DELETE("delete"),
-    COMMENT("comment");
+    COMMENT("comment"),
+    SEND("send");
 
     private final String value;
 

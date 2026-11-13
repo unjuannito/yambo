@@ -112,4 +112,8 @@
     <include file="db/changelog/changes/101-staff-photo-edit.xml"/>
     <include file="db/changelog/changes/102-public-slugs.xml"/>
     <include file="db/changelog/changes/103-home-share-card.xml"/>
+    <include file="db/changelog/changes/107-email-templates.xml"/>
+    <include file="db/changelog/changes/108-email-campaigns.xml"/>
+    <include file="db/changelog/changes/109-email-template-import.xml"/>
+    <include file="db/changelog/changes/110-editable-email-layouts.xml"/>
 </databaseChangeLog>

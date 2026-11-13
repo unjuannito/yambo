@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Issue #123, Part 2: plantillas importadas a la BD + elementos comunes
+        de comunicados editables + cuerpos Thymeleaf completos.
+
+        Los 15 correos automáticos built-in ya comparten emails/layout/base-email
+        (cabecera/pie de marca por tipo de correo, ver el refactor layout:decorate
+        anterior en esta rama) — importarlos aquí como filas de email_template no
+        les cambia el aspecto: el body importado es exactamente el contenido que
+        ya vivía en layout:fragment="content" de cada .html, así que personalizar
+        uno de estos 15 sigue usando la misma cabecera que su versión por defecto.
+
+        email_common_element es un concepto distinto y más pequeño de lo que
+        el plan original proponía: cabecera/pie editables del envoltorio
+        genérico (EmailRenderer.envelope()) que SOLO usan los comunicados
+        (campañas) — los 15 automáticos no lo usan, así que no hace falta (ni
+        conviene) sembrar un header/footer genérico para ellos aquí.
+    -->
+
+    <!-- 109-01: metadatos de catálogo en la propia fila (nombre/descripción para el admin). -->
+    <changeSet id="109-01-add-email-template-metadata" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="email_template" columnName="name"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="email_template">
+            <column name="name" type="varchar(120)"/>
+            <column name="description" type="text"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- 109-02: cabecera/pie editables del envoltorio de comunicados (email_common_element). -->
+    <changeSet id="109-02-create-email-common-element" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="email_common_element"/>
+            </not>
+        </preConditions>
+        <createTable tableName="email_common_element">
+            <column name="id" type="char(8)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- element_key, no "key": palabra reservada en H2 (entorno de test) que
+                 Liquibase escapa a mayúsculas al crear la tabla. -->
+            <column name="element_key" type="varchar(32)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_email_common_element_key"/>
+            </column>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="html" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="now()"/>
+            <column name="updated_at" type="timestamp" defaultValueComputed="now()"/>
+        </createTable>
+    </changeSet>
+
+    <!--
+        109-03: valores por defecto de header/footer de comunicados — el mismo
+        HTML con tokens {{organizacion}}/{{enlace_preferencias}} que
+        EmailRenderer.envelope() ya trae hardcodeado en Java (fallback si no
+        hay fila, así que sembrar esto es solo para que el admin tenga algo
+        editable desde el primer momento, no un requisito de renderizado).
+    -->
+    <changeSet id="109-03-seed-common-elements" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM email_common_element WHERE element_key IN ('header','footer')</sqlCheck>
+        </preConditions>
+        <insert tableName="email_common_element">
+            <column name="id" value="ECEL0001"/>
+            <column name="element_key" value="header"/>
+            <column name="name" value="Cabecera de comunicados"/>
+            <column name="description" value="Cabecera de marca que envuelve los comunicados (campañas). No afecta a los 15 correos automáticos, que tienen su propia cabecera por tipo."/>
+            <column name="html"><![CDATA[<div style="background-color:#2c3e50;padding:16px 30px;"><span style="color:#ffffff;font-size:18px;font-weight:bold;font-family:Arial,sans-serif;">{{organizacion}}</span></div>]]></column>
+        </insert>
+        <insert tableName="email_common_element">
+            <column name="id" value="ECEL0002"/>
+            <column name="element_key" value="footer"/>
+            <column name="name" value="Pie de comunicados"/>
+            <column name="description" value="Pie con el enlace de preferencias de notificación que envuelve los comunicados (campañas)."/>
+            <column name="html"><![CDATA[<div style="padding:16px 30px;border-top:1px solid #eaeaea;"><p style="margin:0 0 6px 0;color:#999999;font-size:12px;font-family:Arial,sans-serif;">Has recibido este correo de {{organizacion}}.</p><p style="margin:0;color:#3498db;font-size:12px;font-family:Arial,sans-serif;"><a href="{{enlace_preferencias}}" style="color:#3498db;">Gestionar preferencias de notificación</a></p></div>]]></column>
+        </insert>
+    </changeSet>
+
+    <!--
+        109-04: importa las 15 plantillas built-in como filas de email_template
+        (body = el mismo contenido que layout:fragment="content" en el .html,
+        generado por script desde los propios ficheros — ver 109-import-data/).
+        customChange, no sqlFile: los cuerpos contienen ${...} (variables
+        Thymeleaf) y Liquibase sustituye ${...} como propiedad del changelog en
+        CUALQUIER texto que procese, incluido el contenido de un sqlFile, sin
+        forma de desactivarlo por tag en esta versión — cae a variables de
+        entorno del sistema cuando el nombre no es una propiedad declarada
+        (comprobado: ${userName} se sustituía por la variable de entorno
+        USERNAME de Windows). Leer el fichero por Java y pasarlo como
+        parámetro ligado de JDBC evita ese pipeline por completo.
+    -->
+    <changeSet id="109-04-import-builtin-templates" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM email_template WHERE "key" IN (
+                'invitation','order-pending-payment','order-confirmed','order-in-progress',
+                'order-delivered','order-confirming-payment','order-cancelled','order-admin-updated',
+                'issue-created','issue-comment-added','issue-status-changed','issue-watcher-added',
+                'password-reset','account-access','activity-open-registration')</sqlCheck>
+        </preConditions>
+        <customChange class="es.yambo_alco.web.migration.ImportBuiltinEmailTemplatesChange"/>
+    </changeSet>
+
+    <!-- 109-05: permisos EMAIL_COMMON (read/create/update/delete) para email_common_element. -->
+    <changeSet id="109-05-seed-email-common-permissions" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM permission WHERE resource = 'EMAIL_COMMON'</sqlCheck>
+        </preConditions>
+        <insert tableName="permission">
+            <column name="id" value="PECM_RD"/>
+            <column name="resource" value="EMAIL_COMMON"/>
+            <column name="action" value="READ"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PECM_CRT"/>
+            <column name="resource" value="EMAIL_COMMON"/>
+            <column name="action" value="CREATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PECM_UPD"/>
+            <column name="resource" value="EMAIL_COMMON"/>
+            <column name="action" value="UPDATE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+        <insert tableName="permission">
+            <column name="id" value="PECM_DEL"/>
+            <column name="resource" value="EMAIL_COMMON"/>
+            <column name="action" value="DELETE"/>
+            <column name="has_condition" valueBoolean="false"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="109-06-grant-email-common-to-admin" author="yambo">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <sqlCheck expectedResult="1">SELECT COUNT(*) FROM profile WHERE id IN ('ADMIN', 'PROF0001') OR LOWER(name) IN ('admin', 'administrator')</sqlCheck>
+                <sqlCheck expectedResult="4">SELECT COUNT(*) FROM permission WHERE resource = 'EMAIL_COMMON'</sqlCheck>
+            </and>
+        </preConditions>
+        <sql>
+            INSERT INTO profile_permission (profile_id, permission_id)
+            SELECT
+                (SELECT id FROM profile WHERE id IN ('ADMIN', 'PROF0001') OR LOWER(name) IN ('admin', 'administrator') LIMIT 1),
+                id
+            FROM permission
+            WHERE resource = 'EMAIL_COMMON'
+            ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

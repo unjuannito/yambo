@@ -1,5 +1,8 @@
 package es.yambo_alco.web.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.exception.ResourceNotFoundException;
 import es.yambo_alco.web.model.Settings;
@@ -9,13 +12,64 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class SettingsService {
+
+    private static final ObjectMapper EMAIL_JSON = new ObjectMapper();
+    private static final Set<String> EMAIL_FIELDS = Set.of("headerTitle", "headerColor", "emailDate");
+
+    public Map<String, String> getEmailVariables(String templateKey) {
+        String json = getSettingValue("emails.variables." + templateKey, "{}");
+        if (json == null || json.isBlank()) return Map.of();
+        try {
+            return EMAIL_JSON.readValue(json, new TypeReference<Map<String, String>>() {});
+        } catch (IOException exception) {
+            throw new IllegalStateException("Invalid email variable settings", exception);
+        }
+    }
+
+    @Transactional
+    @CacheEvict(value = "settings", allEntries = true)
+    public void saveEmailVariables(String templateKey, Map<String, String> variables) {
+        Map<String, String> clean = validateEmailVariables(variables);
+        try {
+            upsertSetting("emails.variables." + templateKey, EMAIL_JSON.writeValueAsString(clean));
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    public static Map<String, String> validateEmailVariables(Map<String, String> variables) {
+        Map<String, String> clean = new LinkedHashMap<>();
+        variables.forEach((key, value) -> {
+            if (!EMAIL_FIELDS.contains(key)) throw new BadRequestException("Variable de correo no editable: " + key);
+            if (value == null || value.isBlank()) return;
+            if (value.length() > 200) throw new BadRequestException("El valor de " + key + " no puede superar 200 caracteres");
+            if (key.equals("headerColor") && !value.matches("#[0-9a-fA-F]{6}")) {
+                throw new BadRequestException("El color debe tener el formato #RRGGBB");
+            }
+            if (key.equals("emailDate")) {
+                try {
+                    java.time.LocalDateTime.parse(value.strip(), java.time.format.DateTimeFormatter
+                            .ofPattern("dd/MM/uuuu HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT));
+                } catch (java.time.format.DateTimeParseException exception) {
+                    throw new BadRequestException("Selecciona una fecha y hora válidas para la cabecera");
+                }
+            }
+            clean.put(key, value.strip());
+        });
+        return clean;
+    }
 
     private static final String ISSUE_CREATION_WINDOW_DAYS_KEY = "issues.creation_window_days";
     private static final int DEFAULT_ISSUE_CREATION_WINDOW_DAYS = 30;

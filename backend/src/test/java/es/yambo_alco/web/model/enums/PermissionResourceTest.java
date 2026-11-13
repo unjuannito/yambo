@@ -16,6 +16,8 @@ class PermissionResourceTest {
         assertEquals("product", PermissionResource.PRODUCT.getValue());
         assertEquals("project", PermissionResource.PROJECT.getValue());
         assertEquals("family_product", PermissionResource.FAMILY_PRODUCT.getValue());
+        assertEquals("email_template", PermissionResource.EMAIL_TEMPLATE.getValue());
+        assertEquals("campaign", PermissionResource.CAMPAIGN.getValue());
     }
 
     @Test
@@ -26,6 +28,8 @@ class PermissionResourceTest {
         assertEquals(PermissionResource.PRODUCT, PermissionResource.fromValue("product"));
         assertEquals(PermissionResource.PROJECT, PermissionResource.fromValue("project"));
         assertEquals(PermissionResource.FAMILY_PRODUCT, PermissionResource.fromValue("family_product"));
+        assertEquals(PermissionResource.EMAIL_TEMPLATE, PermissionResource.fromValue("email_template"));
+        assertEquals(PermissionResource.CAMPAIGN, PermissionResource.fromValue("campaign"));
     }
 
     @Test
@@ -64,11 +68,13 @@ class PermissionResourceTest {
         assertEquals("product", PermissionResource.PRODUCT.toString());
         assertEquals("project", PermissionResource.PROJECT.toString());
         assertEquals("family_product", PermissionResource.FAMILY_PRODUCT.toString());
+        assertEquals("email_template", PermissionResource.EMAIL_TEMPLATE.toString());
+        assertEquals("campaign", PermissionResource.CAMPAIGN.toString());
     }
 
     @Test
     void values_ShouldContainAllResources() {
         PermissionResource[] resources = PermissionResource.values();
-        assertEquals(13, resources.length);
+        assertEquals(16, resources.length);
     }
 }
