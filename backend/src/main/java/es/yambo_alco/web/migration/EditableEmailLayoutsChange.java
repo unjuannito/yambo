@@ -7,48 +7,92 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.exception.CustomChangeException;
 import liquibase.exception.ValidationErrors;
 import liquibase.resource.ResourceAccessor;
+
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /** Upgrade existing bodies without overwriting their content or campaign envelope. */
 public class EditableEmailLayoutsChange implements CustomTaskChange {
+    private record StoredTemplate(String key, String body) {}
+
+    @Override
     public void execute(Database database) throws CustomChangeException {
         Connection connection = ((JdbcConnection) database.getConnection()).getUnderlyingConnection();
         try {
-            for (String part : new String[]{"header", "footer"}) {
-                String key = "automatic-" + part;
-                try (var check = connection.prepareStatement("SELECT 1 FROM email_common_element WHERE element_key=?")) {
-                    check.setString(1, key);
-                    try (var rows = check.executeQuery()) {
-                        if (rows.next()) continue;
-                    }
-                }
-                try (var insert = connection.prepareStatement("INSERT INTO email_common_element (id,element_key,name,html,description,created_at,updated_at) VALUES (?,?,?,?,?,now(),now())")) {
-                    insert.setString(1, UUID.randomUUID().toString().replace("-", "").substring(0, 8));
-                    insert.setString(2, key);
-                    insert.setString(3, part.equals("header") ? "Cabecera de correos automáticos" : "Pie de correos automáticos");
-                    insert.setString(4, EditableEmailDocument.section(part));
-                    insert.setString(5, "Sección editable de los correos automáticos; conserva las variables de marca de cada plantilla.");
-                    insert.executeUpdate();
-                }
+            insertMissingSection(connection, "header", "Cabecera de correos automáticos");
+            insertMissingSection(connection, "footer", "Pie de correos automáticos");
+            for (StoredTemplate template : readTemplates(connection)) {
+                upgradeTemplate(connection, template);
             }
-            var bodies = new ArrayList<String[]>();
-            try (var statement = connection.prepareStatement("SELECT \"key\",body FROM email_template WHERE body IS NOT NULL"); var rows = statement.executeQuery()) {
-                while (rows.next()) bodies.add(new String[]{rows.getString(1), rows.getString(2)});
-            }
-            for (String[] row : bodies) {
-                String wrapped = EditableEmailDocument.wrap(row[1]);
-                if (wrapped.equals(row[1])) continue;
-                try (var update = connection.prepareStatement("UPDATE email_template SET body=?,updated_at=now() WHERE \"key\"=? AND body=?")) {
-                    update.setString(1, wrapped); update.setString(2, row[0]); update.setString(3, row[1]);
-                    if (update.executeUpdate() != 1) throw new IllegalStateException("Template changed during migration: " + row[0]);
-                }
-            }
-        } catch (Exception e) { throw new CustomChangeException("Cannot migrate editable email layouts", e); }
+        } catch (Exception exception) {
+            throw new CustomChangeException("Cannot migrate editable email layouts", exception);
+        }
     }
-    public String getConfirmationMessage() { return "Email headers and footers are editable sections"; }
+
+    private void insertMissingSection(Connection connection, String section, String name) throws SQLException {
+        String key = "automatic-" + section;
+        try (var check = connection.prepareStatement("SELECT 1 FROM email_common_element WHERE element_key=?")) {
+            check.setString(1, key);
+            try (var rows = check.executeQuery()) {
+                if (rows.next()) {
+                    return;
+                }
+            }
+        }
+        String sql = "INSERT INTO email_common_element (id,element_key,name,html,description,created_at,updated_at) VALUES (?,?,?,?,?,now(),now())";
+        try (var insert = connection.prepareStatement(sql)) {
+            insert.setString(1, UUID.randomUUID().toString().replace("-", "").substring(0, 8));
+            insert.setString(2, key);
+            insert.setString(3, name);
+            insert.setString(4, EditableEmailDocument.section(section));
+            insert.setString(5, "Sección editable de los correos automáticos; conserva las variables de marca de cada plantilla.");
+            insert.executeUpdate();
+        }
+    }
+
+    private List<StoredTemplate> readTemplates(Connection connection) throws SQLException {
+        List<StoredTemplate> templates = new ArrayList<>();
+        String sql = "SELECT \"key\",body FROM email_template WHERE body IS NOT NULL";
+        try (var statement = connection.prepareStatement(sql); var rows = statement.executeQuery()) {
+            while (rows.next()) {
+                templates.add(new StoredTemplate(rows.getString(1), rows.getString(2)));
+            }
+        }
+        return templates;
+    }
+
+    private void upgradeTemplate(Connection connection, StoredTemplate template) throws SQLException {
+        String wrapped = EditableEmailDocument.wrap(template.body());
+        if (wrapped.equals(template.body())) {
+            return;
+        }
+        String sql = "UPDATE email_template SET body=?,updated_at=now() WHERE \"key\"=? AND body=?";
+        try (var update = connection.prepareStatement(sql)) {
+            update.setString(1, wrapped);
+            update.setString(2, template.key());
+            update.setString(3, template.body());
+            if (update.executeUpdate() != 1) {
+                throw new IllegalStateException("Template changed during migration: " + template.key());
+            }
+        }
+    }
+
+    @Override
+    public String getConfirmationMessage() {
+        return "Email headers and footers are editable sections";
+    }
+
+    @Override
     public void setUp() {}
+
+    @Override
     public void setFileOpener(ResourceAccessor accessor) {}
-    public ValidationErrors validate(Database database) { return new ValidationErrors(); }
+
+    @Override
+    public ValidationErrors validate(Database database) {
+        return new ValidationErrors();
+    }
 }

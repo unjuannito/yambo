@@ -1,6 +1,7 @@
 package es.yambo_alco.web.service;
 
 import es.yambo_alco.web.util.CampaignVariables;
+import es.yambo_alco.web.util.CampaignPlaceholders;
 import org.junit.jupiter.api.Test;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.mockito.ArgumentCaptor;
@@ -43,12 +44,12 @@ class CampaignPersonalizationTest {
     void resolvesDatesAndNestedValuesAndEscapesPersonalText() {
         var values = CampaignVariables.values(new CampaignRecipient("U1", "Ana <b>& {{email}}", "ana@example.com"),"Yambo","https://yambo.example",WHEN);
         assertEquals("13/11/2026",values.get("fecha")); assertEquals("10:35",values.get("hora")); assertEquals(2026,values.get("anio"));
-        assertEquals("ana@example.com",CampaignVariables.replace("${destinatario.email}",values));
-        String html = CampaignVariables.resolveHtml("<p>{{nombre}}</p><a href='{{preferencesUrl}}'>Cuenta</a>",values);
+        assertEquals("ana@example.com",CampaignPlaceholders.replace("${destinatario.email}",values));
+        String html = CampaignPlaceholders.resolveHtml("<p>{{nombre}}</p><a href='{{preferencesUrl}}'>Cuenta</a>",values);
         assertTrue(html.contains("&lt;b&gt;")); assertTrue(html.contains("&amp;"));
         assertTrue(html.contains("{{email}}"),"Replacement values are never processed recursively");
         assertTrue(html.contains("https://yambo.example/mi-espacio/cuenta"));
-        assertEquals("Ana <b>& {{email}}",CampaignVariables.replace("{{nombre}}",values));
+        assertEquals("Ana <b>& {{email}}",CampaignPlaceholders.replace("{{nombre}}",values));
         assertTrue(CampaignVariables.catalog(values).stream().anyMatch(v -> v.varName().equals("destinatario") && v.sample() instanceof Map));
     }
 

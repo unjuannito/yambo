@@ -5,6 +5,7 @@ import es.yambo_alco.web.service.MailService.OrderProductInfo;
 import es.yambo_alco.web.util.EmailHtmlSanitizer;
 import es.yambo_alco.web.util.EmailTemplateCatalog;
 import es.yambo_alco.web.util.CampaignVariables;
+import es.yambo_alco.web.util.CampaignPlaceholders;
 import es.yambo_alco.web.util.HtmlInliner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -217,7 +218,7 @@ public class EmailRenderer {
     }
 
     public String renderCampaignSubject(String subject, Map<String, Object> variables) {
-        return CampaignVariables.replace(subject, variables).replaceAll("[\\r\\n]+", " ").trim();
+        return CampaignPlaceholders.replace(subject, variables).replaceAll("[\\r\\n]+", " ").trim();
     }
 
     public String renderCampaignBody(String bodyHtml) {
@@ -225,7 +226,7 @@ public class EmailRenderer {
     }
 
     public String renderCampaignBody(String bodyHtml, Map<String, Object> variables) {
-        String body = CampaignVariables.resolveHtml(bodyHtml, variables);
+        String body = CampaignPlaceholders.resolveHtml(bodyHtml, variables);
         if (ThymeleafEmailEngine.isThymeleafMode(body)) {
             String rendered = thymeleafEmailEngine.renderOrFallback(body, variables);
             body = rendered != null ? rendered : EmailHtmlSanitizer.stripThymeleafAttributes(body);
@@ -360,7 +361,7 @@ public class EmailRenderer {
         variables.put("organizationName", orgName); variables.put("organizacion", orgName);
         variables.put("preferencesUrl", prefsUrl); variables.put("enlace_preferencias", prefsUrl);
         variables.put("dominio", settingsService.getDomain());
-        String rendered = CampaignVariables.resolveHtml(template, variables);
+        String rendered = CampaignPlaceholders.resolveHtml(template, variables);
         if (ThymeleafEmailEngine.isThymeleafMode(rendered)) {
             String result = thymeleafEmailEngine.renderOrFallback(rendered, variables);
             rendered = result != null ? result : EmailHtmlSanitizer.stripThymeleafAttributes(rendered);

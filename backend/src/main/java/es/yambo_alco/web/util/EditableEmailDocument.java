@@ -1,11 +1,29 @@
 package es.yambo_alco.web.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Entities;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /** Explicit marker distinguishes complete editable emails from legacy body-only overrides. */
 public final class EditableEmailDocument {
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final String RESOURCE_ROOT = "/templates/emails/editor/";
+    private static final List<Map<String, String>> HEADER_PROPERTIES = List.of(
+            property("headerTitle", "Título", "text", "Notificación"),
+            property("headerColor", "Color de fondo", "color", "#2c3e50"),
+            property("emailDate", "Fecha", "text", ""));
+    private static final List<Map<String, String>> FOOTER_PROPERTIES = List.of(
+            property("organizationName", "Organización", "text", "Yambo"),
+            property("preferencesUrl", "Enlace de preferencias", "url", ""),
+            property("currentYear", "Año", "text", "2026"));
+
     private EditableEmailDocument() {}
 
     public static boolean ownsLayout(String html) {
@@ -13,51 +31,64 @@ public final class EditableEmailDocument {
     }
 
     public static String section(String name) {
-        if (!name.equals("header") && !name.equals("footer")) throw new IllegalArgumentException("Unknown email section");
-        try (var in = EditableEmailDocument.class.getResourceAsStream("/templates/emails/editor/" + name + ".html")) {
-            if (in == null) throw new IllegalStateException("Missing editable email section " + name);
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) { throw new IllegalStateException(e); }
+        if (!name.equals("header") && !name.equals("footer")) {
+            throw new IllegalArgumentException("Unknown email section");
+        }
+        return readResource(RESOURCE_ROOT + name + ".html", "editable email section " + name);
     }
 
     public static String initialBody(String key) {
-        if (!key.matches("[a-z0-9-]+")) throw new IllegalArgumentException("Unknown template key");
-        try (var in = EditableEmailDocument.class.getResourceAsStream("/db/changelog/changes/109-import-data/" + key + ".html")) {
-            if (in == null) throw new IllegalStateException("Missing email template " + key);
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) { throw new IllegalStateException(e); }
+        if (!key.matches("[a-z0-9-]+")) {
+            throw new IllegalArgumentException("Unknown template key");
+        }
+        return readResource("/db/changelog/changes/109-import-data/" + key + ".html", "email template " + key);
     }
 
-    public static java.util.List<java.util.Map<String, String>> propertiesFor(String key) {
-        if (key.equals("automatic-header")) return java.util.List.of(
-                property("headerTitle", "Título", "text", "Notificación"),
-                property("headerColor", "Color de fondo", "color", "#2c3e50"),
-                property("emailDate", "Fecha", "text", ""));
-        if (key.equals("automatic-footer")) return java.util.List.of(
-                property("organizationName", "Organización", "text", "Yambo"),
-                property("preferencesUrl", "Enlace de preferencias", "url", ""),
-                property("currentYear", "Año", "text", "2026"));
-        return java.util.List.of();
+    private static String readResource(String path, String description) {
+        try (var input = EditableEmailDocument.class.getResourceAsStream(path)) {
+            if (input == null) {
+                throw new IllegalStateException("Missing " + description);
+            }
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
-    private static java.util.Map<String, String> property(String key, String label, String type, String fallback) {
-        return java.util.Map.of("key", key, "label", label, "type", type, "defaultValue", fallback);
+    public static List<Map<String, String>> propertiesFor(String key) {
+        return switch (key) {
+            case "automatic-header" -> HEADER_PROPERTIES;
+            case "automatic-footer" -> FOOTER_PROPERTIES;
+            default -> List.of();
+        };
+    }
+
+    private static Map<String, String> property(String key, String label, String type, String fallback) {
+        return Map.of("key", key, "label", label, "type", type, "defaultValue", fallback);
+    }
+
+    private static String jsonAttribute(Object value) {
+        try {
+            return Entities.escape(JSON.writeValueAsString(value)).replace("\"", "&quot;");
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     private static String component(String key, String name, String html) {
-        var properties = propertiesFor(key);
-        var values = new java.util.LinkedHashMap<String, Object>();
-        properties.forEach(p -> values.put(p.get("key"), java.util.Map.of("mode", "expression", "value", p.get("key"))));
-        try {
-            var json = new com.fasterxml.jackson.databind.ObjectMapper();
-            return "<div data-ee-component=\"" + key + "\" data-ee-component-name=\"" + name
-                    + "\" data-ee-component-values=\"" + org.jsoup.nodes.Entities.escape(json.writeValueAsString(values)).replace("\"", "&quot;")
-                    + "\" data-ee-component-properties=\"" + org.jsoup.nodes.Entities.escape(json.writeValueAsString(properties)).replace("\"", "&quot;") + "\">" + html + "</div>";
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalStateException(e); }
+        List<Map<String, String>> properties = propertiesFor(key);
+        Map<String, Object> values = new LinkedHashMap<>();
+        properties.forEach(property -> values.put(property.get("key"),
+                Map.of("mode", "expression", "value", property.get("key"))));
+        return "<div data-ee-component=\"" + key + "\" data-ee-component-name=\"" + name
+                + "\" data-ee-component-values=\"" + jsonAttribute(values)
+                + "\" data-ee-component-properties=\"" + jsonAttribute(properties) + "\">" + html + "</div>";
     }
 
     public static String wrap(String body) {
-        if (body == null || body.isBlank() || ownsLayout(body)) return body;
+        if (body == null || body.isBlank() || ownsLayout(body)) {
+            return body;
+        }
         return "<div data-yambo-email-document=\"v1\" aria-label=\"Correo completo\" style=\"width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:8px;overflow:hidden;font-family:Arial,sans-serif;\">"
                 + component("automatic-header", "Cabecera del correo", section("header"))
                 + "<div aria-label=\"Contenido del correo\" style=\"padding:40px 30px;\">" + body + "</div>"

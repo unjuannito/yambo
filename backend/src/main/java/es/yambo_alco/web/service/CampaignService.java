@@ -1,5 +1,7 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.util.CampaignVariables;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.yambo_alco.web.config.MailConfig;
@@ -185,9 +187,9 @@ public class CampaignService {
         return emailRenderer.renderCampaignBody(c.getBody() == null ? "" : c.getBody());
     }
 
-    public java.util.List<es.yambo_alco.web.util.CampaignVariables.Variable> variables() {
-        return es.yambo_alco.web.util.CampaignVariables.catalog(emailRenderer.campaignVariables(
-                es.yambo_alco.web.util.CampaignVariables.SAMPLE, es.yambo_alco.web.util.CampaignVariables.now()));
+    public List<CampaignVariables.Variable> variables() {
+        return CampaignVariables.catalog(emailRenderer.campaignVariables(
+                CampaignVariables.SAMPLE, CampaignVariables.now()));
     }
 
     /** Respuesta de la vista previa del cuerpo de un comunicado. */

@@ -1,5 +1,7 @@
 package es.yambo_alco.web.service;
 
+import es.yambo_alco.web.util.CampaignVariables;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -31,7 +33,7 @@ public class CampaignSender {
     @Async("mailExecutor")
     public void sendAll(String subject, String bodyHtml, List<CampaignRecipient> recipients) {
         int sent = 0;
-        var sentAt = es.yambo_alco.web.util.CampaignVariables.now();
+        var sentAt = CampaignVariables.now();
         for (CampaignRecipient r : recipients) {
             try {
                 var variables = emailRenderer.campaignVariables(r, sentAt);

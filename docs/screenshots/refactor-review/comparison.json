@@ -1,0 +1,44 @@
+[
+  {
+    "image": "06-catalogo-previews.png",
+    "beforeSize": [
+      1600,
+      2854
+    ],
+    "afterSize": [
+      1600,
+      2854
+    ],
+    "changedPixels": 0,
+    "totalPixels": 4566400,
+    "changedPercent": 0.0
+  },
+  {
+    "image": "08-crear-componente-variables.png",
+    "beforeSize": [
+      1600,
+      1518
+    ],
+    "afterSize": [
+      1600,
+      1518
+    ],
+    "changedPixels": 4324,
+    "totalPixels": 2428800,
+    "changedPercent": 0.178
+  },
+  {
+    "image": "10-comunicados-variables-personales.png",
+    "beforeSize": [
+      1600,
+      1418
+    ],
+    "afterSize": [
+      1600,
+      1418
+    ],
+    "changedPixels": 0,
+    "totalPixels": 2268800,
+    "changedPercent": 0.0
+  }
+]

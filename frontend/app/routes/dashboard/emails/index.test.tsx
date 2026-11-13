@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const state = vi.hoisted(() => ({ getById: vi.fn(), listCommon: vi.fn(), createCommon: vi.fn(), updateCommon: vi.fn(), removeCommon: vi.fn(), resetCommon: vi.fn(), listTemplates: vi.fn(), previewTemplate: vi.fn(), commonOnly: false }));
+const state = vi.hoisted(() => ({ getById: vi.fn(), listCommon: vi.fn(), createCommon: vi.fn(), updateCommon: vi.fn(), removeCommon: vi.fn(), resetCommon: vi.fn(), listTemplates: vi.fn(), previewTemplate: vi.fn(), commonOnly: false, toastError: vi.fn() }));
+vi.mock("react-hot-toast", () => ({ default: { error: state.toastError, success: vi.fn() } }));
 vi.mock("~/hooks/useAuth", () => ({ useAuth: () => ({ loading: false, hasPermission: (permission: { obj: string } | { obj: string }[]) => !state.commonOnly || (Array.isArray(permission) ? permission.some((item) => item.obj === "email_common") : permission.obj === "email_common") }) }));
 vi.mock("~/components/common/PageHeader", () => ({ PageHeader: () => null }));
 vi.mock("~/components/common/PageContainer", () => ({ PageContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
@@ -19,6 +20,7 @@ import EmailsAdmin from "./index";
 describe("email administration integration", () => {
   beforeEach(() => {
     state.commonOnly = false;
+    state.toastError.mockClear();
     state.listTemplates.mockReset().mockResolvedValue([]);
     state.previewTemplate.mockReset().mockResolvedValue({html: "<h1>Preview</h1>"});
     state.listCommon.mockResolvedValue([{ key: "header", name: "Cabecera", html: "<h1>Yambo</h1>", builtIn: true }, { key: "firma", name: "Firma", html: "<p>Equipo</p>", builtIn: false }]);
@@ -26,6 +28,15 @@ describe("email administration integration", () => {
     state.createCommon.mockReset().mockResolvedValue({});
     state.removeCommon.mockReset().mockResolvedValue(undefined);
     state.resetCommon.mockReset().mockResolvedValue({ html: "<h1>Cabecera restaurada</h1>" });
+  });
+  it("shows the translated validation message when the campaign subject is blank", async () => {
+    render(<EmailsAdmin />);
+    fireEvent.click(screen.getByRole("button", { name: "Comunicados" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Nuevo comunicado" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Asunto del comunicado" }), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(state.toastError).toHaveBeenCalledWith("Escribe un asunto para el comunicado.");
+    expect(screen.getByRole("textbox", { name: "Asunto del comunicado" })).toHaveValue("   ");
   });
   it("offers recipient variables when composing a campaign and inserts them into the subject", async () => {
     render(<EmailsAdmin />);

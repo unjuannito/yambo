@@ -100,3 +100,11 @@ El editor carga el catálogo desde `GET /api/campaigns/variables`, con ejemplos 
 Se admiten `${nombre}` y `{{nombre}}`, también rutas como `${destinatario.email}`. En el cuerpo, el editor puede generar atributos `th:text` / `th:href`; el backend conserva ese funcionamiento. El asunto admite las mismas variables y elimina saltos de línea. Se puede insertar nombre, email o fecha desde los accesos rápidos bajo el asunto.
 
 El envío sigue siendo una sola tarea asíncrona, con entregas secuenciales, pero ahora cada destinatario obtiene su propio asunto y HTML. La fecha/hora se fija una vez al comenzar esa tarea. La vista previa usa un socio ficticio y el cuerpo guardado, nunca los datos personales de un miembro real. Los valores de texto se insertan escapados y el HTML resultante vuelve a sanearse antes de enviarse.
+
+## Organización del código
+
+La ruta de administración mantiene las consultas y las acciones de guardado. Las vistas están separadas en `components/emails/admin`: plantillas, comunicados, formulario de comunicado y elementos comunes.
+
+`useEmailPreview` gestiona la carga diferida y los reintentos; `EmailPreviewDialog` presenta la ampliación accesible. `ComponentVariablePanel` contiene la edición de variables y `useComponentSamples` mantiene los datos de ejemplo. `useCampaignVariables` carga el catálogo de variables personales con su catálogo local de respaldo.
+
+En el backend, `CampaignVariables` define el catálogo y los valores por destinatario; `CampaignPlaceholders` sustituye las variables en asuntos y HTML. `EditableEmailDocument` construye los documentos editables y `EditableEmailLayoutsChange` coordina su migración sin sobrescribir modificaciones simultáneas.

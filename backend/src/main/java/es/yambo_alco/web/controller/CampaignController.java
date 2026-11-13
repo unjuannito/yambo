@@ -1,5 +1,7 @@
 package es.yambo_alco.web.controller;
 
+import es.yambo_alco.web.util.CampaignVariables;
+
 import es.yambo_alco.web.model.enums.CampaignAudience;
 import es.yambo_alco.web.service.AuthService;
 import es.yambo_alco.web.service.CampaignService;
@@ -38,7 +40,7 @@ public class CampaignController {
 
     @GetMapping("/variables")
     @PreAuthorize("@permissionCheck.hasPermission('campaign', 'read')")
-    public ResponseEntity<java.util.List<es.yambo_alco.web.util.CampaignVariables.Variable>> variables() {
+    public ResponseEntity<List<CampaignVariables.Variable>> variables() {
         return ResponseEntity.ok(campaignService.variables());
     }
 
