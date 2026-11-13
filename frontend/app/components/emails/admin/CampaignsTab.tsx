@@ -1,3 +1,8 @@
+import {
+  CAMPAIGN_STARTERS,
+  starterPreview,
+  type CampaignStarter,
+} from "../campaignStarters";
 import type * as React from "react";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
@@ -37,7 +42,7 @@ interface CampaignsTabProps {
   sendTarget: CampaignView | null;
   deleteTarget: CampaignView | null;
   busyDialog: boolean;
-  onNew: () => void;
+  onNew: (starter?: CampaignStarter) => void;
   onEdit: (c: CampaignView) => void;
   onClose: () => void;
   onSave: () => void;
@@ -71,10 +76,62 @@ export function CampaignsTab(p: CampaignsTabProps) {
     <div className="space-y-6">
       {p.canCreate && (
         <div className="flex justify-end">
-          <ButtonComponent onClick={p.onNew} variant="primary">
+          <ButtonComponent onClick={() => p.onNew()} variant="primary">
             {t("emails.newCampaign")}
           </ButtonComponent>
         </div>
+      )}
+
+      {p.canCreate && !p.editingId && (
+        <section aria-label="Plantillas de comunicado" className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">
+              Empieza con una plantilla de Yambo
+            </h2>
+            <p className="text-sm text-gray-500">
+              Elige un diseño, completa sus detalles y guarda un borrador. No se
+              envía automáticamente.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {CAMPAIGN_STARTERS.map((starter) => (
+              <article
+                key={starter.key}
+                className="overflow-hidden rounded-2xl border border-gray-200 bg-white"
+              >
+                <div
+                  className="h-44 overflow-hidden border-b bg-gray-50"
+                  aria-hidden="true"
+                >
+                  <iframe
+                    tabIndex={-1}
+                    title={`Diseño de ${starter.name}`}
+                    sandbox=""
+                    srcDoc={starterPreview(starter)}
+                    style={{
+                      width: "600px",
+                      height: "420px",
+                      transform: "scale(.45)",
+                      transformOrigin: "top left",
+                      pointerEvents: "none",
+                      border: 0,
+                    }}
+                  />
+                </div>
+                <div className="space-y-3 p-4">
+                  <h3 className="font-semibold">{starter.name}</h3>
+                  <p className="text-sm text-gray-500">{starter.description}</p>
+                  <ButtonComponent
+                    variant="secondary"
+                    onClick={() => p.onNew(starter)}
+                  >
+                    Usar {starter.name.toLocaleLowerCase()}
+                  </ButtonComponent>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       {p.campaigns.length === 0 && !p.editingId && (

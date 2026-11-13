@@ -2,6 +2,28 @@ import type { CommonElements, EmailToken } from "mailcanvas";
 import type { EmailCommonElementView } from "~/services/emailCommonElementService";
 import type { EmailTemplateToken } from "~/services/emailTemplateService";
 
+/** Upgrade the types in older built-in component schemas without touching custom components. */
+function typedProperties(
+  key: string,
+  properties: NonNullable<EmailCommonElementView["properties"]> = [],
+) {
+  return properties.map((property) => {
+    if (
+      key === "automatic-header" &&
+      property.key === "emailDate" &&
+      property.type === "text"
+    )
+      return { ...property, type: "datetime" as const };
+    if (
+      key === "automatic-footer" &&
+      property.key === "currentYear" &&
+      property.type === "text"
+    )
+      return { ...property, type: "number" as const };
+    return property;
+  });
+}
+
 /** Keep structured samples intact for object/array inspection and loop previews. */
 export function toEmailTokens(tokens: EmailTemplateToken[]): EmailToken[] {
   return tokens.map((token) => ({
@@ -31,7 +53,7 @@ export function toCommonElements(
       description: element.description ?? "",
       category: element.builtIn ? "Envoltorio de comunicados" : "Yambo",
       html: element.html,
-      properties: element.properties ?? [],
+      properties: typedProperties(element.key, element.properties),
     })),
   };
 }
@@ -60,6 +82,22 @@ export function prepareEditorHtml(source: string): string {
   const normalized = normalizeTemplateMarkup(source);
   if (typeof DOMParser === "undefined") return normalized;
   const doc = new DOMParser().parseFromString(normalized, "text/html");
+  for (const component of doc.body.querySelectorAll("[data-ee-component]")) {
+    const key = component.getAttribute("data-ee-component") ?? "";
+    if (key !== "automatic-header" && key !== "automatic-footer") continue;
+    try {
+      const properties = JSON.parse(
+        component.getAttribute("data-ee-component-properties") ?? "[]",
+      );
+      if (Array.isArray(properties))
+        component.setAttribute(
+          "data-ee-component-properties",
+          JSON.stringify(typedProperties(key, properties)),
+        );
+    } catch {
+      /* The editor retains malformed metadata as protected HTML. */
+    }
+  }
   const names: Record<string, string> = {
     productTable: "Productos del pedido",
     orderDetails: "Detalles del pedido",

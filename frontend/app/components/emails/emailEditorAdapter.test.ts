@@ -4,6 +4,13 @@ import { describe, expect, it } from "vitest";
 import { prepareEditorHtml, normalizeTemplateMarkup, toCommonElements, toEmailTokens } from "./emailEditorAdapter";
 
 describe("email editor data adapter", () => {
+  it("upgrades date and year fields in legacy built-in component schemas", () => {
+    const source = `<div data-ee-component="automatic-header" data-ee-component-properties='[{"key":"emailDate","label":"Fecha","type":"text","defaultValue":""}]'><p>Cabecera</p></div>`;
+    const doc = new DOMParser().parseFromString(prepareEditorHtml(source), "text/html");
+    expect(JSON.parse(doc.querySelector("[data-ee-component]")!.getAttribute("data-ee-component-properties")!)[0].type).toBe("datetime");
+    const library = toCommonElements([{ key: "automatic-footer", name: "Pie", description: null, html: "<p>Pie</p>", builtIn: false, properties: [{ key: "currentYear", label: "Año", type: "text", defaultValue: "2026" }] }], false);
+    expect(library.components?.[0].properties[0].type).toBe("number");
+  });
   it("keeps the complete-document marker and editable sections through a real library round trip", () => {
     const source = readFileSync("../backend/src/main/resources/db/changelog/changes/109-import-data/invitation.html", "utf8");
     const result = emailBlocksToHtml(parseEmailHtmlToBlocks(prepareEditorHtml(source)));

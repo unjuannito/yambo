@@ -42,6 +42,9 @@ class EmailTemplateServiceTest {
 
 
     @Mock
+    private SettingsService settingsService;
+
+    @Mock
     private EmailTemplateRepository templateRepository;
 
     @Mock
@@ -55,6 +58,33 @@ class EmailTemplateServiceTest {
 
     @InjectMocks
     private EmailTemplateService service;
+
+    @Test
+    void restoresAllKnownTemplatesAndTheirHeaderVariables() {
+        EmailTemplate row = overrideRow("invitation", "Personalizado", "<p>Cambiado</p>");
+        when(templateRepository.findByKey("invitation")).thenReturn(Optional.of(row));
+        var restored = service.resetAll();
+        assertEquals(EmailTemplateCatalog.all().size(), restored.size());
+        verify(templateRepository).delete(row);
+        for (var definition : EmailTemplateCatalog.all()) {
+            verify(settingsService).saveEmailVariables(definition.key(), Map.of());
+        }
+        verify(templateRepository, never()).deleteAll();
+    }
+
+    @Test
+    void previewUsesDraftHeaderValuesWithoutPersistingThem() {
+        when(emailRenderer.brandVariables()).thenReturn(Map.of("emailDate", "Fecha automática"));
+        when(emailRenderer.renderBody(eq("invitation"), eq("<p>Hola</p>"), anyMap())).thenReturn("<p>Hola</p>");
+        when(templateEngine.process(eq("emails/layout/base-email"), any(IContext.class))).thenReturn("preview");
+        service.preview("invitation", "<p>Hola</p>", Map.of("headerTitle", "Sin guardar", "headerColor", "#123456"));
+        var variables = ArgumentCaptor.forClass(Map.class);
+        verify(emailRenderer).renderBody(eq("invitation"), eq("<p>Hola</p>"), variables.capture());
+        assertEquals("Sin guardar", variables.getValue().get("headerTitle"));
+        assertEquals("#123456", variables.getValue().get("headerColor"));
+        assertEquals("Fecha automática", variables.getValue().get("emailDate"));
+        verify(settingsService, never()).saveEmailVariables(anyString(), anyMap());
+    }
 
     private EmailTemplate overrideRow(String key, String subject, String body) {
         return EmailTemplate.builder().key(key).subject(subject).body(body).updatedBy("admin").build();

@@ -40,7 +40,7 @@
     "i18next": "^26.3.6",
     "isbot": "^5.1.27",
     "jpeg-js": "^0.4.4",
-    "mailcanvas": "^1.0.0",
+    "mailcanvas": "1.0.1",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",

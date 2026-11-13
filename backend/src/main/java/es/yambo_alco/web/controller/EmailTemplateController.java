@@ -47,7 +47,13 @@ public class EmailTemplateController {
     public ResponseEntity<TemplateView> saveTemplate(
             @PathVariable String key, @Valid @RequestBody SaveTemplateRequest request) {
         String updatedBy = authService.getCurrentUser(true).getName();
-        return ResponseEntity.ok(templateService.save(key, request.getSubject(), request.getBody(), updatedBy));
+        return ResponseEntity.ok(templateService.saveWithVariables(key, request.getSubject(), request.getBody(), updatedBy, request.getVariableOverrides()));
+    }
+
+    @DeleteMapping
+    @PreAuthorize("@permissionCheck.hasPermission('email_template', 'update')")
+    public ResponseEntity<List<TemplateView>> resetAllTemplates() {
+        return ResponseEntity.ok(templateService.resetAll());
     }
 
     @DeleteMapping("/{key}")
@@ -62,7 +68,7 @@ public class EmailTemplateController {
     public ResponseEntity<PreviewResponse> preview(
             @PathVariable String key, @RequestBody(required = false) SaveTemplateRequest request) {
         String body = request == null ? null : request.getBody();
-        return ResponseEntity.ok(new PreviewResponse(templateService.preview(key, body)));
+        return ResponseEntity.ok(new PreviewResponse(templateService.preview(key, body, request == null ? null : request.getVariableOverrides())));
     }
 
     /** Correo de prueba: envía el cuerpo (con tokens a valores de ejemplo) a un email. */
@@ -70,7 +76,7 @@ public class EmailTemplateController {
     @PreAuthorize("@permissionCheck.hasPermission('email_template', 'update')")
     public ResponseEntity<Void> sendTest(
             @PathVariable String key, @Valid @RequestBody SendTestRequest request) {
-        templateService.sendTest(key, request.getSubject(), request.getBody(), request.getTo());
+        templateService.sendTest(key, request.getSubject(), request.getBody(), request.getTo(), request.getVariableOverrides());
         return ResponseEntity.ok().build();
     }
 
@@ -80,6 +86,7 @@ public class EmailTemplateController {
     public static class SaveTemplateRequest {
         private String subject;
         private String body;
+        private java.util.Map<String, String> variableOverrides;
     }
 
     @Data
@@ -88,6 +95,7 @@ public class EmailTemplateController {
         private String to;
         private String subject;
         private String body;
+        private java.util.Map<String, String> variableOverrides;
     }
 
     @Data

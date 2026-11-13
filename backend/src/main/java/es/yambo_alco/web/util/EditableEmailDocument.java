@@ -18,11 +18,11 @@ public final class EditableEmailDocument {
     private static final List<Map<String, String>> HEADER_PROPERTIES = List.of(
             property("headerTitle", "Título", "text", "Notificación"),
             property("headerColor", "Color de fondo", "color", "#2c3e50"),
-            property("emailDate", "Fecha", "text", ""));
+            property("emailDate", "Fecha", "datetime", ""));
     private static final List<Map<String, String>> FOOTER_PROPERTIES = List.of(
             property("organizationName", "Organización", "text", "Yambo"),
             property("preferencesUrl", "Enlace de preferencias", "url", ""),
-            property("currentYear", "Año", "text", "2026"));
+            property("currentYear", "Año", "number", "2026"));
 
     private EditableEmailDocument() {}
 

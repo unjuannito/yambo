@@ -7,7 +7,7 @@ export interface EmailCommonElementView {
     description: string | null;
     html: string;
     builtIn: boolean;
-    properties?: { key: string; label: string; type: "text" | "url" | "color" | "boolean"; defaultValue: string }[];
+    properties?: { key: string; label: string; type: "text" | "url" | "color" | "boolean" | "number" | "email" | "image" | "date" | "datetime"; defaultValue: string }[];
 }
 
 export interface EmailCommonElementCreateRequest {

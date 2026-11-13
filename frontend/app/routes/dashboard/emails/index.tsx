@@ -1,3 +1,4 @@
+import type { CampaignStarter } from "~/components/emails/campaignStarters";
 import { faEnvelopeOpenText } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -86,7 +87,11 @@ export default function EmailsAdmin() {
   const [tplError, setTplError] = useState<string | null>(null);
   const [tplRefresh, setTplRefresh] = useState(0);
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [tplForm, setTplForm] = useState({ subject: "", body: "" });
+  const [tplForm, setTplForm] = useState({
+    subject: "",
+    body: "",
+    variableOverrides: {} as Record<string, string>,
+  });
   const [savingTpl, setSavingTpl] = useState(false);
   const [tplPreview, setTplPreview] = useState<string | null>(null);
   const [previewingTpl, setPreviewingTpl] = useState(false);
@@ -116,7 +121,11 @@ export default function EmailsAdmin() {
 
   const startEditTpl = async (tpl: EmailTemplateView) => {
     setEditingKey(tpl.key);
-    setTplForm({ subject: tpl.subject ?? "", body: tpl.body ?? "" });
+    setTplForm({
+      subject: tpl.subject ?? "",
+      body: tpl.body ?? "",
+      variableOverrides: tpl.variableOverrides ?? {},
+    });
     setTestEmail("");
     setTplPreview(null);
     try {
@@ -132,7 +141,7 @@ export default function EmailsAdmin() {
 
   const closeTpl = () => {
     setEditingKey(null);
-    setTplForm({ subject: "", body: "" });
+    setTplForm({ subject: "", body: "", variableOverrides: {} });
     setTplPreview(null);
     setConfirmReset(false);
   };
@@ -144,12 +153,28 @@ export default function EmailsAdmin() {
       await emailTemplateService.save(editingKey, {
         subject: tplForm.subject || null,
         body: tplForm.body || null,
+        variableOverrides: tplForm.variableOverrides,
       });
       toast.success(t("emails.saved"));
       closeTpl();
       setTplRefresh((k) => k + 1);
     } catch (err) {
       toast.error(getErrorMessage(err, t("emails.saveError")));
+    } finally {
+      setSavingTpl(false);
+    }
+  };
+
+  const handleResetAllTpl = async () => {
+    try {
+      setSavingTpl(true);
+      await emailTemplateService.resetAll();
+      closeTpl();
+      setTplRefresh((value) => value + 1);
+      toast.success("Todas las plantillas se han restaurado.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, t("emails.saveError")));
+      throw error;
     } finally {
       setSavingTpl(false);
     }
@@ -175,7 +200,11 @@ export default function EmailsAdmin() {
     if (!editingKey) return;
     try {
       setPreviewingTpl(true);
-      const res = await emailTemplateService.preview(editingKey, tplForm.body);
+      const res = await emailTemplateService.preview(
+        editingKey,
+        tplForm.body,
+        tplForm.variableOverrides,
+      );
       setTplPreview(res.html);
     } catch (err) {
       toast.error(getErrorMessage(err, t("emails.loadError")));
@@ -197,6 +226,7 @@ export default function EmailsAdmin() {
         to,
         subject: tplForm.subject || undefined,
         body: tplForm.body || undefined,
+        variableOverrides: tplForm.variableOverrides,
       });
       toast.success(t("emails.sendTestSuccess", { to }));
     } catch (err) {
@@ -305,10 +335,18 @@ export default function EmailsAdmin() {
     };
   }, [campForm.audienceType]);
 
-  const openNewCampaign = () => {
+  const openNewCampaign = (starter?: CampaignStarter) => {
     campaignEditRequest.current++;
     setEditingId("new");
-    setCampForm(EMPTY_CAMPAIGN_FORM);
+    setCampForm(
+      starter
+        ? {
+            ...EMPTY_CAMPAIGN_FORM,
+            subject: starter.subject,
+            body: starter.body,
+          }
+        : EMPTY_CAMPAIGN_FORM,
+    );
     setCampPreview(null);
     setRecipients(null);
   };
@@ -730,6 +768,7 @@ export default function EmailsAdmin() {
           onClose={closeTpl}
           onSave={handleSaveTpl}
           onReset={handleResetTpl}
+          onResetAll={handleResetAllTpl}
           onPreview={handlePreviewTpl}
           onTest={handleSendTest}
         />

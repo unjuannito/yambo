@@ -108,3 +108,35 @@ La ruta de administración mantiene las consultas y las acciones de guardado. La
 `useEmailPreview` gestiona la carga diferida y los reintentos; `EmailPreviewDialog` presenta la ampliación accesible. `ComponentVariablePanel` contiene la edición de variables y `useComponentSamples` mantiene los datos de ejemplo. `useCampaignVariables` carga el catálogo de variables personales con su catálogo local de respaldo.
 
 En el backend, `CampaignVariables` define el catálogo y los valores por destinatario; `CampaignPlaceholders` sustituye las variables en asuntos y HTML. `EditableEmailDocument` construye los documentos editables y `EditableEmailLayoutsChange` coordina su migración sin sobrescribir modificaciones simultáneas.
+
+
+## Datos de cabecera y restauración
+
+Al editar un correo automático, el panel «Datos de la cabecera» permite personalizar `${headerTitle}`, `${headerColor}` y `${emailDate}`. El botón del mismo nombre en el editor maximizado vuelve al panel y enfoca el título. Los campos vacíos conservan el valor original; la fecha vacía se calcula al enviar. El título y el color originales proceden de `EmailTemplateCatalog` y de los estados de pedidos/incidencias. El nombre de la organización y el dominio se siguen gestionando en Configuración.
+
+Los valores se guardan con el asunto y el cuerpo, en `settings` bajo la clave `emails.variables.<templateKey>`. Solo se admiten esas tres variables; el color debe tener formato `#RRGGBB`. El backend aplica los mismos valores a las vistas previas, las pruebas y los envíos automáticos. La vista previa y el envío de prueba también aceptan los valores aún sin guardar.
+
+«Restablecer» descarta las personalizaciones de un correo. «Restaurar todas las plantillas» hace lo mismo con todos los correos automáticos, en una transacción y tras confirmación. Ambas acciones recuperan asuntos, cuerpos y datos de cabecera originales. No eliminan comunicados ni componentes compartidos. La restauración global usa `DELETE /email-templates`, con el permiso `email_template:update`; no se ejecuta al abrir la página.
+
+## Diseños de comunicado
+
+La pestaña Comunicados ofrece cuatro diseños con miniatura: inscripciones a proyectos, próximas actividades, artículos y pedidos, y novedades de la asociación. Se crean desde `campaignStarters.ts`, con enlaces a rutas existentes y variables `${organizacion}`, `${primerNombre}` y `${dominio}`. Elegir uno abre un borrador editable; hay que completar los detalles indicados y guardar antes de enviar. Los diseños no inventan fechas, precios ni actividades de la asociación.
+
+Capturas de revisión: `docs/screenshots/mailcanvas-review/12-datos-cabecera-web.png`, `13-restaurar-todas-confirmacion.png` `14-plantillas-comunicados-yambo.png` y `15-comunicado-actividad-editor.png`. El escenario visual usa APIs y permisos simulados; las pruebas del backend verifican la persistencia de ajustes y su aplicación al contexto de envío sin conectar a SMTP.
+
+
+## Controles según el tipo de dato
+
+El panel de cabecera usa un selector de color con campo hexadecimal y un calendario de fecha/hora. La fecha vacía conserva el envío automático; las fechas fijas se guardan en formato `dd/MM/yyyy HH:mm` y se validan también en el backend, sin conversión de zona horaria del navegador.
+
+La creación de variables de ejemplo permite texto, números decimales, booleanos, email, enlaces, imágenes por URL con vista previa, fecha, fecha/hora, color, objetos y arrays. Objetos y listas usan JSON con errores accesibles; solo se añaden si la estructura coincide con el tipo elegido. Los números y booleanos se conservan como valores JSON, no como texto. Estas variables siguen siendo datos de ejemplo de la sesión.
+
+El inspector de componentes de mailcanvas usa controles nativos en modo literal (`T`) según `ComponentProperty.type`; en modo `ƒ` conserva el campo de expresiones con autocompletado. Las propiedades numéricas se exportan como números para que las fórmulas puedan operar con ellas.
+
+
+El adaptador actualiza los esquemas antiguos de `automatic-header` y `automatic-footer` al abrirlos: `emailDate` usa calendario y `currentYear` usa un campo numérico, incluso si el documento guardado los declaraba como texto. Los componentes personalizados conservan sus tipos definidos. Las instancias y Diseño comparten selectores de color; las medidas de Diseño incluyen unidades y un modo CSS para valores compuestos. Capturas: `19-instancia-controles-tipados.png` y `20-diseno-medidas-colores.png` en `docs/screenshots/mailcanvas-review`.
+
+
+## Versión del paquete
+
+La integración usa `mailcanvas@1.0.1`, instalado desde el registro npm y fijado en `frontend/package.json` y `frontend/package-lock.json`. La versión incluye controles tipados para propiedades de componentes, selectores de color y medidas con unidades en Diseño. Para reproducir la instalación, ejecuta `npm ci` en `frontend`; no hace falta copiar el build local del editor.

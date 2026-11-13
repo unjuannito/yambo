@@ -24,7 +24,7 @@ await fs.writeFile(path.join(harness,'review.css'),'@import "../app/app.css";\n@
 await fs.writeFile(path.join(harness,'index.html'),'<html><div id="root"></div><script type="module" src="/main.tsx"></script></html>');
 await fs.writeFile(path.join(harness,'main.tsx'),`import React from 'react';import{createRoot}from'react-dom/client';import{BrowserRouter}from'react-router';import i18n from'i18next';import{initReactI18next}from'react-i18next';import es from'../app/i18n/locales/es.json';import'./review.css';import EmailsAdmin from'../app/routes/dashboard/emails/index';await i18n.use(initReactI18next).init({resources:{es:{translation:es}},lng:'es',interpolation:{escapeValue:false}});createRoot(document.getElementById('root')!).render(<BrowserRouter><EmailsAdmin/></BrowserRouter>);`);
 let playwright;try{playwright=await import('playwright');}catch{playwright=await import(pathToFileURL(path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs')).href);}
-const server=await createServer({configFile:false,root:harness,plugins:[tailwindcss()],resolve:{alias:[{find:'~/hooks/useAuth',replacement:path.join(harness,'auth.ts')},{find:'~',replacement:path.join(root,'app')}]},esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:5292,strictPort:true,fs:{allow:[root]}}});
+const server=await createServer({configFile:false,optimizeDeps:{force:true},root:harness,plugins:[tailwindcss()],resolve:{alias:[{find:'~/hooks/useAuth',replacement:path.join(harness,'auth.ts')},{find:'~',replacement:path.join(root,'app')}]},esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:5292,strictPort:true,fs:{allow:[root]}}});
 let browser;
 try{
  await server.listen();
@@ -64,9 +64,32 @@ try{
  await page.getByRole('button',{name:'Añadir ejemplo',exact:true}).click();
  await page.getByRole('button',{name:'Insertar variable productos',exact:true}).waitFor();
  await page.screenshot({path:path.join(output,'09-variables-listas-ejemplos.png'),fullPage:true});
+ await page.getByLabel('Nombre de variable de ejemplo',{exact:true}).fill('importe');
+ await page.getByLabel('Tipo de variable de ejemplo',{exact:true}).selectOption('number');
+ await page.getByLabel('Valor de variable de ejemplo',{exact:true}).fill('18.5');
+ assert.equal(await page.getByLabel('Valor de variable de ejemplo',{exact:true}).getAttribute('type'),'number');
+ await page.screenshot({path:path.join(output,'16-variable-numerica.png'),fullPage:true});
+ await page.getByRole('button',{name:'Añadir ejemplo',exact:true}).click();
+ await page.getByRole('button',{name:'Insertar variable importe',exact:true}).waitFor();
+ await page.getByLabel('Tipo de variable de ejemplo',{exact:true}).selectOption('color');
+ await page.getByLabel('Seleccionar color: Valor de variable de ejemplo',{exact:true}).waitFor();
+ await page.screenshot({path:path.join(output,'17-variable-color.png'),fullPage:true});
+ await page.getByLabel('Tipo de variable de ejemplo',{exact:true}).selectOption('datetime');
+ assert.equal(await page.getByLabel('Valor de variable de ejemplo',{exact:true}).getAttribute('type'),'datetime-local');
+ await page.screenshot({path:path.join(output,'18-variable-fecha-hora.png'),fullPage:true});
+
  await page.getByRole('button',{name:'Cancelar',exact:true}).click();
  await page.getByRole('button',{name:'Plantillas',exact:true}).click();await page.getByRole('article',{name:'Pago confirmado',exact:true}).getByRole('button',{name:'Editar',exact:true}).click();
  const editor=page.getByRole('region',{name:'Pago confirmado',exact:true});await editor.waitFor();
+ await editor.getByRole('button',{name:'Minimizar editor',exact:true}).click();
+ await page.getByLabel('Título de la cabecera',{exact:true}).fill('Novedades de mi pedido');
+ await page.getByLabel('Color de la cabecera',{exact:true}).fill('#23834d');
+ await page.getByLabel('Fecha de la cabecera',{exact:true}).fill('2026-11-13T10:30');
+ await editor.getByRole('heading',{name:'Novedades de mi pedido',exact:true}).waitFor();
+ await page.getByLabel('Título de la cabecera',{exact:true}).scrollIntoViewIfNeeded();
+ await page.screenshot({path:path.join(output,'12-datos-cabecera-web.png')});
+ await editor.getByRole('button',{name:'Maximizar editor',exact:true}).click();
+
  await editor.getByRole('button',{name:/^Componentes/}).click();
  for(const name of ['Cabecera de comunicados','Pie de comunicados','Firma del equipo'])await editor.getByRole('button').filter({hasText:name}).waitFor();
  await page.screenshot({path:path.join(output,'02-biblioteca-completa.png')});
@@ -84,13 +107,42 @@ try{
  await editor.getByLabel('Propiedad headerTitle',{exact:true}).fill('Mi cabecera editable');
  await editor.getByRole('heading',{name:'Mi cabecera editable',exact:true}).waitFor();
  await page.screenshot({path:path.join(output,'05-cabecera-personalizada.png')});
+ await editor.getByRole('button',{name:'Texto fijo: Propiedad headerColor',exact:true}).click();
+ await editor.getByLabel('Seleccionar color: Propiedad headerColor',{exact:true}).fill('#23834d');
+ await editor.getByRole('button',{name:'Texto fijo: Propiedad emailDate',exact:true}).click();
+ await editor.getByLabel('Propiedad emailDate',{exact:true}).fill('2026-11-13T10:30');
+ assert.equal(await editor.getByLabel('Propiedad emailDate',{exact:true}).getAttribute('type'),'datetime-local');
+ await page.screenshot({path:path.join(output,'19-instancia-controles-tipados.png')});
+ await editor.getByRole('tab',{name:'Diseño',exact:true}).click();
+ await editor.getByLabel('Seleccionar color: Color del fondo',{exact:true}).fill('#ffffff');
+ await editor.getByRole('spinbutton',{name:'Tamaño del texto',exact:true}).fill('1');
+ await editor.getByLabel('Unidad de Tamaño del texto',{exact:true}).selectOption('rem');
+ await editor.getByRole('spinbutton',{name:'Espaciado interior',exact:true}).fill('12');
+ await editor.getByRole('spinbutton',{name:'Radio de las esquinas',exact:true}).fill('8');
+ await editor.getByRole('button',{name:'Centrar',exact:true}).click();
+ assert.equal(await editor.getByRole('button',{name:'Centrar',exact:true}).getAttribute('aria-pressed'),'true');
+ await page.screenshot({path:path.join(output,'20-diseno-medidas-colores.png')});
+
  await editor.getByRole('button',{name:'Minimizar editor',exact:true}).click();
  await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+
+ await page.getByRole('button',{name:'Restaurar todas las plantillas',exact:true}).click();
+ await page.getByRole('button',{name:'Descartar cambios y restaurar todas',exact:true}).waitFor();
+ await page.screenshot({path:path.join(output,'13-restaurar-todas-confirmacion.png'),fullPage:true});
+ await page.getByRole('button',{name:'Cancelar',exact:true}).click();
  await page.getByRole('button',{name:'Comunicados',exact:true}).click();
- await page.getByRole('button',{name:'Nuevo comunicado',exact:true}).click();
+ await page.getByRole('button',{name:'Usar próximas actividades',exact:true}).waitFor();
+ await page.screenshot({path:path.join(output,'14-plantillas-comunicados-yambo.png'),fullPage:true});
+
+ await page.getByRole('button',{name:'Usar próximas actividades',exact:true}).click();
  const campaign=page.locator('.email-editor');await campaign.waitFor();
  const minimizeCampaign=campaign.getByRole('button',{name:'Minimizar editor',exact:true});
  if(await minimizeCampaign.count())await minimizeCampaign.click();
+ await campaign.getByText('Hagamos algo juntos',{exact:true}).first().waitFor();
+ assert((await campaign.innerText()).includes('Lucía'),'The starter must resolve the recipient example in the real canvas');
+ await page.screenshot({path:path.join(output,'15-comunicado-actividad-editor.png'),fullPage:true});
+ await page.getByRole('textbox',{name:'Asunto del comunicado',exact:true}).fill('');
+
  await page.getByRole('button',{name:'Insertar nombre en asunto',exact:true}).click();
  assert.equal(await page.getByRole('textbox',{name:'Asunto del comunicado',exact:true}).inputValue(),'${nombre}');
  await campaign.getByRole('button',{name:/^Variables/}).click();
@@ -102,6 +154,6 @@ try{
  await campaign.getByRole('searchbox').count().catch(()=>0);
  await campaign.getByPlaceholder('Buscar bloques o variables…').fill('destinatario');
  await page.screenshot({path:path.join(output,'11-destinatario-estructura.png'),fullPage:true});
- assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'report.json'),JSON.stringify({fixture:'Real order-confirmed.html; API and permissions simulated',checks:['shared management tab','campaign and automatic email sections in the library','editable header, original six content blocks and editable footer','product fragment visible','insert shared block','edit header title per instance','preview gallery and search','enlarged accessible preview','starter component and variables','campaign recipient variables','insert recipient in subject and body'],errors},null,2));
+ assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'report.json'),JSON.stringify({fixture:'Real order-confirmed.html; API and permissions simulated',checks:['shared management tab','campaign and automatic email sections in the library','editable header, original six content blocks and editable footer','product fragment visible','insert shared block','edit header title per instance','preview gallery and search','enlarged accessible preview','starter component and variables','campaign recipient variables','insert recipient in subject and body','editable header values on the web','restore all confirmation','website campaign starter gallery','native numeric sample input','color picker and hexadecimal input','native datetime input','component instance color and date controls','design measurements with units and accessible alignment'],errors},null,2));
  console.log('Visual review passed:',output);
 }finally{if(browser)await browser.close();await server.close();}

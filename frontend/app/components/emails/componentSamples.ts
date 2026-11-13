@@ -12,9 +12,26 @@ export const COMPONENT_SAMPLE_DATA: Record<string, unknown> = {
 };
 const VARIABLE_NAME = /^[a-zA-Z_$][\w$]*$/;
 export const isVariableName = (value: string) => VARIABLE_NAME.test(value);
-export type SampleKind = "text" | "number" | "boolean" | "object" | "array";
+export type SampleKind =
+  | "text"
+  | "number"
+  | "boolean"
+  | "object"
+  | "array"
+  | "email"
+  | "url"
+  | "image"
+  | "date"
+  | "datetime"
+  | "color";
 export const SAMPLE_VALUES: Record<SampleKind, string> = {
   text: "Ejemplo",
+  email: "lucia@example.com",
+  url: "https://yambo.example/actividades",
+  image: "/logo.png",
+  date: "2026-11-13",
+  datetime: "2026-11-13T10:00",
+  color: "#23834d",
   number: "42",
   boolean: "true",
   object: '{"nombre":"Lucía","email":"lucia@example.com"}',
@@ -32,10 +49,35 @@ export function parseSampleData(source: string): Record<string, unknown> {
     );
   return data;
 }
+function validDate(value: string): boolean {
+  const date = new Date(value + "T00:00:00Z");
+  return (
+    Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+}
 export function parseSampleValue(kind: SampleKind, source: string): unknown {
-  const value: unknown = kind === "text" ? source : JSON.parse(source);
+  const structured = ["number", "boolean", "object", "array"].includes(kind);
+  const value: unknown = structured ? JSON.parse(source) : source;
   const accepts: Record<SampleKind, (value: unknown) => boolean> = {
     text: (value) => typeof value === "string",
+    email: (value) =>
+      typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+    url: (value) =>
+      typeof value === "string" && /^(https?:\/\/|\/(?!\/))\S+$/i.test(value),
+    image: (value) =>
+      typeof value === "string" && /^(https?:\/\/|\/(?!\/))\S+$/i.test(value),
+    color: (value) =>
+      typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value),
+    date: (value) =>
+      typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      validDate(value),
+    datetime: (value) =>
+      typeof value === "string" &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) &&
+      validDate(value.slice(0, 10)) &&
+      +value.slice(11, 13) < 24 &&
+      +value.slice(14) < 60,
     number: (value) => typeof value === "number" && Number.isFinite(value),
     boolean: (value) => typeof value === "boolean",
     object: isObject,
@@ -55,18 +97,21 @@ export function componentTokens(data: Record<string, unknown>): EmailToken[] {
     }));
 }
 export function sampleType(value: unknown) {
-  return value === null
-    ? "Vacío"
-    : Array.isArray(value)
-      ? "Lista"
-      : typeof value === "object"
-        ? "Objeto"
-        : typeof value === "number"
-          ? "Número"
-          : typeof value === "boolean"
-            ? "Booleano"
-            : "Texto";
+  if (value === null) return "Vacío";
+  if (Array.isArray(value)) return "Lista";
+  if (typeof value === "object") return "Objeto";
+  if (typeof value === "number") return "Número";
+  if (typeof value === "boolean") return "Booleano";
+  if (typeof value === "string") {
+    if (/^#[0-9a-f]{6}$/i.test(value)) return "Color";
+    if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(value)) return "Fecha";
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Email";
+    if (/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(value)) return "Imagen";
+    if (/^https?:\/\//i.test(value)) return "Enlace";
+  }
+  return "Texto";
 }
+
 export const COMPONENT_TOKENS = componentTokens(COMPONENT_SAMPLE_DATA);
 export const COMPONENT_STARTERS = [
   {

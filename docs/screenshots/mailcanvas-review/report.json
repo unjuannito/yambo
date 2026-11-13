@@ -11,7 +11,15 @@
     "enlarged accessible preview",
     "starter component and variables",
     "campaign recipient variables",
-    "insert recipient in subject and body"
+    "insert recipient in subject and body",
+    "editable header values on the web",
+    "restore all confirmation",
+    "website campaign starter gallery",
+    "native numeric sample input",
+    "color picker and hexadecimal input",
+    "native datetime input",
+    "component instance color and date controls",
+    "design measurements with units and accessible alignment"
   ],
   "errors": []
 }

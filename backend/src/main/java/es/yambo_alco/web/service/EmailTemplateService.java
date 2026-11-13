@@ -37,6 +37,7 @@ import java.util.Map;
 public class EmailTemplateService {
 
     private final EmailTemplateRepository templateRepository;
+    private final SettingsService settingsService;
     private final EmailRenderer emailRenderer;
     private final MailService mailService;
     private final TemplateEngine templateEngine;
@@ -52,6 +53,8 @@ public class EmailTemplateService {
         private boolean overridden;
         private String subject;
         private String body;
+        private Map<String, String> variableOverrides;
+        private Map<String, Object> variableDefaults;
     }
 
     @Transactional(readOnly = true)
@@ -105,6 +108,20 @@ public class EmailTemplateService {
     }
 
     @Transactional
+    public TemplateView saveWithVariables(String key, String subject, String body, String updatedBy,
+                                          Map<String, String> variables) {
+        if (!EmailTemplateCatalog.isKnown(key)) throw new BadRequestException("Plantilla desconocida: " + key);
+        if (variables != null) settingsService.saveEmailVariables(key, variables);
+        return save(key, subject, body, updatedBy);
+    }
+
+    @Transactional
+    public List<TemplateView> resetAll() {
+        for (TemplateDef definition : EmailTemplateCatalog.all()) reset(definition.key());
+        return listTemplates();
+    }
+
+    @Transactional
     public TemplateView reset(String key) {
         TemplateDef def = EmailTemplateCatalog.byKey(key);
         if (def == null) {
@@ -114,6 +131,7 @@ public class EmailTemplateService {
         if (row != null) {
             templateRepository.delete(row);
         }
+        settingsService.saveEmailVariables(key, Map.of());
         return toView(def, null);
     }
 
@@ -124,6 +142,12 @@ public class EmailTemplateService {
      * @param body cuerpo markdown (con tokens) a previsualizar; nulo → plantilla integrada
      * @return HTML completo del correo de muestra
      */
+    public String preview(String key, String body, Map<String, String> variables) {
+        TemplateDef def = EmailTemplateCatalog.byKey(key);
+        if (def == null) throw new BadRequestException("Plantilla desconocida: " + key);
+        return renderPreviewDocument(key, def, body, variables);
+    }
+
     public String preview(String key, String body) {
         TemplateDef def = EmailTemplateCatalog.byKey(key);
         if (def == null) {
@@ -139,6 +163,11 @@ public class EmailTemplateService {
      */
     @Transactional(readOnly = true)
     public void sendTest(String key, String subject, String body, String to) {
+        sendTest(key, subject, body, to, null);
+    }
+
+    @Transactional(readOnly = true)
+    public void sendTest(String key, String subject, String body, String to, Map<String, String> variables) {
         TemplateDef def = EmailTemplateCatalog.byKey(key);
         if (def == null) {
             throw new BadRequestException("Plantilla desconocida: " + key);
@@ -149,7 +178,7 @@ public class EmailTemplateService {
         String trimmedSubject = subject == null ? null : subject.trim();
         boolean hasCustomSubject = trimmedSubject != null && !trimmedSubject.isBlank();
         String trimmedBody = body == null ? null : body.trim();
-        String html = renderPreviewDocument(key, def, trimmedBody);
+        String html = renderPreviewDocument(key, def, trimmedBody, variables);
         String subjectOut = hasCustomSubject
                 ? emailRenderer.renderSubject(key, trimmedSubject, def.sampleVariables())
                 : (trimmedBody == null || trimmedBody.isBlank()
@@ -169,8 +198,15 @@ public class EmailTemplateService {
      * que vería el socio.
      */
     private String renderPreviewDocument(String key, TemplateDef def, String body) {
+        return renderPreviewDocument(key, def, body, null);
+    }
+
+    private String renderPreviewDocument(String key, TemplateDef def, String body, Map<String, String> overrides) {
         Map<String, Object> vars = new HashMap<>(def.sampleVariables());
         vars.putAll(emailRenderer.brandVariables());
+        // Draft values replace the saved configuration, so removing an override is previewable.
+        vars.putAll(overrides == null ? settingsService.getEmailVariables(key)
+                : SettingsService.validateEmailVariables(overrides));
 
         String content;
         if (body == null || body.isBlank()) {
@@ -207,13 +243,23 @@ public class EmailTemplateService {
                 "label", t.label(), "sample", t.sample() == null ? "" : t.sample())));
         var samples = new java.util.LinkedHashMap<String, Object>(def.sampleVariables());
         samples.putAll(emailRenderer.brandVariables());
+        Map<String, Object> variableDefaults = new HashMap<>();
+        for (String field : List.of("headerTitle", "headerColor", "emailDate")) {
+            variableDefaults.put(field, samples.getOrDefault(field, ""));
+        }
+        view.setVariableDefaults(variableDefaults);
+        Map<String, String> variableOverrides = settingsService.getEmailVariables(def.key());
+        samples.putAll(variableOverrides);
+        view.setVariableOverrides(variableOverrides);
         for (String variable : List.of("emailDate", "headerTitle", "headerColor", "headerIcon", "currentYear", "organizationName", "preferencesUrl")) {
             if (samples.containsKey(variable) && tokens.stream().noneMatch(t -> variable.equals(t.get("varName")))) {
                 tokens.add(Map.of("token", variable, "varName", variable, "label", variable, "sample", samples.get(variable)));
             }
         }
         view.setTokens(tokens);
-        view.setOverridden(override != null && override.getBody() != null && !override.getBody().isBlank());
+        view.setOverridden((override != null && ((override.getBody() != null && !override.getBody().isBlank())
+                || (override.getSubject() != null && !override.getSubject().isBlank())))
+                || !view.getVariableOverrides().isEmpty());
         view.setSubject(override != null ? override.getSubject() : null);
         view.setBody(override != null && override.getBody() != null ? override.getBody() : EditableEmailDocument.initialBody(def.key()));
         return view;

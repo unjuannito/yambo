@@ -66,6 +66,23 @@ class HtmlMailServiceTest {
         lenient().when(settingsService.getDomain()).thenReturn("https://yambo-alco.es");
     }
 
+    @Test
+    void appliesSavedHeaderValuesToActualDeliveryContext() {
+        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+        when(templateEngine.process(eq("emails/invitation"), any())).thenReturn("<html>Correo</html>");
+        when(settingsService.getEmailVariables("invitation")).thenReturn(java.util.Map.of(
+                "headerTitle", "Bienvenido a la asociación", "headerColor", "#23834d", "emailDate", "13/11/2026 10:00"));
+
+        htmlMailService.sendInvitation("user@example.com", "Invitación", "https://yambo-alco.es/registro");
+
+        var context = ArgumentCaptor.forClass(Context.class);
+        verify(templateEngine).process(eq("emails/invitation"), context.capture());
+        assertThat(context.getValue().getVariable("headerTitle")).isEqualTo("Bienvenido a la asociación");
+        assertThat(context.getValue().getVariable("headerColor")).isEqualTo("#23834d");
+        assertThat(context.getValue().getVariable("emailDate")).isEqualTo("13/11/2026 10:00");
+        verify(mailSender).send(mimeMessage);
+    }
+
     // ── Invitation ───────────────────────────────────────────────────────
 
     @Test

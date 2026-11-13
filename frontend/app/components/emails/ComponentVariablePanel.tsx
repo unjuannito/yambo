@@ -1,3 +1,4 @@
+import { VariableValueInput } from "./VariableValueInput";
 import { useState } from "react";
 import {
   SAMPLE_VALUES as generated,
@@ -104,23 +105,27 @@ export function ComponentVariablePanel({ sampleState, onInsert }: Props) {
               className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm"
             >
               <option value="text">Texto</option>
+              <option value="email">Email</option>
+              <option value="url">Enlace</option>
+              <option value="image">Imagen (URL)</option>
+              <option value="date">Fecha</option>
+              <option value="datetime">Fecha y hora</option>
+              <option value="color">Color</option>
               <option value="number">Número</option>
               <option value="boolean">Booleano</option>
               <option value="object">Objeto</option>
               <option value="array">Lista / array</option>
             </select>
           </label>
-          <label className="block text-xs text-gray-500">
-            Valor
-            <textarea
-              aria-label="Valor de variable de ejemplo"
+          <div className="block text-xs text-gray-500">
+            <span>Valor</span>
+            <VariableValueInput
+              kind={exampleType}
+              label="Valor de variable de ejemplo"
               value={exampleValue}
-              rows={3}
-              maxLength={8000}
-              onChange={(event) => setExampleValue(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 font-mono text-xs"
+              onChange={setExampleValue}
             />
-          </label>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

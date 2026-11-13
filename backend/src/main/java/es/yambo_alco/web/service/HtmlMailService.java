@@ -104,6 +104,8 @@ public class HtmlMailService implements MailService {
             allVars.put("organizationName", settingsService.getOrganizationName());
             allVars.put("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
 
+            allVars.putAll(settingsService.getEmailVariables(key));
+
             boolean hasOverride = override != null && override.getBody() != null
                     && !override.getBody().isBlank() && emailRenderer != null;
             String renderedContent = hasOverride

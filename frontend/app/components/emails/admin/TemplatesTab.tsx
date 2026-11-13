@@ -1,5 +1,5 @@
 import type * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
@@ -10,6 +10,7 @@ import type { EmailTemplateView } from "~/services/emailTemplateService";
 import { toEmailTokens } from "../emailEditorAdapter";
 import { PreviewFrame } from "../PreviewFrame";
 import { TemplatePreviewCard, templateCategory } from "../TemplatePreviewCard";
+import { TemplateVariablesPanel } from "./TemplateVariablesPanel";
 import { YamboEmailEditor } from "../YamboEmailEditor";
 
 interface TemplatesTabProps {
@@ -18,9 +19,17 @@ interface TemplatesTabProps {
   error: string | null;
   onRetry: () => void;
   editingKey: string | null;
-  tplForm: { subject: string; body: string };
+  tplForm: {
+    subject: string;
+    body: string;
+    variableOverrides: Record<string, string>;
+  };
   setTplForm: React.Dispatch<
-    React.SetStateAction<{ subject: string; body: string }>
+    React.SetStateAction<{
+      subject: string;
+      body: string;
+      variableOverrides: Record<string, string>;
+    }>
   >;
   canUpdateTpl: boolean;
   savingTpl: boolean;
@@ -35,12 +44,16 @@ interface TemplatesTabProps {
   onClose: () => void;
   onSave: () => void;
   onReset: () => void;
+  onResetAll: () => Promise<void>;
   onPreview: () => void;
   onTest: () => void;
 }
 
 export function TemplatesTab(p: TemplatesTabProps) {
   const { t } = useTranslation();
+  const [editorMaximized, setEditorMaximized] = useState(true);
+  useEffect(() => setEditorMaximized(true), [p.editingKey]);
+  const [resetAllOpen, setResetAllOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todas");
   const visibleTemplates = p.templates.filter(
@@ -66,6 +79,34 @@ export function TemplatesTab(p: TemplatesTabProps) {
   }
   return (
     <div className="space-y-5">
+      {p.canUpdateTpl && (
+        <div className="flex justify-end">
+          <ButtonComponent
+            variant="secondary"
+            onClick={() => setResetAllOpen(true)}
+            disabled={p.savingTpl}
+          >
+            Restaurar todas las plantillas
+          </ButtonComponent>
+        </div>
+      )}
+      <ConfirmDialog
+        isOpen={resetAllOpen}
+        onClose={() => !p.savingTpl && setResetAllOpen(false)}
+        onConfirm={async () => {
+          try {
+            await p.onResetAll();
+            setResetAllOpen(false);
+          } catch {
+            /* Keep the confirmation open for retry. */
+          }
+        }}
+        title="Restaurar todas las plantillas"
+        message="Se descartarán los asuntos, cuerpos y valores de cabecera personalizados de todos los correos automáticos. Volverán a su diseño original. Los comunicados y componentes compartidos no se eliminarán."
+        confirmLabel="Descartar cambios y restaurar todas"
+        variant="danger"
+        isLoading={p.savingTpl}
+      />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-yambo-black">
@@ -159,6 +200,23 @@ export function TemplatesTab(p: TemplatesTabProps) {
                 <div className="p-6 space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
+                      <TemplateVariablesPanel
+                        tokens={tpl.tokens.map((token) => ({
+                          ...token,
+                          sample:
+                            tpl.variableDefaults?.[token.varName] ??
+                            token.sample,
+                        }))}
+                        values={p.tplForm.variableOverrides}
+                        onChange={(variableOverrides) =>
+                          p.setTplForm((form) => ({
+                            ...form,
+                            variableOverrides,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {t("emails.subject")}
                       </label>
@@ -178,20 +236,43 @@ export function TemplatesTab(p: TemplatesTabProps) {
                         {t("emails.body")}
                       </label>
                       <YamboEmailEditor
+                        maximized={editorMaximized}
+                        onMaximizedChange={setEditorMaximized}
+                        navigation={
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditorMaximized(false);
+                              requestAnimationFrame(() =>
+                                document
+                                  .getElementById("email-variable-headerTitle")
+                                  ?.focus(),
+                              );
+                            }}
+                          >
+                            Datos de cabecera
+                          </button>
+                        }
                         key={tpl.key}
                         templateKey={tpl.key}
                         value={p.tplForm.body}
                         onChange={(v) =>
                           p.setTplForm((f) => ({ ...f, body: v }))
                         }
-                        tokens={toEmailTokens(tpl.tokens)}
+                        tokens={toEmailTokens(tpl.tokens).map((token) => ({
+                          ...token,
+                          sample:
+                            p.tplForm.variableOverrides[token.varName ?? ""] ||
+                            tpl.variableDefaults?.[token.varName ?? ""] ||
+                            token.sample,
+                        }))}
                         title={tpl.displayName}
                         onServerPreview={
                           p.previewingTpl ? undefined : p.onPreview
                         }
                         onSave={p.savingTpl ? undefined : p.onSave}
                         onReset={
-                          tpl.overridden && !p.savingTpl
+                          !p.savingTpl
                             ? () => p.setConfirmReset(true)
                             : undefined
                         }
@@ -237,7 +318,7 @@ export function TemplatesTab(p: TemplatesTabProps) {
                     >
                       {t("emails.sendTest")}
                     </ButtonComponent>
-                    {tpl.overridden && (
+                    {p.canUpdateTpl && (
                       <ButtonComponent
                         onClick={() => p.setConfirmReset(true)}
                         variant="danger-text"
