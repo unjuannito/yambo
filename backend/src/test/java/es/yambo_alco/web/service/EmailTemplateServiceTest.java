@@ -29,6 +29,17 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 class EmailTemplateServiceTest {
+    @Test
+    void previewCompleteEditableDocumentDoesNotApplyBaseLayoutAgain() {
+        String source = "<div data-yambo-email-document=\"v1\"><h1>Cabecera</h1><p>Contenido</p><footer>Pie</footer></div>";
+        when(emailRenderer.brandVariables()).thenReturn(Map.of());
+        when(emailRenderer.renderBody(eq("invitation"), eq(source), anyMap())).thenReturn("<h1>Cabecera</h1><p>Contenido</p><footer>Pie</footer>");
+        String html = service.preview("invitation", source);
+        assertTrue(html.startsWith("<!doctype html>"));
+        assertEquals(1, html.split("<h1>Cabecera</h1>", -1).length - 1);
+        verifyNoInteractions(templateEngine);
+    }
+
 
     @Mock
     private EmailTemplateRepository templateRepository;
@@ -111,7 +122,7 @@ class EmailTemplateServiceTest {
         verify(templateRepository).delete(existing);
         verify(templateRepository, never()).save(any());
         assertFalse(view.isOverridden());
-        assertNull(view.getBody());
+        assertTrue(es.yambo_alco.web.util.EditableEmailDocument.ownsLayout(view.getBody()));
     }
 
     @Test

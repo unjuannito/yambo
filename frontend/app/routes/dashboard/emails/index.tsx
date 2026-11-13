@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelopeOpenText } from "@fortawesome/free-solid-svg-icons";
@@ -8,7 +8,14 @@ import { LoadingSpinner } from "~/components/common/LoadingSpinner";
 import { ErrorMessage } from "~/components/common/ErrorMessage";
 import ButtonComponent from "~/components/common/forms/ButtonComponent";
 import InputComponent from "~/components/common/forms/InputComponent";
-import RichTextEditor from "~/components/common/forms/RichTextEditor";
+import { ComponentComposer } from "~/components/emails/ComponentComposer";
+import { CommonComponentCard } from "~/components/emails/CommonComponentCard";
+import { COMPONENT_TOKENS } from "~/components/emails/componentSamples";
+import { TemplatePreviewCard, templateCategory } from "~/components/emails/TemplatePreviewCard";
+import { CAMPAIGN_TOKENS } from "~/components/emails/campaignVariables";
+import { YamboEmailEditor } from "~/components/emails/YamboEmailEditor";
+import { emailCommonElementService, type EmailCommonElementView } from "~/services/emailCommonElementService";
+import { toEmailTokens } from "~/components/emails/emailEditorAdapter";
 import { ConfirmDialog } from "~/components/common/ConfirmDialog";
 import { useAuth } from "~/hooks/useAuth";
 import {
@@ -32,7 +39,7 @@ import type { User } from "~/types/userType";
 import { getErrorMessage } from "~/types/error";
 import toast from "react-hot-toast";
 
-type Tab = "templates" | "campaigns";
+type Tab = "templates" | "campaigns" | "common";
 
 const AUDIENCE_TYPES: CampaignAudienceType[] = [
   "ALL",
@@ -100,14 +107,21 @@ export default function EmailsAdmin() {
     [
       { obj: "email_template", action: "read" },
       { obj: "campaign", action: "read" },
+      { obj: "email_common", action: "read" },
     ],
-    true,
+    false,
   );
+  const canReadTpl = hasPermission({ obj: "email_template", action: "read" });
+  const canReadCamp = hasPermission({ obj: "campaign", action: "read" });
   const canUpdateTpl = hasPermission({ obj: "email_template", action: "update" });
   const canCreateCamp = hasPermission({ obj: "campaign", action: "create" });
   const canUpdateCamp = hasPermission({ obj: "campaign", action: "update" });
   const canSendCamp = hasPermission({ obj: "campaign", action: "send" });
   const canDeleteCamp = hasPermission({ obj: "campaign", action: "delete" });
+  const canReadCommon = hasPermission({ obj: "email_common", action: "read" });
+  const canCreateCommon = hasPermission({ obj: "email_common", action: "create" });
+  const canUpdateCommon = hasPermission({ obj: "email_common", action: "update" });
+  const canDeleteCommon = hasPermission({ obj: "email_common", action: "delete" });
 
   // ── Plantillas ────────────────────────────────────────────────────────
   const [templates, setTemplates] = useState<EmailTemplateView[]>([]);
@@ -124,6 +138,7 @@ export default function EmailsAdmin() {
   const [confirmReset, setConfirmReset] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
+    if (authLoading || !canReadTpl) { setTplLoading(false); return; }
     try {
       setTplLoading(true);
       setTplError(null);
@@ -133,7 +148,7 @@ export default function EmailsAdmin() {
     } finally {
       setTplLoading(false);
     }
-  }, [tplRefresh, t]);
+  }, [tplRefresh, t, authLoading, canReadTpl]);
 
   useEffect(() => {
     fetchTemplates();
@@ -237,6 +252,7 @@ export default function EmailsAdmin() {
   const [campError, setCampError] = useState<string | null>(null);
   const [campRefresh, setCampRefresh] = useState(0);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
+  const campaignEditRequest = useRef(0);
   const [campForm, setCampForm] = useState<CampaignForm>(emptyCampaign);
   const [savingCamp, setSavingCamp] = useState(false);
   const [campPreview, setCampPreview] = useState<string | null>(null);
@@ -253,6 +269,7 @@ export default function EmailsAdmin() {
   const [users, setUsers] = useState<User[]>([]);
 
   const fetchCampaigns = useCallback(async () => {
+    if (authLoading || !canReadCamp) { setCampLoading(false); return; }
     try {
       setCampLoading(true);
       setCampError(null);
@@ -262,7 +279,7 @@ export default function EmailsAdmin() {
     } finally {
       setCampLoading(false);
     }
-  }, [campRefresh, t]);
+  }, [campRefresh, t, authLoading, canReadCamp]);
 
   useEffect(() => {
     fetchCampaigns();
@@ -324,35 +341,39 @@ export default function EmailsAdmin() {
   }, [campForm.audienceType]);
 
   const openNewCampaign = () => {
+    campaignEditRequest.current++;
     setEditingId("new");
     setCampForm(emptyCampaign);
     setCampPreview(null);
     setRecipients(null);
   };
 
-  const startEditCamp = async (c: CampaignView) => {
-    setEditingId(c.id);
-    setCampForm({
-      subject: c.subject,
-      body: c.body ?? "",
-      audienceType: c.audienceType,
-      audienceRef: c.audienceRef ?? "",
-      audienceUsers: c.audienceUsers ?? [],
-    });
-    setCampPreview(null);
-    setRecipients(null);
+  const startEditCamp = async (campaign: CampaignView) => {
+    const request = ++campaignEditRequest.current;
     try {
-      setPreviewingCamp(true);
-      const res = await campaignService.previewHtml(c.id);
-      setCampPreview(res.html);
-    } catch {
+      // The list response may deliberately omit body: fetch the complete draft
+      // before mounting the editor so editing cannot overwrite it with empty HTML.
+      const full = await campaignService.getById(campaign.id);
+      if (request !== campaignEditRequest.current) return;
+      setEditingId(full.id);
+      setCampForm({
+        subject: full.subject,
+        body: full.body ?? "",
+        audienceType: full.audienceType,
+        audienceRef: full.audienceRef ?? "",
+        audienceUsers: full.audienceUsers ?? [],
+      });
       setCampPreview(null);
-    } finally {
-      setPreviewingCamp(false);
+      setRecipients(null);
+    } catch (err) {
+      if (request === campaignEditRequest.current) {
+        toast.error(getErrorMessage(err, t("emails.loadError")));
+      }
     }
   };
 
   const closeCamp = () => {
+    campaignEditRequest.current++;
     setEditingId(null);
     setCampForm(emptyCampaign);
     setCampPreview(null);
@@ -499,6 +520,114 @@ export default function EmailsAdmin() {
       </span>
     );
 
+  // ── Elementos comunes ────────────────────────────────────────────────
+  const [commonElements, setCommonElements] = useState<EmailCommonElementView[]>([]);
+  const [commonLoading, setCommonLoading] = useState(true);
+  const [commonError, setCommonError] = useState<string | null>(null);
+  const [commonRefresh, setCommonRefresh] = useState(0);
+  const [editingCommonKey, setEditingCommonKey] = useState<string | "new" | null>(null);
+  const [commonForm, setCommonForm] = useState({ name: "", html: "", description: "" });
+  const [savingCommon, setSavingCommon] = useState(false);
+  const [confirmResetCommon, setConfirmResetCommon] = useState(false);
+  const [deleteCommonTarget, setDeleteCommonTarget] = useState<EmailCommonElementView | null>(null);
+
+  const fetchCommonElements = useCallback(async () => {
+    if (!canReadCommon) {
+      setCommonLoading(false);
+      return;
+    }
+    try {
+      setCommonLoading(true);
+      setCommonError(null);
+      setCommonElements(await emailCommonElementService.list());
+    } catch (err) {
+      setCommonError(getErrorMessage(err, t("emails.loadError")));
+    } finally {
+      setCommonLoading(false);
+    }
+  }, [commonRefresh, canReadCommon, t]);
+
+  useEffect(() => {
+    fetchCommonElements();
+  }, [fetchCommonElements]);
+
+  const startEditCommon = (el: EmailCommonElementView) => {
+    setEditingCommonKey(el.key);
+    setCommonForm({ name: el.name, html: el.html, description: el.description ?? "" });
+  };
+
+  const openNewCommon = () => {
+    setEditingCommonKey("new");
+    setCommonForm({ name: "", html: "", description: "" });
+  };
+
+  const closeCommon = () => {
+    setEditingCommonKey(null);
+    setCommonForm({ name: "", html: "", description: "" });
+    setConfirmResetCommon(false);
+  };
+
+  const handleSaveCommon = async () => {
+    if (!editingCommonKey) return;
+    try {
+      setSavingCommon(true);
+      if (editingCommonKey === "new") {
+        await emailCommonElementService.create({
+          name: commonForm.name,
+          html: commonForm.html,
+          description: commonForm.description || null,
+        });
+      } else {
+        await emailCommonElementService.update(editingCommonKey, { html: commonForm.html });
+      }
+      toast.success(t("emails.saved"));
+      closeCommon();
+      setCommonRefresh((k) => k + 1);
+    } catch (err) {
+      toast.error(getErrorMessage(err, t("emails.saveError")));
+    } finally {
+      setSavingCommon(false);
+    }
+  };
+
+  const handleResetCommon = async () => {
+    if (!editingCommonKey || editingCommonKey === "new") return;
+    try {
+      setSavingCommon(true);
+      const updated = await emailCommonElementService.reset(editingCommonKey);
+      setCommonForm((f) => ({ ...f, html: updated.html }));
+      toast.success(t("emails.saved"));
+      setConfirmResetCommon(false);
+      setCommonRefresh((k) => k + 1);
+    } catch (err) {
+      toast.error(getErrorMessage(err, t("emails.saveError")));
+    } finally {
+      setSavingCommon(false);
+    }
+  };
+
+  const handleDeleteCommonConfirm = async () => {
+    if (!deleteCommonTarget) return;
+    try {
+      setSavingCommon(true);
+      await emailCommonElementService.remove(deleteCommonTarget.key);
+      toast.success(t("emails.commonDeleted"));
+      setDeleteCommonTarget(null);
+      if (editingCommonKey === deleteCommonTarget.key) closeCommon();
+      setCommonRefresh((k) => k + 1);
+    } catch (err) {
+      toast.error(getErrorMessage(err, t("emails.saveError")));
+    } finally {
+      setSavingCommon(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authLoading) return;
+    const permitted = { templates: canReadTpl, campaigns: canReadCamp, common: canReadCommon };
+    if (!permitted[tab]) setTab(canReadTpl ? "templates" : canReadCamp ? "campaigns" : "common");
+  }, [authLoading, tab, canReadTpl, canReadCamp, canReadCommon]);
+
   // ── Render ────────────────────────────────────────────────────────────
   if (authLoading) {
     return (
@@ -538,7 +667,7 @@ export default function EmailsAdmin() {
       />
 
       <div className="flex gap-2 border-b border-gray-200 mb-6">
-        {(["templates", "campaigns"] as Tab[]).map((tb) => (
+        {([...(canReadTpl ? ["templates" as const] : []), ...(canReadCamp ? ["campaigns" as const] : []), ...(canReadCommon ? ["common" as const] : [])] as Tab[]).map((tb) => (
           <button
             key={tb}
             onClick={() => setTab(tb)}
@@ -548,12 +677,37 @@ export default function EmailsAdmin() {
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tb === "templates" ? t("emails.tabTemplates") : t("emails.tabCampaigns")}
+            {tb === "templates" ? t("emails.tabTemplates") : tb === "campaigns" ? t("emails.tabCampaigns") : t("emails.tabCommon")}
           </button>
         ))}
       </div>
 
-      {tab === "templates" ? (
+      {tab === "common" ? (
+        <CommonElementsTab
+          elements={commonElements}
+          loading={commonLoading}
+          error={commonError}
+          onRetry={fetchCommonElements}
+          editingKey={editingCommonKey}
+          form={commonForm}
+          setForm={setCommonForm}
+          canCreate={canCreateCommon}
+          canUpdate={canUpdateCommon}
+          canDelete={canDeleteCommon}
+          saving={savingCommon}
+          confirmReset={confirmResetCommon}
+          setConfirmReset={setConfirmResetCommon}
+          deleteTarget={deleteCommonTarget}
+          onNew={openNewCommon}
+          onEdit={startEditCommon}
+          onClose={closeCommon}
+          onSave={handleSaveCommon}
+          onReset={handleResetCommon}
+          onDeleteOpen={(el) => setDeleteCommonTarget(el)}
+          onDeleteConfirm={handleDeleteCommonConfirm}
+          onDeleteClose={() => setDeleteCommonTarget(null)}
+        />
+      ) : tab === "templates" ? (
         <TemplatesTab
           templates={templates}
           loading={tplLoading}
@@ -654,6 +808,10 @@ interface TemplatesTabProps {
 
 function TemplatesTab(p: TemplatesTabProps) {
   const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("Todas");
+  const visibleTemplates = p.templates.filter((template) => template.key === p.editingKey ||
+    ((category === "Todas" || templateCategory(template.key) === category) && `${template.displayName} ${template.description}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())));
   if (p.loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -668,13 +826,24 @@ function TemplatesTab(p: TemplatesTabProps) {
     return <p className="text-gray-500">{t("emails.noTemplates")}</p>;
   }
   return (
-    <div className="space-y-6">
-      {p.templates.map((tpl) => {
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="text-lg font-semibold text-yambo-black">Tus plantillas de correo</h2><p className="mt-1 text-sm text-gray-500">Reconoce cada correo por su diseño y abre el que quieras editar.</p></div>
+        <input aria-label="Buscar plantillas" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar una plantilla…" className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm sm:w-72 focus:outline-none focus:ring-2 focus:ring-yambo-green-400" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar plantillas por categoría">
+        {["Todas", "Pedidos", "Incidencias", "Acceso y cuentas", "Actividades"].map((value) => <button key={value} type="button" aria-pressed={category === value} onClick={() => setCategory(value)} className={`rounded-full px-3.5 py-2 text-sm font-medium ${category === value ? "bg-yambo-green-600 text-white" : "bg-white text-gray-600 ring-1 ring-inset ring-gray-200 hover:bg-gray-50"}`}>{value}</button>)}
+        <span className="ml-auto text-xs text-gray-400" aria-live="polite">{visibleTemplates.length} plantillas</span>
+      </div>
+      {visibleTemplates.length === 0 && <p className="rounded-2xl border border-dashed p-10 text-center text-sm text-gray-500">No hay plantillas que coincidan. Prueba otro nombre o categoría.</p>}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {visibleTemplates.map((tpl) => {
         const isEditing = p.editingKey === tpl.key;
+        if (!isEditing) return <TemplatePreviewCard key={tpl.key} template={tpl} canEdit={p.canUpdateTpl} onEdit={() => p.onEdit(tpl)} />;
         return (
           <div
             key={tpl.key}
-            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            className="col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
           >
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -691,38 +860,9 @@ function TemplatesTab(p: TemplatesTabProps) {
                   )}
                 </h2>
                 <p className="text-xs text-gray-400 mt-1">{tpl.description}</p>
-                {tpl.tokens.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {tpl.tokens.map((tk) => (
-                      <span
-                        key={tk.token}
-                        title={tk.sample}
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-500"
-                      >
-                        {tk.token}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <p className="mt-2 text-xs text-gray-400">{tpl.tokens.length} variables disponibles en el editor</p>
               </div>
-              {!isEditing && p.canUpdateTpl && (
-                <ButtonComponent
-                  onClick={() => p.onEdit(tpl)}
-                  variant="primary"
-                  size="sm"
-                >
-                  {t("common.edit")}
-                </ButtonComponent>
-              )}
             </div>
-
-            {!isEditing && (
-              <div className="p-6">
-                <p className="text-sm text-gray-600 line-clamp-3 whitespace-pre-wrap">
-                  {tpl.body || t("emails.usingDefault")}
-                </p>
-              </div>
-            )}
 
             {isEditing && (
               <div className="p-6 space-y-4">
@@ -743,11 +883,17 @@ function TemplatesTab(p: TemplatesTabProps) {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t("emails.body")}
                     </label>
-                    <RichTextEditor
+                    <YamboEmailEditor
+                      key={tpl.key}
+                      templateKey={tpl.key}
                       value={p.tplForm.body}
                       onChange={(v) => p.setTplForm((f) => ({ ...f, body: v }))}
-                      minHeight={256}
-                      className="h-64"
+                      tokens={toEmailTokens(tpl.tokens)}
+                      title={tpl.displayName}
+                      onServerPreview={p.previewingTpl ? undefined : p.onPreview}
+                      onSave={p.savingTpl ? undefined : p.onSave}
+                      onReset={tpl.overridden && !p.savingTpl ? () => p.setConfirmReset(true) : undefined}
+                      onSendTest={!p.sendingTest && p.testEmail.trim() ? p.onTest : undefined}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -822,6 +968,7 @@ function TemplatesTab(p: TemplatesTabProps) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -1055,7 +1202,22 @@ interface CampaignEditorProps {
 }
 
 function CampaignEditor(p: CampaignEditorProps) {
+  const [tokens, setTokens] = useState(CAMPAIGN_TOKENS);
+  useEffect(() => {
+    let active = true;
+    campaignService.variables().then((items) => { if (active && items.length) setTokens(toEmailTokens(items)); }).catch(() => { /* The complete local catalog remains usable while offline. */ });
+    return () => { active = false; };
+  }, []);
   const { t } = p;
+  const subjectInput = useRef<HTMLInputElement>(null);
+  const insertSubjectVariable = (name: string) => {
+    const field = subjectInput.current;
+    const start = field?.selectionStart ?? p.form.subject.length;
+    const end = field?.selectionEnd ?? start;
+    const marker = '${' + name + '}';
+    p.setForm((value) => ({ ...value, subject: value.subject.slice(0, start) + marker + value.subject.slice(end) }));
+    requestAnimationFrame(() => { field?.focus(); field?.setSelectionRange(start + marker.length, start + marker.length); });
+  };
   const f = p.form;
   const set = p.setForm;
 
@@ -1067,10 +1229,13 @@ function CampaignEditor(p: CampaignEditorProps) {
             {t("emails.subject")}
           </label>
           <InputComponent
+            ref={subjectInput}
+            aria-label="Asunto del comunicado"
             value={f.subject}
             onChange={(e) => set((s) => ({ ...s, subject: e.target.value }))}
             placeholder={t("emails.subjectPlaceholder")}
           />
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500"><span>Insertar en el asunto:</span>{[["nombre", "Nombre"], ["email", "Email"], ["fecha", "Fecha"]].map(([key, label]) => <button key={key} type="button" aria-label={`Insertar ${key} en asunto`} onClick={() => insertSubjectVariable(key)} className="rounded-md border border-gray-200 bg-white px-2 py-1 font-mono hover:border-yambo-green-400">{label}</button>)}</div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1210,11 +1375,15 @@ function CampaignEditor(p: CampaignEditorProps) {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t("emails.body")}
           </label>
-          <RichTextEditor
+          <p className="mb-2 text-xs text-gray-500">Nombre, usuario y email se sustituyen por los de cada destinatario al enviar. La vista previa usa un socio ficticio; la del servidor muestra la última versión guardada.</p>
+          <YamboEmailEditor
             value={f.body}
             onChange={(v) => set((s) => ({ ...s, body: v }))}
-            minHeight={256}
-            className="h-64"
+            tokens={tokens}
+            title={t("emails.body")}
+            campaign
+            onServerPreview={p.previewing ? undefined : p.onPreview}
+            onSave={p.saving ? undefined : p.onSave}
           />
         </div>
       </div>
@@ -1250,6 +1419,170 @@ function CampaignEditor(p: CampaignEditorProps) {
       </div>
 
       {p.preview && <PreviewFrame html={p.preview} label={t("emails.previewLabel")} />}
+    </div>
+  );
+}
+
+// ── Pestaña Elementos comunes ──────────────────────────────────────────
+interface CommonElementsTabProps {
+  elements: EmailCommonElementView[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  editingKey: string | "new" | null;
+  form: { name: string; html: string; description: string };
+  setForm: React.Dispatch<React.SetStateAction<{ name: string; html: string; description: string }>>;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  saving: boolean;
+  confirmReset: boolean;
+  setConfirmReset: (v: boolean) => void;
+  deleteTarget: EmailCommonElementView | null;
+  onNew: () => void;
+  onEdit: (el: EmailCommonElementView) => void;
+  onClose: () => void;
+  onSave: () => void;
+  onReset: () => void;
+  onDeleteOpen: (el: EmailCommonElementView) => void;
+  onDeleteConfirm: () => void;
+  onDeleteClose: () => void;
+}
+
+function CommonElementsTab(p: CommonElementsTabProps) {
+  const { t } = useTranslation();
+
+  if (p.loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <LoadingSpinner message={t("emails.loading")} />
+      </div>
+    );
+  }
+  if (p.error) {
+    return <ErrorMessage message={p.error} onRetry={p.onRetry} />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500">{t("emails.commonIntro")}</p>
+
+      {p.canCreate && !p.editingKey && (
+        <div className="flex justify-end">
+          <ButtonComponent onClick={p.onNew} variant="primary">
+            {t("emails.newCommonElement")}
+          </ButtonComponent>
+        </div>
+      )}
+
+      {p.editingKey !== "new" && <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {p.elements.map((el) => {
+          const isEditing = p.editingKey === el.key;
+          if (!isEditing) return <CommonComponentCard key={el.key} element={el} canEdit={p.canUpdate} onEdit={() => p.onEdit(el)} />;
+          return (
+            <div
+              key={el.key}
+              className="col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            >
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-yambo-black flex items-center gap-2">
+                    {el.name}
+                    {el.builtIn && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        {t("emails.commonBuiltIn")}
+                      </span>
+                    )}
+                  </h2>
+                  {el.description && (
+                    <p className="text-xs text-gray-400 mt-1">{el.description}</p>
+                  )}
+                </div>
+                {!isEditing && p.canUpdate && (
+                  <ButtonComponent onClick={() => p.onEdit(el)} variant="primary" size="sm">
+                    {t("common.edit")}
+                  </ButtonComponent>
+                )}
+              </div>
+
+              {!isEditing && (
+                <PreviewFrame html={el.html} label={t("emails.previewLabel")} />
+              )}
+
+              {isEditing && (
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t("emails.commonContent")}
+                    </label>
+                    <YamboEmailEditor
+                      tokens={COMPONENT_TOKENS}
+                      value={p.form.html}
+                      onChange={(v) => p.setForm((f) => ({ ...f, html: v }))}
+                      defaultMaximized={false}
+                      title={el.name}
+                      excludeComponentKey={el.key}
+                      onSave={p.saving ? undefined : p.onSave}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <ButtonComponent onClick={p.onSave} variant="primary" isLoading={p.saving}>
+                      {t("emails.save")}
+                    </ButtonComponent>
+                    {el.builtIn && (
+                      <ButtonComponent
+                        onClick={() => p.setConfirmReset(true)}
+                        variant="danger-text"
+                        disabled={p.saving}
+                      >
+                        {t("emails.reset")}
+                      </ButtonComponent>
+                    )}
+                    {!el.builtIn && p.canDelete && (
+                      <ButtonComponent
+                        onClick={() => p.onDeleteOpen(el)}
+                        variant="danger-text"
+                        disabled={p.saving}
+                      >
+                        {t("emails.delete")}
+                      </ButtonComponent>
+                    )}
+                    <ButtonComponent onClick={p.onClose} variant="secondary" disabled={p.saving}>
+                      {t("common.cancel")}
+                    </ButtonComponent>
+                  </div>
+
+                  <ConfirmDialog
+                    isOpen={p.confirmReset}
+                    onClose={() => p.setConfirmReset(false)}
+                    onConfirm={p.onReset}
+                    title={t("emails.resetTitle")}
+                    message={t("emails.resetMsg", { name: el.name })}
+                    confirmLabel={t("emails.reset")}
+                    variant="warning"
+                    isLoading={p.saving}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>}
+
+      {p.editingKey === "new" && <ComponentComposer form={p.form} setForm={p.setForm} saving={p.saving} onSave={p.onSave} onClose={p.onClose} />}
+
+      {/* Diálogo de borrado */}
+      <ConfirmDialog
+        isOpen={!!p.deleteTarget}
+        onClose={p.onDeleteClose}
+        onConfirm={p.onDeleteConfirm}
+        title={t("emails.commonDeleteTitle")}
+        message={t("emails.commonDeleteMsg", { name: p.deleteTarget?.name ?? "" })}
+        confirmLabel={t("emails.delete")}
+        variant="danger"
+        isLoading={p.saving}
+      />
     </div>
   );
 }

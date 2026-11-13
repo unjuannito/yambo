@@ -23,6 +23,17 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 class EmailRendererTest {
+    @Test
+    void envelopeRendersSavedVariablesAndSanitizesTheFinalHeader() {
+        var header = es.yambo_alco.web.model.EmailCommonElement.builder().key("header").html("<h2 th:text='${organizationName}'>Marca</h2>").build();
+        when(emailCommonElementRepository.findByKey("header")).thenReturn(java.util.Optional.of(header));
+        when(thymeleafEmailEngine.renderOrFallback(eq(header.getHtml()), anyMap())).thenReturn("<h2>Marca dinámica</h2><script>alert(1)</script>");
+        String result = renderer.envelope("<p>Contenido</p>");
+        assertTrue(result.contains("Marca dinámica"));
+        assertFalse(result.contains("<script"));
+        assertFalse(result.contains("th:text"));
+    }
+
 
     @Mock
     private SettingsService settingsService;

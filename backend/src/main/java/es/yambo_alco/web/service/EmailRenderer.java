@@ -4,6 +4,7 @@ import es.yambo_alco.web.repository.EmailCommonElementRepository;
 import es.yambo_alco.web.service.MailService.OrderProductInfo;
 import es.yambo_alco.web.util.EmailHtmlSanitizer;
 import es.yambo_alco.web.util.EmailTemplateCatalog;
+import es.yambo_alco.web.util.CampaignVariables;
 import es.yambo_alco.web.util.HtmlInliner;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -55,8 +56,8 @@ import java.util.Map;
  * {@link EmailTemplateCatalog}).
  * <p>
  * En comunicados, el modo Thymeleaf solo tiene variables a nivel de organización
- * (sin datos por destinatario todavía: el envío hoy renderiza el cuerpo una vez
- * para toda la campaña, ver {@link CampaignSender}); esos sí se envuelven con
+ * y de destinatario: {@link CampaignSender} renderiza cada asunto y cuerpo
+ * con el socio correspondiente. Esos mensajes se envuelven con
  * {@link #envelope}, el único sitio que lo usa ahora — con cabecera/pie editables
  * por el admin ({@code email_common_element}, issue #123, Part 2), con el HTML
  * hardcodeado aquí ({@link #DEFAULT_HEADER_HTML}/{@link #DEFAULT_FOOTER_HTML})
@@ -164,8 +165,7 @@ public class EmailRenderer {
     public String sanitizeAndInline(String bodyHtml) {
         String body = bodyHtml;
         if (ThymeleafEmailEngine.isThymeleafMode(body)) {
-            // Solo variables de organización: un comunicado hoy se renderiza una
-            // única vez para toda la audiencia (sin datos por destinatario aún).
+            // Legacy sanitizer context; personalized delivery uses renderCampaignBody(body, variables).
             Map<String, Object> orgVars = Map.of(
                     "organizacion", settingsService.getOrganizationName(),
                     "dominio", settingsService.getDomain());
@@ -199,6 +199,7 @@ public class EmailRenderer {
     public Map<String, Object> brandVariables() {
         Map<String, Object> vars = new LinkedHashMap<>();
         vars.put("currentYear", java.time.Year.now().getValue());
+        vars.put("emailDate", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
         vars.put("organizationName", settingsService.getOrganizationName());
         vars.put("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
         return vars;
@@ -211,8 +212,26 @@ public class EmailRenderer {
      * @param bodyHtml cuerpo HTML del comunicado
      * @return documento HTML completo, listo para enviar
      */
+    public Map<String, Object> campaignVariables(CampaignRecipient recipient, LocalDateTime sentAt) {
+        return CampaignVariables.values(recipient, settingsService.getOrganizationName(), settingsService.getDomain(), sentAt);
+    }
+
+    public String renderCampaignSubject(String subject, Map<String, Object> variables) {
+        return CampaignVariables.replace(subject, variables).replaceAll("[\\r\\n]+", " ").trim();
+    }
+
     public String renderCampaignBody(String bodyHtml) {
-        return envelope(sanitizeAndInline(bodyHtml));
+        return renderCampaignBody(bodyHtml, campaignVariables(CampaignVariables.SAMPLE, CampaignVariables.now()));
+    }
+
+    public String renderCampaignBody(String bodyHtml, Map<String, Object> variables) {
+        String body = CampaignVariables.resolveHtml(bodyHtml, variables);
+        if (ThymeleafEmailEngine.isThymeleafMode(body)) {
+            String rendered = thymeleafEmailEngine.renderOrFallback(body, variables);
+            body = rendered != null ? rendered : EmailHtmlSanitizer.stripThymeleafAttributes(body);
+        }
+        String safe = EmailHtmlSanitizer.absolutizeUploadSrcs(EmailHtmlSanitizer.sanitize(body), settingsService.getDomain());
+        return envelope(safe, settingsService.getOrganizationName(), settingsService.getDomain() + "/mi-espacio/cuenta", variables);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────
@@ -295,11 +314,15 @@ public class EmailRenderer {
     }
 
     private String envelope(String body, String orgName, String prefsUrl) {
+        return envelope(body, orgName, prefsUrl, Map.of());
+    }
+
+    private String envelope(String body, String orgName, String prefsUrl, Map<String, Object> context) {
         // Issue #123, Part 2: cabecera/pie editables (email_common_element); si no
         // hay fila (o la BD no está disponible, p. ej. en tests unitarios sin
         // Spring) se usa el mismo HTML que estaba hardcodeado aquí.
-        String header = resolveCommonTokens(loadCommonElementHtml("header", DEFAULT_HEADER_HTML), orgName, prefsUrl);
-        String footer = resolveCommonTokens(loadCommonElementHtml("footer", DEFAULT_FOOTER_HTML), orgName, prefsUrl);
+        String header = resolveCommonTokens(loadCommonElementHtml("header", DEFAULT_HEADER_HTML), orgName, prefsUrl, context);
+        String footer = resolveCommonTokens(loadCommonElementHtml("footer", DEFAULT_FOOTER_HTML), orgName, prefsUrl, context);
 
         return "<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"UTF-8\">"
                 + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>"
@@ -332,7 +355,16 @@ public class EmailRenderer {
     }
 
     /** Resuelve {{organizacion}}/{{enlace_preferencias}} en la cabecera/pie de comunicados. */
-    private String resolveCommonTokens(String template, String orgName, String prefsUrl) {
-        return template.replace("{{organizacion}}", escape(orgName)).replace("{{enlace_preferencias}}", prefsUrl);
+    private String resolveCommonTokens(String template, String orgName, String prefsUrl, Map<String, Object> context) {
+        Map<String, Object> variables = new LinkedHashMap<>(brandVariables()); variables.putAll(context);
+        variables.put("organizationName", orgName); variables.put("organizacion", orgName);
+        variables.put("preferencesUrl", prefsUrl); variables.put("enlace_preferencias", prefsUrl);
+        variables.put("dominio", settingsService.getDomain());
+        String rendered = CampaignVariables.resolveHtml(template, variables);
+        if (ThymeleafEmailEngine.isThymeleafMode(rendered)) {
+            String result = thymeleafEmailEngine.renderOrFallback(rendered, variables);
+            rendered = result != null ? result : EmailHtmlSanitizer.stripThymeleafAttributes(rendered);
+        }
+        return EmailHtmlSanitizer.sanitize(rendered);
     }
 }

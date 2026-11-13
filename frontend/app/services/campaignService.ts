@@ -1,3 +1,4 @@
+import type { EmailTemplateToken } from "./emailTemplateService";
 import { ApiService } from "./apiService";
 
 export type CampaignAudienceType = "ALL" | "PROFILE" | "PROJECT" | "GROUP" | "USERS";
@@ -48,6 +49,10 @@ export interface CampaignPreviewResponse {
 }
 
 class CampaignService extends ApiService {
+    async variables(): Promise<EmailTemplateToken[]> {
+        return this.get<EmailTemplateToken[]>("/campaigns/variables");
+    }
+
     async list(): Promise<CampaignView[]> {
         return this.get<CampaignView[]>("/campaigns");
     }

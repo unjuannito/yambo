@@ -36,6 +36,7 @@ public class EmailCommonElementService {
         private String description;
         private String html;
         private boolean builtIn;
+        private java.util.List<java.util.Map<String, String>> properties;
     }
 
     @Transactional(readOnly = true)
@@ -55,7 +56,7 @@ public class EmailCommonElementService {
         EmailCommonElement element = EmailCommonElement.builder()
                 .key(key)
                 .name(name.trim())
-                .html(EmailHtmlSanitizer.sanitize(html.trim()))
+                .html(EmailHtmlSanitizer.sanitizeTemplate(html.trim()))
                 .description(description == null ? null : description.trim())
                 .build();
         return toView(repository.save(element));
@@ -67,7 +68,7 @@ public class EmailCommonElementService {
         if (html == null || html.isBlank()) {
             throw new BadRequestException("El contenido no puede quedar vacío");
         }
-        element.setHtml(EmailHtmlSanitizer.sanitize(html.trim()));
+        element.setHtml(EmailHtmlSanitizer.sanitizeTemplate(html.trim()));
         return toView(repository.save(element));
     }
 
@@ -113,6 +114,7 @@ public class EmailCommonElementService {
         view.setDescription(element.getDescription());
         view.setHtml(element.getHtml());
         view.setBuiltIn(BUILT_IN_KEYS.contains(element.getKey()));
+        view.setProperties(es.yambo_alco.web.util.EditableEmailDocument.propertiesFor(element.getKey()));
         return view;
     }
 }

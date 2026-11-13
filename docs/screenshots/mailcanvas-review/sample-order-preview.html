@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<!--
+    Layout base de los 15 correos automáticos built-in (issue #123, Part 2):
+    cabecera (color/icono/título por correo) + pie, en un solo sitio en vez de
+    repetidos en cada plantilla. Cada plantilla hija solo define
+    layout:fragment="content" y las variables headerColor/headerIcon/
+    headerTitle (vía el mapa de variables de HtmlMailService, no como
+    parámetro de fragmento: así layout:decorate no necesita argumentos).
+
+    También se procesa DIRECTAMENTE (sin layout:decorate) para el cuerpo ya
+    renderizado de una personalización de admin: HtmlMailService pasa el HTML
+    resultante en la variable contentHtml, que th:utext escribe en el mismo
+    hueco — layout:fragment queda inerte cuando no hay decorador, así que no
+    hace falta otra plantilla para ese caso.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Pedido Confirmado</title>
+    
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+    <tr><td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+
+            <tr>
+                <td style="background-color: #27ae60; padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">
+                        <span><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 512 512' style='vertical-align:middle;margin-right:6px'><path fill='#ffffff' d='M256 48a208 208 0 1 1 0 416 208 208 0 1 1 0-416zm0 464A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-111 111-47-47c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l64 64c9.4 9.4 24.6 9.4 33.9 0L369 209z'/></svg> Pedido Confirmado</span>
+                    </h1>
+                    <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">
+                        <span>12/11/2026 17:04</span>
+                    </p>
+                </td>
+            </tr>
+
+            <tr><td style="padding: 40px 30px;">
+    <h2 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 24px;">¡Hola <span>Carlos García</span>!</h2>
+    <p style="margin: 0 0 20px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+        Tu pedido ha sido <strong>confirmado</strong> y será procesado en breve.
+    </p>
+
+    
+    <div style="background-color: #ecf0f1; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Detalles del Pedido</h3>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>ID del Pedido:</strong> <span>ORD-20260215-001</span>
+        </p>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>Fecha:</strong> <span>15/02/2026 14:30</span>
+        </p>
+        <p style="margin: 5px 0; color: #555555; font-size: 14px;">
+            <strong>Estado:</strong>
+            <span style="color: #27ae60; font-weight: bold;">PAGO CONFIRMADO</span>
+        </p>
+    </div>
+
+    
+    <div style="margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px;">Productos</h3>
+        <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #34495e;">
+                    <th style="padding: 12px; text-align: left; color: #ffffff; font-size: 14px;">Producto</th>
+                    <th style="padding: 12px; text-align: center; color: #ffffff; font-size: 14px;">Cantidad</th>
+                    <th style="padding: 12px; text-align: right; color: #ffffff; font-size: 14px;">Precio</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                    <td style="padding: 12px; color: #555555; font-size: 14px;">
+                        <div>Camiseta Logo 2026</div>
+                        <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">
+                            <em>Talla M</em>
+                        </div>
+                    </td>
+                    <td style="padding: 12px; text-align: center; color: #555555; font-size: 14px;">2</td>
+                    <td style="padding: 12px; text-align: right; color: #555555; font-size: 14px;">18.50 €</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                    <td style="padding: 12px; color: #555555; font-size: 14px;">
+                        <div>Sudadera Yambo Negra</div>
+                        <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">
+                            <em>Talla L</em>
+                        </div>
+                    </td>
+                    <td style="padding: 12px; text-align: center; color: #555555; font-size: 14px;">1</td>
+                    <td style="padding: 12px; text-align: right; color: #555555; font-size: 14px;">35.00 €</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                    <td style="padding: 12px; color: #555555; font-size: 14px;">
+                        <div>Gorra Clásica</div>
+                        
+                    </td>
+                    <td style="padding: 12px; text-align: center; color: #555555; font-size: 14px;">3</td>
+                    <td style="padding: 12px; text-align: right; color: #555555; font-size: 14px;">12.00 €</td>
+                </tr>
+                <tr style="background-color: #ecf0f1; font-weight: bold;">
+                    <td colspan="2" style="padding: 12px; text-align: right; color: #2c3e50; font-size: 16px;">Total:</td>
+                    <td style="padding: 12px; text-align: right; color: #2c3e50; font-size: 16px;">108.00 €</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+
+    <p style="margin: 20px 0 0 0; color: #555555; font-size: 14px; line-height: 1.6;">
+        Te mantendremos informado sobre el progreso de tu pedido.
+    </p>
+
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href=""
+           style="display: inline-block; padding: 15px 30px; background-color: #8B5CF6; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">Ver mi pedido</a>
+    </div>
+
+</td></tr>
+
+            <tr>
+                <td style="background-color: #ecf0f1; padding: 20px 30px; text-align: center;">
+                    <p style="margin: 0; color: #7f8c8d; font-size: 14px;">
+                        Este es un correo automático, por favor no responda a este mensaje.
+                    </p>
+                    <p style="margin: 10px 0 0 0; color: #7f8c8d; font-size: 12px;">
+                        &copy; <span>2026</span> <span>Yambo</span>. Todos los derechos reservados.
+                    </p>
+                    <p style="margin: 8px 0 0 0;">
+                        <a href="https://yambo-alco.es/mi-espacio/cuenta" style="color: #8B5CF6; font-size: 12px; text-decoration: none;">
+                            Gestionar preferencias de notificación
+                        </a>
+                    </p>
+                </td>
+            </tr>
+
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

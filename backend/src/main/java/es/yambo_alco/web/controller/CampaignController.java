@@ -36,6 +36,12 @@ public class CampaignController {
         return ResponseEntity.ok(campaignService.list());
     }
 
+    @GetMapping("/variables")
+    @PreAuthorize("@permissionCheck.hasPermission('campaign', 'read')")
+    public ResponseEntity<java.util.List<es.yambo_alco.web.util.CampaignVariables.Variable>> variables() {
+        return ResponseEntity.ok(campaignService.variables());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("@permissionCheck.hasPermission('campaign', 'read')")
     public ResponseEntity<CampaignView> getCampaign(@PathVariable String id) {

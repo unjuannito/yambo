@@ -177,7 +177,6 @@ class CampaignServiceTest {
     void send_Confirmed_ShouldMarkSentAndQueueSender() {
         stubFind("C1", campaign("C1", CampaignAudience.ALL, null, null, "DRAFT"));
         when(userRepository.findEnabledWithEmail()).thenReturn(List.of(user("U1", "a@x.com", null)));
-        when(emailRenderer.renderCampaignBody("Cuerpo")).thenReturn("<html>doc</html>");
         when(mailConfig.isConfigured()).thenReturn(true);
         stubSave();
 
@@ -189,14 +188,13 @@ class CampaignServiceTest {
         assertEquals(1, c.getRecipientCount());
         assertEquals("admin", c.getSentBy());
         assertNotNull(c.getSentAt());
-        verify(campaignSender).sendAll(eq("Asunto"), eq("<html>doc</html>"), any());
+        verify(campaignSender).sendAll(eq("Asunto"), eq("Cuerpo"), any());
     }
 
     @Test
     void send_UnconfiguredMail_ShouldStillMarkSent() {
         stubFind("C1", campaign("C1", CampaignAudience.ALL, null, null, "DRAFT"));
         when(userRepository.findEnabledWithEmail()).thenReturn(List.of(user("U1", "a@x.com", null)));
-        when(emailRenderer.renderCampaignBody("Cuerpo")).thenReturn("<html>doc</html>");
         when(mailConfig.isConfigured()).thenReturn(false);
         stubSave();
 

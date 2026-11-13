@@ -21,6 +21,19 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 class EmailCommonElementServiceTest {
+    @Test
+    void createPreservesEditorBindingsButRemovesExecutableHtml() {
+        when(repository.findByKey(anyString())).thenReturn(Optional.empty());
+        when(repository.save(any(EmailCommonElement.class))).thenAnswer(inv -> inv.getArgument(0));
+        var result = service.create("Firma variable", "<div data-ee-component='firma'><span th:text='${organizationName}'>Yambo</span><a th:href='${preferencesUrl}'>Preferencias</a><script>alert(1)</script><img src='javascript:alert(1)' onerror='alert(1)'></div>", null);
+        assertTrue(result.getHtml().contains("th:text"));
+        assertTrue(result.getHtml().contains("th:href"));
+        assertTrue(result.getHtml().contains("data-ee-component"));
+        assertFalse(result.getHtml().contains("<script"));
+        assertFalse(result.getHtml().contains("onerror"));
+        assertFalse(result.getHtml().contains("javascript:"));
+    }
+
 
     @Mock
     private EmailCommonElementRepository repository;

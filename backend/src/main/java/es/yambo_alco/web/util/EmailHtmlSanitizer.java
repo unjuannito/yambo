@@ -71,6 +71,22 @@ public final class EmailHtmlSanitizer {
         return doc.body().html();
     }
 
+    /** Editor source keeps supported directives; final rendered output still uses sanitize(). */
+    public static String sanitizeTemplate(String html) {
+        if (html == null || html.isBlank()) return html;
+        Safelist source = new Safelist(emailSafelist()) {
+            @Override
+            public boolean isSafeAttribute(String tag, Element element, Attribute attribute) {
+                return attribute.getKey().startsWith("data-ee-") || super.isSafeAttribute(tag, element, attribute);
+            }
+        };
+        source.addTags("th:block");
+        source.addAttributes(":all", "th:text", "th:utext", "th:href", "th:src", "th:style", "th:if", "th:unless", "th:each", "th:with", "th:replace", "th:insert");
+        Document doc = Jsoup.parseBodyFragment(Jsoup.clean(html, source));
+        enforce(doc);
+        return doc.body().html();
+    }
+
     /** Lista blanca de etiquetas/atributos apta para el HTML de un editor de correo. */
     public static Safelist emailSafelist() {
         // Partimos de la base de jsoup (p, strong, em, a, ul, ol, li, img, br, hr,

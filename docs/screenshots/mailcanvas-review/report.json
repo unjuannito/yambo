@@ -1,0 +1,17 @@
+{
+  "fixture": "Real order-confirmed.html; API and permissions simulated",
+  "checks": [
+    "shared management tab",
+    "campaign and automatic email sections in the library",
+    "editable header, original six content blocks and editable footer",
+    "product fragment visible",
+    "insert shared block",
+    "edit header title per instance",
+    "preview gallery and search",
+    "enlarged accessible preview",
+    "starter component and variables",
+    "campaign recipient variables",
+    "insert recipient in subject and body"
+  ],
+  "errors": []
+}

@@ -26,13 +26,18 @@ import java.util.List;
 public class CampaignSender {
 
     private final MailService mailService;
+    private final EmailRenderer emailRenderer;
 
     @Async("mailExecutor")
-    public void sendAll(String subject, String htmlDocument, List<CampaignRecipient> recipients) {
+    public void sendAll(String subject, String bodyHtml, List<CampaignRecipient> recipients) {
         int sent = 0;
+        var sentAt = es.yambo_alco.web.util.CampaignVariables.now();
         for (CampaignRecipient r : recipients) {
             try {
-                mailService.sendRaw(r.email(), subject, htmlDocument);
+                var variables = emailRenderer.campaignVariables(r, sentAt);
+                String htmlDocument = emailRenderer.renderCampaignBody(bodyHtml, variables);
+                String personalizedSubject = emailRenderer.renderCampaignSubject(subject, variables);
+                mailService.sendRaw(r.email(), personalizedSubject, htmlDocument);
                 sent++;
             } catch (Exception e) {
                 log.error("Failed to deliver campaign [{}] to {} ({}): {}",

@@ -3,8 +3,9 @@ import { ApiService } from "./apiService";
 /** Un token {{...}} disponible en una plantilla, con su etiqueta y valor de ejemplo. */
 export interface EmailTemplateToken {
     token: string;
+    varName: string;
     label: string;
-    sample: string;
+    sample: unknown;
 }
 
 export interface EmailTemplateView {

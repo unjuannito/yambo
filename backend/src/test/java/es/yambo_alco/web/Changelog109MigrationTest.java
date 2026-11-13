@@ -125,6 +125,27 @@ class Changelog109MigrationTest {
     }
 
     @Test
+    void changelog110_UpgradesLegacyBodiesWithoutReplacingCustomContent() throws Exception {
+        newLiquibase().update(new Contexts(), new LabelExpression());
+        try (var update = connection.prepareStatement("UPDATE email_template SET body=? WHERE \"key\"='invitation'")) {
+            update.setString(1, "<p>Mi invitación personalizada</p>"); update.executeUpdate();
+        }
+        var upgrade = new Liquibase("db/changelog/changes/110-editable-email-layouts.xml", new ClassLoaderResourceAccessor(), database);
+        upgrade.update(new Contexts(), new LabelExpression());
+        upgrade.update(new Contexts(), new LabelExpression());
+        try (var statement = connection.createStatement()) {
+            var rows = statement.executeQuery("SELECT body FROM email_template WHERE \"key\"='invitation'");
+            assertTrue(rows.next());
+            String body = rows.getString(1);
+            assertTrue(body.contains("Mi invitación personalizada"));
+            assertTrue(es.yambo_alco.web.util.EditableEmailDocument.ownsLayout(body));
+            assertEquals(1, body.split("data-ee-component=\"automatic-header\"", -1).length - 1);
+            var components = statement.executeQuery("SELECT COUNT(*) FROM email_common_element");
+            assertTrue(components.next()); assertEquals(4, components.getInt(1));
+        }
+    }
+
+    @Test
     void changelog109_ShouldBeIdempotentOnSecondRun() throws Exception {
         Liquibase liquibase = newLiquibase();
         liquibase.update(new Contexts(), new LabelExpression());

@@ -100,6 +100,7 @@ public class HtmlMailService implements MailService {
 
             Map<String, Object> allVars = new HashMap<>(variables);
             allVars.put("currentYear", java.time.Year.now().getValue());
+            allVars.put("emailDate", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
             allVars.put("organizationName", settingsService.getOrganizationName());
             allVars.put("preferencesUrl", settingsService.getDomain() + "/mi-espacio/cuenta");
 
@@ -121,7 +122,9 @@ public class HtmlMailService implements MailService {
                 Context baseContext = new Context();
                 allVars.forEach(baseContext::setVariable);
                 baseContext.setVariable("contentHtml", renderedContent);
-                htmlContent = templateEngine.process("emails/layout/base-email", baseContext);
+                htmlContent = es.yambo_alco.web.util.EditableEmailDocument.ownsLayout(override.getBody())
+                        ? es.yambo_alco.web.util.EditableEmailDocument.renderedDocument(renderedContent)
+                        : templateEngine.process("emails/layout/base-email", baseContext);
             } else {
                 // No override, or its Thymeleaf body failed/timed out: never send a
                 // personalization that rendered half-broken (e.g. a password reset

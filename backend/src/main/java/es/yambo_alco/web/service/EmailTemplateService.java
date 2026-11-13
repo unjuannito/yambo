@@ -3,6 +3,7 @@ package es.yambo_alco.web.service;
 import es.yambo_alco.web.exception.BadRequestException;
 import es.yambo_alco.web.model.EmailTemplate;
 import es.yambo_alco.web.repository.EmailTemplateRepository;
+import es.yambo_alco.web.util.EditableEmailDocument;
 import es.yambo_alco.web.util.EmailTemplateCatalog;
 import es.yambo_alco.web.util.EmailTemplateCatalog.TemplateDef;
 import lombok.Data;
@@ -182,6 +183,9 @@ public class EmailTemplateService {
                             + "revisa la sintaxis Thymeleaf del cuerpo)</p>";
         }
 
+        if (EditableEmailDocument.ownsLayout(body) && content != null) {
+            return EditableEmailDocument.renderedDocument(content);
+        }
         Context ctx = new Context();
         vars.forEach(ctx::setVariable);
         ctx.setVariable("contentHtml", content);
@@ -198,15 +202,20 @@ public class EmailTemplateService {
         view.setDisplayName(def.displayName());
         view.setDescription(def.description());
         view.setPrimaryLinkToken(def.primaryLinkToken());
-        view.setTokens(def.tokens().stream()
-                .map(t -> Map.<String, Object>of(
-                        "token", t.token(),
-                        "label", t.label(),
-                        "sample", t.sample() == null ? "" : t.sample()))
-                .toList());
+        var tokens = new java.util.ArrayList<Map<String, Object>>();
+        def.tokens().forEach(t -> tokens.add(Map.of("token", t.token(), "varName", t.varName(),
+                "label", t.label(), "sample", t.sample() == null ? "" : t.sample())));
+        var samples = new java.util.LinkedHashMap<String, Object>(def.sampleVariables());
+        samples.putAll(emailRenderer.brandVariables());
+        for (String variable : List.of("emailDate", "headerTitle", "headerColor", "headerIcon", "currentYear", "organizationName", "preferencesUrl")) {
+            if (samples.containsKey(variable) && tokens.stream().noneMatch(t -> variable.equals(t.get("varName")))) {
+                tokens.add(Map.of("token", variable, "varName", variable, "label", variable, "sample", samples.get(variable)));
+            }
+        }
+        view.setTokens(tokens);
         view.setOverridden(override != null && override.getBody() != null && !override.getBody().isBlank());
         view.setSubject(override != null ? override.getSubject() : null);
-        view.setBody(override != null ? override.getBody() : null);
+        view.setBody(override != null && override.getBody() != null ? override.getBody() : EditableEmailDocument.initialBody(def.key()));
         return view;
     }
 }

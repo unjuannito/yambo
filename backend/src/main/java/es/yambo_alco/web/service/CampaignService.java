@@ -185,7 +185,13 @@ public class CampaignService {
         return emailRenderer.renderCampaignBody(c.getBody() == null ? "" : c.getBody());
     }
 
+    public java.util.List<es.yambo_alco.web.util.CampaignVariables.Variable> variables() {
+        return es.yambo_alco.web.util.CampaignVariables.catalog(emailRenderer.campaignVariables(
+                es.yambo_alco.web.util.CampaignVariables.SAMPLE, es.yambo_alco.web.util.CampaignVariables.now()));
+    }
+
     /** Respuesta de la vista previa del cuerpo de un comunicado. */
+    @Data
     @lombok.AllArgsConstructor
     public static class CampaignPreviewResponse {
         private String html;
@@ -209,9 +215,6 @@ public class CampaignService {
                     + "(audience vacía o todos los socios se han dado de baja)");
         }
 
-        // Renderiza el documento una vez (el mismo para todos los destinatarios).
-        String htmlDocument = emailRenderer.renderCampaignBody(c.getBody());
-
         c.setRecipientCount(recipients.size());
         c.setStatus("SENT");
         c.setSentBy(sentBy);
@@ -220,7 +223,7 @@ public class CampaignService {
 
         boolean configured = mailConfig.isConfigured();
         if (configured) {
-            campaignSender.sendAll(c.getSubject(), htmlDocument, recipients);
+            campaignSender.sendAll(c.getSubject(), c.getBody(), recipients);
         } else {
             log.info("[CONSOLE MODE] Campaign [{}] for {} recipients (SMTP no configured): {}",
                     c.getSubject(), recipients.size(), c.getSubject());

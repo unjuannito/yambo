@@ -8,3 +8,5 @@
 /.vscode/
 
 .package-lock.json
+# Isolated visual review harness
+/.email-editor-review/
